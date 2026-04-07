@@ -1,4 +1,43 @@
 ```
-# Quiz template files
-"quizes/quiz-template*
+# Quiz template related ignores (if any artifacts generated)
+*.tmp
+*.log
+
+# Editor/IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.local
+*.env.*
+
+# Python specific
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Build/dist folders
+dist/
+build/
+*.egg-info/
+
+# Coverage reports
+.coverage
+coverage/
+htmlcov/
+
+# Dependencies
+node_modules/
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
 ```
