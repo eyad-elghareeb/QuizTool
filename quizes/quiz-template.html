@@ -229,6 +229,7 @@ input[type=radio] { display: none; }
   text-decoration: none;
 }
 .icon-btn:hover { color: var(--text); border-color: var(--accent); }
+.icon-btn.danger:hover { border-color: var(--wrong); color: var(--wrong); }
 
 /* MAIN BODY */
 .quiz-body {
@@ -869,6 +870,7 @@ input[type=radio]:checked + .option-label .option-key {
     <div class="topbar-actions">
       <a href="../index.html" class="icon-btn" title="Back to Hub">🏠</a>
       <button class="icon-btn theme-toggle-btn" onclick="toggleTheme()" title="Toggle theme">☀</button>
+      <button class="icon-btn danger" onclick="confirmResetProgress()" title="Reset Progress">↻</button>
     </div>
   </div>
 
@@ -913,6 +915,7 @@ input[type=radio]:checked + .option-label .option-key {
     <div class="topbar-actions">
       <a href="../index.html" class="icon-btn" title="Back to Hub">🏠</a>
       <button class="icon-btn theme-toggle-btn" onclick="toggleTheme()" title="Toggle theme">☀</button>
+      <button class="icon-btn danger" onclick="confirmResetProgress()" title="Reset Progress">↻</button>
     </div>
   </div>
   <div class="result-body">
@@ -1676,6 +1679,33 @@ function restoreProgress() {
 
 function clearProgress() {
   localStorage.removeItem(STORAGE_KEY);
+}
+
+/**
+ * Confirm and reset quiz progress
+ */
+function confirmResetProgress() {
+  if (confirm('Are you sure you want to reset your quiz progress? This cannot be undone.')) {
+    clearProgress();
+    // Reset state
+    state.current = 0;
+    state.answers = {};
+    state.flagged = {};
+    state.elapsed = 0;
+    state.timerSecs = QUIZ_CONFIG.timeLimit * 60;
+    state.submitted = false;
+    
+    showToast('🔄 Progress reset! Starting fresh...');
+    
+    setTimeout(() => {
+      showScreen('quiz-screen');
+      buildNavGrid();
+      renderQuestion(state.current);
+      if(state.mode !== 'learning') {
+        startTimer();
+      }
+    }, 1000);
+  }
 }
 
 // Auto-save every 5 seconds
