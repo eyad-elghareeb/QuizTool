@@ -1512,11 +1512,21 @@ function showToast(msg) {
 }
 
 /* ── LOCAL STORAGE SAVE/RESTORE ──────────────────────────── */
-const STORAGE_KEY = `quiz_${btoa(QUIZ_CONFIG.title).replace(/=/g,'')}`;
+// Improved storage key generation that handles special characters safely
+const STORAGE_VERSION = 'v1';
+const STORAGE_KEY = `quiz_progress_${STORAGE_VERSION}_${QUIZ_CONFIG.title.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30)}`;
 
+/**
+ * Safely save quiz progress to localStorage
+ * Handles quota errors and validates data before saving
+ */
 function saveProgress() {
   if (state.submitted) return;
+  
   const saveData = {
+    version: STORAGE_VERSION,
+    quizTitle: QUIZ_CONFIG.title,
+    totalQuestions: QUESTIONS.length,
     current: state.current,
     answers: state.answers,
     flagged: state.flagged,
@@ -1525,29 +1535,135 @@ function saveProgress() {
     mode: state.mode,
     timestamp: Date.now()
   };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
+  
+  try {
+    // Validate data before saving
+    if (!isValidSaveData(saveData)) {
+      console.warn('Invalid save data, skipping save');
+      return;
+    }
+    
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
+    console.log('Progress saved successfully');
+  } catch (e) {
+    if (e.name === 'QuotaExceededError' || e.code === 22) {
+      console.warn('LocalStorage quota exceeded, clearing old saves...');
+      clearOldSaves();
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
+      } catch (retryError) {
+        console.error('Failed to save progress even after cleanup:', retryError);
+      }
+    } else {
+      console.error('Error saving progress:', e);
+    }
+  }
 }
 
+/**
+ * Validate save data structure
+ */
+function isValidSaveData(data) {
+  if (!data || typeof data !== 'object') return false;
+  if (typeof data.current !== 'number' || data.current < 0 || data.current >= data.totalQuestions) return false;
+  if (!data.answers || typeof data.answers !== 'object') return false;
+  if (!data.flagged || typeof data.flagged !== 'object') return false;
+  if (typeof data.timerSecs !== 'number' || data.timerSecs < 0) return false;
+  if (!['exam', 'learning'].includes(data.mode)) return false;
+  return true;
+}
+
+/**
+ * Clear old saves from other quizzes to free up space
+ */
+function clearOldSaves() {
+  try {
+    const now = Date.now();
+    const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
+    
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('quiz_progress_')) {
+        try {
+          const data = JSON.parse(localStorage.getItem(key));
+          if (now - data.timestamp > maxAge) {
+            localStorage.removeItem(key);
+          }
+        } catch (e) {
+          // Invalid JSON, remove it
+          localStorage.removeItem(key);
+        }
+      }
+    });
+  } catch (e) {
+    console.error('Error clearing old saves:', e);
+  }
+}
+
+/**
+ * Restore quiz progress from localStorage
+ * Includes validation and compatibility checks
+ */
 function restoreProgress() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (!saved) return false;
   
   try {
     const data = JSON.parse(saved);
-    // Only restore if less than 7 days old
-    if (Date.now() - data.timestamp > 7 * 24 * 60 * 60 * 1000) {
+    
+    // Check if data is from a compatible version
+    if (data.version !== STORAGE_VERSION) {
+      console.log('Incompatible save version, starting fresh');
       localStorage.removeItem(STORAGE_KEY);
       return false;
     }
     
-    state.current = data.current;
+    // Verify this save is for the same quiz
+    if (data.quizTitle !== QUIZ_CONFIG.title) {
+      console.log('Save is for a different quiz, starting fresh');
+      localStorage.removeItem(STORAGE_KEY);
+      return false;
+    }
+    
+    // Verify question count hasn't changed
+    if (data.totalQuestions !== QUESTIONS.length) {
+      console.log('Quiz structure has changed, starting fresh');
+      localStorage.removeItem(STORAGE_KEY);
+      return false;
+    }
+    
+    // Only restore if less than 7 days old
+    const maxAge = 7 * 24 * 60 * 60 * 1000;
+    if (Date.now() - data.timestamp > maxAge) {
+      console.log('Save is too old, starting fresh');
+      localStorage.removeItem(STORAGE_KEY);
+      return false;
+    }
+    
+    // Validate all answer indices are still valid
+    for (const [qIdx, optIdx] of Object.entries(data.answers)) {
+      const qIndex = parseInt(qIdx);
+      if (qIndex >= 0 && qIndex < QUESTIONS.length) {
+        const optCount = QUESTIONS[qIndex].options.length;
+        if (optIdx < 0 || optIdx >= optCount) {
+          delete data.answers[qIdx];
+        }
+      } else {
+        delete data.answers[qIdx];
+      }
+    }
+    
+    // Restore state
+    state.current = Math.min(data.current, QUESTIONS.length - 1);
     state.answers = data.answers;
-    state.flagged = data.flagged;
-    state.elapsed = data.elapsed;
-    state.timerSecs = data.timerSecs;
+    state.flagged = data.flagged || {};
+    state.elapsed = data.elapsed || 0;
+    state.timerSecs = Math.max(0, data.timerSecs);
     state.mode = data.mode;
+    state.submitted = false;
+    
     return true;
   } catch(e) {
+    console.error('Error restoring progress:', e);
     localStorage.removeItem(STORAGE_KEY);
     return false;
   }
@@ -1559,6 +1675,13 @@ function clearProgress() {
 
 // Auto-save every 5 seconds
 setInterval(saveProgress, 5000);
+
+// Save progress before page unload (tab close, refresh, navigation)
+window.addEventListener('beforeunload', function() {
+  if (!state.submitted) {
+    saveProgress();
+  }
+});
 
 // Check for saved progress on init
 function checkSavedProgress() {
