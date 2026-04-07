@@ -247,7 +247,15 @@ function downloadQuiz() {
   templateFrame.style.display = 'none';
   templateFrame.src = 'quizes/quiz-template.html';
   
+  let loadTimeout = setTimeout(function() {
+    if (templateFrame && templateFrame.parentNode) {
+      document.body.removeChild(templateFrame);
+      alert('Loading template timed out. Make sure quizes/quiz-template.html exists.');
+    }
+  }, 5000);
+  
   templateFrame.onload = function() {
+    clearTimeout(loadTimeout);
     try {
       // First check if contentDocument is available (null with local file origin restrictions)
       if (!templateFrame.contentDocument || !templateFrame.contentDocument.documentElement) {
@@ -274,21 +282,20 @@ function downloadQuiz() {
       setTimeout(() => URL.revokeObjectURL(url), 100);
       
     } catch (error) {
-      document.body.removeChild(templateFrame);
+      if (templateFrame && templateFrame.parentNode) {
+        document.body.removeChild(templateFrame);
+      }
       console.error(error);
       alert('Error generating quiz file: ' + error.message + '\n\nTry running this page through a web server instead of opening locally.');
     }
   };
   
-  // Also handle iframe loading errors
   templateFrame.onerror = function() {
-    document.body.removeChild(templateFrame);
-    alert('Failed to load quiz template file. Check that quizes/quiz-template.html exists.');
-  };
-  
-  templateFrame.onerror = function() {
+    clearTimeout(loadTimeout);
+    if (templateFrame && templateFrame.parentNode) {
+      document.body.removeChild(templateFrame);
+    }
     alert("Could not load quiz template. Make sure quizes/quiz-template.html exists in the correct folder.");
-    document.body.removeChild(templateFrame);
   };
   
   document.body.appendChild(templateFrame);
