@@ -170,6 +170,37 @@ textarea:focus {
     You can use 4 or 5 options per question. This tool will preserve all existing fields including explanations and properties.
   </div>
 
+  <details class="form-group" style="background: var(--surface2); padding: 1rem; border-radius: 8px; border-left: 3px solid var(--accent);">
+    <summary style="cursor: pointer; font-weight: 600; color: var(--text); margin-bottom: 0.75rem;">📋 Best Prompt for AI to Generate Questions Array</summary>
+    <div style="margin-top: 0.75rem;">
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.75rem;">Use this prompt with any AI assistant to generate properly formatted questions:</p>
+      <textarea id="prompt-template" style="min-height: 200px; font-size: 0.85rem;" readonly>Generate a quiz questions array in JavaScript format for a quiz about [TOPIC]. 
+
+Format each question exactly like this structure:
+
+[
+  {
+    question: "Your question text here?",
+    options: ["Option A", "Option B", "Option C", "Option D", "Option E"],
+    correct: 1,
+    explanation: "Brief explanation of why this answer is correct"
+  },
+  // Add more questions...
+]
+
+Requirements:
+- Each question must have: question (string), options (array of 4-5 strings), correct (number - zero-based index of correct answer), explanation (string)
+- Use clear, engaging question text
+- Make distractors plausible but clearly wrong
+- Include helpful explanations
+- Generate [NUMBER] questions total
+- Topic: [YOUR TOPIC HERE]
+
+Output ONLY the JavaScript array, no additional text or markdown formatting.</textarea>
+      <button class="btn-generate" style="margin-top: 1rem; padding: 0.75rem; font-size: 0.9rem;" onclick="copyPrompt()">📋 Copy Prompt to Clipboard</button>
+    </div>
+  </details>
+
   <div class="form-group">
     <label>Paste QUESTIONS Array:</label>
     <textarea id="js-input" placeholder='Paste your questions array here, example:
@@ -204,6 +235,19 @@ function init() {
 }
 
 let parsedQuestions = null;
+
+function copyPrompt() {
+  const promptText = document.getElementById('prompt-template').value;
+  navigator.clipboard.writeText(promptText).then(() => {
+    alert('✅ Prompt copied to clipboard! Now paste it into your AI assistant.');
+  }).catch(err => {
+    // Fallback for older browsers
+    const textarea = document.getElementById('prompt-template');
+    textarea.select();
+    document.execCommand('copy');
+    alert('✅ Prompt copied to clipboard! Now paste it into your AI assistant.');
+  });
+}
 
 function generateQuiz() {
   const input = document.getElementById('js-input').value.trim();
