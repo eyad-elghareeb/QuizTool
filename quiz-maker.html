@@ -401,8 +401,8 @@ function downloadQuiz() {
     .then(template => {
       // Replace quiz config and questions
       let modified = template
-        .replace(/"General Knowledge Quiz"/, JSON.stringify(window.generatedQuiz.title))
-        .replace(/"Test your knowledge across science, history, geography, and more."/, JSON.stringify(window.generatedQuiz.description))
+        .replace(/title:\s*"General Knowledge Quiz"/, `title: ${JSON.stringify(window.generatedQuiz.title)}`)
+        .replace(/description:\s*"Test your knowledge across science, history, geography, and more."/, `description: ${JSON.stringify(window.generatedQuiz.description)}`)
         .replace(/const QUESTIONS = \[[\s\S]*?\];/, `const QUESTIONS = ${JSON.stringify(window.generatedQuiz.questions, null, 2)};`);
       
       // Create download

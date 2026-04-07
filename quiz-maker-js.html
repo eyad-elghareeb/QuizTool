@@ -265,8 +265,8 @@ function downloadQuiz() {
       let template = templateFrame.contentDocument.documentElement.outerHTML;
       
       let modified = template
-        .replace(/"General Knowledge Quiz"/, JSON.stringify(window.generatedQuiz.title))
-        .replace(/"Test your knowledge across science, history, geography, and more."/, JSON.stringify(window.generatedQuiz.description))
+        .replace(/title:\s*"General Knowledge Quiz"/, `title: ${JSON.stringify(window.generatedQuiz.title)}`)
+        .replace(/description:\s*"Test your knowledge across science, history, geography, and more."/, `description: ${JSON.stringify(window.generatedQuiz.description)}`)
         .replace(/const\s+QUESTIONS\s*=\s*\[[\s\S]*?\];/m, `const QUESTIONS = ${questionsJson};`);
       
       document.body.removeChild(templateFrame);
