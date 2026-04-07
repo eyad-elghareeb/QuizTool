@@ -1076,6 +1076,8 @@ let state = {
   submitted: false,
   mode:      'exam', // 'exam' or 'learning'
 };
+let timerPaused = false;
+let lastTime = Date.now();
 
 /* ── MODE SELECTION HANDLERS ───────────────────────────────── */
 document.querySelectorAll('input[name="quiz-mode"]').forEach(input => {
@@ -1158,25 +1160,43 @@ function showScreen(id) {
 /* ── TIMER ────────────────────────────────────────────────── */
 function startTimer() {
   if(state.timerID) clearInterval(state.timerID);
+  timerPaused = false;
+  lastTime = Date.now();
   state.timerID = setInterval(() => {
-    state.elapsed++;
-    state.timerSecs--;
-    updateTimerDisplay();
-    if(state.timerSecs <= 0) {
-      clearInterval(state.timerID);
-      showToast("⏰ Time's up! Submitting…");
-      setTimeout(confirmSubmit, 1500);
+    if (!timerPaused && state.timerSecs > 0) {
+      const now = Date.now();
+      const delta = Math.floor((now - lastTime) / 1000);
+      if (delta >= 1) {
+        state.elapsed += delta;
+        state.timerSecs -= delta;
+        lastTime = now;
+        updateTimerDisplay();
+        if(state.timerSecs <= 0) {
+          stopTimer();
+          showToast("⏰ Time's up! Submitting…");
+          setTimeout(confirmSubmit, 1500);
+        }
+      }
     }
-  }, 1000);
+  }, 100);
+}
+
+function stopTimer() {
+  if(state.timerID) {
+    clearInterval(state.timerID);
+    state.timerID = null;
+  }
+  timerPaused = true;
 }
 
 function updateTimerDisplay() {
-  const m = Math.floor(state.timerSecs / 60);
-  const s = state.timerSecs % 60;
+  const secs = Math.max(0, state.timerSecs || 0);
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
   document.getElementById('timer-text').textContent =
     String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
   const el = document.getElementById('timer-display');
-  if(state.timerSecs < 120) el.classList.add('warn'); else el.classList.remove('warn');
+  if(secs < 120) el.classList.add('warn'); else el.classList.remove('warn');
 }
 
 /* ── RENDER QUESTION ─────────────────────────────────────── */
@@ -1366,7 +1386,7 @@ function closeModal() {
 }
 function confirmSubmit() {
   closeModal();
-  clearInterval(state.timerID);
+  stopTimer();
   state.submitted = true;
   clearProgress(); // Clear saved progress after successful submission
   buildResults();
@@ -1708,6 +1728,17 @@ function confirmResetProgress() {
   }
 }
 
+// Stop timer when user leaves the page/tab
+window.addEventListener('visibilitychange', function() {
+  if (document.hidden && !state.submitted && state.mode !== 'learning') {
+    stopTimer();
+  } else if (!document.hidden && !state.submitted && state.mode !== 'learning' && state.timerID === null) {
+    // Resume timer when user comes back (only if it was stopped due to visibility change)
+    lastTime = Date.now();
+    timerPaused = false;
+  }
+});
+
 // Auto-save every 5 seconds
 setInterval(saveProgress, 5000);
 
@@ -1729,6 +1760,7 @@ function checkSavedProgress() {
       showScreen('quiz-screen');
       buildNavGrid();
       renderQuestion(state.current);
+      updateTimerDisplay(); // Ensure timer display is correct on restore
       if(state.mode !== 'learning') {
         startTimer();
       }

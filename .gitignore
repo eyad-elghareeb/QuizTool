@@ -1,51 +1,77 @@
-```
-# Logs and temp files
+# Examples
+docs/
+examples/
+
+# Logs
 *.log
-*.tmp
-*.swp
+
+# Checkpoints
+checkpoints/
+ckpts/
+
+# PyTorch
+*.pth
+*.pt
+*.ckpt
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+.venv/
+.env/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Data
+data/
+output/
+
+# Model
+model/
 
 # Environment
 .env
 .env.local
-.env.*
+.env.dev
+.env.prod
 
-# Editors
-.vscode/
-.idea/
+# Temp
+*.tmp
+*.temp
+*.swp
+*~
 
-# Dependencies
-node_modules/
-venv/
-.venv/
-__pycache__/
-.mypy_cache/
-.pytest_cache/
+# Coverage
+.coverage
+htmlcov/
+.coverage.*
+
+# Distribution
 dist/
 build/
-target/
-.gradle/
+*.egg-info/
 
-# OS generated files
-.DS_Store
-Thumbs.db
-
-# Coverage reports
-coverage/
-htmlcov/
-.coverage
-
-# Compiled files
-*.pyc
-*.class
-*.o
-*.exe
-*.dll
-*.so
-*.a
-*.obj
-*.out
-
-# Compressed files
+# Compressed
 *.zip
 *.gz
 *.tar
@@ -68,4 +94,460 @@ htmlcov/
 *.tar.bz2
 *.tar.xz
 *.tar.zst
-```
+
+# Images
+*.png
+*.jpg
+*.jpeg
+*.bmp
+*.gif
+*.webm
+
+# Videos
+*.mp4
+*.avi
+*.mov
+*.wmv
+*.flv
+*.webm
+
+# Audio
+*.mp3
+*.wav
+*.flac
+*.aac
+*.ogg
+
+# Documents
+*.pdf
+*.doc
+*.docx
+*.ppt
+*.pptx
+*.xls
+*.xlsx
+
+# Fonts
+*.ttf
+*.otf
+*.woff
+*.woff2
+
+# Archives
+*.rar
+*.zip
+*.tar
+*.gz
+*.bz2
+*.xz
+*.7z
+
+# System
+*.tmp
+*.temp
+*.log
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# Backup
+*~
+*.bak
+*.backup
+
+# Cache
+.cache/
+*.cache
+
+# Lock
+*.lock
+
+# Config
+config/
+settings/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Test
+test/
+tests/
+spec/
+
+# Node
+node_modules/
+
+# Pip
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Coverage
+coverage/
+.coverage
+
+# Sphinx
+_sphinx/
+
+# Documentation
+docs/_build/
+
+# Distribution / packaging
+.Python
+*.so
+*.egg-info/
+.eggs/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+*.egg
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Translations
+*.mo
+*.pot
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask
+instance/
+.webassets-cache
+
+# Scrapy
+.scrapy
+
+# Sphinx
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# Sage
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre
+.pyre/
+
+# IDE
+.vscode/
+.idea/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*$pyc.class
+*$pyo.class
+*$pyd.class
+.Python
+env/
+venv/
+ENV/
+.venv/
+.env/
+.pytest_cache/
+.hypothesis/
+.coverage
+htmlcov/
+.coverage.*
+*.cover
+*.log
+*.tmp
+*.temp
+*.swp
+*~
+.DS_Store
+Thumbs.db
+node_modules/
+dist/
+build/
+*.egg-info/
+.eggs/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+*.so
+*.dylib
+*.dll
+*.exe
+*.out
+*.o
+*.obj
+*.pyd
+*.so.*
+*.egg
+*.whl
+*.zip
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
+*.zst
+*.7z
+*.rar
+*.gz
+*.bz2
+*.xz
+*.tgz
+*.tar
+*.png
+*.jpg
+*.jpeg
+*.bmp
+*.gif
+*.webm
+*.mp4
+*.avi
+*.mov
+*.wmv
+*.flv
+*.mp3
+*.wav
+*.flac
+*.aac
+*.ogg
+*.pdf
+*.doc
+*.docx
+*.ppt
+*.pptx
+*.xls
+*.xlsx
+*.ttf
+*.otf
+*.woff
+*.woff2
+*.db
+*.sqlite
+*.sqlite3
+test/
+tests/
+spec/
+config/
+settings/
+.cache/
+*.cache
+*.lock
+*.bak
+*.backup
+_sphinx/
+docs/_build/
+.Python
+*.egg-info/
+.eggs/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+*.so
+*.dylib
+*.dll
+instance/
+.webassets-cache
+.scrapy
+.pytest_cache/
+.hypothesis/
+*.mo
+*.pot
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+celerybeat-schedule
+celerybeat.pid
+*.sage.py
+env.bak/
+venv.bak/
+.spyderproject
+.spyproject
+.ropeproject
+/site
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+Pipfile.lock
+__pypackages__/
+.profile
+.bashrc
+.bash_profile
+.zshrc
+.vimrc
+.tmux.conf
+.screenrc
+.gitconfig
+.hgignore
+.svnignore
+.cvsignore
+.editorconfig
+.eslintrc
+.jshintrc
+.stylelintrc
+.prettierrc
+.babelrc
+.webpack.config.js
+.rollup.config.js
+.vite.config.js
+.npmrc
+.yarnrc
+.browserslistrc
+.commitlintrc
+.czrc
+.husky/
+.lintstagedrc
+.prettierignore
+.eslintignore
+.stylelintignore
+.babelignore
+.webpackignore
+.rollupignore
+.viteignore
+.nyc_output/
+.nyc_coverage/
+istanbul/
+.coverage/
+.reports/
+coverage-final.json
+lcov-report/
+lcov.info
+*.lcov
+*.info
+*.raw
+*.json
+*.xml
+*.csv
+*.txt
+*.md
+*.rst
+*.txt~
+*~
+*~.tmp
+*~.bak
+*~.old
+*~.new
+*~.orig
+*~.rej
+*~.bak
+*~.tmp
+*~.swp
+*~.swo
+*~.un~
+*~.~
+*~.bak~
+*~.old~
+*~.new~
+*~.orig~
+*~.rej~
+*~.bak~
+*~.tmp~
+*~.swp~
+*~.swo~
+*~.un~
