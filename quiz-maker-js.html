@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JS Quiz Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:         #0d1117;
+  --surface:    #161b22;
+  --surface2:   #1c2330;
+  --border:     #30363d;
+  --text:       #e6edf3;
+  --text-muted: #8b949e;
+  --accent:     #f0a500;
+  --accent-dim: rgba(240,165,0,0.12);
+  --correct:    #2ea043;
+  --wrong:      #da3633;
+  --radius:     12px;
+  --shadow:     0 4px 24px rgba(0,0,0,0.4);
+  --transition: 0.2s ease;
+}
+[data-theme="light"] {
+  --bg:         #f3f0eb;
+  --surface:    #ffffff;
+  --surface2:   #f8f6f1;
+  --border:     #d0ccc5;
+  --text:       #1c1917;
+  --text-muted: #78716c;
+  --accent:     #c27803;
+  --accent-dim: rgba(194,120,3,0.10);
+  --correct:    #16a34a;
+  --wrong:      #dc2626;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  transition: background var(--transition), color var(--transition);
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.topbar-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  flex: 1;
+}
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color var(--transition);
+}
+.back-btn:hover { color: var(--text); }
+
+h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: var(--text);
+}
+textarea {
+  width: 100%;
+  padding: 1rem;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: 'Consolas', monospace;
+  font-size: 0.9rem;
+  min-height: 400px;
+  resize: vertical;
+  transition: all var(--transition);
+  white-space: pre;
+  overflow-x: auto;
+}
+textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.btn-generate {
+  width: 100%;
+  padding: 1rem;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: #000;
+  font-weight: 700;
+  font-size: 1rem;
+  border: none;
+  cursor: pointer;
+  transition: opacity var(--transition);
+  margin-bottom: 2rem;
+}
+.btn-generate:hover { opacity: 0.88; }
+
+.output-area {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.output-area pre {
+  max-height: 300px;
+  overflow: auto;
+  padding: 1rem;
+  background: var(--surface2);
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+}
+
+.hint {
+  background: var(--surface2);
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 3px solid var(--accent);
+  margin-bottom: 1.5rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="index.html" class="back-btn">← Back to Hub</a>
+  <div class="topbar-title">⚡ JS Quiz Generator</div>
+</div>
+
+<div class="container">
+  <h1>Generate Quiz from JS Array</h1>
+
+  <div class="hint">
+    <strong>Instructions:</strong> Paste your QUESTIONS JavaScript array directly below. Supports any format will be injected into the quiz template automatically.<br>
+    You can use 4 or 5 options per question. This tool will preserve all existing fields including explanations and properties.
+  </div>
+
+  <div class="form-group">
+    <label>Paste QUESTIONS Array:</label>
+    <textarea id="js-input" placeholder='Paste your questions array here, example:
+
+[
+  {
+    question: "What is 2 + 2?",
+    options: ["3", "4", "5", "6", "7"],
+    correct: 1,
+    explanation: "2 + 2 equals 4"
+  },
+  {
+    question: "Second question..."
+  }
+]'></textarea>
+  </div>
+
+  <button class="btn-generate" onclick="generateQuiz()">📥 Generate Quiz File</button>
+
+  <div class="output-area" id="output-area" style="display: none;">
+    <h3 style="margin-bottom: 1rem;">✅ Quiz Generated:</h3>
+    <button class="btn-generate" style="margin-top: 1rem;" onclick="downloadQuiz()">💾 Download as HTML File</button>
+  </div>
+</div>
+
+<script>
+function init() {
+  const savedTheme = localStorage.getItem('quiz-theme');
+  if (savedTheme) {
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  }
+}
+
+let parsedQuestions = null;
+
+function generateQuiz() {
+  const input = document.getElementById('js-input').value.trim();
+  
+  if(!input) {
+    alert('Please paste your questions array first!');
+    return;
+  }
+
+  try {
+    // Safely evaluate the input
+    parsedQuestions = eval(`(${input})`);
+    
+    if(!Array.isArray(parsedQuestions)) {
+      throw new Error("Input is not an array");
+    }
+    
+    window.generatedQuiz = {
+      title: "Generated Quiz",
+      description: `Imported from JS questions`,
+      questions: parsedQuestions
+    };
+    
+    document.getElementById('output-area').style.display = 'block';
+    alert(`Successfully parsed ${parsedQuestions.length} questions!`);
+    
+  } catch (e) {
+    alert('Error parsing JavaScript array: ' + e.message);
+    console.error(e);
+  }
+}
+
+function downloadQuiz() {
+  if(!window.generatedQuiz) return;
+  
+  // Create complete quiz file directly without external requests
+  let questionsJson = JSON.stringify(window.generatedQuiz.questions, null, 2);
+  
+  // Load template via hidden iframe workaround that works on local files
+  let templateFrame = document.createElement('iframe');
+  templateFrame.style.display = 'none';
+  templateFrame.src = 'quizes/quiz-template.html';
+  
+  templateFrame.onload = function() {
+    try {
+      // First check if contentDocument is available (null with local file origin restrictions)
+      if (!templateFrame.contentDocument || !templateFrame.contentDocument.documentElement) {
+        throw new Error("Cannot access iframe content. This is a browser security restriction for local files.");
+      }
+      
+      let template = templateFrame.contentDocument.documentElement.outerHTML;
+      
+      let modified = template
+        .replace(/"General Knowledge Quiz"/, JSON.stringify(window.generatedQuiz.title))
+        .replace(/"Test your knowledge across science, history, geography, and more."/, JSON.stringify(window.generatedQuiz.description))
+        .replace(/const\s+QUESTIONS\s*=\s*\[[\s\S]*?\];/m, `const QUESTIONS = ${questionsJson};`);
+      
+      document.body.removeChild(templateFrame);
+      
+      const blob = new Blob([modified], {type: 'text/html'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'generated-quiz.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+      
+    } catch (error) {
+      document.body.removeChild(templateFrame);
+      console.error(error);
+      alert('Error generating quiz file: ' + error.message + '\n\nTry running this page through a web server instead of opening locally.');
+    }
+  };
+  
+  // Also handle iframe loading errors
+  templateFrame.onerror = function() {
+    document.body.removeChild(templateFrame);
+    alert('Failed to load quiz template file. Check that quizes/quiz-template.html exists.');
+  };
+  
+  templateFrame.onerror = function() {
+    alert("Could not load quiz template. Make sure quizes/quiz-template.html exists in the correct folder.");
+    document.body.removeChild(templateFrame);
+  };
+  
+  document.body.appendChild(templateFrame);
+}
+
+init();
+</script>
+</body>
+</html>

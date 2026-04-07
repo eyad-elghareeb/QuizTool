@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz Maker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   CSS VARIABLES & THEME
+═══════════════════════════════════════════ */
+:root {
+  --bg:         #0d1117;
+  --surface:    #161b22;
+  --surface2:   #1c2330;
+  --border:     #30363d;
+  --text:       #e6edf3;
+  --text-muted: #8b949e;
+  --accent:     #f0a500;
+  --accent-dim: rgba(240,165,0,0.12);
+  --correct:    #2ea043;
+  --wrong:      #da3633;
+  --radius:     12px;
+  --shadow:     0 4px 24px rgba(0,0,0,0.4);
+  --transition: 0.2s ease;
+}
+[data-theme="light"] {
+  --bg:         #f3f0eb;
+  --surface:    #ffffff;
+  --surface2:   #f8f6f1;
+  --border:     #d0ccc5;
+  --text:       #1c1917;
+  --text-muted: #78716c;
+  --accent:     #c27803;
+  --accent-dim: rgba(194,120,3,0.10);
+  --correct:    #16a34a;
+  --wrong:      #dc2626;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  transition: background var(--transition), color var(--transition);
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.topbar-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  flex: 1;
+}
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color var(--transition);
+}
+.back-btn:hover { color: var(--text); }
+
+h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: var(--text);
+}
+input, textarea {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 1rem;
+  transition: all var(--transition);
+}
+input:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.question-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+.question-number {
+  position: absolute;
+  top: -12px;
+  left: 1rem;
+  background: var(--accent);
+  color: #000;
+  font-weight: 700;
+  padding: 0.2rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+.question-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.delete-btn {
+  background: var(--wrong-bg);
+  border: 1px solid var(--wrong);
+  color: var(--wrong);
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+.option-input {
+  position: relative;
+}
+.option-input input {
+  padding-left: 3rem;
+}
+.option-label {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.correct-selector {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.correct-selector select {
+  padding: 0.4rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.btn-add {
+  width: 100%;
+  padding: 1rem;
+  border: 2px dashed var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all var(--transition);
+  margin-bottom: 2rem;
+}
+.btn-add:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-generate {
+  width: 100%;
+  padding: 1rem;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: #000;
+  font-weight: 700;
+  font-size: 1rem;
+  border: none;
+  cursor: pointer;
+  transition: opacity var(--transition);
+}
+.btn-generate:hover { opacity: 0.88; }
+
+.output-area {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.output-area pre {
+  max-height: 300px;
+  overflow: auto;
+  padding: 1rem;
+  background: var(--surface2);
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 768px) {
+  .options-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="index.html" class="back-btn">← Back to Hub</a>
+  <div class="topbar-title">🔧 Quiz Maker</div>
+</div>
+
+<div class="container">
+  <h1>Create New Quiz</h1>
+
+  <div class="form-group">
+    <label>Quiz Title</label>
+    <input type="text" id="quiz-title" placeholder="Enter quiz name...">
+  </div>
+
+  <div class="form-group">
+    <label>Quiz Description</label>
+    <textarea id="quiz-description" rows="2" placeholder="Short description about this quiz..."></textarea>
+  </div>
+
+  <div id="questions-container">
+    <!-- Questions will be added here -->
+  </div>
+
+  <button class="btn-add" onclick="addQuestion()">+ Add Question</button>
+
+  <button class="btn-generate" onclick="generateQuiz()">📥 Generate Quiz File</button>
+
+  <div class="output-area" id="output-area" style="display: none;">
+    <h3 style="margin-bottom: 1rem;">✅ Generated Quiz Code:</h3>
+    <pre id="output-code"></pre>
+    <button class="btn-generate" style="margin-top: 1rem;" onclick="downloadQuiz()">💾 Download as HTML File</button>
+  </div>
+</div>
+
+<script>
+let questionCount = 0;
+
+function init() {
+  // Load saved theme
+  const savedTheme = localStorage.getItem('quiz-theme');
+  if (savedTheme) {
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  }
+  // Add first question
+  addQuestion();
+}
+
+function addQuestion() {
+  questionCount++;
+  const container = document.getElementById('questions-container');
+  
+  const questionCard = document.createElement('div');
+  questionCard.className = 'question-card';
+  questionCard.id = `question-${questionCount}`;
+  
+  questionCard.innerHTML = `
+    <span class="question-number">Q ${questionCount}</span>
+    <div class="question-header">
+      <span style="color: var(--text-muted);">Question ${questionCount}</span>
+      <button class="delete-btn" onclick="deleteQuestion(${questionCount})">✕ Delete</button>
+    </div>
+    
+    <div class="form-group">
+      <textarea id="q-${questionCount}-text" rows="2" placeholder="Enter your question here..."></textarea>
+    </div>
+    
+    <div class="options-grid">
+      <div class="option-input">
+        <span class="option-label">A</span>
+        <input type="text" id="q-${questionCount}-opt-a" placeholder="Option A">
+      </div>
+      <div class="option-input">
+        <span class="option-label">B</span>
+        <input type="text" id="q-${questionCount}-opt-b" placeholder="Option B">
+      </div>
+      <div class="option-input">
+        <span class="option-label">C</span>
+        <input type="text" id="q-${questionCount}-opt-c" placeholder="Option C">
+      </div>
+       <div class="option-input">
+         <span class="option-label">D</span>
+         <input type="text" id="q-${questionCount}-opt-d" placeholder="Option D">
+       </div>
+       <div class="option-input">
+         <span class="option-label">E</span>
+         <input type="text" id="q-${questionCount}-opt-e" placeholder="Option E">
+       </div>
+     </div>
+    
+    <div class="correct-selector">
+      <span>Correct Answer:</span>
+       <select id="q-${questionCount}-correct">
+         <option value="0">A</option>
+         <option value="1">B</option>
+         <option value="2">C</option>
+         <option value="3">D</option>
+         <option value="4">E</option>
+       </select>
+    </div>
+    
+    <div class="form-group" style="margin-top: 1rem;">
+      <textarea id="q-${questionCount}-expl" rows="2" placeholder="Explanation (shown after answering)..."></textarea>
+    </div>
+  `;
+  
+  container.appendChild(questionCard);
+}
+
+function deleteQuestion(id) {
+  const el = document.getElementById(`question-${id}`);
+  if(el) el.remove();
+}
+
+function generateQuiz() {
+  const title = document.getElementById('quiz-title').value || 'New Quiz';
+  const description = document.getElementById('quiz-description').value || '';
+  
+  const questions = [];
+  document.querySelectorAll('.question-card').forEach(card => {
+    const id = card.id.replace('question-', '');
+    const qText = document.getElementById(`q-${id}-text`)?.value;
+    if(!qText) return;
+    
+    questions.push({
+      question: qText,
+       options: [
+         document.getElementById(`q-${id}-opt-a`)?.value || '',
+         document.getElementById(`q-${id}-opt-b`)?.value || '',
+         document.getElementById(`q-${id}-opt-c`)?.value || '',
+         document.getElementById(`q-${id}-opt-d`)?.value || '',
+         document.getElementById(`q-${id}-opt-e`)?.value || ''
+       ],
+      correct: parseInt(document.getElementById(`q-${id}-correct`)?.value || 0),
+      explanation: document.getElementById(`q-${id}-expl`)?.value || ''
+    });
+  });
+  
+  if(questions.length === 0) {
+    alert('Please add at least one question!');
+    return;
+  }
+
+  // Generate output JSON
+  const output = {
+    title: title,
+    description: description,
+    questions: questions
+  };
+  
+  document.getElementById('output-area').style.display = 'block';
+  document.getElementById('output-code').textContent = JSON.stringify(output, null, 2);
+  
+  // Store for download
+  window.generatedQuiz = output;
+}
+
+function downloadQuiz() {
+  if(!window.generatedQuiz) return;
+  
+  // Load base template
+  fetch('quizes/quiz-template.html')
+    .then(res => res.text())
+    .then(template => {
+      // Replace quiz config and questions
+      let modified = template
+        .replace(/"General Knowledge Quiz"/, JSON.stringify(window.generatedQuiz.title))
+        .replace(/"Test your knowledge across science, history, geography, and more."/, JSON.stringify(window.generatedQuiz.description))
+        .replace(/const QUESTIONS = \[[\s\S]*?\];/, `const QUESTIONS = ${JSON.stringify(window.generatedQuiz.questions, null, 2)};`);
+      
+      // Create download
+      const blob = new Blob([modified], {type: 'text/html'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = window.generatedQuiz.title.replace(/\s+/g, '-').toLowerCase() + '.html';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+}
+
+init();
+</script>
+</body>
+</html>
