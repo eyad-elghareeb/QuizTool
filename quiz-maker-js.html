@@ -75,6 +75,19 @@ body {
 }
 .back-btn:hover { color: var(--text); }
 
+.icon-btn {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted);
+  transition: all var(--transition);
+  font-size: 1rem;
+  cursor: pointer;
+}
+.icon-btn:hover { color: var(--text); border-color: var(--accent); }
+
 h1 {
   font-family: 'Playfair Display', serif;
   font-size: 2rem;
@@ -160,6 +173,7 @@ textarea:focus {
 <div class="topbar">
   <a href="index.html" class="back-btn">← Back to Hub</a>
   <div class="topbar-title">⚡ JS Quiz Generator</div>
+  <button class="icon-btn" onclick="resetForm()" title="Reset Form">↻</button>
 </div>
 
 <div class="container">
@@ -343,6 +357,48 @@ function downloadQuiz() {
   };
   
   document.body.appendChild(templateFrame);
+}
+
+/**
+ * Reset the form to initial state
+ */
+function resetForm() {
+  if (confirm('Are you sure you want to reset the form? All entered data will be lost.')) {
+    document.getElementById('js-input').value = '';
+    document.getElementById('output-area').style.display = 'none';
+    parsedQuestions = null;
+    window.generatedQuiz = null;
+    showToast('Form reset successfully!');
+  }
+}
+
+/**
+ * Show toast notification
+ */
+function showToast(msg) {
+  const toast = document.createElement('div');
+  toast.textContent = msg;
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius);
+    color: var(--text);
+    font-weight: 500;
+    box-shadow: var(--shadow);
+    z-index: 9999;
+    animation: slideUp 0.3s ease;
+  `;
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.3s ease';
+    setTimeout(() => toast.remove(), 300);
+  }, 2200);
 }
 
 init();
