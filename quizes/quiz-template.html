@@ -170,6 +170,24 @@ input[type=radio] { display: none; }
 .btn-start:hover { opacity: 0.88; transform: translateY(-1px); }
 .btn-start:active { transform: translateY(0); }
 
+/* Mode options - ensure equal height on mobile */
+.mode-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+}
+
+@media (max-width: 480px) {
+  .mode-option {
+    min-height: 90px;
+  }
+  .start-card {
+    padding: 2rem 1.5rem;
+  }
+}
+
 /* ═══════════════════════════════════════════
    QUIZ SCREEN LAYOUT
 ═══════════════════════════════════════════ */
