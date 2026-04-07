@@ -1692,7 +1692,7 @@ function confirmResetProgress() {
     state.answers = {};
     state.flagged = {};
     state.elapsed = 0;
-    state.timerSecs = QUIZ_CONFIG.timeLimit * 60;
+    state.timerSecs = (QUESTIONS.length + 5) * 60;
     state.submitted = false;
     
     showToast('🔄 Progress reset! Starting fresh...');
