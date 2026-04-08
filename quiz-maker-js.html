@@ -184,10 +184,21 @@ textarea:focus {
     You can use 4 or 5 options per question. This tool will preserve all existing fields including explanations and properties.
   </div>
 
+  <div class="form-group">
+    <label>Quiz Title</label>
+    <input type="text" id="quiz-title" placeholder="Enter quiz name..." value="General Knowledge Quiz" style="width: 100%; padding: 0.85rem 1rem; border-radius: var(--radius); border: 1.5px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 1rem; transition: all var(--transition);">
+  </div>
+
+  <div class="form-group">
+    <label>Quiz Description</label>
+    <textarea id="quiz-description" rows="2" placeholder="Short description about this quiz..." style="width: 100%; padding: 0.85rem 1rem; border-radius: var(--radius); border: 1.5px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 1rem; transition: all var(--transition); resize: vertical; min-height: auto;">Test your knowledge across science, history, geography, and more.</textarea>
+  </div>
+
   <details class="form-group" style="background: var(--surface2); padding: 1rem; border-radius: 8px; border-left: 3px solid var(--accent);">
     <summary style="cursor: pointer; font-weight: 600; color: var(--text); margin-bottom: 0.75rem;">📋 Best Prompt for AI to Generate Questions Array</summary>
     <div style="margin-top: 0.75rem;">
       <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.75rem;">Use this prompt with any AI assistant to generate properly formatted questions:</p>
+      <a href="https://gemini.google.com/gem/10Wtzm9NCe6vTfSEQoV2M38_8VNypNqsd?usp=sharing" target="_blank" rel="noopener noreferrer" style="display: inline-block; margin-bottom: 0.75rem; color: var(--accent); text-decoration: none; font-weight: 600;">🔗 Open Gemini Quiz Generator</a>
       <textarea id="prompt-template" style="min-height: 200px; font-size: 0.85rem;" readonly>Generate a quiz questions array in JavaScript format for a quiz about [TOPIC]. 
 
 Format each question exactly like this structure:
@@ -279,9 +290,12 @@ function generateQuiz() {
       throw new Error("Input is not an array");
     }
     
+    const title = document.getElementById('quiz-title').value || 'Generated Quiz';
+    const description = document.getElementById('quiz-description').value || 'Imported from JS questions';
+    
     window.generatedQuiz = {
-      title: "Generated Quiz",
-      description: `Imported from JS questions`,
+      title: title,
+      description: description,
       questions: parsedQuestions
     };
     
@@ -364,6 +378,8 @@ function downloadQuiz() {
  */
 function resetForm() {
   if (confirm('Are you sure you want to reset the form? All entered data will be lost.')) {
+    document.getElementById('quiz-title').value = 'General Knowledge Quiz';
+    document.getElementById('quiz-description').value = 'Test your knowledge across science, history, geography, and more.';
     document.getElementById('js-input').value = '';
     document.getElementById('output-area').style.display = 'none';
     parsedQuestions = null;

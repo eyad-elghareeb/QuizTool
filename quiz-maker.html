@@ -261,12 +261,12 @@ input:focus, textarea:focus {
 
   <div class="form-group">
     <label>Quiz Title</label>
-    <input type="text" id="quiz-title" placeholder="Enter quiz name...">
+    <input type="text" id="quiz-title" placeholder="Enter quiz name..." value="General Knowledge Quiz">
   </div>
 
   <div class="form-group">
     <label>Quiz Description</label>
-    <textarea id="quiz-description" rows="2" placeholder="Short description about this quiz..."></textarea>
+    <textarea id="quiz-description" rows="2" placeholder="Short description about this quiz...">Test your knowledge across science, history, geography, and more.</textarea>
   </div>
 
   <div id="questions-container">
@@ -453,8 +453,8 @@ function resetForm() {
     
     // Reset in-memory state
     questionCount = 0;
-    document.getElementById('quiz-title').value = '';
-    document.getElementById('quiz-description').value = '';
+    document.getElementById('quiz-title').value = 'General Knowledge Quiz';
+    document.getElementById('quiz-description').value = 'Test your knowledge across science, history, geography, and more.';
     document.getElementById('questions-container').innerHTML = '';
     document.getElementById('output-area').style.display = 'none';
     document.getElementById('output-code').textContent = '';
