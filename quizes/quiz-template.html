@@ -1539,7 +1539,7 @@ function toggleTheme() {
   updateThemeIcon();
 }
 
-/* ── NAVIGATE TO INDEX.HTML IN SAME DIRECTORY ───────────────────────────────────────────────── */
+/* ── NAVIGATE TO INDEX.HTML IN SAME DIRECTORY (WITH FALLBACK) ───────────────────────────────────────────────── */
 function navigateToIndex(event) {
   event.preventDefault();
   // Get the current page's path
@@ -1547,8 +1547,27 @@ function navigateToIndex(event) {
   // Extract the directory portion
   const lastSlashIndex = currentPath.lastIndexOf('/');
   const directory = lastSlashIndex !== -1 ? currentPath.substring(0, lastSlashIndex + 1) : '/';
-  // Navigate to index.html in the same directory
-  window.location.href = directory + 'index.html';
+  
+  // First, try to navigate to index.html in the same directory
+  const sameDirIndex = directory + 'index.html';
+  
+  // Check if index.html exists in the same directory by attempting to fetch it
+  fetch(sameDirIndex, { method: 'HEAD' })
+    .then(response => {
+      if (response.ok) {
+        // index.html exists in the same directory
+        window.location.href = sameDirIndex;
+      } else {
+        // Fallback: go one directory up and look for index.html
+        const parentDir = directory.substring(0, directory.lastIndexOf('/', directory.length - 2) + 1) || '/';
+        window.location.href = parentDir + 'index.html';
+      }
+    })
+    .catch(() => {
+      // If fetch fails (e.g., CORS or network issue), fallback to parent directory
+      const parentDir = directory.substring(0, directory.lastIndexOf('/', directory.length - 2) + 1) || '/';
+      window.location.href = parentDir + 'index.html';
+    });
 }
 function updateThemeIcon() {
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
