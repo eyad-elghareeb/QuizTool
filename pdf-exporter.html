@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDF Exporter - QuizTool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:         #0d1117;
+  --surface:    #161b22;
+  --surface2:   #1c2330;
+  --border:     #30363d;
+  --text:       #e6edf3;
+  --text-muted: #8b949e;
+  --accent:     #f0a500;
+  --accent-dim: rgba(240,165,0,0.12);
+  --radius:     12px;
+  --shadow:     0 4px 24px rgba(0,0,0,0.4);
+  --transition: 0.2s ease;
+}
+[data-theme="light"] {
+  --bg:         #f3f0eb;
+  --surface:    #ffffff;
+  --surface2:   #f8f6f1;
+  --border:     #d0ccc5;
+  --text:       #1c1917;
+  --text-muted: #78716c;
+  --accent:     #c27803;
+  --accent-dim: rgba(194,120,3,0.10);
+  --shadow:     0 4px 24px rgba(0,0,0,0.10);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  transition: background var(--transition), color var(--transition);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* UI Elements */
+.no-print { display: block; }
+
+.topbar {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.topbar-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  flex: 1;
+}
+.icon-btn {
+  width: 38px; height: 38px;
+  border-radius: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted);
+  transition: all var(--transition);
+  font-size: 1.1rem;
+  cursor: pointer;
+  text-decoration: none;
+}
+.icon-btn:hover { color: var(--text); border-color: var(--accent); }
+
+.container {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 0 1.5rem;
+  flex: 1;
+  width: 100%;
+}
+
+.upload-card {
+  background: var(--surface);
+  border: 2px dashed var(--border);
+  border-radius: 20px;
+  padding: 4rem 2rem;
+  text-align: center;
+  transition: all var(--transition);
+  cursor: pointer;
+}
+.upload-card:hover, .upload-card.dragover {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+.upload-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  display: block;
+}
+
+.controls {
+  margin: 2rem 0;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius);
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all var(--transition);
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.btn-primary {
+  background: var(--accent);
+  color: #000;
+}
+.btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+
+.toggle-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  user-select: none;
+  cursor: pointer;
+}
+.toggle-wrap input { cursor: pointer; }
+
+/* Preview & Print Styles */
+#print-area {
+  background: white;
+  color: black;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  display: none;
+  margin-top: 2rem;
+}
+
+.quiz-header {
+  text-align: center;
+  border-bottom: 2px solid #000;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+}
+.quiz-header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.2rem;
+  margin-bottom: 0.5rem;
+}
+.quiz-header p {
+  font-size: 1.1rem;
+  color: #444;
+}
+
+.question-item {
+  margin-bottom: 2rem;
+  page-break-inside: avoid;
+}
+.question-text {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+.options-list {
+  list-style: none;
+  margin-left: 1rem;
+}
+.option-item {
+  margin-bottom: 0.4rem;
+  display: flex;
+  gap: 0.75rem;
+}
+.option-letter {
+  font-weight: 700;
+  min-width: 1.5rem;
+}
+
+.answer-key {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: #f0f0f0;
+  border-left: 4px solid #000;
+  font-size: 0.95rem;
+}
+.answer-key.hidden { display: none; }
+.answer-key strong { color: #d32f2f; }
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: white !important; color: black !important; }
+  .container { max-width: none; margin: 0; padding: 0; }
+  #print-area {
+    display: block !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}
+
+.status-msg {
+  text-align: center;
+  margin-top: 1rem;
+  font-weight: 500;
+}
+.status-msg.error { color: var(--wrong, #da3633); }
+
+</style>
+</head>
+<body>
+
+  <div class="topbar no-print">
+    <div class="topbar-title">PDF Exporter</div>
+    <div style="display:flex; gap: 0.5rem;">
+      <a href="index.html" class="icon-btn" title="Back to Hub">🏠</a>
+      <button class="icon-btn" onclick="toggleTheme()" id="theme-toggle">☀</button>
+    </div>
+  </div>
+
+  <div class="container no-print">
+    <div class="upload-card" id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <span class="upload-icon">📄</span>
+      <h2>Upload Quiz HTML</h2>
+      <p style="color: var(--text-muted); margin-top: 0.5rem;">Drag and drop your exported quiz file here, or click to browse.</p>
+      <input type="file" id="file-input" hidden accept=".html">
+    </div>
+
+    <div id="status" class="status-msg"></div>
+
+    <div id="preview-controls" class="controls" style="display: none;">
+      <label class="toggle-wrap">
+        <input type="checkbox" id="show-answers" checked onchange="updatePreview()">
+        <span>Show Answers & Explanations</span>
+      </label>
+      <button class="btn btn-primary" onclick="window.print()">🖨️ Print to PDF</button>
+    </div>
+    
+    <div id="preview-hint" style="text-align: center; margin-bottom: 1rem; color: var(--text-muted); display: none;">
+      Scroll down to see the preview. The actual PDF will have a clean white background.
+    </div>
+  </div>
+
+  <div class="container">
+    <div id="print-area">
+      <!-- Generated content goes here -->
+    </div>
+  </div>
+
+<script>
+let quizData = {
+  config: {},
+  questions: []
+};
+
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+const status = document.getElementById('status');
+const previewControls = document.getElementById('preview-controls');
+const printArea = document.getElementById('print-area');
+const previewHint = document.getElementById('preview-hint');
+
+// Drag and drop handlers
+dropZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  dropZone.classList.add('dragover');
+});
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+
+fileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) handleFile(file);
+});
+
+function handleFile(file) {
+  if (!file.name.endsWith('.html')) {
+    showStatus('Please upload an HTML file.', 'error');
+    return;
+  }
+
+  showStatus('Processing file...', '');
+  
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const content = e.target.result;
+      
+      // Extraction using regex
+      // Using new Function to safely evaluate the JS object/array literal
+      const configMatch = content.match(/const QUIZ_CONFIG\s*=\s*({[\s\S]*?});/);
+      const questionsMatch = content.match(/const QUESTIONS\s*=\s*(\[[\s\S]*?\]);/);
+      
+      if (!configMatch || !questionsMatch) {
+        throw new Error('Could not find quiz data in the uploaded file. Make sure it is a valid QuizTool export.');
+      }
+      
+      quizData.config = new Function('return ' + configMatch[1])();
+      quizData.questions = new Function('return ' + questionsMatch[1])();
+      
+      showStatus(`Successfully loaded "${quizData.config.title}" with ${quizData.questions.length} questions.`, '');
+      previewControls.style.display = 'flex';
+      previewHint.style.display = 'block';
+      updatePreview();
+    } catch (err) {
+      console.error(err);
+      showStatus('Error: ' + err.message, 'error');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function showStatus(msg, type) {
+  status.textContent = msg;
+  status.className = 'status-msg ' + type;
+}
+
+function updatePreview() {
+  const showAnswers = document.getElementById('show-answers').checked;
+  const letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+  
+  let html = `
+    <div class="quiz-header">
+      <h1>${quizData.config.title}</h1>
+      <p>${quizData.config.description || ''}</p>
+    </div>
+  `;
+  
+  quizData.questions.forEach((q, i) => {
+    html += `
+      <div class="question-item">
+        <div class="question-text">${i + 1}. ${q.question}</div>
+        <div class="options-list">
+          ${q.options.map((opt, optIdx) => `
+            <div class="option-item">
+              <span class="option-letter">${letters[optIdx]}.</span>
+              <span class="option-text">${opt}</span>
+            </div>
+          `).join('')}
+        </div>
+        <div class="answer-key ${showAnswers ? '' : 'hidden'}">
+          <strong>Correct Answer: ${letters[q.correct]}</strong>
+          ${q.explanation ? `<div style="margin-top: 0.4rem;">${q.explanation}</div>` : ''}
+        </div>
+      </div>
+    `;
+  });
+  
+  printArea.innerHTML = html;
+  printArea.style.display = 'block';
+}
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  const newTheme = isDark ? 'light' : 'dark';
+  html.setAttribute('data-theme', newTheme);
+  localStorage.setItem('quiz-theme', newTheme);
+  updateThemeIcon();
+}
+
+function updateThemeIcon() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.getElementById('theme-toggle').textContent = isDark ? '☀' : '☾';
+}
+
+// Init theme icon
+updateThemeIcon();
+if (localStorage.getItem('quiz-theme')) {
+    document.documentElement.setAttribute('data-theme', localStorage.getItem('quiz-theme'));
+    updateThemeIcon();
+}
+</script>
+</body>
+</html>
