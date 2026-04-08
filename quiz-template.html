@@ -439,6 +439,7 @@ input[type=radio]:checked + .option-label .option-key {
   width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0;
 }
 .dot.answered  { background: var(--correct); }
+.dot.wrong     { background: var(--wrong); }
 .dot.flagged   { background: var(--flagged); }
 .dot.current   { background: var(--accent); }
 .dot.unanswered{ background: var(--surface2); border: 1.5px solid var(--border); }
@@ -469,6 +470,7 @@ input[type=radio]:checked + .option-label .option-key {
 }
 .nav-btn:hover { border-color: var(--accent); color: var(--accent); }
 .nav-btn.answered { background: var(--correct-bg); border-color: var(--correct); color: var(--correct); }
+.nav-btn.wrong    { background: var(--wrong-bg); border-color: var(--wrong); color: var(--wrong); }
 .nav-btn.flagged  { background: var(--flagged-bg); border-color: var(--flagged); color: var(--flagged); }
 .nav-btn.current  { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim); }
 .nav-btn .flag-dot {
@@ -909,7 +911,8 @@ input[type=radio]:checked + .option-label .option-key {
         <h3>Navigation</h3>
         <div class="legend">
           <div class="legend-item"><div class="dot current"></div> Current</div>
-          <div class="legend-item"><div class="dot answered"></div> Answered</div>
+          <div class="legend-item"><div class="dot answered"></div> <span id="legend-text-answered">Answered</span></div>
+          <div class="legend-item" id="legend-wrong" style="display: none;"><div class="dot wrong"></div> Wrong</div>
           <div class="legend-item"><div class="dot flagged"></div> Flagged</div>
           <div class="legend-item"><div class="dot unanswered"></div> Skipped</div>
         </div>
@@ -1157,8 +1160,16 @@ function startQuiz() {
   if(state.mode === 'learning') {
     // Hide timer in learning mode
     document.getElementById('timer-display').classList.add('hidden');
+    const legendAns = document.getElementById('legend-text-answered');
+    if(legendAns) legendAns.textContent = 'Correct';
+    const legendWr = document.getElementById('legend-wrong');
+    if(legendWr) legendWr.style.display = 'flex';
   } else {
     document.getElementById('timer-display').classList.remove('hidden');
+    const legendAns = document.getElementById('legend-text-answered');
+    if(legendAns) legendAns.textContent = 'Answered';
+    const legendWr = document.getElementById('legend-wrong');
+    if(legendWr) legendWr.style.display = 'none';
   }
   
   buildNavGrid();
@@ -1251,11 +1262,11 @@ function renderQuestion(idx) {
         let keyStyle = '';
         if (isLearning && isAnswered) {
           if (i === q.correct) {
-            extraStyle = 'border-color: var(--correct); background: var(--correct-bg); pointer-events: none;';
-            keyStyle = 'background: var(--correct); color: white; border-color: var(--correct);';
+            extraStyle = 'border-color: var(--correct) !important; background: var(--correct-bg) !important; pointer-events: none;';
+            keyStyle = 'background: var(--correct) !important; color: white !important; border-color: var(--correct) !important;';
           } else if (sel === i) {
-            extraStyle = 'border-color: var(--wrong); background: var(--wrong-bg); pointer-events: none;';
-            keyStyle = 'background: var(--wrong); color: white; border-color: var(--wrong);';
+            extraStyle = 'border-color: var(--wrong) !important; background: var(--wrong-bg) !important; pointer-events: none;';
+            keyStyle = 'background: var(--wrong) !important; color: white !important; border-color: var(--wrong) !important;';
           } else {
             extraStyle = 'pointer-events: none;';
           }
@@ -1345,8 +1356,16 @@ function updateNavGrid() {
     const btn = document.getElementById(`nav-btn-${i}`);
     if(!btn) return;
     btn.className = 'nav-btn';
-    if(i === state.current)   btn.classList.add('current');
-    else if(state.answers[i] !== undefined) btn.classList.add('answered');
+    
+    if(i === state.current) {
+      btn.classList.add('current');
+    } else if(state.answers[i] !== undefined) {
+      if (state.mode === 'learning' && state.answers[i] !== QUESTIONS[i].correct) {
+        btn.classList.add('wrong');
+      } else {
+        btn.classList.add('answered');
+      }
+    }
 
     // Add flag dot
     const existing = btn.querySelector('.flag-dot');
