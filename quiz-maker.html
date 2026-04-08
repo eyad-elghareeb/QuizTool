@@ -410,7 +410,7 @@ function downloadQuiz() {
   if(!window.generatedQuiz) return;
   
   // Load base template
-  fetch('quizes/quiz-template.html')
+  fetch('quiz-template.html')
     .then(res => res.text())
     .then(template => {
       // Replace quiz config and questions
