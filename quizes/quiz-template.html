@@ -826,7 +826,7 @@ input[type=radio]:checked + .option-label .option-key {
 
 <!-- ═══════════════════════════ START ═══════════════════════════ -->
 <div id="start-screen" class="screen active">
-  <a href="../index.html" class="hub-back-btn">
+  <a href="#" class="hub-back-btn" onclick="navigateToIndex(event); return false;">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
       <line x1="19" y1="12" x2="5" y2="12"></line>
       <polyline points="12 19 5 12 12 5"></polyline>
@@ -886,7 +886,7 @@ input[type=radio]:checked + .option-label .option-key {
       <span id="timer-text">00:00</span>
     </div>
     <div class="topbar-actions">
-      <a href="../index.html" class="icon-btn" title="Back to Hub">🏠</a>
+      <a href="#" class="icon-btn" title="Back to Hub" onclick="navigateToIndex(event); return false;">🏠</a>
       <button class="icon-btn theme-toggle-btn" onclick="toggleTheme()" title="Toggle theme">☀</button>
       <button class="icon-btn danger" onclick="confirmResetProgress()" title="Reset Progress">↻</button>
     </div>
@@ -931,7 +931,7 @@ input[type=radio]:checked + .option-label .option-key {
   <div class="result-topbar">
     <h2>📊 Quiz Results</h2>
     <div class="topbar-actions">
-      <a href="../index.html" class="icon-btn" title="Back to Hub">🏠</a>
+      <a href="#" class="icon-btn" title="Back to Hub" onclick="navigateToIndex(event); return false;">🏠</a>
       <button class="icon-btn theme-toggle-btn" onclick="toggleTheme()" title="Toggle theme">☀</button>
       <button class="icon-btn danger" onclick="confirmResetProgress()" title="Reset Progress">↻</button>
     </div>
@@ -969,7 +969,7 @@ input[type=radio]:checked + .option-label .option-key {
 
     <div class="result-actions">
       <button class="btn-restart" onclick="restartQuiz()">↺ Retake Quiz</button>
-      <a href="../index.html" class="btn-restart btn-secondary">🏠 Return to Hub</a>
+      <a href="#" class="btn-restart btn-secondary" onclick="navigateToIndex(event); return false;">🏠 Return to Hub</a>
     </div>
   </div>
 </div>
@@ -1537,6 +1537,37 @@ function toggleTheme() {
   localStorage.setItem('quiz-theme', newTheme); 
   
   updateThemeIcon();
+}
+
+/* ── NAVIGATE TO INDEX.HTML IN SAME DIRECTORY (WITH FALLBACK) ───────────────────────────────────────────────── */
+function navigateToIndex(event) {
+  event.preventDefault();
+  // Get the current page's path
+  const currentPath = window.location.pathname;
+  // Extract the directory portion
+  const lastSlashIndex = currentPath.lastIndexOf('/');
+  const directory = lastSlashIndex !== -1 ? currentPath.substring(0, lastSlashIndex + 1) : '/';
+  
+  // First, try to navigate to index.html in the same directory
+  const sameDirIndex = directory + 'index.html';
+  
+  // Check if index.html exists in the same directory by attempting to fetch it
+  fetch(sameDirIndex, { method: 'HEAD' })
+    .then(response => {
+      if (response.ok) {
+        // index.html exists in the same directory
+        window.location.href = sameDirIndex;
+      } else {
+        // Fallback: go one directory up and look for index.html
+        const parentDir = directory.substring(0, directory.lastIndexOf('/', directory.length - 2) + 1) || '/';
+        window.location.href = parentDir + 'index.html';
+      }
+    })
+    .catch(() => {
+      // If fetch fails (e.g., CORS or network issue), fallback to parent directory
+      const parentDir = directory.substring(0, directory.lastIndexOf('/', directory.length - 2) + 1) || '/';
+      window.location.href = parentDir + 'index.html';
+    });
 }
 function updateThemeIcon() {
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
