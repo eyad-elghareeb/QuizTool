@@ -317,12 +317,12 @@ function downloadQuiz() {
   // Load template via hidden iframe workaround that works on local files
   let templateFrame = document.createElement('iframe');
   templateFrame.style.display = 'none';
-  templateFrame.src = 'quizes/quiz-template.html';
+  templateFrame.src = 'quiz-template.html';
   
   let loadTimeout = setTimeout(function() {
     if (templateFrame && templateFrame.parentNode) {
       document.body.removeChild(templateFrame);
-      alert('Loading template timed out. Make sure quizes/quiz-template.html exists.');
+      alert('Loading template timed out. Make sure quiz-template.html exists.');
     }
   }, 5000);
   
@@ -367,7 +367,7 @@ function downloadQuiz() {
     if (templateFrame && templateFrame.parentNode) {
       document.body.removeChild(templateFrame);
     }
-    alert("Could not load quiz template. Make sure quizes/quiz-template.html exists in the correct folder.");
+    alert("Could not load quiz template. Make sure quiz-template.html exists in the correct folder.");
   };
   
   document.body.appendChild(templateFrame);
