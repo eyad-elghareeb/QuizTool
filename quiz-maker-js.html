@@ -171,7 +171,7 @@ textarea:focus {
 <body>
 
 <div class="topbar">
-  <a href="index.html" class="back-btn">← Back to Hub</a>
+  <a href="#" onclick="navigateToIndex(event)" class="back-btn">← Back to Hub</a>
   <div class="topbar-title">⚡ JS Quiz Generator</div>
   <button class="icon-btn" onclick="resetForm()" title="Reset Form">↻</button>
 </div>
@@ -415,6 +415,48 @@ function showToast(msg) {
     toast.style.transition = 'opacity 0.3s ease';
     setTimeout(() => toast.remove(), 300);
   }, 2200);
+}
+
+/* ── NAVIGATE TO INDEX.HTML IN SAME DIRECTORY (WITH FALLBACK) ───────────────────────────────────────────────── */
+function navigateToIndex(event) {
+  event.preventDefault();
+  // Get the current page's path
+  const currentPath = window.location.pathname;
+  // Extract the directory portion
+  const lastSlashIndex = currentPath.lastIndexOf('/');
+  const directory = lastSlashIndex !== -1 ? currentPath.substring(0, lastSlashIndex + 1) : '/';
+  
+  // First, try to navigate to index.html in the same directory (PRIORITY)
+  const sameDirIndex = directory + 'index.html';
+  
+  // Create a temporary iframe to test existence
+  const testFrame = document.createElement('iframe');
+  testFrame.style.display = 'none';
+  testFrame.src = sameDirIndex;
+  document.body.appendChild(testFrame);
+  
+  testFrame.onload = function() {
+    // Successfully loaded - index.html exists in same directory
+    document.body.removeChild(testFrame);
+    window.location.href = sameDirIndex;
+  };
+  
+  testFrame.onerror = function() {
+    // Failed to load - fallback to parent directory
+    document.body.removeChild(testFrame);
+    const parentDir = directory.substring(0, directory.lastIndexOf('/', directory.length - 2) + 1) || '/';
+    window.location.href = parentDir + 'index.html';
+  };
+  
+  // Timeout fallback in case neither onload nor onerror fires (e.g., CORS)
+  setTimeout(function() {
+    if (document.body.contains(testFrame)) {
+      document.body.removeChild(testFrame);
+      // If we get here, assume same directory didn't work, try parent
+      const parentDir = directory.substring(0, directory.lastIndexOf('/', directory.length - 2) + 1) || '/';
+      window.location.href = parentDir + 'index.html';
+    }
+  }, 3000);
 }
 
 init();

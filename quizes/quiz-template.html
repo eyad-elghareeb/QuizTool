@@ -1548,26 +1548,40 @@ function navigateToIndex(event) {
   const lastSlashIndex = currentPath.lastIndexOf('/');
   const directory = lastSlashIndex !== -1 ? currentPath.substring(0, lastSlashIndex + 1) : '/';
   
-  // First, try to navigate to index.html in the same directory
+  // First, try to navigate to index.html in the same directory (PRIORITY)
   const sameDirIndex = directory + 'index.html';
   
-  // Check if index.html exists in the same directory by attempting to fetch it
-  fetch(sameDirIndex, { method: 'HEAD' })
-    .then(response => {
-      if (response.ok) {
-        // index.html exists in the same directory
-        window.location.href = sameDirIndex;
-      } else {
-        // Fallback: go one directory up and look for index.html
-        const parentDir = directory.substring(0, directory.lastIndexOf('/', directory.length - 2) + 1) || '/';
-        window.location.href = parentDir + 'index.html';
-      }
-    })
-    .catch(() => {
-      // If fetch fails (e.g., CORS or network issue), fallback to parent directory
+  // Create a temporary link to test navigation
+  // We'll attempt to load the same directory index.html first
+  // If it results in a 404, the browser will show the error page
+  // For a more graceful fallback, we use an iframe to test existence
+  const testFrame = document.createElement('iframe');
+  testFrame.style.display = 'none';
+  testFrame.src = sameDirIndex;
+  document.body.appendChild(testFrame);
+  
+  testFrame.onload = function() {
+    // Successfully loaded - index.html exists in same directory
+    document.body.removeChild(testFrame);
+    window.location.href = sameDirIndex;
+  };
+  
+  testFrame.onerror = function() {
+    // Failed to load - fallback to parent directory
+    document.body.removeChild(testFrame);
+    const parentDir = directory.substring(0, directory.lastIndexOf('/', directory.length - 2) + 1) || '/';
+    window.location.href = parentDir + 'index.html';
+  };
+  
+  // Timeout fallback in case neither onload nor onerror fires (e.g., CORS)
+  setTimeout(function() {
+    if (document.body.contains(testFrame)) {
+      document.body.removeChild(testFrame);
+      // If we get here, assume same directory didn't work, try parent
       const parentDir = directory.substring(0, directory.lastIndexOf('/', directory.length - 2) + 1) || '/';
       window.location.href = parentDir + 'index.html';
-    });
+    }
+  }, 3000);
 }
 function updateThemeIcon() {
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
