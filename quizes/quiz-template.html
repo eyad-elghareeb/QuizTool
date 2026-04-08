@@ -1624,7 +1624,8 @@ function saveProgress() {
     elapsed: state.elapsed,
     timerSecs: state.timerSecs,
     mode: state.mode,
-    timestamp: Date.now()
+    timestamp: Date.now(),
+    savedAt: Date.now() // Separate field for time calculation
   };
   
   try {
@@ -1661,6 +1662,7 @@ function isValidSaveData(data) {
   if (!data.flagged || typeof data.flagged !== 'object') return false;
   if (typeof data.timerSecs !== 'number' || data.timerSecs < 0) return false;
   if (!['exam', 'learning'].includes(data.mode)) return false;
+  // savedAt is optional now since we don't use it for time calculation
   return true;
 }
 
@@ -1730,6 +1732,11 @@ function restoreProgress() {
       return false;
     }
     
+    // Handle backward compatibility: if savedAt doesn't exist, use timestamp
+    if (!data.savedAt) {
+      data.savedAt = data.timestamp;
+    }
+    
     // Validate all answer indices are still valid
     for (const [qIdx, optIdx] of Object.entries(data.answers)) {
       const qIndex = parseInt(qIdx);
@@ -1747,8 +1754,11 @@ function restoreProgress() {
     state.current = Math.min(data.current, QUESTIONS.length - 1);
     state.answers = data.answers;
     state.flagged = data.flagged || {};
+    
+    // Restore timer values exactly as saved (time doesn't count while page is closed)
     state.elapsed = data.elapsed || 0;
-    state.timerSecs = Math.max(0, data.timerSecs);
+    state.timerSecs = data.timerSecs || 0;
+    
     state.mode = data.mode;
     state.submitted = false;
     
