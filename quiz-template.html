@@ -1224,6 +1224,10 @@ function renderQuestion(idx) {
   const isLast = idx === QUESTIONS.length - 1;
   const sel = state.answers[idx];
 
+  // In learning mode, check if answered
+  const isLearning = state.mode === 'learning';
+  const isAnswered = sel !== undefined;
+
   // progress
   const done = Object.keys(state.answers).length;
   document.getElementById('progress-fill').style.width = (done / QUESTIONS.length * 100) + '%';
@@ -1242,14 +1246,36 @@ function renderQuestion(idx) {
     </div>
 
     <div class="options-list" id="options-list">
-      ${q.options.map((opt, i) => `
-        <input type="radio" name="q_opt" id="opt_${i}" value="${i}" ${sel===i?'checked':''} onchange="selectAnswer(${idx},${i})">
-        <label class="option-label" for="opt_${i}">
-          <span class="option-key">${KEYS[i]}</span>
+      ${q.options.map((opt, i) => {
+        let extraStyle = '';
+        let keyStyle = '';
+        if (isLearning && isAnswered) {
+          if (i === q.correct) {
+            extraStyle = 'border-color: var(--correct); background: var(--correct-bg); pointer-events: none;';
+            keyStyle = 'background: var(--correct); color: white; border-color: var(--correct);';
+          } else if (sel === i) {
+            extraStyle = 'border-color: var(--wrong); background: var(--wrong-bg); pointer-events: none;';
+            keyStyle = 'background: var(--wrong); color: white; border-color: var(--wrong);';
+          } else {
+            extraStyle = 'pointer-events: none;';
+          }
+        }
+        return `
+        <input type="radio" name="q_opt" id="opt_${i}" value="${i}" ${sel===i?'checked':''} ${isLearning && isAnswered ? 'disabled' : ''} onchange="selectAnswer(${idx},${i})">
+        <label class="option-label" for="opt_${i}" style="${extraStyle}">
+          <span class="option-key" style="${keyStyle}">${KEYS[i]}</span>
           <span class="option-text">${opt}</span>
         </label>
-      `).join('')}
+        `;
+      }).join('')}
     </div>
+
+    ${(isLearning && isAnswered) ? `
+      <div class="explanation-box" style="margin-top: 1rem;">
+        <strong>${sel === q.correct ? '✅ Correct!' : '❌ Incorrect'}</strong>
+        ${q.explanation}
+      </div>
+    ` : ''}
 
     <div class="q-nav-btns">
       ${idx > 0 ? `<button class="btn-nav" onclick="goTo(${idx-1})">← Previous</button>` : ''}
@@ -1265,6 +1291,8 @@ function renderQuestion(idx) {
 
 /* ── ANSWER SELECTION ────────────────────────────────────── */
 function selectAnswer(qIdx, optIdx) {
+  if (state.mode === 'learning' && state.answers[qIdx] !== undefined) return;
+  
   state.answers[qIdx] = optIdx;
   updateNavGrid();
   updateNavStats();
@@ -1272,53 +1300,11 @@ function selectAnswer(qIdx, optIdx) {
   const done = Object.keys(state.answers).length;
   document.getElementById('progress-fill').style.width = (done / QUESTIONS.length * 100) + '%';
   
-  // In learning mode: show correct answer and feedback after user selects option
+  // In learning mode: re-render to show explanation and highlights
   if(state.mode === 'learning') {
-    const q = QUESTIONS[qIdx];
-    const isCorrect = optIdx === q.correct;
-    
-    // Highlight selected answer
-    const selectedLabel = document.querySelector(`label[for="opt_${optIdx}"]`);
-    if(selectedLabel) {
-      if(isCorrect) {
-        selectedLabel.style.borderColor = 'var(--correct)';
-        selectedLabel.style.background = 'var(--correct-bg)';
-        selectedLabel.querySelector('.option-key').style.background = 'var(--correct)';
-        selectedLabel.querySelector('.option-key').style.color = 'white';
-      } else {
-        selectedLabel.style.borderColor = 'var(--wrong)';
-        selectedLabel.style.background = 'var(--wrong-bg)';
-        selectedLabel.querySelector('.option-key').style.background = 'var(--wrong)';
-        selectedLabel.querySelector('.option-key').style.color = 'white';
-        
-        // Also show correct answer
-        const correctLabel = document.querySelector(`label[for="opt_${q.correct}"]`);
-        if(correctLabel) {
-          correctLabel.style.borderColor = 'var(--correct)';
-          correctLabel.style.background = 'var(--correct-bg)';
-          correctLabel.querySelector('.option-key').style.background = 'var(--correct)';
-          correctLabel.querySelector('.option-key').style.color = 'white';
-        }
-      }
-    }
-    
-    // Show explanation
-    const existingExpl = document.querySelector('.explanation-box');
-    if(!existingExpl) {
-      const explBox = document.createElement('div');
-      explBox.className = 'explanation-box';
-      explBox.style.marginTop = '1rem';
-      explBox.innerHTML = `<strong>${isCorrect ? '✅ Correct!' : '❌ Incorrect'}</strong>${q.explanation}`;
-      document.getElementById('options-list').after(explBox);
-    }
-    
-    // Disable all options after selection
-    document.querySelectorAll('.option-label').forEach(label => {
-      label.style.pointerEvents = 'none';
-    });
+    renderQuestion(qIdx);
   }
 }
-
 /* ── NAVIGATION ──────────────────────────────────────────── */
 function nextQuestion() {
   if(state.current < QUESTIONS.length - 1) renderQuestion(state.current + 1);
