@@ -347,7 +347,7 @@ function downloadQuiz() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'generated-quiz.html';
+      a.download = window.generatedQuiz.title.replace(/\s+/g, '-').toLowerCase() + '.html';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
