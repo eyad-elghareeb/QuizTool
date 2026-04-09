@@ -33,6 +33,7 @@
   --accent-dim: rgba(194,120,3,0.10);
   --correct:    #16a34a;
   --wrong:      #dc2626;
+  --shadow:     0 4px 24px rgba(0,0,0,0.10);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -173,6 +174,7 @@ textarea:focus {
 <div class="topbar">
   <a href="#" onclick="navigateToIndex(event)" class="back-btn">← Back to Hub</a>
   <div class="topbar-title">⚡ JS Quiz Generator</div>
+  <button class="icon-btn" onclick="toggleTheme()" id="theme-toggle" title="Toggle theme">☀</button>
   <button class="icon-btn" onclick="resetForm()" title="Reset Form">↻</button>
 </div>
 
@@ -257,6 +259,22 @@ function init() {
   if (savedTheme) {
     document.documentElement.setAttribute('data-theme', savedTheme);
   }
+  updateThemeIcon();
+}
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  const newTheme = isDark ? 'light' : 'dark';
+  html.setAttribute('data-theme', newTheme);
+  localStorage.setItem('quiz-theme', newTheme);
+  updateThemeIcon();
+}
+
+function updateThemeIcon() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const btn = document.getElementById('theme-toggle');
+  if (btn) btn.textContent = isDark ? '☀' : '☾';
 }
 
 let parsedQuestions = null;
@@ -419,46 +437,10 @@ function showToast(msg) {
   }, 2200);
 }
 
-/* ── NAVIGATE TO INDEX.HTML IN SAME DIRECTORY (WITH FALLBACK) ───────────────────────────────────────────────── */
+/* ── NAVIGATE BACK TO HUB ──────────────────────────────────── */
 function navigateToIndex(event) {
   event.preventDefault();
-  // Get the current page's path
-  const currentPath = window.location.pathname;
-  // Extract the directory portion
-  const lastSlashIndex = currentPath.lastIndexOf('/');
-  const directory = lastSlashIndex !== -1 ? currentPath.substring(0, lastSlashIndex + 1) : '/';
-  
-  // First, try to navigate to index.html in the same directory (PRIORITY)
-  const sameDirIndex = directory + 'index.html';
-  
-  // Create a temporary iframe to test existence
-  const testFrame = document.createElement('iframe');
-  testFrame.style.display = 'none';
-  testFrame.src = sameDirIndex;
-  document.body.appendChild(testFrame);
-  
-  testFrame.onload = function() {
-    // Successfully loaded - index.html exists in same directory
-    document.body.removeChild(testFrame);
-    window.location.href = sameDirIndex;
-  };
-  
-  testFrame.onerror = function() {
-    // Failed to load - fallback to parent directory
-    document.body.removeChild(testFrame);
-    const parentDir = directory.substring(0, directory.lastIndexOf('/', directory.length - 2) + 1) || '/';
-    window.location.href = parentDir + 'index.html';
-  };
-  
-  // Timeout fallback in case neither onload nor onerror fires (e.g., CORS)
-  setTimeout(function() {
-    if (document.body.contains(testFrame)) {
-      document.body.removeChild(testFrame);
-      // If we get here, assume same directory didn't work, try parent
-      const parentDir = directory.substring(0, directory.lastIndexOf('/', directory.length - 2) + 1) || '/';
-      window.location.href = parentDir + 'index.html';
-    }
-  }, 3000);
+  window.location.href = 'index.html';
 }
 
 init();

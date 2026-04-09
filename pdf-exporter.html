@@ -379,12 +379,11 @@ function updateThemeIcon() {
   document.getElementById('theme-toggle').textContent = isDark ? '☀' : '☾';
 }
 
-// Init theme icon
-updateThemeIcon();
+// Init theme
 if (localStorage.getItem('quiz-theme')) {
-    document.documentElement.setAttribute('data-theme', localStorage.getItem('quiz-theme'));
-    updateThemeIcon();
+  document.documentElement.setAttribute('data-theme', localStorage.getItem('quiz-theme'));
 }
+updateThemeIcon();
 </script>
 </body>
 </html>
