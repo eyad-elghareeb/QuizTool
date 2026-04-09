@@ -734,48 +734,18 @@ input[type=radio]:checked + .option-label .option-key {
 ═══════════════════════════════════════════ */
 .toast {
   position: fixed;
-  bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(100px);
+  bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(80px);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 0.75rem 1.25rem;
-  font-size: 0.9rem;
+  border-radius: 10px;
+  padding: 0.65rem 1.2rem;
+  font-size: 0.88rem;
   font-weight: 500;
   box-shadow: var(--shadow);
   z-index: 9999;
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  opacity: 0;
-  pointer-events: none;
+  transition: transform 0.3s ease;
+  white-space: nowrap;
 }
-.toast.show { transform: translateX(-50%) translateY(0); opacity: 1; pointer-events: all; }
-.toast-btn {
-  background: var(--accent);
-  color: #000;
-  border: none;
-  padding: 0.4rem 0.8rem;
-  border-radius: 6px;
-  font-weight: 700;
-  font-size: 0.75rem;
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-.toast-btn:hover { opacity: 0.85; }
-.toast.show { transform: translateX(-50%) translateY(0); opacity: 1; pointer-events: all; }
-.toast-btn {
-  background: var(--accent);
-  color: #000;
-  border: none;
-  padding: 0.4rem 0.8rem;
-  border-radius: 6px;
-  font-weight: 700;
-  font-size: 0.75rem;
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-.toast-btn:hover { opacity: 0.85; }
 .toast.show { transform: translateX(-50%) translateY(0); }
 
 /* ═══════════════════════════════════════════
@@ -1629,51 +1599,26 @@ function updateThemeIcon() {
 
 /* ── TOAST ───────────────────────────────────────────────── */
 let toastTimer;
-function showToast(msg, btnText, btnCallback) {
+function showToast(msg) {
   const t = document.getElementById('toast');
-  if (!t) return;
-  t.innerHTML = `<span>${msg}</span>`;
-  if (btnText && btnCallback) {
-    const btn = document.createElement('button');
-    btn.textContent = btnText;
-    btn.className = 'toast-btn';
-    btn.onclick = (e) => {
-      e.stopPropagation();
-      btnCallback();
-      t.classList.remove('show');
-    };
-    t.appendChild(btn);
-  }
+  t.textContent = msg;
   t.classList.add('show');
   clearTimeout(toastTimer);
-  if (!btnText) {
-    toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
-  }
-}</span>`;
-  if (btnText && btnCallback) {
-    const btn = document.createElement('button');
-    btn.textContent = btnText;
-    btn.className = 'toast-btn';
-    btn.onclick = (e) => {
-      e.stopPropagation();
-      btnCallback();
-      t.classList.remove('show');
-    };
-    t.appendChild(btn);
-  }
-  t.classList.add('show');
-  clearTimeout(toastTimer);
-  if (!btnText) {
-    toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
-  }
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
 }
 
 /* ── LOCAL STORAGE SAVE/RESTORE ──────────────────────────── */
+// Improved storage key generation that handles special characters safely
 const STORAGE_VERSION = 'v1';
 const STORAGE_KEY = `quiz_progress_${STORAGE_VERSION}_${QUIZ_CONFIG.title.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30)}`;
 
+/**
+ * Safely save quiz progress to localStorage
+ * Handles quota errors and validates data before saving
+ */
 function saveProgress() {
   if (state.submitted) return;
+  
   const saveData = {
     version: STORAGE_VERSION,
     quizTitle: QUIZ_CONFIG.title,
@@ -1684,66 +1629,163 @@ function saveProgress() {
     elapsed: state.elapsed,
     timerSecs: state.timerSecs,
     mode: state.mode,
-    timestamp: Date.now()
+    timestamp: Date.now(),
+    savedAt: Date.now() // Separate field for time calculation
   };
+  
   try {
+    // Validate data before saving
+    if (!isValidSaveData(saveData)) {
+      console.warn('Invalid save data, skipping save');
+      return;
+    }
+    
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
+    console.log('Progress saved successfully');
   } catch (e) {
-    console.warn('Save failed', e);
+    if (e.name === 'QuotaExceededError' || e.code === 22) {
+      console.warn('LocalStorage quota exceeded, clearing old saves...');
+      clearOldSaves();
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
+      } catch (retryError) {
+        console.error('Failed to save progress even after cleanup:', retryError);
+      }
+    } else {
+      console.error('Error saving progress:', e);
+    }
   }
 }
 
-function getSavedProgress() {
+/**
+ * Validate save data structure
+ */
+function isValidSaveData(data) {
+  if (!data || typeof data !== 'object') return false;
+  if (typeof data.current !== 'number' || data.current < 0 || data.current >= data.totalQuestions) return false;
+  if (!data.answers || typeof data.answers !== 'object') return false;
+  if (!data.flagged || typeof data.flagged !== 'object') return false;
+  if (typeof data.timerSecs !== 'number' || data.timerSecs < 0) return false;
+  if (!['exam', 'learning'].includes(data.mode)) return false;
+  // savedAt is optional now since we don't use it for time calculation
+  return true;
+}
+
+/**
+ * Clear old saves from other quizzes to free up space
+ */
+function clearOldSaves() {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return null;
-    const data = JSON.parse(saved);
-    if (data.version !== STORAGE_VERSION || data.quizTitle !== QUIZ_CONFIG.title || data.totalQuestions !== QUESTIONS.length) return null;
-    return data;
-  } catch (e) { return null; }
+    const now = Date.now();
+    const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
+    
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('quiz_progress_')) {
+        try {
+          const data = JSON.parse(localStorage.getItem(key));
+          if (now - data.timestamp > maxAge) {
+            localStorage.removeItem(key);
+          }
+        } catch (e) {
+          // Invalid JSON, remove it
+          localStorage.removeItem(key);
+        }
+      }
+    });
+  } catch (e) {
+    console.error('Error clearing old saves:', e);
+  }
 }
 
-function applyProgress(data) {
-  if (!data) return;
-  state.current = Math.min(data.current, QUESTIONS.length - 1);
-  state.answers = data.answers;
-  state.flagged = data.flagged || {};
-  state.elapsed = data.elapsed || 0;
-  state.timerSecs = data.timerSecs || (QUESTIONS.length + 5) * 60;
-  state.mode = data.mode || 'exam';
-  state.submitted = false;
-
-  if (state.mode === 'learning') {
-    document.getElementById('timer-display').classList.add('hidden');
-    const legendAns = document.getElementById('legend-text-answered');
-    if(legendAns) legendAns.textContent = 'Correct';
-    const legendWr = document.getElementById('legend-wrong');
-    if(legendWr) legendWr.style.display = 'flex';
-  } else {
-    document.getElementById('timer-display').classList.remove('hidden');
-    const legendAns = document.getElementById('legend-text-answered');
-    if(legendAns) legendAns.textContent = 'Answered';
-    const legendWr = document.getElementById('legend-wrong');
-    if(legendWr) legendWr.style.display = 'none';
+/**
+ * Restore quiz progress from localStorage
+ * Includes validation and compatibility checks
+ */
+function restoreProgress() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (!saved) return false;
+  
+  try {
+    const data = JSON.parse(saved);
+    
+    // Check if data is from a compatible version
+    if (data.version !== STORAGE_VERSION) {
+      console.log('Incompatible save version, starting fresh');
+      localStorage.removeItem(STORAGE_KEY);
+      return false;
+    }
+    
+    // Verify this save is for the same quiz
+    if (data.quizTitle !== QUIZ_CONFIG.title) {
+      console.log('Save is for a different quiz, starting fresh');
+      localStorage.removeItem(STORAGE_KEY);
+      return false;
+    }
+    
+    // Verify question count hasn't changed
+    if (data.totalQuestions !== QUESTIONS.length) {
+      console.log('Quiz structure has changed, starting fresh');
+      localStorage.removeItem(STORAGE_KEY);
+      return false;
+    }
+    
+    // Only restore if less than 7 days old
+    const maxAge = 7 * 24 * 60 * 60 * 1000;
+    if (Date.now() - data.timestamp > maxAge) {
+      console.log('Save is too old, starting fresh');
+      localStorage.removeItem(STORAGE_KEY);
+      return false;
+    }
+    
+    // Handle backward compatibility: if savedAt doesn't exist, use timestamp
+    if (!data.savedAt) {
+      data.savedAt = data.timestamp;
+    }
+    
+    // Validate all answer indices are still valid
+    for (const [qIdx, optIdx] of Object.entries(data.answers)) {
+      const qIndex = parseInt(qIdx);
+      if (qIndex >= 0 && qIndex < QUESTIONS.length) {
+        const optCount = QUESTIONS[qIndex].options.length;
+        if (optIdx < 0 || optIdx >= optCount) {
+          delete data.answers[qIdx];
+        }
+      } else {
+        delete data.answers[qIdx];
+      }
+    }
+    
+    // Restore state
+    state.current = Math.min(data.current, QUESTIONS.length - 1);
+    state.answers = data.answers;
+    state.flagged = data.flagged || {};
+    
+    // Restore timer values exactly as saved (time doesn't count while page is closed)
+    state.elapsed = data.elapsed || 0;
+    state.timerSecs = data.timerSecs || 0;
+    
+    state.mode = data.mode;
+    state.submitted = false;
+    
+    return true;
+  } catch(e) {
+    console.error('Error restoring progress:', e);
+    localStorage.removeItem(STORAGE_KEY);
+    return false;
   }
-
-  showScreen('quiz-screen');
-  buildNavGrid();
-  renderQuestion(state.current);
-  updateTimerDisplay();
-  if (state.mode !== 'learning') {
-    startTimer();
-  }
-  showToast("🚀 Progress restored!");
 }
 
 function clearProgress() {
   localStorage.removeItem(STORAGE_KEY);
 }
 
+/**
+ * Confirm and reset quiz progress
+ */
 function confirmResetProgress() {
   if (confirm('Are you sure you want to reset your quiz progress? This cannot be undone.')) {
     clearProgress();
+    // Reset state
     state.current = 0;
     state.answers = {};
     state.flagged = {};
@@ -1751,41 +1793,54 @@ function confirmResetProgress() {
     state.timerSecs = (QUESTIONS.length + 5) * 60;
     state.submitted = false;
     state.mode = 'exam';
-    showToast('🔄 Progress reset!');
-    setTimeout(() => { showScreen('start-screen'); }, 1000);
+    
+    showToast('🔄 Progress reset! Starting fresh...');
+    
+    setTimeout(() => {
+      showScreen('start-screen');
+    }, 1000);
   }
 }
 
-function checkSavedProgress() {
-  const data = getSavedProgress();
-  if (data) {
-    const modeText = data.mode === 'learning' ? 'Learning Mode' : 'Exam Mode';
-    showToast(`📂 Saved ${modeText} found!`, "Restore", () => {
-      applyProgress(data);
-    });
-    // Set a timeout specifically for the restoration toast
-    toastTimer = setTimeout(() => {
-        const t = document.getElementById('toast');
-        if (t && t.classList.contains('show') && t.querySelector('.toast-btn')) {
-            t.classList.remove('show');
-        }
-    }, 8000);
-  }
-}
-
-window.addEventListener('visibilitychange', () => {
+// Stop timer when user leaves the page/tab
+window.addEventListener('visibilitychange', function() {
   if (document.hidden && !state.submitted && state.mode !== 'learning') {
     stopTimer();
   } else if (!document.hidden && !state.submitted && state.mode !== 'learning' && state.timerID === null) {
+    // Resume timer when user comes back (only if it was stopped due to visibility change)
     lastTime = Date.now();
     timerPaused = false;
   }
 });
 
+// Auto-save every 5 seconds
 setInterval(saveProgress, 5000);
-window.addEventListener('beforeunload', () => {
-  if (!state.submitted) saveProgress();
+
+// Save progress before page unload (tab close, refresh, navigation)
+window.addEventListener('beforeunload', function() {
+  if (!state.submitted) {
+    saveProgress();
+  }
 });
+
+// Check for saved progress on init
+function checkSavedProgress() {
+  if (restoreProgress()) {
+    showToast("📂 Previous progress found! Resuming quiz...");
+    setTimeout(() => {
+      if(state.mode === 'learning') {
+        document.getElementById('timer-display').classList.add('hidden');
+      }
+      showScreen('quiz-screen');
+      buildNavGrid();
+      renderQuestion(state.current);
+      updateTimerDisplay(); // Ensure timer display is correct on restore
+      if(state.mode !== 'learning') {
+        startTimer();
+      }
+    }, 1000);
+  }
+}
 
 /* ── BOOT ────────────────────────────────────────────────── */
 initUI();
