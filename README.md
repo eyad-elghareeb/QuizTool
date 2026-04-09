@@ -1,5 +1,4 @@
 # QuizTool 🎯
-## Seemes to be broken for now , test older versions
 A modern, feature-rich quiz creation and management platform built with vanilla HTML, CSS, and JavaScript. Create custom quizzes, manage multiple exam types, and test knowledge across various subjects—all in a beautiful, responsive interface.
 
 ## ✨ Features
