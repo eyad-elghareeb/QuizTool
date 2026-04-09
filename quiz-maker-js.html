@@ -315,68 +315,36 @@ function generateQuiz() {
 function downloadQuiz() {
   if(!window.generatedQuiz) return;
   
-  // Create complete quiz file directly without external requests
-  let questionsJson = JSON.stringify(window.generatedQuiz.questions, null, 2);
-  
-  // Load template via hidden iframe workaround that works on local files
-  let templateFrame = document.createElement('iframe');
-  templateFrame.style.display = 'none';
-  templateFrame.src = 'quiz-template.html';
-  
-  let loadTimeout = setTimeout(function() {
-    if (templateFrame && templateFrame.parentNode) {
-      document.body.removeChild(templateFrame);
-      alert('Loading template timed out. Make sure quiz-template.html exists.');
-    }
-  }, 5000);
-  
-  templateFrame.onload = function() {
-    clearTimeout(loadTimeout);
-    try {
-      // First check if contentDocument is available (null with local file origin restrictions)
-      if (!templateFrame.contentDocument || !templateFrame.contentDocument.documentElement) {
-        throw new Error("Cannot access iframe content. This is a browser security restriction for local files.");
-      }
-      
-      let template = templateFrame.contentDocument.documentElement.outerHTML;
-      
+  // Load base template
+  fetch('quiz-template.html')
+    .then(res => {
+      if (!res.ok) throw new Error('Failed to load quiz-template.html');
+      return res.text();
+    })
+    .then(template => {
       const configJson = JSON.stringify(window.generatedQuiz.config, null, 2);
       const questionsJson = JSON.stringify(window.generatedQuiz.questions, null, 2);
-      
+
+      // Replace quiz config and questions using robust regex
       let modified = template
         .replace(/const\s+QUIZ_CONFIG\s*=\s*\{[\s\S]*?\};/m, `const QUIZ_CONFIG = ${configJson};`)
         .replace(/const\s+QUESTIONS\s*=\s*\[[\s\S]*?\];/m, `const QUESTIONS = ${questionsJson};`);
       
-      document.body.removeChild(templateFrame);
-      
+      // Create download
       const blob = new Blob([modified], {type: 'text/html'});
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = window.generatedQuiz.title.replace(/\s+/g, '-').toLowerCase() + '.html';
+      a.download = window.generatedQuiz.config.title.replace(/\s+/g, '-').toLowerCase() + '.html';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 100);
-      
-    } catch (error) {
-      if (templateFrame && templateFrame.parentNode) {
-        document.body.removeChild(templateFrame);
-      }
-      console.error(error);
-      alert('Error generating quiz file: ' + error.message + '\n\nTry running this page through a web server instead of opening locally.');
-    }
-  };
-  
-  templateFrame.onerror = function() {
-    clearTimeout(loadTimeout);
-    if (templateFrame && templateFrame.parentNode) {
-      document.body.removeChild(templateFrame);
-    }
-    alert("Could not load quiz template. Make sure quiz-template.html exists in the correct folder.");
-  };
-  
-  document.body.appendChild(templateFrame);
+    })
+    .catch(err => {
+      console.error(err);
+      alert('Error generating quiz: ' + err.message + '\nEnsure quiz-template.html is in the same folder.');
+    });
 }
 
 /**

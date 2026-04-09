@@ -414,26 +414,67 @@ function downloadQuiz() {
   
   // Load base template
   fetch('quiz-template.html')
-    .then(res => res.text())
+    .then(res => {
+      if (!res.ok) throw new Error(`Could not find quiz-template.html (Status: ${res.status})`);
+      return res.text();
+    })
     .then(template => {
-      const configJson = JSON.stringify(window.generatedQuiz.config, null, 2);
-      const questionsJson = JSON.stringify(window.generatedQuiz.questions, null, 2);
+      const configJson = `const QUIZ_CONFIG = ${JSON.stringify(window.generatedQuiz.config, null, 2)};`;
+      const questionsJson = `const QUESTIONS = ${JSON.stringify(window.generatedQuiz.questions, null, 2)};`;
 
-      // Replace quiz config and questions
-      let modified = template
-        .replace(/const\s+QUIZ_CONFIG\s*=\s*\{[\s\S]*?\};/m, `const QUIZ_CONFIG = ${configJson};`)
-        .replace(/const\s+QUESTIONS\s*=\s*\[[\s\S]*?\];/m, `const QUESTIONS = ${questionsJson};`);
+      // 100% Reliable Marker-Based Replacement
+      let modified = template;
+      
+      // Replace Config
+      const configStart = '/* [QUIZ_CONFIG_START] */';
+      const configEnd = '/* [QUIZ_CONFIG_END] */';
+      const cfgI1 = modified.indexOf(configStart);
+      const cfgI2 = modified.indexOf(configEnd);
+      if (cfgI1 !== -1 && cfgI2 !== -1) {
+        modified = modified.substring(0, cfgI1 + configStart.length) + 
+                   "\n" + configJson + "\n" + 
+                   modified.substring(cfgI2);
+      }
+
+      // Replace Questions
+      const qStart = '/* [QUESTIONS_START] */';
+      const qEnd = '/* [QUESTIONS_END] */';
+      const qI1 = modified.indexOf(qStart);
+      const qI2 = modified.indexOf(qEnd);
+      if (qI1 !== -1 && qI2 !== -1) {
+        modified = modified.substring(0, qI1 + qStart.length) + 
+                   "\n" + questionsJson + "\n" + 
+                   modified.substring(qI2);
+      }
+      
+      // Final Title Replacement in HTML head
+      modified = modified.replace(/<title>.*?<\/title>/, `<title>${window.generatedQuiz.config.title}</title>`);
       
       // Create download
       const blob = new Blob([modified], {type: 'text/html'});
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = window.generatedQuiz.title.replace(/\s+/g, '-').toLowerCase() + '.html';
+      // Sanitize filename: remove special characters, replace spaces with dashes
+      const safeName = window.generatedQuiz.config.title
+        .replace(/[^a-z0-9\s-]/gi, '')
+        .trim()
+        .replace(/\s+/g, '-')
+        .toLowerCase();
+      a.download = (safeName || 'quiz') + '.html';
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+      showToast('✅ Quiz generated and download started!');
+    })
+    .catch(err => {
+      console.error(err);
+      alert('Error generating quiz file: ' + err.message + 
+            '\n\nPossible solutions:\n1. Ensure quiz-template.html is in the SAME folder as this file.\n2. If using GitHub Pages, ensure both files are pushed to the repository.');
     });
 }
+
 
 /**
  * Reset the form to initial state
