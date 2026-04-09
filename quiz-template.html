@@ -1926,9 +1926,9 @@ function checkSavedProgress() {
       pendingRestoreData = null;
       clearProgress();
       // Hide the toast if it's still visible
-      const toast = document.getElementById('toast-notification');
+      const toast = document.getElementById('toast');
       if (toast) {
-        toast.classList.add('hidden');
+        toast.classList.remove('show');
       }
     }, 15000);
     
