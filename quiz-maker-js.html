@@ -322,20 +322,48 @@ function downloadQuiz() {
       return res.text();
     })
     .then(template => {
-      const configJson = JSON.stringify(window.generatedQuiz.config, null, 2);
-      const questionsJson = JSON.stringify(window.generatedQuiz.questions, null, 2);
+      const configJson = `const QUIZ_CONFIG = ${JSON.stringify(window.generatedQuiz.config, null, 2)};`;
+      const questionsJson = `const QUESTIONS = ${JSON.stringify(window.generatedQuiz.questions, null, 2)};`;
 
-      // Replace quiz config and questions using robust regex
-      let modified = template
-        .replace(/const\s+QUIZ_CONFIG\s*=\s*\{[\s\S]*?\};/m, `const QUIZ_CONFIG = ${configJson};`)
-        .replace(/const\s+QUESTIONS\s*=\s*\[[\s\S]*?\];/m, `const QUESTIONS = ${questionsJson};`);
-      
+      let modified = template;
+
+      // Replace Config using markers (same approach as quiz-maker.html)
+      const configStart = '/* [QUIZ_CONFIG_START] */';
+      const configEnd   = '/* [QUIZ_CONFIG_END] */';
+      const cfgI1 = modified.indexOf(configStart);
+      const cfgI2 = modified.indexOf(configEnd);
+      if (cfgI1 !== -1 && cfgI2 !== -1) {
+        modified = modified.substring(0, cfgI1 + configStart.length) +
+                   "\n" + configJson + "\n" +
+                   modified.substring(cfgI2);
+      }
+
+      // Replace Questions using markers
+      const qStart = '/* [QUESTIONS_START] */';
+      const qEnd   = '/* [QUESTIONS_END] */';
+      const qI1 = modified.indexOf(qStart);
+      const qI2 = modified.indexOf(qEnd);
+      if (qI1 !== -1 && qI2 !== -1) {
+        modified = modified.substring(0, qI1 + qStart.length) +
+                   "\n" + questionsJson + "\n" +
+                   modified.substring(qI2);
+      }
+
+      // Replace <title> in HTML head — use a function to avoid $ special char issues
+      modified = modified.replace(/<title>.*?<\/title>/, () => `<title>${window.generatedQuiz.config.title}</title>`);
+
       // Create download
       const blob = new Blob([modified], {type: 'text/html'});
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = window.generatedQuiz.config.title.replace(/\s+/g, '-').toLowerCase() + '.html';
+      // Sanitize filename
+      const safeName = window.generatedQuiz.config.title
+        .replace(/[^a-z0-9\s-]/gi, '')
+        .trim()
+        .replace(/\s+/g, '-')
+        .toLowerCase();
+      a.download = (safeName || 'quiz') + '.html';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

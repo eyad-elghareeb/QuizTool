@@ -448,7 +448,7 @@ function downloadQuiz() {
       }
       
       // Final Title Replacement in HTML head
-      modified = modified.replace(/<title>.*?<\/title>/, `<title>${window.generatedQuiz.config.title}</title>`);
+      modified = modified.replace(/<title>.*?<\/title>/, () => `<title>${window.generatedQuiz.config.title}</title>`);
       
       // Create download
       const blob = new Blob([modified], {type: 'text/html'});
