@@ -1862,6 +1862,10 @@ window.addEventListener('beforeunload', function() {
 
 // Check for saved progress on init
 function checkSavedProgress() {
+  // Check if this is a new session (page reload/new tab)
+  // If so, automatically dismiss any pending restore
+  const isNewSession = !sessionStorage.getItem('quizSessionActive');
+  
   const saved = localStorage.getItem(STORAGE_KEY);
   if (!saved) return;
   
@@ -1894,8 +1898,19 @@ function checkSavedProgress() {
       return;
     }
     
+    // If this is a new session, auto-dismiss the restore prompt
+    if (isNewSession) {
+      console.log('New session detected, auto-dismissing restore prompt');
+      localStorage.removeItem(STORAGE_KEY);
+      sessionStorage.setItem('quizSessionActive', 'true');
+      return;
+    }
+    
     // Store pending restore data
     pendingRestoreData = data;
+    
+    // Mark session as active
+    sessionStorage.setItem('quizSessionActive', 'true');
     
     // Show toast with optional restore button
     showToast("📂 Previous progress found!", [
