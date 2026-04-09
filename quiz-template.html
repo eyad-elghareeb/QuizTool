@@ -1861,11 +1861,9 @@ window.addEventListener('beforeunload', function() {
 });
 
 // Check for saved progress on init
+let restoreToastTimeout = null;
+
 function checkSavedProgress() {
-  // Check if this is a new session (page reload/new tab)
-  // If so, automatically dismiss any pending restore
-  const isNewSession = !sessionStorage.getItem('quizSessionActive');
-  
   const saved = localStorage.getItem(STORAGE_KEY);
   if (!saved) return;
   
@@ -1898,19 +1896,8 @@ function checkSavedProgress() {
       return;
     }
     
-    // If this is a new session, auto-dismiss the restore prompt
-    if (isNewSession) {
-      console.log('New session detected, auto-dismissing restore prompt');
-      localStorage.removeItem(STORAGE_KEY);
-      sessionStorage.setItem('quizSessionActive', 'true');
-      return;
-    }
-    
     // Store pending restore data
     pendingRestoreData = data;
-    
-    // Mark session as active
-    sessionStorage.setItem('quizSessionActive', 'true');
     
     // Show toast with optional restore button
     showToast("📂 Previous progress found!", [
@@ -1918,6 +1905,7 @@ function checkSavedProgress() {
         label: "Restore",
         primary: true,
         onClick: () => {
+          clearTimeout(restoreToastTimeout);
           doRestoreProgress(pendingRestoreData);
         }
       },
@@ -1925,11 +1913,25 @@ function checkSavedProgress() {
         label: "Dismiss",
         primary: false,
         onClick: () => {
+          clearTimeout(restoreToastTimeout);
           pendingRestoreData = null;
           clearProgress();
         }
       }
     ]);
+    
+    // Auto-dismiss after 15 seconds if user hasn't interacted
+    restoreToastTimeout = setTimeout(() => {
+      console.log('Auto-dismissing restore toast after 15 seconds');
+      pendingRestoreData = null;
+      clearProgress();
+      // Hide the toast if it's still visible
+      const toast = document.getElementById('toast');
+      if (toast) {
+        toast.classList.remove('show');
+      }
+    }, 15000);
+    
   } catch(e) {
     console.error('Error checking saved progress:', e);
     localStorage.removeItem(STORAGE_KEY);
