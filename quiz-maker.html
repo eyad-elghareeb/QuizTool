@@ -413,9 +413,10 @@ function downloadQuiz() {
   fetch('quiz-template.html')
     .then(res => res.text())
     .then(template => {
+      const uid = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
       // Replace quiz config and questions
       let modified = template
-        .replace(/title:\s*"General Knowledge Quiz"/, `title: ${JSON.stringify(window.generatedQuiz.title)}`)
+        .replace(/title:\s*"General Knowledge Quiz"/, `uid: ${JSON.stringify(uid)},\n  title: ${JSON.stringify(window.generatedQuiz.title)}`)
         .replace(/description:\s*"Test your knowledge across science, history, geography, and more."/, `description: ${JSON.stringify(window.generatedQuiz.description)}`)
         .replace(/const QUESTIONS = \[[\s\S]*?\];/, `const QUESTIONS = ${JSON.stringify(window.generatedQuiz.questions, null, 2)};`);
       

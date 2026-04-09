@@ -1673,7 +1673,7 @@ function showToast(msg, actions = []) {
 /* ── LOCAL STORAGE SAVE/RESTORE ──────────────────────────── */
 // Improved storage key generation that handles special characters safely
 const STORAGE_VERSION = 'v1';
-const STORAGE_KEY = `quiz_progress_${STORAGE_VERSION}_${QUIZ_CONFIG.title.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30)}`;
+const STORAGE_KEY = `quiz_progress_${STORAGE_VERSION}_${(QUIZ_CONFIG.uid || window.location.pathname).replace(/[^a-zA-Z0-9]/g, '_')}`;
 
 /**
  * Safely save quiz progress to localStorage
@@ -1681,6 +1681,12 @@ const STORAGE_KEY = `quiz_progress_${STORAGE_VERSION}_${QUIZ_CONFIG.title.replac
  */
 function saveProgress() {
   if (state.submitted) return;
+  
+  // Don't save if there's no progress yet (prevents blank saves on first load/exit)
+  const hasAnswers = Object.keys(state.answers || {}).length > 0;
+  const hasFlags = Object.values(state.flagged || {}).some(v => v === true);
+  const hasTime = (state.elapsed || 0) > 10;
+  if (!hasAnswers && !hasFlags && !hasTime) return;
   
   const saveData = {
     version: STORAGE_VERSION,
