@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bank Maker — QuizTool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:         #0d1117;
+  --surface:    #161b22;
+  --surface2:   #1c2330;
+  --border:     #30363d;
+  --text:       #e6edf3;
+  --text-muted: #8b949e;
+  --accent:     #f0a500;
+  --accent-dim: rgba(240,165,0,0.12);
+  --correct:    #2ea043;
+  --wrong:      #da3633;
+  --radius:     12px;
+  --shadow:     0 4px 24px rgba(0,0,0,0.4);
+  --transition: 0.2s ease;
+}
+[data-theme="light"] {
+  --bg:         #f3f0eb;
+  --surface:    #ffffff;
+  --surface2:   #f8f6f1;
+  --border:     #d0ccc5;
+  --text:       #1c1917;
+  --text-muted: #78716c;
+  --accent:     #c27803;
+  --accent-dim: rgba(194,120,3,0.10);
+  --correct:    #16a34a;
+  --wrong:      #dc2626;
+  --shadow:     0 4px 24px rgba(0,0,0,0.10);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  transition: background var(--transition), color var(--transition);
+}
+button, a { cursor: pointer; font-family: inherit; }
+
+.topbar {
+  display: flex; align-items: center;
+  padding: 0.75rem 1.5rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 10;
+}
+.topbar-title { font-family: 'Playfair Display', serif; font-size: 1.15rem; font-weight: 700; flex: 1; }
+.back-btn {
+  display: flex; align-items: center; gap: 0.5rem;
+  color: var(--text-muted); text-decoration: none;
+  font-weight: 600; transition: color var(--transition); font-size: 0.9rem;
+}
+.back-btn:hover { color: var(--text); }
+.icon-btn {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: var(--surface2); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted); transition: all var(--transition); font-size: 1rem;
+}
+.icon-btn:hover { color: var(--text); border-color: var(--accent); }
+
+.container { max-width: 820px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+.page-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.7rem, 4vw, 2.2rem);
+  margin-bottom: 0.35rem;
+  text-align: center;
+}
+.page-sub { color: var(--text-muted); font-size: 0.9rem; text-align: center; margin-bottom: 2rem; }
+
+label {
+  display: block; margin-bottom: 0.45rem;
+  font-weight: 600; color: var(--text); font-size: 0.9rem;
+}
+.form-group { margin-bottom: 1.5rem; }
+
+input[type=text], input[type=number] {
+  width: 100%; padding: 0.85rem 1rem;
+  border-radius: var(--radius); border: 1.5px solid var(--border);
+  background: var(--surface); color: var(--text);
+  font-family: inherit; font-size: 0.95rem;
+  transition: border-color var(--transition);
+}
+input[type=text]:focus, input[type=number]:focus {
+  outline: none; border-color: var(--accent);
+}
+
+.icon-input-row {
+  display: grid;
+  grid-template-columns: 1fr 80px;
+  gap: 0.75rem;
+}
+
+textarea {
+  width: 100%; padding: 1rem;
+  border-radius: var(--radius); border: 1.5px solid var(--border);
+  background: var(--surface); color: var(--text);
+  font-family: 'Consolas', 'Monaco', monospace; font-size: 0.87rem;
+  min-height: 380px; resize: vertical;
+  transition: border-color var(--transition);
+  white-space: pre; overflow-x: auto;
+}
+textarea:focus { outline: none; border-color: var(--accent); }
+
+.hint-box {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  margin-bottom: 1.5rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+.hint-box strong { color: var(--text); }
+
+/* Stats row */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  display: none;
+}
+.stats-row.visible { display: grid; }
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  text-align: center;
+}
+.stat-card .sv { font-size: 1.5rem; font-weight: 700; color: var(--accent); display: block; }
+.stat-card .sl { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* Prompt helper */
+.prompt-details {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  margin-bottom: 1.5rem;
+}
+.prompt-details summary {
+  cursor: pointer; font-weight: 600; color: var(--text);
+  font-size: 0.9rem; list-style: none; display: flex; align-items: center; gap: 0.5rem;
+}
+.prompt-details summary::-webkit-details-marker { display: none; }
+.prompt-details[open] summary::before { content: '▾'; } 
+.prompt-details:not([open]) summary::before { content: '▸'; }
+.prompt-textarea {
+  min-height: 220px; font-size: 0.82rem;
+  margin-top: 0.75rem; margin-bottom: 0.75rem;
+}
+
+.btn-primary {
+  width: 100%; padding: 1rem;
+  border-radius: var(--radius);
+  background: var(--accent); color: #000;
+  font-weight: 700; font-size: 1rem;
+  border: none; cursor: pointer;
+  transition: opacity var(--transition), transform var(--transition);
+  margin-bottom: 1rem;
+  display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+}
+.btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+.btn-secondary {
+  width: 100%; padding: 0.9rem;
+  border-radius: var(--radius);
+  background: transparent; color: var(--text);
+  font-weight: 600; font-size: 0.95rem;
+  border: 1.5px solid var(--border); cursor: pointer;
+  transition: all var(--transition);
+  display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+}
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+.output-panel {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.5rem;
+  margin-top: 0.5rem; display: none;
+}
+.output-panel.visible { display: block; }
+.output-panel h3 { margin-bottom: 1rem; font-size: 1.05rem; }
+
+.success-badge {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  background: rgba(46,160,67,0.12); border: 1px solid var(--correct);
+  color: var(--correct); padding: 0.4rem 0.85rem;
+  border-radius: 8px; font-size: 0.85rem; font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .container { padding: 1.5rem 1rem; }
+  .icon-input-row { grid-template-columns: 1fr; }
+  .stats-row { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="#" onclick="navigateToIndex(event)" class="back-btn">← Back to Hub</a>
+  <div class="topbar-title">🏦 Bank Maker</div>
+  <button class="icon-btn" onclick="toggleTheme()" id="theme-toggle" title="Toggle theme">☀</button>
+</div>
+
+<div class="container">
+  <h1 class="page-title">Create a Question Bank</h1>
+  <p class="page-sub">Paste a large JavaScript questions array to generate a smart Question Bank HTML file.</p>
+
+  <div class="hint-box">
+    <strong>How it works:</strong> Paste any number of questions (50, 100, 500+) as a JS array.
+    The generated bank file will randomly serve a subset of questions each session,
+    tracking which ones you've already seen so you always get fresh questions —
+    all stored in your browser's localStorage.
+  </div>
+
+  <!-- Bank name & icon -->
+  <div class="form-group">
+    <label>Bank Title</label>
+    <div class="icon-input-row">
+      <input type="text" id="bank-title" placeholder="e.g. JavaScript Mastery Bank" value="My Question Bank">
+      <input type="text" id="bank-icon"  placeholder="Icon" value="🗃️" style="text-align:center; font-size:1.4rem;">
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label>Description</label>
+    <input type="text" id="bank-desc" placeholder="A brief description of this question bank..." value="A question bank for focused study sessions.">
+  </div>
+
+  <!-- AI prompt helper -->
+  <details class="prompt-details">
+    <summary>🤖 AI Prompt to Generate a Large Questions Array</summary>
+    <p style="color:var(--text-muted);font-size:0.85rem;margin-top:0.75rem;margin-bottom:0.5rem;">
+      Use this prompt with any AI assistant to generate a properly formatted questions array:
+    </p>
+    <textarea id="prompt-template" class="prompt-textarea" readonly>Generate a large question bank array in JavaScript format for the topic: [YOUR TOPIC].
+
+Format each question exactly like this:
+
+[
+  {
+    question: "Your question text here?",
+    options: ["Option A", "Option B", "Option C", "Option D"],
+    correct: 0,
+    explanation: "Brief explanation of why this answer is correct."
+  },
+  // more questions...
+]
+
+Requirements:
+- Each question must have: question (string), options (array of 4-5 strings), correct (zero-based index), explanation (string)
+- Make questions varied in difficulty: easy, medium, hard
+- Ensure distractors are plausible but clearly wrong
+- Include helpful, educational explanations
+- Generate [NUMBER] questions total (aim for 50-100 for a good bank)
+- Topic: [YOUR TOPIC HERE]
+
+Output ONLY the JavaScript array — no extra text, no markdown code fences.</textarea>
+    <button class="btn-primary" style="width:auto;padding:0.6rem 1.25rem;margin-bottom:0;" onclick="copyPrompt()">
+      📋 Copy Prompt
+    </button>
+  </details>
+
+  <!-- Questions array input -->
+  <div class="form-group">
+    <label>Paste QUESTION_BANK Array</label>
+    <textarea id="js-input" placeholder='Paste your questions array here:
+
+[
+  {
+    question: "What does `typeof null` return?",
+    options: ["&quot;null&quot;", "&quot;undefined&quot;", "&quot;object&quot;", "&quot;number&quot;"],
+    correct: 2,
+    explanation: "This is a known JavaScript quirk..."
+  },
+  // more questions...
+]'></textarea>
+  </div>
+
+  <!-- Parse stats -->
+  <div class="stats-row" id="stats-row">
+    <div class="stat-card"><span class="sv" id="stat-count">0</span><span class="sl">Questions</span></div>
+    <div class="stat-card"><span class="sv" id="stat-opts">0</span><span class="sl">Avg Options</span></div>
+    <div class="stat-card"><span class="sv" id="stat-expl">0%</span><span class="sl">Have Explanation</span></div>
+  </div>
+
+  <button class="btn-primary" id="parse-btn" onclick="parseAndPreview()">
+    🔍 Parse & Preview
+  </button>
+
+  <!-- Output -->
+  <div class="output-panel" id="output-panel">
+    <h3>✅ Bank Ready</h3>
+    <div class="success-badge" id="success-badge">✓ 0 questions parsed</div>
+    <p style="color:var(--text-muted);font-size:0.88rem;margin-bottom:1.25rem;">
+      Your question bank HTML file is ready to download. Place it in the same folder as the other
+      QuizTool files and add a link to it in <code style="background:var(--surface2);padding:2px 6px;border-radius:4px;">index.html</code>.
+    </p>
+    <button class="btn-primary" onclick="downloadBank()">
+      💾 Download Bank HTML File
+    </button>
+    <button class="btn-secondary" onclick="resetForm()">↺ Start Over</button>
+  </div>
+</div>
+
+<script>
+/* ─── THEME ──────────────────────────────────────────────── */
+function init() {
+  const savedTheme = localStorage.getItem('quiz-theme');
+  if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+  updateThemeIcon();
+}
+function toggleTheme() {
+  const html = document.documentElement;
+  const newTheme = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', newTheme);
+  localStorage.setItem('quiz-theme', newTheme);
+  updateThemeIcon();
+}
+function updateThemeIcon() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const btn = document.getElementById('theme-toggle');
+  if (btn) btn.textContent = isDark ? '☀' : '☾';
+}
+function navigateToIndex(e) { e.preventDefault(); window.location.href = 'index.html'; }
+
+/* ─── COPY PROMPT ────────────────────────────────────────── */
+function copyPrompt() {
+  const txt = document.getElementById('prompt-template').value;
+  navigator.clipboard.writeText(txt).then(() => {
+    showToast('✅ Prompt copied to clipboard!');
+  }).catch(() => {
+    const ta = document.getElementById('prompt-template');
+    ta.select();
+    document.execCommand('copy');
+    showToast('✅ Prompt copied!');
+  });
+}
+
+/* ─── PARSE & PREVIEW ────────────────────────────────────── */
+let parsedBank = null;
+
+function parseAndPreview() {
+  const input = document.getElementById('js-input').value.trim();
+  if (!input) { showToast('⚠️ Please paste your questions array first!'); return; }
+
+  try {
+    const arr = eval(`(${input})`);
+    if (!Array.isArray(arr)) throw new Error('Input must be a JavaScript array');
+    if (arr.length === 0) throw new Error('Array is empty');
+
+    // Validate structure
+    arr.forEach((q, i) => {
+      if (!q.question)            throw new Error(`Question ${i+1}: missing "question" field`);
+      if (!Array.isArray(q.options)) throw new Error(`Question ${i+1}: missing "options" array`);
+      if (q.options.length < 2)   throw new Error(`Question ${i+1}: needs at least 2 options`);
+      if (q.correct === undefined) throw new Error(`Question ${i+1}: missing "correct" index`);
+      if (q.correct < 0 || q.correct >= q.options.length)
+        throw new Error(`Question ${i+1}: "correct" index out of range`);
+    });
+
+    parsedBank = arr;
+
+    // Update stats
+    const totalOpts = arr.reduce((s, q) => s + q.options.length, 0);
+    const avgOpts   = (totalOpts / arr.length).toFixed(1);
+    const withExpl  = arr.filter(q => q.explanation && q.explanation.trim()).length;
+    const explPct   = Math.round(withExpl / arr.length * 100);
+
+    document.getElementById('stat-count').textContent = arr.length;
+    document.getElementById('stat-opts').textContent  = avgOpts;
+    document.getElementById('stat-expl').textContent  = explPct + '%';
+    document.getElementById('stats-row').classList.add('visible');
+    document.getElementById('success-badge').textContent = `✓ ${arr.length} questions parsed`;
+    document.getElementById('output-panel').classList.add('visible');
+
+    showToast(`✅ Parsed ${arr.length} questions successfully!`);
+
+  } catch(e) {
+    showToast('❌ Parse error: ' + e.message);
+    console.error(e);
+  }
+}
+
+/* ─── DOWNLOAD BANK ──────────────────────────────────────── */
+function downloadBank() {
+  if (!parsedBank) return;
+
+  const title = document.getElementById('bank-title').value.trim() || 'My Question Bank';
+  const desc  = document.getElementById('bank-desc').value.trim()  || 'A question bank.';
+  const icon  = document.getElementById('bank-icon').value.trim()  || '🗃️';
+  const uid   = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+
+  fetch('question-bank-template.html')
+    .then(res => {
+      if (!res.ok) throw new Error('Could not load question-bank-template.html — make sure it is in the same folder.');
+      return res.text();
+    })
+    .then(template => {
+      const configObj = { uid, title, description: desc, icon };
+      const configJs  = `const BANK_CONFIG = ${JSON.stringify(configObj, null, 2)};`;
+      const bankJs    = `const QUESTION_BANK = ${JSON.stringify(parsedBank, null, 2)};`;
+
+      let out = template;
+
+      // Replace BANK_CONFIG
+      const cfgStart = '/* [BANK_CONFIG_START] */';
+      const cfgEnd   = '/* [BANK_CONFIG_END] */';
+      const ci1 = out.indexOf(cfgStart), ci2 = out.indexOf(cfgEnd);
+      if (ci1 !== -1 && ci2 !== -1) {
+        out = out.substring(0, ci1 + cfgStart.length) + '\n' + configJs + '\n' + out.substring(ci2);
+      }
+
+      // Replace QUESTION_BANK
+      const qStart = '/* [QUESTION_BANK_START] */';
+      const qEnd   = '/* [QUESTION_BANK_END] */';
+      const qi1 = out.indexOf(qStart), qi2 = out.indexOf(qEnd);
+      if (qi1 !== -1 && qi2 !== -1) {
+        out = out.substring(0, qi1 + qStart.length) + '\n' + bankJs + '\n' + out.substring(qi2);
+      }
+
+      // Replace <title>
+      out = out.replace(/<title>.*?<\/title>/, () => `<title>${title}</title>`);
+
+      const blob = new Blob([out], { type: 'text/html' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url;
+      const safeName = title.replace(/[^a-z0-9\s-]/gi,'').trim().replace(/\s+/g,'-').toLowerCase();
+      a.download = (safeName || 'question-bank') + '.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+      showToast(`💾 ${a.download} downloaded!`);
+    })
+    .catch(err => {
+      console.error(err);
+      showToast('❌ ' + err.message);
+    });
+}
+
+/* ─── RESET FORM ─────────────────────────────────────────── */
+function resetForm() {
+  if (!confirm('Clear everything and start over?')) return;
+  document.getElementById('bank-title').value = 'My Question Bank';
+  document.getElementById('bank-icon').value  = '🗃️';
+  document.getElementById('bank-desc').value  = 'A question bank for focused study sessions.';
+  document.getElementById('js-input').value   = '';
+  document.getElementById('stats-row').classList.remove('visible');
+  document.getElementById('output-panel').classList.remove('visible');
+  parsedBank = null;
+}
+
+/* ─── TOAST ──────────────────────────────────────────────── */
+let toastEl;
+function showToast(msg) {
+  if (!toastEl) {
+    toastEl = document.createElement('div');
+    toastEl.style.cssText = `
+      position:fixed; bottom:1.5rem; left:50%; transform:translateX(-50%) translateY(80px);
+      background:var(--surface); border:1px solid var(--border); border-radius:10px;
+      padding:0.65rem 1.2rem; font-size:0.88rem; font-weight:500;
+      box-shadow:var(--shadow); z-index:9999;
+      transition:transform 0.3s ease; white-space:nowrap; max-width:90%;
+    `;
+    document.body.appendChild(toastEl);
+  }
+  toastEl.textContent = msg;
+  toastEl.style.transform = 'translateX(-50%) translateY(0)';
+  clearTimeout(toastEl._t);
+  toastEl._t = setTimeout(() => {
+    toastEl.style.transform = 'translateX(-50%) translateY(80px)';
+  }, 2800);
+}
+
+init();
+</script>
+</body>
+</html>
