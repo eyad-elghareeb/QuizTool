@@ -74,27 +74,28 @@ input[type=radio] { display: none; }
 #start-screen {
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   padding: 1.5rem;
   gap: 1rem;
   overflow-y: auto;
-  padding-top: 3rem;
 }
 .hub-back-btn {
-  position: fixed;
-  top: 1.25rem;
-  left: 1.25rem;
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
   color: var(--text-muted);
   text-decoration: none;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   transition: color var(--transition);
   z-index: 10;
 }
 .hub-back-btn:hover { color: var(--text); }
+.hub-back-btn svg { transition: transform var(--transition); }
+.hub-back-btn:hover svg { transform: translateX(-3px); }
 .theme-btn-fixed {
   position: fixed;
   top: 1.1rem;
@@ -208,50 +209,6 @@ input[type=radio] { display: none; }
 
 /* Question count selector */
 .q-count-section { margin-bottom: 1.1rem; }
-.q-count-presets {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  flex-wrap: wrap;
-}
-.preset-btn {
-  padding: 0.45rem 1rem;
-  border-radius: 8px;
-  background: var(--surface2);
-  border: 1.5px solid var(--border);
-  color: var(--text-muted);
-  font-size: 0.88rem;
-  font-weight: 600;
-  transition: all var(--transition);
-  min-width: 48px;
-}
-.preset-btn:hover { border-color: var(--accent); color: var(--text); }
-.preset-btn.active {
-  background: var(--accent-dim);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-.custom-count-wrap {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-left: auto;
-}
-.custom-count-wrap label { font-size: 0.82rem; color: var(--text-muted); white-space: nowrap; }
-.count-input {
-  width: 68px;
-  padding: 0.45rem 0.6rem;
-  border-radius: 8px;
-  border: 1.5px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  font-family: inherit;
-  font-size: 0.9rem;
-  font-weight: 600;
-  text-align: center;
-  transition: border-color var(--transition);
-}
-.count-input:focus { outline: none; border-color: var(--accent); }
 
 /* Time selector */
 .time-section { margin-bottom: 1.1rem; }
@@ -698,13 +655,16 @@ input[type=radio]:checked + .option-label .option-key { background: var(--accent
 
 .hidden { display: none !important; }
 </style>
+<link rel="manifest" href="../../manifest.webmanifest">
+<link rel="icon" href="../../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../../favicon.svg">
 </head>
 <body>
 
 <!-- ═══════════════════════════ START SCREEN ═══════════════════════════ -->
 <div id="start-screen" class="screen active">
   <a href="#" class="hub-back-btn" onclick="navigateToIndex(event); return false;">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
       <line x1="19" y1="12" x2="5" y2="12"></line>
       <polyline points="12 19 5 12 12 5"></polyline>
     </svg>
@@ -746,30 +706,22 @@ input[type=radio]:checked + .option-label .option-key { background: var(--accent
 
     <!-- Question count -->
     <div class="q-count-section">
-      <div class="section-label">Number of Questions</div>
-      <div class="q-count-presets">
-        <button class="preset-btn" id="preset-10"  onclick="setCount(10)">10</button>
-        <button class="preset-btn" id="preset-20"  onclick="setCount(20)">20</button>
-        <button class="preset-btn" id="preset-30"  onclick="setCount(30)">30</button>
-        <button class="preset-btn" id="preset-all" onclick="setCount(-1)">All</button>
-        <div class="custom-count-wrap">
-          <label for="q-count-input">Custom:</label>
-          <input type="number" id="q-count-input" class="count-input" min="1" value="20"
-                 oninput="onCustomCount(this.value)">
-        </div>
+      <div class="section-label">Number of Questions <span style="color:var(--text-muted);font-size:0.75rem;font-weight:400;margin-left:0.35rem">(qs)</span></div>
+      <div class="time-controls">
+        <button class="time-adj-btn" onclick="adjustCount(-5)">−5</button>
+        <input type="number" id="q-count-input" class="time-input" min="1" value="20" oninput="onCustomCount(this.value)">
+        <button class="time-adj-btn" onclick="adjustCount(5)">+5</button>
       </div>
     </div>
 
     <!-- Time selector (exam mode only) -->
     <div class="time-section" id="time-section">
-      <div class="section-label">Time Limit</div>
+      <div class="section-label">Time Limit <span style="color:var(--text-muted);font-size:0.75rem;font-weight:400;margin-left:0.35rem">(min)</span></div>
       <div class="time-controls">
         <button class="time-adj-btn" onclick="adjustTime(-5)">−5</button>
         <input type="number" id="time-input" class="time-input" min="1" max="300" value="30">
         <button class="time-adj-btn" onclick="adjustTime(5)">+5</button>
-        <span style="color:var(--text-muted);font-size:0.85rem;white-space:nowrap">min</span>
       </div>
-      <p class="time-hint" id="time-hint">Auto-calculated · adjust freely</p>
     </div>
 
     <!-- Mode selection -->
@@ -903,7 +855,7 @@ input[type=radio]:checked + .option-label .option-key { background: var(--accent
 const BANK_CONFIG = {
   "uid": "js_mastery_bank_v1",
   "title": "JavaScript Mastery Bank",
-  "description": "50 carefully crafted JavaScript questions — covering fundamentals, scope, async, arrays, and more. Fresh questions every session.",
+  "description": "51 carefully crafted JavaScript questions — covering fundamentals, scope, async, arrays, and more. Fresh questions every session.",
   "icon": "⚡"
 };
 /* [BANK_CONFIG_END] */
@@ -1484,6 +1436,11 @@ const KEYS = ['A','B','C','D','E','F','G','H'];
 
 // Session questions (selected subset from bank for this session)
 let SESSION_QUESTIONS = [];
+// Bank indices corresponding to SESSION_QUESTIONS — saved so restore skips re-selection
+let SESSION_QUESTION_INDICES = [];
+// Set to true after initUI() completes — prevents adjustCount/setCount/onCustomCount
+// from wiping saved progress during page initialisation
+let uiReady = false;
 
 // Quiz state
 let state = {
@@ -1501,6 +1458,253 @@ let lastTime = Date.now();
 
 // Start screen config
 let selectedCount = 20;
+
+/* ─── SESSION PROGRESS STORAGE ─────────────────────────────────────
+   Tracks quiz session progress (answers, flags, timer) across page reloads.
+   Uses same pattern as misc-mcq.html for consistency.
+──────────────────────────────────────────────────────────────── */
+const STORAGE_VERSION = 'v1';
+const STORAGE_KEY = `quiz_progress_${STORAGE_VERSION}_${(BANK_CONFIG.uid || window.location.pathname).replace(/[^a-zA-Z0-9]/g, '_')}`;
+let pendingRestoreData = null;
+let restoreToastTimeout = null;
+
+/**
+ * Safely save quiz progress to localStorage
+ * Handles quota errors and validates data before saving
+ */
+function saveProgress() {
+  if (state.submitted) return;
+
+  // Don't save if there's no progress yet (prevents blank saves on first load/exit)
+  const hasAnswers = Object.keys(state.answers || {}).length > 0;
+  const hasFlags = Object.values(state.flagged || {}).some(v => v === true);
+  const hasTime = (state.elapsed || 0) > 10;
+  if (!hasAnswers && !hasFlags && !hasTime) return;
+
+  const saveData = {
+    version: STORAGE_VERSION,
+    quizTitle: BANK_CONFIG.title,
+    totalQuestions: SESSION_QUESTIONS.length,
+    questionCount: selectedCount, // Store the selected question count for validation
+    sessionIndices: SESSION_QUESTION_INDICES, // Exact bank indices — lets restore skip re-selection
+    current: state.current,
+    answers: state.answers,
+    flagged: state.flagged,
+    elapsed: state.elapsed,
+    timerSecs: state.timerSecs,
+    mode: state.mode,
+    timestamp: Date.now(),
+    savedAt: Date.now()
+  };
+
+  try {
+    if (!isValidSaveData(saveData)) {
+      console.warn('Invalid save data, skipping save');
+      return;
+    }
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
+    console.log('Progress saved successfully');
+  } catch (e) {
+    if (e.name === 'QuotaExceededError' || e.code === 22) {
+      console.warn('LocalStorage quota exceeded, clearing old saves...');
+      clearOldSaves();
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
+      } catch (retryError) {
+        console.error('Failed to save progress even after cleanup:', retryError);
+      }
+    } else {
+      console.error('Error saving progress:', e);
+    }
+  }
+}
+
+/**
+ * Validate save data structure
+ */
+function isValidSaveData(data) {
+  if (!data || typeof data !== 'object') return false;
+  if (typeof data.current !== 'number' || data.current < 0) return false;
+  if (!data.answers || typeof data.answers !== 'object') return false;
+  if (!data.flagged || typeof data.flagged !== 'object') return false;
+  if (typeof data.timerSecs !== 'number' || data.timerSecs < 0) return false;
+  if (!['exam', 'learning'].includes(data.mode)) return false;
+  if (typeof data.questionCount !== 'number' || data.questionCount < 1) return false;
+  if (typeof data.totalQuestions !== 'number' || data.totalQuestions < 1) return false;
+  // sessionIndices must exist and every index must be a valid bank index
+  if (!Array.isArray(data.sessionIndices) || data.sessionIndices.length === 0) return false;
+  if (data.sessionIndices.some(i => typeof i !== 'number' || i < 0 || i >= QUESTION_BANK.length)) return false;
+  return true;
+}
+
+/**
+ * Clear old saves from other quizzes to free up space
+ */
+function clearOldSaves() {
+  try {
+    const now = Date.now();
+    const maxAge = 7 * 24 * 60 * 60 * 1000;
+
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('quiz_progress_')) {
+        try {
+          const data = JSON.parse(localStorage.getItem(key));
+          if (now - data.timestamp > maxAge) {
+            localStorage.removeItem(key);
+          }
+        } catch (e) {
+          localStorage.removeItem(key);
+        }
+      }
+    });
+  } catch (e) {
+    console.error('Error clearing old saves:', e);
+  }
+}
+
+function clearProgress() {
+  localStorage.removeItem(STORAGE_KEY);
+}
+
+/**
+ * Check for saved progress on init and show optional restore toast
+ */
+function checkSavedProgress() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (!saved) return;
+
+  try {
+    const data = JSON.parse(saved);
+
+    if (data.version !== STORAGE_VERSION) {
+      console.log('Incompatible save version, starting fresh');
+      localStorage.removeItem(STORAGE_KEY);
+      return;
+    }
+
+    if (data.quizTitle !== BANK_CONFIG.title) {
+      console.log('Save is for a different quiz, starting fresh');
+      localStorage.removeItem(STORAGE_KEY);
+      return;
+    }
+
+    // Validate basic structure before showing restore option
+    if (!isValidSaveData(data)) {
+      console.log('Invalid save data structure, starting fresh');
+      localStorage.removeItem(STORAGE_KEY);
+      return;
+    }
+
+    const maxAge = 7 * 24 * 60 * 60 * 1000;
+    if (Date.now() - data.timestamp > maxAge) {
+      console.log('Save is too old, starting fresh');
+      localStorage.removeItem(STORAGE_KEY);
+      return;
+    }
+
+    pendingRestoreData = data;
+
+    showToast("📂 Previous progress found!", [
+      {
+        label: "Restore",
+        primary: true,
+        onClick: () => {
+          clearTimeout(restoreToastTimeout);
+          doRestoreProgress(pendingRestoreData);
+        }
+      },
+      {
+        label: "Dismiss",
+        primary: false,
+        onClick: () => {
+          clearTimeout(restoreToastTimeout);
+          pendingRestoreData = null;
+          clearProgress();
+        }
+      }
+    ]);
+
+    restoreToastTimeout = setTimeout(() => {
+      console.log('Auto-dismissing restore toast after 15 seconds');
+      pendingRestoreData = null;
+      clearProgress();
+      const toast = document.getElementById('toast');
+      if (toast) {
+        toast.classList.remove('show');
+      }
+    }, 15000);
+
+  } catch(e) {
+    console.error('Error checking saved progress:', e);
+    localStorage.removeItem(STORAGE_KEY);
+  }
+}
+
+/**
+ * Actually perform the restore with validated data
+ */
+function doRestoreProgress(data) {
+  if (!data.savedAt) {
+    data.savedAt = data.timestamp;
+  }
+
+  // Restore the selectedCount from saved data
+  selectedCount = data.questionCount || 20;
+  
+  // Update the input field to reflect restored count
+  const inp = document.getElementById('q-count-input');
+  if (inp) inp.value = selectedCount;
+
+  // Restore session questions DIRECTLY from saved indices — do NOT call
+  // selectSessionQuestions() here because that would pick NEW questions,
+  // corrupt bank progress (double-count the session), and mismatch answers.
+  SESSION_QUESTION_INDICES = data.sessionIndices;
+  SESSION_QUESTIONS = data.sessionIndices.map(i => QUESTION_BANK[i]);
+
+  // Validate all answer indices are still valid
+  for (const [qIdx, optIdx] of Object.entries(data.answers)) {
+    const qIndex = parseInt(qIdx);
+    if (qIndex >= 0 && qIndex < SESSION_QUESTIONS.length) {
+      const optCount = SESSION_QUESTIONS[qIndex].options.length;
+      if (optIdx < 0 || optIdx >= optCount) {
+        delete data.answers[qIdx];
+      }
+    } else {
+      delete data.answers[qIdx];
+    }
+  }
+
+  state.current = Math.min(data.current, SESSION_QUESTIONS.length - 1);
+  state.answers = data.answers;
+  state.flagged = data.flagged || {};
+  state.elapsed = data.elapsed || 0;
+  state.timerSecs = data.timerSecs || 0;
+  state.mode = data.mode;
+  state.submitted = false;
+
+  setTimeout(() => {
+    // Set CSS variable for portrait nav grid (same as startQuiz does)
+    document.documentElement.style.setProperty('--q-count', SESSION_QUESTIONS.length);
+
+    if(state.mode === 'learning') {
+      document.getElementById('timer-display').classList.add('hidden');
+      document.getElementById('legend-text-answered').textContent = 'Correct';
+      document.getElementById('legend-wrong').style.display = 'flex';
+    } else {
+      document.getElementById('timer-display').classList.remove('hidden');
+      document.getElementById('legend-text-answered').textContent = 'Answered';
+      document.getElementById('legend-wrong').style.display = 'none';
+    }
+    showScreen('quiz-screen');
+    buildNavGrid();
+    renderQuestion(state.current);
+    updateTimerDisplay();
+    if(state.mode !== 'learning') {
+      startTimer();
+    }
+  }, 500);
+}
 
 /* ─── BANK PROGRESS STORAGE ─────────────────────────────────────
    Tracks which questions from the bank have been shown across sessions.
@@ -1575,6 +1779,7 @@ function selectSessionQuestions(count) {
   progress.totalSessions++;
   saveBankProgress(progress);
 
+  SESSION_QUESTION_INDICES = picked;
   return picked.map(i => QUESTION_BANK[i]);
 }
 
@@ -1592,23 +1797,30 @@ function updateStartScreenStats() {
   document.getElementById('coverage-pct').textContent  = pct + '%';
 }
 
+function adjustCount(delta) {
+  const inp = document.getElementById('q-count-input');
+  const bankSize = QUESTION_BANK.length;
+  const cur = parseInt(inp.value) || selectedCount || 20;
+  const newVal = Math.max(1, Math.min(bankSize, cur + delta));
+  inp.value = newVal;
+  selectedCount = newVal;
+  autoSetTime(newVal);
+  
+  // Only clear saved progress when user actively changes the count (not during init)
+  if (uiReady) clearProgress();
+}
+
 function setCount(n) {
   const bankSize = QUESTION_BANK.length;
   if (n === -1) n = bankSize; // "All"
   n = Math.max(1, Math.min(n, bankSize));
   selectedCount = n;
 
-  // Update preset button states
-  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
-  const presetMap = { 10: 'preset-10', 20: 'preset-20', 30: 'preset-30' };
-  if (n === bankSize) {
-    document.getElementById('preset-all').classList.add('active');
-  } else if (presetMap[n]) {
-    document.getElementById(presetMap[n]).classList.add('active');
-  }
-
   document.getElementById('q-count-input').value = n;
   autoSetTime(n);
+  
+  // Only clear saved progress when user actively changes the count (not during init)
+  if (uiReady) clearProgress();
 }
 
 function onCustomCount(val) {
@@ -1616,9 +1828,10 @@ function onCustomCount(val) {
   let n = parseInt(val) || 1;
   n = Math.max(1, Math.min(n, bankSize));
   selectedCount = n;
-
-  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
   autoSetTime(n);
+  
+  // Only clear saved progress when user actively changes the count (not during init)
+  if (uiReady) clearProgress();
 }
 
 function autoSetTime(n) {
@@ -1667,7 +1880,7 @@ function initUI() {
 
   // Default count
   const defaultCount = Math.min(20, bankSize);
-  setCount(defaultCount);
+  adjustCount(0); // Initialize with default value
 
   updateStartScreenStats();
 
@@ -1675,6 +1888,9 @@ function initUI() {
   const savedTheme = localStorage.getItem('quiz-theme');
   if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
   updateThemeIcon();
+
+  // Mark UI as fully initialised — count-change handlers may now clear saved progress
+  uiReady = true;
 }
 
 /* ─── START QUIZ ─────────────────────────────────────────────── */
@@ -1682,6 +1898,9 @@ function startQuiz() {
   const mode = document.querySelector('input[name="quiz-mode"]:checked').value;
   const timeMins = parseInt(document.getElementById('time-input').value) || 30;
   const count = selectedCount;
+
+  // Clear any existing saved progress before starting a new session
+  clearProgress();
 
   // Select questions from bank
   SESSION_QUESTIONS = selectSessionQuestions(count);
@@ -1915,6 +2134,10 @@ function confirmSubmit() {
   closeModal();
   stopTimer();
   state.submitted = true;
+  
+  // Clear saved progress — session is done, no restore needed
+  clearProgress();
+  
   buildResults();
   showScreen('result-screen');
 }
@@ -2021,6 +2244,10 @@ function confirmResetProgress() {
   if (!confirm('End this session and go back to start?')) return;
   stopTimer();
   state.submitted = false;
+  
+  // Clear saved progress when manually resetting
+  clearProgress();
+  
   showScreen('start-screen');
 }
 
@@ -2047,13 +2274,80 @@ function navigateToIndex(event) {
 
 /* ─── TOAST ──────────────────────────────────────────────────── */
 let toastTimer;
-function showToast(msg) {
+
+function showToast(msg, actions = []) {
   const t = document.getElementById('toast');
-  t.textContent = msg;
+
+  // Clear any existing content
+  t.innerHTML = '';
+
+  // Create message span
+  const msgSpan = document.createElement('span');
+  msgSpan.textContent = msg;
+  msgSpan.style.flex = '1';
+  t.appendChild(msgSpan);
+
+  // Add action buttons if provided
+  if (actions.length > 0) {
+    const actionsContainer = document.createElement('div');
+    actionsContainer.style.display = 'flex';
+    actionsContainer.style.gap = '0.5rem';
+    actionsContainer.style.marginLeft = '0.75rem';
+
+    actions.forEach(action => {
+      const btn = document.createElement('button');
+      btn.textContent = action.label;
+      btn.style.cssText = `
+        padding: 0.35rem 0.75rem;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: ${action.primary ? 'var(--accent)' : 'var(--surface2)'};
+        color: ${action.primary ? '#000' : 'var(--text)'};
+        font-size: 0.75rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all var(--transition);
+      `;
+      btn.onclick = () => {
+        action.onClick();
+        t.classList.remove('show');
+      };
+      btn.onmouseenter = () => {
+        if (!action.primary) {
+          btn.style.borderColor = 'var(--accent)';
+          btn.style.color = 'var(--accent)';
+        }
+      };
+      btn.onmouseleave = () => {
+        if (!action.primary) {
+          btn.style.borderColor = 'var(--border)';
+          btn.style.color = 'var(--text)';
+        }
+      };
+      actionsContainer.appendChild(btn);
+    });
+
+    t.appendChild(actionsContainer);
+  }
+
   t.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+
+  // Auto-hide only if no actions (for simple toasts)
+  if (actions.length === 0) {
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+  }
 }
+
+// Auto-save every 5 seconds
+setInterval(saveProgress, 5000);
+
+// Save progress before page unload (tab close, refresh, navigation)
+window.addEventListener('beforeunload', function() {
+  if (!state.submitted) {
+    saveProgress();
+  }
+});
 
 /* ─── VISIBILITY CHANGE ──────────────────────────────────────── */
 window.addEventListener('visibilitychange', () => {
@@ -2067,6 +2361,14 @@ window.addEventListener('visibilitychange', () => {
 
 /* ─── BOOT ───────────────────────────────────────────────────── */
 initUI();
+checkSavedProgress();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('../../sw.js').catch(function () {});
+  });
+}
 </script>
 </body>
 </html>
