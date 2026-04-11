@@ -329,6 +329,12 @@ textarea { resize: vertical; min-height: 80px; }
 
   <!-- EXPORT TAB -->
   <div class="section" id="tab-export">
+    <div id="upload-status" style="display: none; margin-bottom: 1rem; padding: 0.75rem 1rem; background: var(--correct-bg); border: 1px solid var(--correct); border-radius: var(--radius);">
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <span style="color: var(--correct); font-weight: 500;">✓ Using uploaded HTML (custom code preserved)</span>
+        <button class="btn-secondary" onclick="clearUploadedHTML()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Use Default Template</button>
+      </div>
+    </div>
     <div class="preview-panel">
       <h3>📄 Generated Configuration</h3>
       <pre id="export-preview"></pre>
@@ -354,6 +360,7 @@ textarea { resize: vertical; min-height: 80px; }
 ──────────────────────────────────────────────────────────────────*/
 let quizEntries = [];
 let entryCounter = 0;
+let uploadedHTMLContent = ''; // Store uploaded HTML to preserve custom code
 
 /* ─────────────────────────────────────────────────────────────────
    INITIALIZATION
@@ -606,12 +613,16 @@ function generateHTML() {
   const config = getConfig();
   const quizzesJson = JSON.stringify(config.quizzes, null, 2);
 
-  // Fetch template
-  fetch('index-template.html')
-    .then(res => {
-      if (!res.ok) throw new Error('index-template.html not found');
-      return res.text();
-    })
+  // Use uploaded HTML as template if available, otherwise fetch the default template
+  const templatePromise = uploadedHTMLContent 
+    ? Promise.resolve(uploadedHTMLContent)
+    : fetch('index-template.html')
+        .then(res => {
+          if (!res.ok) throw new Error('index-template.html not found');
+          return res.text();
+        });
+
+  templatePromise
     .then(template => {
       let modified = template;
 
@@ -621,7 +632,7 @@ function generateHTML() {
       if (quizzesStartMatch) {
         const startIdx = modified.indexOf(quizzesStartMatch[0]);
         const arrayStart = startIdx + quizzesStartMatch[0].length - 1; // Position of [
-        
+
         // Find matching ]
         let bracketCount = 0;
         let arrayEnd = -1;
@@ -635,7 +646,7 @@ function generateHTML() {
             }
           }
         }
-        
+
         if (arrayEnd !== -1) {
           // Replace the array content
           const before = modified.substring(0, arrayStart + 1); // Include [
@@ -732,6 +743,10 @@ function processFile(file) {
 }
 
 function importFromHTML(content) {
+  // Store the uploaded HTML to preserve custom code
+  uploadedHTMLContent = content;
+  updateUploadStatus();
+  
   // Strategy 1: Try QUIZZES array (standard format used by index.html and index-template.html)
   const quizzesMatch = content.match(/const\s+QUIZZES\s*=\s*\[/);
   if (quizzesMatch) {
@@ -746,7 +761,7 @@ function importFromHTML(content) {
           // Sanitize the JavaScript array to valid JSON
           quizzesStr = sanitizeJavaScriptObject(quizzesStr);
           const quizzes = JSON.parse(quizzesStr);
-          
+
           // Extract additional config from HTML elements
           const extractedConfig = extractHTMLConfig(content, quizzes);
           importConfig(extractedConfig);
@@ -780,6 +795,19 @@ function importFromHTML(content) {
   }
 
   showToast('❌ No quiz configuration found in HTML file. Expected: const QUIZZES = [...]');
+}
+
+function clearUploadedHTML() {
+  uploadedHTMLContent = '';
+  updateUploadStatus();
+  showToast('✓ Now using default template');
+}
+
+function updateUploadStatus() {
+  const statusEl = document.getElementById('upload-status');
+  if (statusEl) {
+    statusEl.style.display = uploadedHTMLContent ? 'block' : 'none';
+  }
 }
 
 function extractHTMLConfig(html, quizzes) {
