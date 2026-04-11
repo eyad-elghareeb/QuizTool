@@ -229,8 +229,8 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
   <div class="container">
     <!-- HERO SECTION -->
     <header class="hero">
-      <h1>Select Your <span>Exam</span></h1>
-      <p>Test your knowledge across various subjects. Choose an exam below to begin.</p>
+      <h1>Select Your <span>Tool</span></h1>
+      <p>Create Quizzes / Question banks , and make full project with index </p>
     </header>
 
     <!-- EXAMS GRID -->
@@ -254,64 +254,92 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
    QUIZ CONFIGURATION — Easily add your separate HTML exams here!
 ──────────────────────────────────────────────────────────────────*/
 const QUIZZES =[
+
   {
-    title: "🔧 Quiz Maker",
-    description: "Create your own custom quizzes with this easy tool",
-    icon: "⚙️",
-    tags: ["Tool", "Create"],
-    url: "quiz-maker.html"
+    "title": "🔧 Quiz Maker",
+    "description": "Create your own custom quizzes with this easy tool",
+    "icon": "⚙️",
+    "url": "quiz-maker.html",
+    "tags": [
+      "Tool",
+      "Create"
+    ]
   },
   {
-    title: "📱 Quiz Maker JS",
-    description: "JavaScript-based quiz maker for interactive quizzes",
-    icon: "💻",
-    tags: ["Tool", "JavaScript"],
-    url: "quiz-maker-js.html"
+    "title": "📱 Quiz Maker JS",
+    "description": "JavaScript-based quiz maker for interactive quizzes",
+    "icon": "💻",
+    "url": "quiz-maker-js.html",
+    "tags": [
+      "Tool",
+      "JavaScript"
+    ]
   },
   {
-    title: "🔀 Quiz Combiner",
-    description: "Merge multiple quiz HTML files into a single Question Bank. Drop any number of quiz files, remove duplicates, configure the bank name, and download in one click.",
-    icon: "🔀",
-    tags: ["Tool", "Combine", "New ✨"],
-    url: "quiz-combiner.html"
+    "title": "🔀 Quiz Combiner",
+    "description": "Merge multiple quiz HTML files into a single Question Bank. Drop any number of quiz files, remove duplicates, configure the bank name, and download in one click.",
+    "icon": "🔀",
+    "url": "quiz-combiner.html",
+    "tags": [
+      "Tool",
+      "Combine",
+      "New ✨"
+    ]
   },
   {
-    title: "🏦 Bank Maker",
-    description: "Create a smart Question Bank from a large JS array. The bank remembers which questions you've already seen and always serves fresh ones each session.",
-    icon: "🏦",
-    tags: ["Tool", "Bank", "New ✨"],
-    url: "bank-maker.html"
+    "title": "🏦 Bank Maker",
+    "description": "Create a smart Question Bank from a large JS array. The bank remembers which questions you've already seen and always serves fresh ones each session.",
+    "icon": "🏦",
+    "url": "bank-maker.html",
+    "tags": [
+      "Tool",
+      "Bank",
+      "New ✨"
+    ]
   },
   {
-    title: "📄 PDF Exporter",
-    description: "Export your quiz HTML files to a clean, printable PDF format",
-    icon: "🖨️",
-    tags: ["Tool", "Export"],
-    url: "pdf-exporter.html"
+    "title": "📄 PDF Exporter",
+    "description": "Export your quiz HTML files to a clean, printable PDF format",
+    "icon": "🖨️",
+    "url": "pdf-exporter.html",
+    "tags": [
+      "Tool",
+      "Export"
+    ]
   },
   {
-    title: "📝 Index Editor",
-    description: "Create and manage custom index/hub pages for any project with a visual editor",
-    icon: "📝",
-    tags: ["Tool", "Hub", "New ✨"],
-    url: "index-editor.html"
+    "title": "📝 Index Editor",
+    "description": "Create and manage custom index/hub pages for any project with a visual editor",
+    "icon": "📝",
+    "url": "index-editor.html",
+    "tags": [
+      "Tool",
+      "Hub",
+      "New ✨"
+    ]
   },
   {
-    title: "⚡ JavaScript Mastery Bank",
-    description: "51 JS questions covering closures, async, arrays, prototypes and more. Pick how many to answer each session — fresh questions every time, coverage tracked automatically.",
-    icon: "⚡",
-    tags: ["51 Questions", "JavaScript", "Bank"],
-    url: "js-question-bank.html"
+    "title": "⚡ JavaScript Mastery Bank",
+    "description": "51 JS questions covering closures, async, arrays, prototypes and more. Pick how many to answer each session — fresh questions every time, coverage tracked automatically.",
+    "icon": "⚡",
+    "url": "js-question-bank.html",
+    "tags": [
+      "JavaScript",
+      "Bank"
+    ]
   },
   {
-    title: "General Knowledge Quiz",
-    description: "Test your knowledge across science, history, geography, and more.",
-    icon: "🌍",
-    tags: ["10 Questions", "General"],
-    url: "quiz-template.html"
+    "title": "General Knowledge Quiz",
+    "description": "Test your knowledge across science, history, geography, and more.",
+    "icon": "🌍",
+    "url": "quiz-template.html",
+    "tags": [
+      "10 Questions",
+      "General"
+    ]
   }
-  // To add a new exam, just duplicate a block above, change the text, and link the new file!
-];
+
+  ];
 
 /* ─────────────────────────────────────────────────────────────────
    ENGINE LOGIC
