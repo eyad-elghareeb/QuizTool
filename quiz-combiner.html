@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz Combiner — QuizTool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:         #0d1117;
+  --surface:    #161b22;
+  --surface2:   #1c2330;
+  --border:     #30363d;
+  --text:       #e6edf3;
+  --text-muted: #8b949e;
+  --accent:     #f0a500;
+  --accent-dim: rgba(240,165,0,0.12);
+  --correct:    #2ea043;
+  --correct-bg: rgba(46,160,67,0.12);
+  --wrong:      #da3633;
+  --wrong-bg:   rgba(218,54,51,0.12);
+  --radius:     12px;
+  --shadow:     0 4px 24px rgba(0,0,0,0.4);
+  --transition: 0.2s ease;
+}
+[data-theme="light"] {
+  --bg:         #f3f0eb;
+  --surface:    #ffffff;
+  --surface2:   #f8f6f1;
+  --border:     #d0ccc5;
+  --text:       #1c1917;
+  --text-muted: #78716c;
+  --accent:     #c27803;
+  --accent-dim: rgba(194,120,3,0.10);
+  --correct:    #16a34a;
+  --correct-bg: rgba(22,163,74,0.10);
+  --wrong:      #dc2626;
+  --wrong-bg:   rgba(220,38,38,0.10);
+  --shadow:     0 4px 24px rgba(0,0,0,0.10);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  transition: background var(--transition), color var(--transition);
+}
+button { cursor: pointer; font-family: inherit; border: none; outline: none; }
+a { cursor: pointer; font-family: inherit; text-decoration: none; }
+
+/* ── TOPBAR ── */
+.topbar {
+  display: flex; align-items: center; gap: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 10;
+}
+.topbar-title { font-family: 'Playfair Display', serif; font-size: 1.15rem; font-weight: 700; flex: 1; }
+.back-btn {
+  display: flex; align-items: center; gap: 0.5rem;
+  color: var(--text-muted); font-weight: 600;
+  transition: color var(--transition); font-size: 0.9rem;
+}
+.back-btn:hover { color: var(--text); }
+.back-btn svg { transition: transform var(--transition); }
+.back-btn:hover svg { transform: translateX(-3px); }
+.icon-btn {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: var(--surface2); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted); transition: all var(--transition); font-size: 1rem;
+}
+.icon-btn:hover { color: var(--text); border-color: var(--accent); }
+
+/* ── LAYOUT ── */
+.container { max-width: 820px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+.page-header { text-align: center; margin-bottom: 2rem; }
+.page-header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.7rem, 4vw, 2.2rem);
+  margin-bottom: 0.4rem;
+}
+.page-header p { color: var(--text-muted); font-size: 0.9rem; }
+
+/* ── SECTION LABELS ── */
+.section-label {
+  font-size: 0.78rem; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  margin-bottom: 0.6rem; display: block;
+}
+
+/* ── DROP ZONE ── */
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: 16px;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition);
+  background: var(--surface);
+  margin-bottom: 1rem;
+}
+.drop-zone:hover, .drop-zone.drag-over {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+.drop-zone-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+.drop-zone h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.35rem; }
+.drop-zone p { color: var(--text-muted); font-size: 0.85rem; }
+.drop-zone .browse-link {
+  color: var(--accent); font-weight: 600; cursor: pointer;
+  text-decoration: underline; text-underline-offset: 3px;
+}
+#file-input { display: none; }
+
+/* ── FILE LIST ── */
+.file-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.5rem; }
+.file-item {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.7rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: border-color var(--transition);
+}
+.file-item.error { border-color: var(--wrong); background: var(--wrong-bg); }
+.file-item.success { border-color: var(--correct); }
+.file-status {
+  width: 24px; height: 24px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.8rem; font-weight: 700; flex-shrink: 0;
+}
+.file-item.success .file-status { background: var(--correct-bg); color: var(--correct); }
+.file-item.error .file-status { background: var(--wrong-bg); color: var(--wrong); }
+.file-item.loading .file-status { background: var(--accent-dim); color: var(--accent); }
+.file-info { flex: 1; min-width: 0; }
+.file-name { font-weight: 600; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.1rem; }
+.file-remove {
+  width: 26px; height: 26px; border-radius: 6px;
+  background: transparent; border: 1px solid transparent;
+  color: var(--text-muted); font-size: 0.9rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition); flex-shrink: 0;
+}
+.file-remove:hover { border-color: var(--wrong); color: var(--wrong); background: var(--wrong-bg); }
+
+/* ── STATS ROW ── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.65rem;
+  margin-bottom: 1.75rem;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.9rem 0.75rem;
+  text-align: center;
+}
+.stat-card .sv { font-size: 1.4rem; font-weight: 700; color: var(--accent); display: block; line-height: 1; margin-bottom: 0.2rem; }
+.stat-card .sv.warn { color: var(--wrong); }
+.stat-card .sl { font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* ── FORM FIELDS ── */
+.form-group { margin-bottom: 1.35rem; }
+label { display: block; margin-bottom: 0.4rem; font-weight: 600; color: var(--text); font-size: 0.9rem; }
+input[type=text] {
+  width: 100%; padding: 0.8rem 1rem;
+  border-radius: var(--radius); border: 1.5px solid var(--border);
+  background: var(--surface); color: var(--text);
+  font-family: inherit; font-size: 0.95rem;
+  transition: border-color var(--transition);
+}
+input[type=text]:focus { outline: none; border-color: var(--accent); }
+.icon-input-row { display: grid; grid-template-columns: 1fr 80px; gap: 0.75rem; }
+
+/* ── DEDUP TOGGLE ── */
+.dedup-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.9rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 1.75rem;
+  transition: border-color var(--transition);
+}
+.dedup-row:has(input:checked) { border-color: var(--accent); background: var(--accent-dim); }
+.dedup-info { flex: 1; }
+.dedup-info strong { font-size: 0.9rem; display: block; }
+.dedup-info span { font-size: 0.78rem; color: var(--text-muted); }
+.toggle {
+  position: relative; width: 42px; height: 24px; flex-shrink: 0;
+}
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; inset: 0; border-radius: 24px;
+  background: var(--surface2); border: 1.5px solid var(--border);
+  transition: all var(--transition); cursor: pointer;
+}
+.toggle-slider::before {
+  content: ''; position: absolute;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--text-muted);
+  top: 2px; left: 2px;
+  transition: all var(--transition);
+}
+.toggle input:checked + .toggle-slider { background: var(--accent); border-color: var(--accent); }
+.toggle input:checked + .toggle-slider::before { transform: translateX(18px); background: #000; }
+
+/* ── HINT BOX ── */
+.hint-box {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 1.5rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+.hint-box strong { color: var(--text); }
+
+/* ── BUTTONS ── */
+.btn-primary {
+  width: 100%; padding: 1rem;
+  border-radius: var(--radius);
+  background: var(--accent); color: #000;
+  font-weight: 700; font-size: 1rem;
+  transition: opacity var(--transition), transform var(--transition);
+  margin-bottom: 0.75rem;
+  display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+}
+.btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+.btn-primary:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+.btn-secondary {
+  width: 100%; padding: 0.9rem;
+  border-radius: var(--radius);
+  background: transparent; color: var(--text);
+  font-weight: 600; font-size: 0.95rem;
+  border: 1.5px solid var(--border);
+  transition: all var(--transition);
+  display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+}
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── DIVIDER ── */
+.divider {
+  border: none; border-top: 1px solid var(--border);
+  margin: 1.75rem 0;
+}
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 1.5rem; left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 0.65rem 1.2rem;
+  font-size: 0.88rem; font-weight: 500;
+  box-shadow: var(--shadow); z-index: 9999;
+  transition: transform 0.3s ease;
+  white-space: nowrap; max-width: 90%;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+@media (max-width: 520px) {
+  .container { padding: 1.5rem 1rem 3rem; }
+  .stats-row { grid-template-columns: 1fr 1fr; }
+  .icon-input-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="#" onclick="navigateToIndex(event)" class="back-btn">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+    </svg>
+    Back to Hub
+  </a>
+  <div class="topbar-title">🔀 Quiz Combiner</div>
+  <button class="icon-btn" onclick="toggleTheme()" id="theme-toggle" title="Toggle theme">☀</button>
+</div>
+
+<div class="container">
+
+  <div class="page-header">
+    <h1>Quiz Combiner</h1>
+    <p>Drop multiple quiz HTML files to merge their questions into a single Question Bank.</p>
+  </div>
+
+  <!-- ── DROP ZONE ── -->
+  <span class="section-label">1 · Load Quiz Files</span>
+  <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+    <div class="drop-zone-icon">📂</div>
+    <h3>Drop quiz HTML files here</h3>
+    <p>or <span class="browse-link">browse to select files</span></p>
+    <p style="margin-top:0.5rem;font-size:0.78rem;color:var(--text-muted);">Accepts quiz HTML files built with quiz-template.html</p>
+  </div>
+  <input type="file" id="file-input" multiple accept=".html">
+
+  <div class="file-list" id="file-list"></div>
+
+  <!-- ── STATS ── -->
+  <div class="stats-row" id="stats-row" style="display:none;">
+    <div class="stat-card"><span class="sv" id="sv-files">0</span><span class="sl">Files</span></div>
+    <div class="stat-card"><span class="sv" id="sv-total">0</span><span class="sl">Total Qs</span></div>
+    <div class="stat-card"><span class="sv warn" id="sv-dupes">0</span><span class="sl">Duplicates</span></div>
+    <div class="stat-card"><span class="sv" id="sv-final">0</span><span class="sl">After Merge</span></div>
+  </div>
+
+  <!-- ── OPTIONS ── -->
+  <hr class="divider">
+  <span class="section-label">2 · Configure Bank</span>
+
+  <div class="form-group">
+    <label>Bank Title</label>
+    <div class="icon-input-row">
+      <input type="text" id="bank-title" value="Combined Question Bank" placeholder="e.g. Gynecology Master Bank">
+      <input type="text" id="bank-icon" value="🗃️" placeholder="Icon" style="text-align:center;font-size:1.3rem;">
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label>Description</label>
+    <input type="text" id="bank-desc" value="Questions combined from multiple quizzes." placeholder="Shown on the bank's start screen">
+  </div>
+
+  <div class="dedup-row">
+    <div class="dedup-info">
+      <strong>Remove duplicate questions</strong>
+      <span>Compares question text — identical questions across files are merged into one</span>
+    </div>
+    <label class="toggle" style="margin-left:1rem;">
+      <input type="checkbox" id="dedup-toggle" checked onchange="refreshStats()">
+      <span class="toggle-slider"></span>
+    </label>
+  </div>
+
+  <div class="hint-box">
+    <strong>How it works:</strong> Each quiz file's <code style="background:var(--surface);padding:1px 5px;border-radius:4px;">QUESTIONS</code> array is extracted using the
+    <code style="background:var(--surface);padding:1px 5px;border-radius:4px;">[QUESTIONS_START]</code> / <code style="background:var(--surface);padding:1px 5px;border-radius:4px;">[QUESTIONS_END]</code> markers.
+    Questions are merged in file order, and the result is injected into
+    <code style="background:var(--surface);padding:1px 5px;border-radius:4px;">question-bank-template.html</code> to produce the final bank file.
+  </div>
+
+  <!-- ── GENERATE ── -->
+  <hr class="divider">
+  <span class="section-label">3 · Generate</span>
+
+  <button class="btn-primary" id="generate-btn" onclick="generateBank()" disabled>
+    💾 Generate &amp; Download Bank HTML
+  </button>
+  <button class="btn-secondary" onclick="resetAll()">↺ Start Over</button>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── THEME ─────────────────────────────────────────────────── */
+function init() {
+  const saved = localStorage.getItem('quiz-theme');
+  if (saved) document.documentElement.setAttribute('data-theme', saved);
+  updateThemeIcon();
+}
+function toggleTheme() {
+  const html = document.documentElement;
+  const newTheme = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', newTheme);
+  localStorage.setItem('quiz-theme', newTheme);
+  updateThemeIcon();
+}
+function updateThemeIcon() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const btn = document.getElementById('theme-toggle');
+  if (btn) btn.textContent = isDark ? '☀' : '☾';
+}
+function navigateToIndex(e) { e.preventDefault(); window.location.href = 'index.html'; }
+
+/* ── FILE STORE ─────────────────────────────────────────────── */
+// Each entry: { id, filename, title, questions: [...], error: null|string }
+let loadedFiles = [];
+let nextId = 0;
+
+/* ── DROP ZONE EVENTS ───────────────────────────────────────── */
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', ()  => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  handleFiles([...e.dataTransfer.files].filter(f => f.name.endsWith('.html')));
+});
+fileInput.addEventListener('change', () => {
+  handleFiles([...fileInput.files]);
+  fileInput.value = '';
+});
+
+/* ── FILE HANDLING ──────────────────────────────────────────── */
+function handleFiles(files) {
+  if (!files.length) return;
+  files.forEach(file => {
+    const id = nextId++;
+    // Add a loading placeholder
+    loadedFiles.push({ id, filename: file.name, title: '', questions: [], error: null, loading: true });
+    renderFileList();
+
+    const reader = new FileReader();
+    reader.onload = e => {
+      const entry = loadedFiles.find(f => f.id === id);
+      if (!entry) return;
+      entry.loading = false;
+      try {
+        const { questions, title } = parseQuizFile(e.target.result, file.name);
+        entry.questions = questions;
+        entry.title = title;
+        entry.error = null;
+      } catch(err) {
+        entry.error = err.message;
+      }
+      renderFileList();
+      refreshStats();
+    };
+    reader.onerror = () => {
+      const entry = loadedFiles.find(f => f.id === id);
+      if (entry) { entry.loading = false; entry.error = 'Could not read file'; }
+      renderFileList();
+      refreshStats();
+    };
+    reader.readAsText(file);
+  });
+}
+
+/* ── PARSER ─────────────────────────────────────────────────── */
+function parseQuizFile(html, filename) {
+  // Extract QUESTIONS array between markers
+  const qStart = html.indexOf('/* [QUESTIONS_START] */');
+  const qEnd   = html.indexOf('/* [QUESTIONS_END] */');
+  if (qStart === -1 || qEnd === -1) {
+    throw new Error('No [QUESTIONS_START] / [QUESTIONS_END] markers found — is this a quiz-template file?');
+  }
+  const block = html.slice(qStart + '/* [QUESTIONS_START] */'.length, qEnd).trim();
+
+  // Strip "const QUESTIONS = " prefix and trailing ";"
+  const arrMatch = block.match(/const\s+QUESTIONS\s*=\s*([\s\S]*?);?\s*$/);
+  const arrayStr = arrMatch ? arrMatch[1].replace(/;\s*$/, '') : block;
+
+  let questions;
+  try {
+    // Safe eval using Function constructor — runs in its own scope
+    questions = new Function(`"use strict"; return (${arrayStr})`)();
+  } catch(e) {
+    throw new Error(`Could not parse QUESTIONS array: ${e.message}`);
+  }
+
+  if (!Array.isArray(questions)) throw new Error('QUESTIONS is not an array');
+  if (questions.length === 0)   throw new Error('QUESTIONS array is empty');
+
+  // Validate each question
+  questions.forEach((q, i) => {
+    if (!q.question)              throw new Error(`Q${i+1}: missing "question" field`);
+    if (!Array.isArray(q.options)) throw new Error(`Q${i+1}: missing "options" array`);
+    if (q.correct === undefined)  throw new Error(`Q${i+1}: missing "correct" index`);
+  });
+
+  // Try to extract the quiz title from QUIZ_CONFIG
+  let title = filename.replace(/\.html$/i, '').replace(/[-_]/g, ' ');
+  const cfgStart = html.indexOf('/* [QUIZ_CONFIG_START] */');
+  const cfgEnd   = html.indexOf('/* [QUIZ_CONFIG_END] */');
+  if (cfgStart !== -1 && cfgEnd !== -1) {
+    const cfgBlock = html.slice(cfgStart, cfgEnd);
+    const titleMatch = cfgBlock.match(/title\s*:\s*["'`]([^"'`]+)["'`]/);
+    if (titleMatch) title = titleMatch[1];
+  }
+
+  return { questions, title };
+}
+
+/* ── RENDER FILE LIST ───────────────────────────────────────── */
+function renderFileList() {
+  const list = document.getElementById('file-list');
+  if (!loadedFiles.length) { list.innerHTML = ''; return; }
+
+  list.innerHTML = loadedFiles.map(f => {
+    const cls = f.loading ? 'loading' : f.error ? 'error' : 'success';
+    const icon = f.loading ? '…' : f.error ? '✗' : '✓';
+    const meta = f.loading
+      ? 'Reading…'
+      : f.error
+        ? f.error
+        : `${f.questions.length} question${f.questions.length !== 1 ? 's' : ''} · ${f.title}`;
+    return `
+      <div class="file-item ${cls}" data-id="${f.id}">
+        <div class="file-status">${icon}</div>
+        <div class="file-info">
+          <div class="file-name" title="${escHtml(f.filename)}">${escHtml(f.filename)}</div>
+          <div class="file-meta">${escHtml(meta)}</div>
+        </div>
+        <button class="file-remove" onclick="removeFile(${f.id})" title="Remove">✕</button>
+      </div>`;
+  }).join('');
+}
+
+function removeFile(id) {
+  loadedFiles = loadedFiles.filter(f => f.id !== id);
+  renderFileList();
+  refreshStats();
+}
+
+/* ── STATS ──────────────────────────────────────────────────── */
+function refreshStats() {
+  const successful = loadedFiles.filter(f => !f.loading && !f.error);
+  const statsRow   = document.getElementById('stats-row');
+
+  if (!successful.length) {
+    statsRow.style.display = 'none';
+    document.getElementById('generate-btn').disabled = true;
+    return;
+  }
+
+  statsRow.style.display = 'grid';
+
+  const allQuestions = successful.flatMap(f => f.questions);
+  const dedup = document.getElementById('dedup-toggle').checked;
+  const dupeCount = countDuplicates(allQuestions);
+  const finalCount = dedup ? allQuestions.length - dupeCount : allQuestions.length;
+
+  document.getElementById('sv-files').textContent = successful.length;
+  document.getElementById('sv-total').textContent = allQuestions.length;
+  document.getElementById('sv-dupes').textContent = dupeCount;
+  document.getElementById('sv-final').textContent = finalCount;
+
+  document.getElementById('generate-btn').disabled = finalCount === 0;
+}
+
+function countDuplicates(questions) {
+  const seen = new Set();
+  let dupes = 0;
+  for (const q of questions) {
+    const key = q.question.trim().toLowerCase();
+    if (seen.has(key)) dupes++;
+    else seen.add(key);
+  }
+  return dupes;
+}
+
+function deduplicate(questions) {
+  const seen = new Set();
+  return questions.filter(q => {
+    const key = q.question.trim().toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/* ── GENERATE BANK ──────────────────────────────────────────── */
+function generateBank() {
+  const successful = loadedFiles.filter(f => !f.loading && !f.error);
+  if (!successful.length) { showToast('⚠️ No valid quiz files loaded'); return; }
+
+  let combined = successful.flatMap(f => f.questions);
+  if (document.getElementById('dedup-toggle').checked) {
+    combined = deduplicate(combined);
+  }
+
+  if (!combined.length) { showToast('⚠️ No questions to include after merging'); return; }
+
+  const title = document.getElementById('bank-title').value.trim() || 'Combined Question Bank';
+  const desc  = document.getElementById('bank-desc').value.trim()  || 'Questions combined from multiple quizzes.';
+  const icon  = document.getElementById('bank-icon').value.trim()  || '🗃️';
+  const uid   = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+
+  fetch('question-bank-template.html')
+    .then(res => {
+      if (!res.ok) throw new Error('Could not load question-bank-template.html — make sure it is in the same folder.');
+      return res.text();
+    })
+    .then(template => {
+      const configObj = { uid, title, description: desc, icon };
+      const configJs  = `const BANK_CONFIG = ${JSON.stringify(configObj, null, 2)};`;
+      const bankJs    = `const QUESTION_BANK = ${JSON.stringify(combined, null, 2)};`;
+
+      let out = template;
+
+      // Replace BANK_CONFIG block
+      const cfgS = '/* [BANK_CONFIG_START] */', cfgE = '/* [BANK_CONFIG_END] */';
+      const ci1 = out.indexOf(cfgS), ci2 = out.indexOf(cfgE);
+      if (ci1 !== -1 && ci2 !== -1)
+        out = out.slice(0, ci1 + cfgS.length) + '\n' + configJs + '\n' + out.slice(ci2);
+
+      // Replace QUESTION_BANK block
+      const qS = '/* [QUESTION_BANK_START] */', qE = '/* [QUESTION_BANK_END] */';
+      const qi1 = out.indexOf(qS), qi2 = out.indexOf(qE);
+      if (qi1 !== -1 && qi2 !== -1)
+        out = out.slice(0, qi1 + qS.length) + '\n' + bankJs + '\n' + out.slice(qi2);
+
+      // Update <title>
+      out = out.replace(/<title>.*?<\/title>/, `<title>${escHtml(title)}</title>`);
+
+      const blob = new Blob([out], { type: 'text/html' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      const safe = title.replace(/[^a-z0-9\s-]/gi, '').trim().replace(/\s+/g, '-').toLowerCase();
+      a.download = (safe || 'question-bank') + '.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+
+      showToast(`💾 ${a.download} downloaded! (${combined.length} questions)`);
+    })
+    .catch(err => {
+      console.error(err);
+      showToast('❌ ' + err.message);
+    });
+}
+
+/* ── RESET ──────────────────────────────────────────────────── */
+function resetAll() {
+  if (loadedFiles.length && !confirm('Clear all loaded files and start over?')) return;
+  loadedFiles = [];
+  nextId = 0;
+  renderFileList();
+  refreshStats();
+  document.getElementById('bank-title').value = 'Combined Question Bank';
+  document.getElementById('bank-desc').value  = 'Questions combined from multiple quizzes.';
+  document.getElementById('bank-icon').value  = '🗃️';
+}
+
+/* ── HELPERS ────────────────────────────────────────────────── */
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+init();
+</script>
+</body>
+</html>
