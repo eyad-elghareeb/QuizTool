@@ -179,6 +179,14 @@ textarea { resize: vertical; min-height: 80px; }
   max-height: 400px; overflow: auto; padding: 1rem; background: var(--surface2);
   border-radius: 8px; font-family: monospace; font-size: 0.85rem; white-space: pre-wrap;
 }
+.preview-panel code {
+  background: var(--surface2);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: var(--accent);
+}
 .preview-actions { display: flex; gap: 1rem; margin-top: 1rem; flex-wrap: wrap; }
 
 /* IMPORT SECTION */
@@ -189,6 +197,14 @@ textarea { resize: vertical; min-height: 80px; }
 }
 .import-dropzone:hover, .import-dropzone.dragover { border-color: var(--accent); background: var(--accent-dim); }
 .import-dropzone svg { width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.5; }
+.import-dropzone code {
+  background: var(--surface2);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: var(--accent);
+}
 
 /* STATS */
 .stats-bar {
@@ -294,13 +310,19 @@ textarea { resize: vertical; min-height: 80px; }
         <polyline points="17 8 12 3 7 8"></polyline>
         <line x1="12" y1="3" x2="12" y2="15"></line>
       </svg>
-      <h3>Upload Index JSON or HTML</h3>
-      <p>Drag & drop a file here, or click to browse</p>
+      <h3>Upload Index Configuration</h3>
+      <p>Drag & drop or click to browse</p>
+      <div style="margin-top: 1rem; font-size: 0.85rem; color: var(--text-muted);">
+        <strong>Supported formats:</strong><br>
+        • JSON config files (.json)<br>
+        • HTML files with <code>const QUIZZES = [...]</code> (.html, .htm)<br>
+        • HTML files with <code>const INDEX_CONFIG = {...}</code> (.html, .htm)
+      </div>
       <input type="file" id="file-input" accept=".json,.html,.htm" style="display: none;" onchange="handleFileUpload(event)">
     </div>
     <div class="form-group" style="margin-top: 1.5rem;">
       <label for="import-text">Or paste your JSON configuration below</label>
-      <textarea id="import-text" rows="8" placeholder='{"quizzes": [...]} or full INDEX_CONFIG object'></textarea>
+      <textarea id="import-text" rows="8" placeholder='{"topbarTitle": "My Hub", "hero": {"title": "Select Your <span>Exam</span>", "description": "..."}, "quizzes": [...]}'></textarea>
       <button class="btn-secondary" style="margin-top: 0.75rem;" onclick="importFromText()">📥 Import from JSON</button>
     </div>
   </div>
@@ -591,19 +613,36 @@ function generateHTML() {
       return res.text();
     })
     .then(template => {
-      // Replace quizzes array between markers
-      const start = '// [QUIZZES_START]';
-      const end = '// [QUIZZES_END]';
-      const i1 = template.indexOf(start);
-      const i2 = template.indexOf(end);
-
       let modified = template;
-      if (i1 !== -1 && i2 !== -1) {
-        // Insert the quizzes array between markers
-        const quizzesContent = quizzesJson.substring(1, quizzesJson.length - 1); // Remove outer brackets
-        modified = modified.substring(0, i1 + start.length) +
-                   `\n  ${quizzesContent}\n  ` +
-                   modified.substring(i2);
+
+      // Replace the QUIZZES array entirely
+      // Find "const QUIZZES = [" and match to the closing "];"
+      const quizzesStartMatch = modified.match(/const\s+QUIZZES\s*=\s*\[/);
+      if (quizzesStartMatch) {
+        const startIdx = modified.indexOf(quizzesStartMatch[0]);
+        const arrayStart = startIdx + quizzesStartMatch[0].length - 1; // Position of [
+        
+        // Find matching ]
+        let bracketCount = 0;
+        let arrayEnd = -1;
+        for (let i = arrayStart; i < modified.length; i++) {
+          if (modified[i] === '[') bracketCount++;
+          else if (modified[i] === ']') {
+            bracketCount--;
+            if (bracketCount === 0) {
+              arrayEnd = i;
+              break;
+            }
+          }
+        }
+        
+        if (arrayEnd !== -1) {
+          // Replace the array content
+          const before = modified.substring(0, arrayStart + 1); // Include [
+          const after = modified.substring(arrayEnd); // From ] onwards
+          const quizzesContent = quizzesJson.substring(1, quizzesJson.length - 1); // Remove outer brackets
+          modified = before + '\n' + quizzesContent + '\n  ' + after;
+        }
       }
 
       // Update title in head
@@ -616,20 +655,12 @@ function generateHTML() {
       );
 
       // Update hero title (handle HTML with <span>)
-      const heroTitleMatch = modified.match(/(<h1>.*?<span>).*?(<\/span>.*?<\/h1>)/s);
+      const heroTitleMatch = modified.match(/(<h1>).*?(<\/h1>)/s);
       if (heroTitleMatch) {
-        const titleParts = config.hero.title.split(/<span>|<\/span>/);
-        if (titleParts.length >= 3) {
-          modified = modified.replace(
-            /(<h1>).*?(<\/h1>)/s,
-            `$1${titleParts[0]}<span>${titleParts[1]}</span>${titleParts[2] || ''}</h1>`
-          );
-        } else {
-          modified = modified.replace(
-            /(<h1>).*?(<\/h1>)/s,
-            `$1${config.hero.title}</h1>`
-          );
-        }
+        modified = modified.replace(
+          /(<h1>).*?(<\/h1>)/s,
+          `$1${config.hero.title}</h1>`
+        );
       }
 
       // Update hero description
@@ -689,89 +720,137 @@ function processFile(file) {
       try {
         const json = JSON.parse(content);
         importConfig(json.quizzes ? json : { quizzes: json });
-        showToast('✅ JSON imported!');
+        showToast('✅ JSON imported successfully!');
       } catch (err) {
-        showToast('❌ Invalid JSON file');
+        showToast('❌ Invalid JSON file: ' + err.message);
       }
     } else if (file.name.endsWith('.html') || file.name.endsWith('.htm')) {
-      // Try QUIZZES array first (old format - most common)
-      const quizzesStart = content.indexOf('const QUIZZES');
-      if (quizzesStart !== -1) {
-        try {
-          // Find the opening bracket
-          const openBracket = content.indexOf('[', quizzesStart);
-          if (openBracket !== -1) {
-            // Find matching closing bracket by counting
-            let bracketCount = 0;
-            let closeBracket = -1;
-            for (let i = openBracket; i < content.length; i++) {
-              if (content[i] === '[') bracketCount++;
-              else if (content[i] === ']') {
-                bracketCount--;
-                if (bracketCount === 0) {
-                  closeBracket = i;
-                  break;
-                }
-              }
-            }
-            
-            if (closeBracket !== -1) {
-              let quizzesStr = content.substring(openBracket, closeBracket + 1);
-              // Remove single-line comments (lines starting with //)
-              quizzesStr = quizzesStr.replace(/^\s*\/\/.*$/gm, '');
-              // Remove inline comments at end of lines (but preserve URLs with //)
-              quizzesStr = quizzesStr.replace(/\s\/\/[^/\n]*$/gm, '');
-              // Remove trailing commas before closing brackets
-              quizzesStr = quizzesStr.replace(/,\s*([}\]])/g, '$1');
-              // Quote unquoted object keys (e.g., title: -> "title":)
-              // Simple approach: match word characters followed by colon
-              quizzesStr = quizzesStr.replace(/^(\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)(\s*:)/gm, '$1"$2"$3');
-              // Also handle keys after comma
-              quizzesStr = quizzesStr.replace(/,\s*([a-zA-Z_$][a-zA-Z0-9_$]*)(\s*:)/g, ', "$1"$2');
-              // Convert single quotes to double quotes
-              // quizzesStr = quizzesStr.replace(/'/g, '"');
-              // Trim whitespace
-              quizzesStr = quizzesStr.trim();
-              
-              try {
-                const quizzes = JSON.parse(quizzesStr);
-                importConfig({ quizzes });
-                showToast('✅ QUIZZES imported!');
-                return;
-              } catch (parseErr) {
-                // Show the problematic JSON in alert for debugging
-                const debugMsg = `Could not parse QUIZZES:\n${parseErr.message}\n\nFirst 300 chars:\n${quizzesStr.substring(0, 300)}`;
-                console.error('Parse error:', parseErr);
-                console.log('Full string:', quizzesStr);
-                alert(debugMsg);
-                showToast('❌ Could not parse QUIZZES');
-                return;
-              }
-            }
-          }
-        } catch (err) {
-          showToast('❌ Could not parse QUIZZES: ' + err.message);
-          return;
-        }
-      }
-      
-      // Try INDEX_CONFIG (new format)
-      const matchNew = content.match(/const INDEX_CONFIG\s*=\s*(\{[\s\S]*?\});/);
-      if (matchNew) {
-        try {
-          const config = JSON.parse(matchNew[1]);
-          importConfig(config);
-          showToast('✅ INDEX_CONFIG imported!');
-          return;
-        } catch (err) {
-          // Fall through
-        }
-      }
-      
-      showToast('❌ No quiz configuration found in HTML');
+      importFromHTML(content);
     }
   };
   reader.readAsText(file);
+}
+
+function importFromHTML(content) {
+  // Strategy 1: Try QUIZZES array (standard format used by index.html and index-template.html)
+  const quizzesMatch = content.match(/const\s+QUIZZES\s*=\s*\[/);
+  if (quizzesMatch) {
+    try {
+      // Find the opening bracket position
+      const openPos = content.indexOf('[', content.indexOf('QUIZZES'));
+      if (openPos !== -1) {
+        // Find matching closing bracket
+        const closePos = findMatchingBracket(content, openPos, '[', ']');
+        if (closePos !== -1) {
+          let quizzesStr = content.substring(openPos, closePos + 1);
+          // Sanitize the JavaScript array to valid JSON
+          quizzesStr = sanitizeJavaScriptObject(quizzesStr);
+          const quizzes = JSON.parse(quizzesStr);
+          
+          // Extract additional config from HTML elements
+          const extractedConfig = extractHTMLConfig(content, quizzes);
+          importConfig(extractedConfig);
+          showToast(`✅ Successfully imported ${quizzes.length} quizzes from HTML!`);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('QUIZZES parse failed:', err);
+      showToast('❌ Failed to parse QUIZZES: ' + err.message);
+      return;
+    }
+  }
+
+  // Strategy 2: Try INDEX_CONFIG object (alternative format)
+  const indexConfigMatch = content.match(/const\s+INDEX_CONFIG\s*=\s*(\{[\s\S]*?\});/);
+  if (indexConfigMatch) {
+    try {
+      let configStr = indexConfigMatch[1];
+      // Clean up the JSON-like string
+      configStr = sanitizeJavaScriptObject(configStr);
+      const config = JSON.parse(configStr);
+      importConfig(config);
+      showToast('✅ INDEX_CONFIG imported from HTML!');
+      return;
+    } catch (err) {
+      console.warn('INDEX_CONFIG parse failed:', err);
+      showToast('❌ Failed to parse INDEX_CONFIG: ' + err.message);
+      return;
+    }
+  }
+
+  showToast('❌ No quiz configuration found in HTML file. Expected: const QUIZZES = [...]');
+}
+
+function extractHTMLConfig(html, quizzes) {
+  const config = { quizzes };
+  
+  // Extract <title> from head (prefer this if available)
+  const titleMatch = html.match(/<title>(.*?)<\/title>/i);
+  if (titleMatch && titleMatch[1] && titleMatch[1].trim()) {
+    config.topbarTitle = titleMatch[1].trim();
+  }
+  
+  // Extract topbar title (more specific to our template)
+  const topbarTitleMatch = html.match(/<div class="topbar-title">(.*?)<\/div>/i);
+  if (topbarTitleMatch && topbarTitleMatch[1] && topbarTitleMatch[1].trim()) {
+    config.topbarTitle = topbarTitleMatch[1].trim();
+  }
+  
+  // Extract hero title (h1 tag inside hero section)
+  const heroTitleMatch = html.match(/<h1[^>]*>(.*?)<\/h1>/is);
+  if (heroTitleMatch && heroTitleMatch[1] && heroTitleMatch[1].trim()) {
+    config.hero = config.hero || {};
+    config.hero.title = heroTitleMatch[1].trim();
+  }
+  
+  // Extract hero description (p tag inside header, typically after h1)
+  const headerMatch = html.match(/<header class="hero">([\s\S]*?)<\/header>/i);
+  if (headerMatch) {
+    const headerContent = headerMatch[1];
+    // Find p tag that's not inside other elements
+    const pMatch = headerContent.match(/<p[^>]*>(.*?)<\/p>/is);
+    if (pMatch && pMatch[1] && pMatch[1].trim()) {
+      config.hero = config.hero || {};
+      config.hero.description = pMatch[1].trim();
+    }
+  }
+  
+  // Extract theme from data-theme attribute on html tag
+  const themeMatch = html.match(/<html[^>]*data-theme="(dark|light)"[^>]*>/i);
+  if (themeMatch) {
+    config.defaultTheme = themeMatch[1];
+  }
+  
+  return config;
+}
+
+function findMatchingBracket(content, openPos, openChar, closeChar) {
+  let count = 0;
+  for (let i = openPos; i < content.length; i++) {
+    if (content[i] === openChar) count++;
+    else if (content[i] === closeChar) {
+      count--;
+      if (count === 0) return i;
+    }
+  }
+  return -1;
+}
+
+function sanitizeJavaScriptObject(str) {
+  // Remove single-line comments (but not URLs with //)
+  str = str.replace(/^\s*\/\/.*$/gm, '');
+  // Remove trailing commas before closing brackets/braces
+  str = str.replace(/,\s*([}\]])/g, '$1');
+  // Quote unquoted object keys
+  str = str.replace(/(\{|,)\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":');
+  // Handle first key without comma
+  str = str.replace(/^\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/gm, '"$1":');
+  // Replace single quotes with double quotes (carefully)
+  // This is tricky - we'll handle simple cases only
+  // Remove any remaining problematic syntax
+  str = str.trim();
+  return str;
 }
 
 function importFromText() {
@@ -795,21 +874,15 @@ function importConfig(config) {
     // Old format might have title at root
     document.getElementById('cfg-topbar').value = config.title;
   }
-  
+
   if (config.hero?.title) {
     document.getElementById('cfg-hero-title').value = config.hero.title;
-  } else {
-    // Default if not present
-    document.getElementById('cfg-hero-title').value = 'Select Your <span>Exam</span>';
   }
-  
+
   if (config.hero?.description) {
     document.getElementById('cfg-hero-desc').value = config.hero.description;
-  } else {
-    // Default if not present
-    document.getElementById('cfg-hero-desc').value = 'Test your knowledge across various subjects. Choose an exam below to begin.';
   }
-  
+
   if (config.defaultTheme) {
     document.getElementById('cfg-theme').value = config.defaultTheme;
   }
@@ -821,19 +894,22 @@ function importConfig(config) {
 
   // Add quiz entries
   if (config.quizzes?.length) {
-    config.quizzes.forEach(q => {
+    config.quizzes.forEach((q, index) => {
       // Ensure icon field exists (old files might embed emoji in title)
       if (!q.icon) {
         q.icon = '📝';
       }
       addQuizEntry(q);
     });
+    showToast(`✅ Imported ${config.quizzes.length} quiz entries!`);
+  } else {
+    showToast('⚠️ No quiz entries found in config');
   }
 
   updateStats();
   updateExportPreview();
   saveToLocalStorage();
-  
+
   // Switch to quizzes tab manually
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
