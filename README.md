@@ -63,7 +63,7 @@ Comprehensive JavaScript question bank with 51 questions!
 - **Progress Monitoring**: Track your coverage of the entire question set
 - **Great for**: Mastering JavaScript concepts through repeated practice
 
-### 📚 Quiz Templates (`quizes/quiz-template.html`)
+### 📚 Quiz Templates (`quiz-template.html`)
 Pre-built quiz template for creating standardized exams with:
 - Professional styling matching the main theme
 - Score tracking and progress indicators
@@ -123,16 +123,16 @@ const QUIZZES = [
 
 ```
 QuizTool/
-├── index.html              # Main hub/landing page
-├── quiz-maker.html         # Visual quiz builder
-├── quiz-maker-js.html      # JavaScript-based quiz maker
-├── quiz-combiner.html      # Merge multiple quizzes into one bank
-├── bank-maker.html         # Create smart question banks with session tracking
-├── pdf-exporter.html       # Export quizzes to PDF format
-├── js-question-bank.html   # JavaScript mastery question bank (51 questions)
-├── README.md               # This file
-└── quizes/
-    └── quiz-template.html  # Base template for generated quizzes
+├── index.html                    # Main hub/landing page
+├── quiz-maker.html               # Visual quiz builder
+├── quiz-maker-js.html            # JavaScript-based quiz maker
+├── quiz-combiner.html            # Merge multiple quizzes into one bank
+├── bank-maker.html               # Create smart question banks with session tracking
+├── pdf-exporter.html             # Export quizzes to PDF format
+├── js-question-bank.html         # JavaScript mastery question bank (51 questions)
+├── quiz-template.html            # Base template for generated quizzes
+├── question-bank-template.html   # Template for question bank files
+└── README.md                     # This file
 ```
 
 ## 🛠️ Technical Details
