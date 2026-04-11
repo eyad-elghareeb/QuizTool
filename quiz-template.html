@@ -105,7 +105,7 @@ input[type=radio] { display: none; }
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 20px;
-  padding: 3rem 2.5rem;
+  padding: 2rem 2rem 1.75rem;
   max-width: 520px;
   width: 100%;
   box-shadow: var(--shadow);
@@ -133,9 +133,9 @@ input[type=radio] { display: none; }
 }
 .meta-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 1rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
 }
 .meta-item {
   background: var(--surface2);
@@ -169,6 +169,58 @@ input[type=radio] { display: none; }
 }
 .btn-start:hover { opacity: 0.88; transform: translateY(-1px); }
 .btn-start:active { transform: translateY(0); }
+
+/* Time selector (exam mode) */
+.section-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.6rem;
+  text-align: left;
+}
+.time-section { margin-bottom: 1.25rem; text-align: left; }
+.time-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.time-adj-btn {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition);
+  flex-shrink: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+.time-adj-btn:hover { border-color: var(--accent); color: var(--accent); }
+.time-input {
+  flex: 1;
+  padding: 0.5rem;
+  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: center;
+  transition: border-color var(--transition);
+}
+.time-input:focus { outline: none; border-color: var(--accent); }
+.time-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.35rem;
+  text-align: left;
+}
 
 /* Mode options - ensure equal height on mobile */
 .mode-option {
@@ -849,28 +901,34 @@ input[type=radio]:checked + .option-label .option-key {
         <span class="val" id="meta-questions">—</span>
         <span class="lbl">Questions</span>
       </div>
-      <div class="meta-item">
-        <span class="val" id="meta-time">—</span>
-        <span class="lbl">Minutes</span>
-      </div>
     </div>
     
+    <!-- Time Limit (exam mode only) -->
+    <div class="time-section" id="time-section">
+      <div class="section-label">Time Limit <span style="color:var(--text-muted);font-size:0.75rem;font-weight:400;margin-left:0.35rem">(min)</span></div>
+      <div class="time-controls">
+        <button class="time-adj-btn" onclick="adjustTime(-5)">−5</button>
+        <input type="number" id="time-input" class="time-input" min="1" max="300" value="30">
+        <button class="time-adj-btn" onclick="adjustTime(5)">+5</button>
+      </div>
+    </div>
+
     <!-- Mode Selection -->
-    <div style="margin-bottom: 1.5rem;">
-      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.75rem; font-weight: 500;">Quiz Mode</p>
+    <div style="margin-bottom: 1.25rem;">
+      <p class="section-label">Quiz Mode</p>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
         <label style="cursor: pointer;">
           <input type="radio" name="quiz-mode" value="exam" checked style="display: none;">
           <div style="padding: 0.85rem; border-radius: var(--radius); border: 1.5px solid var(--border); background: var(--surface2); transition: all var(--transition); text-align: center;" class="mode-option mode-selected">
             <div style="font-weight: 600; font-size: 0.95rem;">📝 Exam Mode</div>
-            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Timer + Normal Quiz</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Timer + blind answers</div>
           </div>
         </label>
         <label style="cursor: pointer;">
           <input type="radio" name="quiz-mode" value="learning" style="display: none;">
           <div style="padding: 0.85rem; border-radius: var(--radius); border: 1.5px solid var(--border); background: var(--surface2); transition: all var(--transition); text-align: center;" class="mode-option">
             <div style="font-weight: 600; font-size: 0.95rem;">📚 Learning Mode</div>
-            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">No timer, show answers</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Instant feedback</div>
           </div>
         </label>
       </div>
@@ -1064,7 +1122,8 @@ let lastTime = Date.now();
 /* ── MODE SELECTION HANDLERS ───────────────────────────────── */
 document.querySelectorAll('input[name="quiz-mode"]').forEach(input => {
   input.addEventListener('change', function() {
-    document.querySelectorAll('.mode-option').forEach(opt => {
+    document.querySelectorAll('input[name="quiz-mode"]').forEach(r => {
+      const opt = r.closest('label').querySelector('.mode-option');
       opt.classList.remove('mode-selected');
       opt.style.borderColor = 'var(--border)';
       opt.style.background = 'var(--surface2)';
@@ -1073,12 +1132,21 @@ document.querySelectorAll('input[name="quiz-mode"]').forEach(input => {
     selected.classList.add('mode-selected');
     selected.style.borderColor = 'var(--accent)';
     selected.style.background = 'var(--accent-dim)';
+    // Show/hide time selector
+    document.getElementById('time-section').style.display = this.value === 'exam' ? '' : 'none';
   });
 });
 
 // Init first selected state
-document.querySelector('.mode-selected').style.borderColor = 'var(--accent)';
-document.querySelector('.mode-selected').style.background = 'var(--accent-dim)';
+(function() {
+  const checked = document.querySelector('input[name="quiz-mode"]:checked');
+  if (checked) {
+    const opt = checked.closest('label').querySelector('.mode-option');
+    opt.classList.add('mode-selected');
+    opt.style.borderColor = 'var(--accent)';
+    opt.style.background = 'var(--accent-dim)';
+  }
+})();
 
 /* ── INIT ─────────────────────────────────────────────────── */
 function initUI() {
@@ -1086,9 +1154,11 @@ function initUI() {
   document.getElementById('quiz-title').textContent  = QUIZ_CONFIG.title;
   document.getElementById('quiz-desc').textContent   = QUIZ_CONFIG.description;
   document.getElementById('meta-questions').textContent = QUESTIONS.length;
-  const mins = QUESTIONS.length + 5;
-  document.getElementById('meta-time').textContent   = mins;
   document.getElementById('topbar-title').textContent = QUIZ_CONFIG.title;
+
+  // Set default time: ~1.5 min per question, min 5
+  const defaultMins = Math.max(5, Math.ceil(QUESTIONS.length * 1.5));
+  document.getElementById('time-input').value = defaultMins;
 
   // set CSS var for portrait nav scroll
   document.documentElement.style.setProperty('--q-count', QUESTIONS.length);
@@ -1103,17 +1173,26 @@ function initUI() {
   updateThemeIcon();
 }
 
+/* ── TIME CONTROLS ─────────────────────────────────────────── */
+function adjustTime(delta) {
+  const inp = document.getElementById('time-input');
+  const cur = parseInt(inp.value) || 10;
+  inp.value = Math.max(1, Math.min(300, cur + delta));
+}
+
 /* ── START ────────────────────────────────────────────────── */
 function startQuiz() {
   // Clear any existing progress when starting a new quiz
   clearProgress();
   
+  const timeMins = parseInt(document.getElementById('time-input').value) || 30;
+
   state.current  = 0;
   state.answers  = {};
   state.flagged  = {};
   state.elapsed  = 0;
   state.submitted= false;
-  state.timerSecs= (QUESTIONS.length + 5) * 60;
+  state.timerSecs= timeMins * 60;
   state.mode     = document.querySelector('input[name="quiz-mode"]:checked').value;
 
   showScreen('quiz-screen');
@@ -1751,7 +1830,7 @@ function confirmResetProgress() {
     state.answers = {};
     state.flagged = {};
     state.elapsed = 0;
-    state.timerSecs = (QUESTIONS.length + 5) * 60;
+    state.timerSecs = (parseInt(document.getElementById('time-input').value) || 30) * 60;
     state.submitted = false;
     state.mode = 'exam';
     
