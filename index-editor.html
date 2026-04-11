@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Index Editor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   CSS VARIABLES & THEME (Matching QuizTool)
+═══════════════════════════════════════════ */
+:root {
+  --bg:         #0d1117;
+  --surface:    #161b22;
+  --surface2:   #1c2330;
+  --border:     #30363d;
+  --text:       #e6edf3;
+  --text-muted: #8b949e;
+  --accent:     #f0a500;
+  --accent-dim: rgba(240,165,0,0.12);
+  --correct:    #2ea043;
+  --correct-bg: rgba(46,160,67,0.12);
+  --wrong:      #da3633;
+  --wrong-bg:   rgba(218,54,51,0.12);
+  --radius:     12px;
+  --shadow:     0 4px 24px rgba(0,0,0,0.4);
+  --transition: 0.2s ease;
+}
+[data-theme="light"] {
+  --bg:         #f3f0eb;
+  --surface:    #ffffff;
+  --surface2:   #f8f6f1;
+  --border:     #d0ccc5;
+  --text:       #1c1917;
+  --text-muted: #78716c;
+  --accent:     #c27803;
+  --accent-dim: rgba(194,120,3,0.10);
+  --correct:    #16a34a;
+  --correct-bg: rgba(22,163,74,0.10);
+  --wrong:      #dc2626;
+  --wrong-bg:   rgba(220,38,38,0.10);
+  --shadow:     0 4px 24px rgba(0,0,0,0.10);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  transition: background var(--transition), color var(--transition);
+}
+
+.container { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+/* TOPBAR */
+.topbar {
+  display: flex; align-items: center; padding: 0.75rem 1.5rem;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+}
+.topbar-title {
+  font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; flex: 1;
+}
+.back-btn {
+  display: flex; align-items: center; gap: 0.5rem; color: var(--text-muted);
+  text-decoration: none; font-weight: 600; transition: color var(--transition);
+}
+.back-btn:hover { color: var(--text); }
+.icon-btn {
+  width: 36px; height: 36px; border-radius: 8px; background: var(--surface2);
+  border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted); transition: all var(--transition); font-size: 1rem; cursor: pointer;
+}
+.icon-btn:hover { color: var(--text); border-color: var(--accent); }
+
+/* HEADER */
+.header { text-align: center; margin-bottom: 2.5rem; }
+.header h1 { font-family: 'Playfair Display', serif; font-size: clamp(1.8rem, 4vw, 2.5rem); margin-bottom: 0.5rem; }
+.header h1 span { color: var(--accent); }
+.header p { color: var(--text-muted); font-size: 1rem; }
+
+/* TABS */
+.tabs { display: flex; gap: 0.5rem; margin-bottom: 2rem; flex-wrap: wrap; }
+.tab-btn {
+  padding: 0.6rem 1.2rem; border-radius: var(--radius); background: var(--surface);
+  border: 1.5px solid var(--border); color: var(--text-muted); font-size: 0.9rem;
+  font-weight: 500; transition: all var(--transition);
+}
+.tab-btn:hover { border-color: var(--accent); color: var(--accent); }
+.tab-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+/* SECTIONS */
+.section { display: none; }
+.section.active { display: block; }
+
+/* FORM STYLES */
+.form-group { margin-bottom: 1.5rem; }
+label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--text); }
+input, textarea, select {
+  width: 100%; padding: 0.85rem 1rem; border-radius: var(--radius);
+  border: 1.5px solid var(--border); background: var(--surface); color: var(--text);
+  font-family: inherit; font-size: 1rem; transition: all var(--transition);
+}
+input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+textarea { resize: vertical; min-height: 80px; }
+.hint { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.4rem; }
+
+/* QUIZ CARD EDITOR */
+.quiz-entry {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 1.5rem; margin-bottom: 1.5rem; position: relative;
+}
+.quiz-entry-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;
+}
+.quiz-number {
+  position: absolute; top: -12px; left: 1rem; background: var(--accent); color: #000;
+  font-weight: 700; padding: 0.2rem 0.75rem; border-radius: 6px; font-size: 0.8rem;
+}
+.delete-btn {
+  background: var(--wrong-bg); border: 1px solid var(--wrong); color: var(--wrong);
+  padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.8rem;
+}
+.delete-btn:hover { background: var(--wrong); color: #fff; }
+
+/* TAGS INPUT */
+.tags-input-wrap {
+  display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0.5rem;
+  border-radius: var(--radius); border: 1.5px solid var(--border); background: var(--surface);
+  min-height: 48px; align-items: center; cursor: text;
+}
+.tags-input-wrap:focus-within { border-color: var(--accent); }
+.tag-chip {
+  display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.6rem;
+  background: var(--accent-dim); border: 1px solid var(--accent); border-radius: 6px;
+  font-size: 0.85rem; color: var(--accent);
+}
+.tag-chip .remove-tag {
+  cursor: pointer; font-weight: 700; font-size: 1rem; line-height: 1;
+}
+.tag-chip .remove-tag:hover { color: var(--wrong); }
+.tags-input {
+  border: none !important; padding: 0.3rem !important; flex: 1; min-width: 120px;
+  background: transparent !important;
+}
+.tags-input:focus { outline: none !important; border: none !important; }
+
+/* BUTTONS */
+.btn-add {
+  width: 100%; padding: 1rem; border: 2px dashed var(--border); background: transparent;
+  color: var(--text-muted); border-radius: var(--radius); cursor: pointer; font-weight: 600;
+  font-size: 1rem; transition: all var(--transition); margin-bottom: 1.5rem;
+}
+.btn-add:hover { border-color: var(--accent); color: var(--accent); }
+
+.btn-primary {
+  width: 100%; padding: 1rem; border-radius: var(--radius); background: var(--accent);
+  color: #000; font-weight: 700; font-size: 1rem; border: none; cursor: pointer;
+  transition: opacity var(--transition);
+}
+.btn-primary:hover { opacity: 0.88; }
+
+.btn-secondary {
+  padding: 0.85rem 1.5rem; border-radius: var(--radius); background: var(--surface);
+  border: 1.5px solid var(--border); color: var(--text); font-weight: 600;
+  font-size: 0.95rem; cursor: pointer; transition: all var(--transition);
+}
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+/* PREVIEW PANEL */
+.preview-panel {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 1.5rem; margin-top: 2rem;
+}
+.preview-panel h3 { margin-bottom: 1rem; font-family: 'Playfair Display', serif; }
+.preview-panel pre {
+  max-height: 400px; overflow: auto; padding: 1rem; background: var(--surface2);
+  border-radius: 8px; font-family: monospace; font-size: 0.85rem; white-space: pre-wrap;
+}
+.preview-actions { display: flex; gap: 1rem; margin-top: 1rem; flex-wrap: wrap; }
+
+/* IMPORT SECTION */
+.import-dropzone {
+  border: 2px dashed var(--border); border-radius: var(--radius); padding: 3rem 2rem;
+  text-align: center; color: var(--text-muted); transition: all var(--transition);
+  cursor: pointer;
+}
+.import-dropzone:hover, .import-dropzone.dragover { border-color: var(--accent); background: var(--accent-dim); }
+.import-dropzone svg { width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.5; }
+
+/* STATS */
+.stats-bar {
+  display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem;
+}
+.stat-item {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 0.75rem 1.25rem; text-align: center; flex: 1; min-width: 120px;
+}
+.stat-item .sv { font-size: 1.5rem; font-weight: 700; color: var(--accent); display: block; }
+.stat-item .sl { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* TOAST */
+.toast {
+  position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(80px);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 0.75rem 1.5rem; font-size: 0.95rem; font-weight: 500; box-shadow: var(--shadow);
+  z-index: 9999; transition: transform 0.3s ease, opacity 0.3s ease; white-space: nowrap;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .container { padding: 1.5rem 1rem; }
+  .preview-actions { flex-direction: column; }
+  .preview-actions .btn-secondary { width: 100%; text-align: center; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="#" onclick="navigateBack(event)" class="back-btn">← Back</a>
+  <div class="topbar-title">📝 Index Editor</div>
+  <button class="icon-btn" onclick="toggleTheme()" id="theme-toggle" title="Toggle theme">☀</button>
+</div>
+
+<div class="container">
+  <header class="header">
+    <h1>Create Your <span>Quiz Hub</span></h1>
+    <p>Configure and generate custom index pages for any project</p>
+  </header>
+
+  <!-- STATS -->
+  <div class="stats-bar">
+    <div class="stat-item">
+      <span class="sv" id="stat-quizzes">0</span>
+      <span class="sl">Quizzes</span>
+    </div>
+    <div class="stat-item">
+      <span class="sv" id="stat-tags">0</span>
+      <span class="sl">Tags</span>
+    </div>
+    <div class="stat-item">
+      <span class="sv" id="stat-theme">Dark</span>
+      <span class="sl">Theme</span>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('config')">⚙️ Configuration</button>
+    <button class="tab-btn" onclick="switchTab('quizzes')">📚 Quizzes</button>
+    <button class="tab-btn" onclick="switchTab('import')">📥 Import</button>
+    <button class="tab-btn" onclick="switchTab('export')">💾 Export</button>
+  </div>
+
+  <!-- CONFIG TAB -->
+  <div class="section active" id="tab-config">
+    <div class="form-group">
+      <label for="cfg-topbar">Top Bar Title</label>
+      <input type="text" id="cfg-topbar" value="Quiz Hub" oninput="updateConfig()">
+    </div>
+    <div class="form-group">
+      <label for="cfg-hero-title">Hero Title (HTML allowed)</label>
+      <input type="text" id="cfg-hero-title" value='Select Your <span>Exam</span>' oninput="updateConfig()">
+      <div class="hint">Use &lt;span&gt; for accent color</div>
+    </div>
+    <div class="form-group">
+      <label for="cfg-hero-desc">Hero Description</label>
+      <textarea id="cfg-hero-desc" rows="2" oninput="updateConfig()">Test your knowledge across various subjects. Choose an exam below to begin.</textarea>
+    </div>
+    <div class="form-group">
+      <label for="cfg-theme">Default Theme</label>
+      <select id="cfg-theme" onchange="updateConfig()">
+        <option value="dark">Dark</option>
+        <option value="light">Light</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- QUIZZES TAB -->
+  <div class="section" id="tab-quizzes">
+    <div id="quiz-entries-container"></div>
+    <button class="btn-add" onclick="addQuizEntry()">+ Add Quiz Entry</button>
+  </div>
+
+  <!-- IMPORT TAB -->
+  <div class="section" id="tab-import">
+    <div class="import-dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="17 8 12 3 7 8"></polyline>
+        <line x1="12" y1="3" x2="12" y2="15"></line>
+      </svg>
+      <h3>Upload Index JSON or HTML</h3>
+      <p>Drag & drop a file here, or click to browse</p>
+      <input type="file" id="file-input" accept=".json,.html,.htm" style="display: none;" onchange="handleFileUpload(event)">
+    </div>
+    <div class="form-group" style="margin-top: 1.5rem;">
+      <label for="import-text">Or paste your JSON configuration below</label>
+      <textarea id="import-text" rows="8" placeholder='{"quizzes": [...]} or full INDEX_CONFIG object'></textarea>
+      <button class="btn-secondary" style="margin-top: 0.75rem;" onclick="importFromText()">📥 Import from JSON</button>
+    </div>
+  </div>
+
+  <!-- EXPORT TAB -->
+  <div class="section" id="tab-export">
+    <div class="preview-panel">
+      <h3>📄 Generated Configuration</h3>
+      <pre id="export-preview"></pre>
+      <div class="preview-actions">
+        <button class="btn-secondary" onclick="exportJSON()">📋 Copy JSON</button>
+        <button class="btn-secondary" onclick="downloadJSON()">💾 Download JSON</button>
+        <button class="btn-secondary" onclick="generateHTML()">🌐 Generate Full HTML</button>
+      </div>
+    </div>
+    <div class="preview-panel" id="html-output" style="display: none; margin-top: 1.5rem;">
+      <h3>✅ Generated HTML</h3>
+      <pre id="html-code"></pre>
+      <div class="preview-actions">
+        <button class="btn-secondary" onclick="downloadHTML()">💾 Download HTML File</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ─────────────────────────────────────────────────────────────────
+   STATE
+──────────────────────────────────────────────────────────────────*/
+let quizEntries = [];
+let entryCounter = 0;
+
+/* ─────────────────────────────────────────────────────────────────
+   INITIALIZATION
+──────────────────────────────────────────────────────────────────*/
+function init() {
+  loadTheme();
+  loadFromLocalStorage();
+  updateStats();
+  updateExportPreview();
+  if (quizEntries.length === 0) addQuizEntry();
+}
+
+function loadTheme() {
+  const saved = localStorage.getItem('index-editor-theme');
+  if (saved) document.documentElement.setAttribute('data-theme', saved);
+  updateThemeIcon();
+}
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  const newTheme = isDark ? 'light' : 'dark';
+  html.setAttribute('data-theme', newTheme);
+  localStorage.setItem('index-editor-theme', newTheme);
+  updateThemeIcon();
+  updateStats();
+}
+
+function updateThemeIcon() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const btn = document.getElementById('theme-toggle');
+  if (btn) btn.textContent = isDark ? '☀' : '☾';
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   TABS
+──────────────────────────────────────────────────────────────────*/
+function switchTab(tabName) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`tab-${tabName}`).classList.add('active');
+  event.target.classList.add('active');
+  if (tabName === 'export') updateExportPreview();
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   CONFIG
+──────────────────────────────────────────────────────────────────*/
+function updateConfig() {
+  const theme = document.getElementById('cfg-theme').value;
+  document.getElementById('stat-theme').textContent = theme.charAt(0).toUpperCase() + theme.slice(1);
+  updateStats();
+  updateExportPreview();
+  saveToLocalStorage();
+}
+
+function getConfig() {
+  const quizzes = [];
+  document.querySelectorAll('.quiz-entry').forEach(el => {
+    const title = el.querySelector('.qe-title')?.value?.trim();
+    const url = el.querySelector('.qe-url')?.value?.trim();
+    if (title && url) {
+      const entryId = parseInt(el.dataset.entryId);
+      const entry = quizEntries.find(e => e.id === entryId);
+      quizzes.push({
+        title: title,
+        description: el.querySelector('.qe-desc')?.value?.trim() || '',
+        icon: el.querySelector('.qe-icon')?.value?.trim() || '📝',
+        url: url,
+        tags: entry?.tags || []
+      });
+    }
+  });
+
+  return {
+    topbarTitle: document.getElementById('cfg-topbar').value,
+    hero: {
+      title: document.getElementById('cfg-hero-title').value,
+      description: document.getElementById('cfg-hero-desc').value
+    },
+    defaultTheme: document.getElementById('cfg-theme').value,
+    quizzes: quizzes
+  };
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   QUIZ ENTRIES
+──────────────────────────────────────────────────────────────────*/
+function addQuizEntry(data = null) {
+  entryCounter++;
+  const id = entryCounter;
+  const container = document.getElementById('quiz-entries-container');
+  
+  const entry = document.createElement('div');
+  entry.className = 'quiz-entry';
+  entry.id = `entry-${id}`;
+  entry.dataset.entryId = id;
+  entry.innerHTML = `
+    <span class="quiz-number">#${quizEntries.length + 1}</span>
+    <div class="quiz-entry-header">
+      <span style="color: var(--text-muted);">Quiz Entry</span>
+      <button class="delete-btn" onclick="deleteQuizEntry(${id})">✕ Delete</button>
+    </div>
+    <div class="form-group">
+      <label>Title</label>
+      <input type="text" class="qe-title" placeholder="Quiz title..." value="${data?.title || ''}">
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea class="qe-desc" rows="2" placeholder="Brief description...">${data?.description || ''}</textarea>
+    </div>
+    <div class="form-group">
+      <label>Icon (emoji)</label>
+      <input type="text" class="qe-icon" placeholder="🎯" value="${data?.icon || '📝'}" maxlength="4">
+    </div>
+    <div class="form-group">
+      <label>URL</label>
+      <input type="text" class="qe-url" placeholder="path/to/quiz.html" value="${data?.url || ''}">
+      <div class="hint">Relative or absolute URL to the quiz file</div>
+    </div>
+    <div class="form-group">
+      <label>Tags (press Enter to add)</label>
+      <div class="tags-input-wrap" onclick="this.querySelector('input').focus()">
+        <input type="text" class="tags-input" placeholder="Add tag..." onkeydown="handleTagInput(event, ${id})">
+      </div>
+    </div>
+  `;
+  
+  container.appendChild(entry);
+  
+  // Store entry with tags
+  quizEntries.push({ id, tags: data?.tags || [] });
+  if (data?.tags?.length) renderTags(id);
+  
+  // Add input listeners
+  entry.querySelectorAll('input, textarea').forEach(inp => {
+    inp.addEventListener('input', () => { updateStats(); updateExportPreview(); saveToLocalStorage(); });
+  });
+  
+  updateStats();
+  updateExportPreview();
+  saveToLocalStorage();
+}
+
+function deleteQuizEntry(id) {
+  const el = document.getElementById(`entry-${id}`);
+  if (el) el.remove();
+  quizEntries = quizEntries.filter(e => e.id !== id);
+  renumberEntries();
+  updateStats();
+  updateExportPreview();
+  saveToLocalStorage();
+}
+
+function renumberEntries() {
+  document.querySelectorAll('.quiz-entry').forEach((el, i) => {
+    const num = el.querySelector('.quiz-number');
+    if (num) num.textContent = `#${i + 1}`;
+  });
+}
+
+function handleTagInput(event, id) {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    const input = event.target;
+    const tag = input.value.trim();
+    if (!tag) return;
+    
+    const entry = quizEntries.find(e => e.id === id);
+    if (entry && !entry.tags.includes(tag)) {
+      entry.tags.push(tag);
+      renderTags(id);
+      updateStats();
+      updateExportPreview();
+      saveToLocalStorage();
+    }
+    input.value = '';
+  }
+}
+
+function renderTags(id) {
+  const entry = quizEntries.find(e => e.id === id);
+  if (!entry) return;
+  const wrap = document.querySelector(`#entry-${id} .tags-input-wrap`);
+  const input = wrap.querySelector('.tags-input');
+  
+  // Remove existing chips
+  wrap.querySelectorAll('.tag-chip').forEach(c => c.remove());
+  
+  // Add chips
+  entry.tags.forEach((tag, i) => {
+    const chip = document.createElement('span');
+    chip.className = 'tag-chip';
+    chip.innerHTML = `${tag}<span class="remove-tag" onclick="removeTag(${id}, ${i})">×</span>`;
+    wrap.insertBefore(chip, input);
+  });
+}
+
+function removeTag(id, tagIndex) {
+  const entry = quizEntries.find(e => e.id === id);
+  if (entry) {
+    entry.tags.splice(tagIndex, 1);
+    renderTags(id);
+    updateStats();
+    updateExportPreview();
+    saveToLocalStorage();
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   STATS
+──────────────────────────────────────────────────────────────────*/
+function updateStats() {
+  const allTags = new Set();
+  quizEntries.forEach(e => e.tags.forEach(t => allTags.add(t)));
+  document.getElementById('stat-quizzes').textContent = quizEntries.length;
+  document.getElementById('stat-tags').textContent = allTags.size;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   EXPORT
+──────────────────────────────────────────────────────────────────*/
+function updateExportPreview() {
+  const config = getConfig();
+  document.getElementById('export-preview').textContent = JSON.stringify(config, null, 2);
+}
+
+function exportJSON() {
+  const config = getConfig();
+  navigator.clipboard.writeText(JSON.stringify(config, null, 2))
+    .then(() => showToast('✅ JSON copied to clipboard!'))
+    .catch(() => showToast('❌ Failed to copy'));
+}
+
+function downloadJSON() {
+  const config = getConfig();
+  const blob = new Blob([JSON.stringify(config, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'index-config.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 100);
+  showToast('✅ JSON downloaded!');
+}
+
+function generateHTML() {
+  const config = getConfig();
+  const quizzesJson = JSON.stringify(config.quizzes, null, 2);
+
+  // Fetch template
+  fetch('index-template.html')
+    .then(res => {
+      if (!res.ok) throw new Error('index-template.html not found');
+      return res.text();
+    })
+    .then(template => {
+      // Replace quizzes array between markers
+      const start = '// [QUIZZES_START]';
+      const end = '// [QUIZZES_END]';
+      const i1 = template.indexOf(start);
+      const i2 = template.indexOf(end);
+
+      let modified = template;
+      if (i1 !== -1 && i2 !== -1) {
+        // Insert the quizzes array between markers
+        const quizzesContent = quizzesJson.substring(1, quizzesJson.length - 1); // Remove outer brackets
+        modified = modified.substring(0, i1 + start.length) +
+                   `\n  ${quizzesContent}\n  ` +
+                   modified.substring(i2);
+      }
+
+      // Update title in head
+      modified = modified.replace(/<title>.*?<\/title>/, `<title>${config.topbarTitle}</title>`);
+
+      // Update topbar title
+      modified = modified.replace(
+        /(<div class="topbar-title">).*?(<\/div>)/,
+        `$1${config.topbarTitle}$2`
+      );
+
+      // Update hero title (handle HTML with <span>)
+      const heroTitleMatch = modified.match(/(<h1>.*?<span>).*?(<\/span>.*?<\/h1>)/s);
+      if (heroTitleMatch) {
+        const titleParts = config.hero.title.split(/<span>|<\/span>/);
+        if (titleParts.length >= 3) {
+          modified = modified.replace(
+            /(<h1>).*?(<\/h1>)/s,
+            `$1${titleParts[0]}<span>${titleParts[1]}</span>${titleParts[2] || ''}</h1>`
+          );
+        } else {
+          modified = modified.replace(
+            /(<h1>).*?(<\/h1>)/s,
+            `$1${config.hero.title}</h1>`
+          );
+        }
+      }
+
+      // Update hero description
+      modified = modified.replace(
+        /(<p>).*?(<\/p>\s*<\/header>)/s,
+        `$1${config.hero.description}$2`
+      );
+
+      document.getElementById('html-output').style.display = 'block';
+      document.getElementById('html-code').textContent = modified;
+      window.generatedHTML = modified;
+      showToast('✅ HTML generated!');
+    })
+    .catch(err => {
+      console.error(err);
+      alert('Error: Could not load index-template.html. Ensure it is in the same folder.');
+    });
+}
+
+function downloadHTML() {
+  if (!window.generatedHTML) return;
+  const blob = new Blob([window.generatedHTML], {type: 'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'index.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 100);
+  showToast('✅ HTML downloaded!');
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   IMPORT
+──────────────────────────────────────────────────────────────────*/
+const dropzone = document.getElementById('dropzone');
+dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+dropzone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropzone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) processFile(file);
+});
+
+function handleFileUpload(event) {
+  const file = event.target.files[0];
+  if (file) processFile(file);
+}
+
+function processFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const content = e.target.result;
+    if (file.name.endsWith('.json')) {
+      try {
+        const json = JSON.parse(content);
+        importConfig(json.quizzes ? json : { quizzes: json });
+        showToast('✅ JSON imported!');
+      } catch (err) {
+        showToast('❌ Invalid JSON file');
+      }
+    } else if (file.name.endsWith('.html') || file.name.endsWith('.htm')) {
+      // Try QUIZZES array first (old format - most common)
+      const quizzesStart = content.indexOf('const QUIZZES');
+      if (quizzesStart !== -1) {
+        try {
+          // Find the opening bracket
+          const openBracket = content.indexOf('[', quizzesStart);
+          if (openBracket !== -1) {
+            // Find matching closing bracket by counting
+            let bracketCount = 0;
+            let closeBracket = -1;
+            for (let i = openBracket; i < content.length; i++) {
+              if (content[i] === '[') bracketCount++;
+              else if (content[i] === ']') {
+                bracketCount--;
+                if (bracketCount === 0) {
+                  closeBracket = i;
+                  break;
+                }
+              }
+            }
+            
+            if (closeBracket !== -1) {
+              let quizzesStr = content.substring(openBracket, closeBracket + 1);
+              // Remove single-line comments (lines starting with //)
+              quizzesStr = quizzesStr.replace(/^\s*\/\/.*$/gm, '');
+              // Remove inline comments at end of lines (but preserve URLs with //)
+              quizzesStr = quizzesStr.replace(/\s\/\/[^/\n]*$/gm, '');
+              // Remove trailing commas before closing brackets
+              quizzesStr = quizzesStr.replace(/,\s*([}\]])/g, '$1');
+              // Quote unquoted object keys (e.g., title: -> "title":)
+              // Simple approach: match word characters followed by colon
+              quizzesStr = quizzesStr.replace(/^(\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)(\s*:)/gm, '$1"$2"$3');
+              // Also handle keys after comma
+              quizzesStr = quizzesStr.replace(/,\s*([a-zA-Z_$][a-zA-Z0-9_$]*)(\s*:)/g, ', "$1"$2');
+              // Convert single quotes to double quotes
+              // quizzesStr = quizzesStr.replace(/'/g, '"');
+              // Trim whitespace
+              quizzesStr = quizzesStr.trim();
+              
+              try {
+                const quizzes = JSON.parse(quizzesStr);
+                importConfig({ quizzes });
+                showToast('✅ QUIZZES imported!');
+                return;
+              } catch (parseErr) {
+                // Show the problematic JSON in alert for debugging
+                const debugMsg = `Could not parse QUIZZES:\n${parseErr.message}\n\nFirst 300 chars:\n${quizzesStr.substring(0, 300)}`;
+                console.error('Parse error:', parseErr);
+                console.log('Full string:', quizzesStr);
+                alert(debugMsg);
+                showToast('❌ Could not parse QUIZZES');
+                return;
+              }
+            }
+          }
+        } catch (err) {
+          showToast('❌ Could not parse QUIZZES: ' + err.message);
+          return;
+        }
+      }
+      
+      // Try INDEX_CONFIG (new format)
+      const matchNew = content.match(/const INDEX_CONFIG\s*=\s*(\{[\s\S]*?\});/);
+      if (matchNew) {
+        try {
+          const config = JSON.parse(matchNew[1]);
+          importConfig(config);
+          showToast('✅ INDEX_CONFIG imported!');
+          return;
+        } catch (err) {
+          // Fall through
+        }
+      }
+      
+      showToast('❌ No quiz configuration found in HTML');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function importFromText() {
+  const text = document.getElementById('import-text').value.trim();
+  if (!text) return showToast('❌ Paste JSON first');
+  try {
+    const json = JSON.parse(text);
+    importConfig(json.quizzes ? json : { quizzes: json });
+    showToast('✅ JSON imported!');
+    document.getElementById('import-text').value = '';
+  } catch (err) {
+    showToast('❌ Invalid JSON: ' + err.message);
+  }
+}
+
+function importConfig(config) {
+  // Update config fields (handle both new and old formats)
+  if (config.topbarTitle) {
+    document.getElementById('cfg-topbar').value = config.topbarTitle;
+  } else if (config.title) {
+    // Old format might have title at root
+    document.getElementById('cfg-topbar').value = config.title;
+  }
+  
+  if (config.hero?.title) {
+    document.getElementById('cfg-hero-title').value = config.hero.title;
+  } else {
+    // Default if not present
+    document.getElementById('cfg-hero-title').value = 'Select Your <span>Exam</span>';
+  }
+  
+  if (config.hero?.description) {
+    document.getElementById('cfg-hero-desc').value = config.hero.description;
+  } else {
+    // Default if not present
+    document.getElementById('cfg-hero-desc').value = 'Test your knowledge across various subjects. Choose an exam below to begin.';
+  }
+  
+  if (config.defaultTheme) {
+    document.getElementById('cfg-theme').value = config.defaultTheme;
+  }
+
+  // Clear existing entries
+  document.getElementById('quiz-entries-container').innerHTML = '';
+  quizEntries.length = 0;
+  entryCounter = 0;
+
+  // Add quiz entries
+  if (config.quizzes?.length) {
+    config.quizzes.forEach(q => {
+      // Ensure icon field exists (old files might embed emoji in title)
+      if (!q.icon) {
+        q.icon = '📝';
+      }
+      addQuizEntry(q);
+    });
+  }
+
+  updateStats();
+  updateExportPreview();
+  saveToLocalStorage();
+  
+  // Switch to quizzes tab manually
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-quizzes').classList.add('active');
+  document.querySelectorAll('.tab-btn')[1].classList.add('active');
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   LOCAL STORAGE (Auto-save)
+──────────────────────────────────────────────────────────────────*/
+function saveToLocalStorage() {
+  try {
+    const config = getConfig();
+    localStorage.setItem('index-editor-config', JSON.stringify(config));
+  } catch(e) {}
+}
+
+function loadFromLocalStorage() {
+  try {
+    const saved = localStorage.getItem('index-editor-config');
+    if (saved) {
+      const config = JSON.parse(saved);
+      importConfig(config);
+    }
+  } catch(e) {}
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   NAVIGATION & UTILS
+──────────────────────────────────────────────────────────────────*/
+function navigateBack(event) {
+  event.preventDefault();
+  // Try to go back, or go to index.html
+  if (document.referrer) {
+    window.history.back();
+  } else {
+    window.location.href = 'index.html';
+  }
+}
+
+function showToast(msg) {
+  const toast = document.createElement('div');
+  toast.textContent = msg;
+  toast.className = 'toast';
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('show'));
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, 2200);
+}
+
+init();
+</script>
+</body>
+</html>

@@ -6,9 +6,31 @@ A modern, feature-rich quiz creation and management platform built with vanilla 
 ### 🏠 Central Quiz Hub (`index.html`)
 - **Unified Dashboard**: Access all your quizzes from a single, beautifully designed landing page
 - **Dynamic Quiz Cards**: Automatically generated cards for each quiz/exam with icons, descriptions, and metadata
+- **Search & Filter**: Built-in search bar and tag filtering to quickly find quizzes
 - **Theme Support**: Built-in dark/light mode toggle with persistent user preference
 - **Responsive Design**: Optimized for desktop, tablet, and mobile devices
 - **Easy Extension**: Simply add new quiz configurations to the `QUIZZES` array to expand your quiz library
+
+### 📝 Index Editor (`index-editor.html`)
+Create and manage custom index/hub pages for any project!
+
+- **Visual Configuration**: Edit hub settings (title, description, theme) without touching code
+- **Quiz Entry Manager**: Add, edit, and remove quiz entries with an intuitive form interface
+- **Tag Management**: Easy tag creation and management with visual chip interface
+- **Import/Export**: 
+  - Import JSON configurations or extract from existing HTML files
+  - Export as JSON for sharing or as a complete standalone HTML file
+- **Auto-Save**: Your work is automatically saved in browser storage
+- **Live Preview**: See your configuration as JSON in real-time
+- **Template-Based**: Generates hubs using the `index-template.html` for consistency
+
+### 🌐 Index Template (`index-template.html`)
+A reusable, customizable template for creating custom index/hub pages for any project!
+
+- **Configurable Layout**: Customize titles, descriptions, and themes
+- **Search & Filter**: Built-in search functionality and tag filtering
+- **Self-Contained**: Works standalone with no dependencies
+- **Easy to Customize**: Simply edit the `INDEX_CONFIG` object to personalize
 
 ### 🔧 Quiz Maker (`quiz-maker.html`)
 Create custom quizzes without any coding required!
@@ -103,6 +125,25 @@ QuizTool features a sophisticated design system with:
 5. Click **"📥 Generate Quiz File"** to preview
 6. Click **"💾 Download as HTML File"** to save your custom quiz
 
+### Creating a Custom Hub for Another Project
+
+Use the Index Editor to create branded hub pages for any collection of tools or quizzes:
+
+1. Open `index-editor.html` in your browser
+2. Configure your hub:
+   - Set the top bar title and hero section
+   - Choose a default theme (dark/light)
+3. Add quiz/tool entries:
+   - Enter title, description, and icon (emoji)
+   - Provide the URL to each tool or quiz
+   - Add tags for categorization and filtering
+4. Export your hub:
+   - **Option A**: Download as a complete HTML file (ready to deploy)
+   - **Option B**: Export as JSON to import later or share
+5. The generated hub includes search, filtering, and theme toggle out of the box
+
+**Pro Tip**: You can also import an existing `index.html` file into the editor to modify it, or paste a JSON configuration directly.
+
 ### Adding New Quizzes to the Hub
 
 Edit the `QUIZZES` array in `index.html`:
@@ -124,6 +165,8 @@ const QUIZZES = [
 ```
 QuizTool/
 ├── index.html                    # Main hub/landing page
+├── index-template.html           # Reusable template for custom hub pages
+├── index-editor.html             # Visual editor for creating index configurations
 ├── quiz-maker.html               # Visual quiz builder
 ├── quiz-maker-js.html            # JavaScript-based quiz maker
 ├── quiz-combiner.html            # Merge multiple quizzes into one bank
