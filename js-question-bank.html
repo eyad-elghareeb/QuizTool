@@ -1779,7 +1779,7 @@ function shuffle(arr) {
   return a;
 }
 
-function selectSessionQuestions(count) {
+function selectSessionQuestions(count, order = 'random') {
   const bankSize = QUESTION_BANK.length;
   const n = Math.min(count, bankSize);
   const progress = getBankProgress();
@@ -1796,7 +1796,11 @@ function selectSessionQuestions(count) {
     showToast(`🎉 Full cycle complete! Starting fresh — cycle ${progress.cycleCount + 1}`);
   }
 
-  const picked = shuffle(unshown).slice(0, n);
+  // Sequential: pick next N questions in original bank order (no shuffle)
+  // Random: shuffle then pick N for fair random coverage
+  const picked = order === 'sequential'
+    ? unshown.sort((a, b) => a - b).slice(0, n)
+    : shuffle(unshown).slice(0, n);
 
   // Update shown indices
   progress.shownIndices = [...new Set([...progress.shownIndices, ...picked])];
@@ -1961,16 +1965,8 @@ function startQuiz() {
   // Clear any existing saved progress before starting a new session
   clearProgress();
 
-  // Select questions from bank (always picks randomly first for fair coverage)
-  SESSION_QUESTIONS = selectSessionQuestions(count);
-
-  // If sequential order is chosen, sort by original bank index
-  if (order === 'sequential') {
-    const paired = SESSION_QUESTION_INDICES.map((bankIdx, pos) => ({ bankIdx, q: SESSION_QUESTIONS[pos] }));
-    paired.sort((a, b) => a.bankIdx - b.bankIdx);
-    SESSION_QUESTION_INDICES = paired.map(p => p.bankIdx);
-    SESSION_QUESTIONS = paired.map(p => p.q);
-  }
+  // Select questions from bank — sequential picks next N in bank order, random shuffles
+  SESSION_QUESTIONS = selectSessionQuestions(count, order);
 
   state.current   = 0;
   state.answers   = {};
