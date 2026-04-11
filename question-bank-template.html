@@ -283,6 +283,9 @@ input[type=radio] { display: none; }
 }
 .btn-start:hover { opacity: 0.88; transform: translateY(-1px); }
 
+/* Order selection */
+.order-section { margin-bottom: 1.25rem; }
+
 /* Reset bank button */
 .reset-bank-btn {
   width: 100%;
@@ -740,6 +743,27 @@ input[type=radio]:checked + .option-label .option-key { background: var(--accent
           <div class="mode-option">
             <div class="mo-title">📚 Learning Mode</div>
             <div class="mo-sub">Instant feedback</div>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Question order -->
+    <div class="order-section">
+      <div class="section-label">Question Order</div>
+      <div class="mode-grid">
+        <label class="mode-label">
+          <input type="radio" name="quiz-order" value="random" checked>
+          <div class="mode-option mode-order-selected">
+            <div class="mo-title">🔀 Random</div>
+            <div class="mo-sub">Fresh shuffle every session</div>
+          </div>
+        </label>
+        <label class="mode-label">
+          <input type="radio" name="quiz-order" value="sequential">
+          <div class="mode-option">
+            <div class="mo-title">📋 Sequential</div>
+            <div class="mo-sub">Bank order, top to bottom</div>
           </div>
         </label>
       </div>
@@ -1293,7 +1317,8 @@ function adjustTime(delta) {
 /* ─── MODE SELECTION ────────────────────────────────────────── */
 document.querySelectorAll('input[name="quiz-mode"]').forEach(input => {
   input.addEventListener('change', function() {
-    document.querySelectorAll('.mode-option').forEach(opt => {
+    document.querySelectorAll('input[name="quiz-mode"]').forEach(r => {
+      const opt = r.closest('label').querySelector('.mode-option');
       opt.classList.remove('mode-selected');
       opt.style.borderColor = '';
       opt.style.background  = '';
@@ -1306,8 +1331,41 @@ document.querySelectorAll('input[name="quiz-mode"]').forEach(input => {
   });
 });
 // Init mode selection visuals
-document.querySelector('.mode-selected').style.borderColor = 'var(--accent)';
-document.querySelector('.mode-selected').style.background  = 'var(--accent-dim)';
+(function() {
+  const checked = document.querySelector('input[name="quiz-mode"]:checked');
+  if (checked) {
+    const opt = checked.closest('label').querySelector('.mode-option');
+    opt.classList.add('mode-selected');
+    opt.style.borderColor = 'var(--accent)';
+    opt.style.background  = 'var(--accent-dim)';
+  }
+})();
+
+/* ─── ORDER SELECTION ───────────────────────────────────────── */
+document.querySelectorAll('input[name="quiz-order"]').forEach(input => {
+  input.addEventListener('change', function() {
+    document.querySelectorAll('input[name="quiz-order"]').forEach(r => {
+      const opt = r.closest('label').querySelector('.mode-option');
+      opt.classList.remove('mode-order-selected');
+      opt.style.borderColor = '';
+      opt.style.background  = '';
+    });
+    const selected = this.closest('label').querySelector('.mode-option');
+    selected.classList.add('mode-order-selected');
+    selected.style.borderColor = 'var(--accent)';
+    selected.style.background  = 'var(--accent-dim)';
+  });
+});
+// Init order selection visuals
+(function() {
+  const checked = document.querySelector('input[name="quiz-order"]:checked');
+  if (checked) {
+    const opt = checked.closest('label').querySelector('.mode-option');
+    opt.classList.add('mode-order-selected');
+    opt.style.borderColor = 'var(--accent)';
+    opt.style.background  = 'var(--accent-dim)';
+  }
+})();
 
 /* ─── INIT UI ────────────────────────────────────────────────── */
 function initUI() {
@@ -1341,14 +1399,23 @@ function initUI() {
 /* ─── START QUIZ ─────────────────────────────────────────────── */
 function startQuiz() {
   const mode = document.querySelector('input[name="quiz-mode"]:checked').value;
+  const order = document.querySelector('input[name="quiz-order"]:checked').value;
   const timeMins = parseInt(document.getElementById('time-input').value) || 30;
   const count = selectedCount;
 
   // Clear any existing saved progress before starting a new session
   clearProgress();
 
-  // Select questions from bank
+  // Select questions from bank (always picks randomly first for fair coverage)
   SESSION_QUESTIONS = selectSessionQuestions(count);
+
+  // If sequential order is chosen, sort by original bank index
+  if (order === 'sequential') {
+    const paired = SESSION_QUESTION_INDICES.map((bankIdx, pos) => ({ bankIdx, q: SESSION_QUESTIONS[pos] }));
+    paired.sort((a, b) => a.bankIdx - b.bankIdx);
+    SESSION_QUESTION_INDICES = paired.map(p => p.bankIdx);
+    SESSION_QUESTIONS = paired.map(p => p.q);
+  }
 
   state.current   = 0;
   state.answers   = {};
