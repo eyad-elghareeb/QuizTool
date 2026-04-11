@@ -28,6 +28,41 @@ Create custom quizzes without any coding required!
 ### 💻 Quiz Maker JS (`quiz-maker-js.html`)
 JavaScript-based interactive quiz creation tool with enhanced functionality.
 
+### 🔀 Quiz Combiner (`quiz-combiner.html`)
+Merge multiple quiz HTML files into a unified Question Bank!
+
+- **Multi-File Import**: Drop any number of quiz HTML files to combine
+- **Duplicate Removal**: Automatically detects and removes duplicate questions
+- **Custom Bank Naming**: Configure your combined bank with a custom name
+- **One-Click Download**: Export the merged question bank instantly
+- **Perfect for**: Building comprehensive test banks from multiple sources
+
+### 🏦 Bank Maker (`bank-maker.html`)
+Create smart Question Banks with intelligent session tracking!
+
+- **JS Array Input**: Build banks from large JavaScript question arrays
+- **Session Memory**: Remembers which questions you've already seen
+- **Fresh Questions**: Always serves unseen questions each session
+- **Coverage Tracking**: Monitors progress through the entire question pool
+- **Ideal for**: Large question pools where variety is essential
+
+### 📄 PDF Exporter (`pdf-exporter.html`)
+Export your quizzes to clean, printable PDF format!
+
+- **HTML to PDF**: Convert quiz HTML files to professional PDF documents
+- **Print-Ready**: Clean formatting optimized for printing
+- **Offline Distribution**: Share quizzes in a universally accessible format
+- **Perfect for**: Creating physical test materials or study guides
+
+### ⚡ JavaScript Mastery Bank (`js-question-bank.html`)
+Comprehensive JavaScript question bank with 51 questions!
+
+- **Extensive Coverage**: Closures, async/await, arrays, prototypes, and more
+- **Flexible Session Size**: Pick how many questions to answer each session
+- **Smart Selection**: Fresh questions every time with automatic tracking
+- **Progress Monitoring**: Track your coverage of the entire question set
+- **Great for**: Mastering JavaScript concepts through repeated practice
+
 ### 📚 Quiz Templates (`quizes/quiz-template.html`)
 Pre-built quiz template for creating standardized exams with:
 - Professional styling matching the main theme
@@ -91,6 +126,10 @@ QuizTool/
 ├── index.html              # Main hub/landing page
 ├── quiz-maker.html         # Visual quiz builder
 ├── quiz-maker-js.html      # JavaScript-based quiz maker
+├── quiz-combiner.html      # Merge multiple quizzes into one bank
+├── bank-maker.html         # Create smart question banks with session tracking
+├── pdf-exporter.html       # Export quizzes to PDF format
+├── js-question-bank.html   # JavaScript mastery question bank (51 questions)
 ├── README.md               # This file
 └── quizes/
     └── quiz-template.html  # Base template for generated quizzes
