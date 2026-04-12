@@ -12,6 +12,7 @@ var PRECACHE_REL_PATHS = [
   'quiz-combiner.html',
   'bank-maker.html',
   'pdf-exporter.html',
+  'index-editor.html',
   'manifest.webmanifest',
   'favicon.svg'
 ];

@@ -233,6 +233,8 @@ textarea { resize: vertical; min-height: 80px; }
   .preview-actions .btn-secondary { width: 100%; text-align: center; }
 }
 </style>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="apple-touch-icon" href="favicon.svg">
 </head>
 <body>
 
@@ -374,7 +376,7 @@ function init() {
 }
 
 function loadTheme() {
-  const saved = localStorage.getItem('index-editor-theme');
+  const saved = localStorage.getItem('quiz-theme');
   if (saved) document.documentElement.setAttribute('data-theme', saved);
   updateThemeIcon();
 }
@@ -384,7 +386,7 @@ function toggleTheme() {
   const isDark = html.getAttribute('data-theme') === 'dark';
   const newTheme = isDark ? 'light' : 'dark';
   html.setAttribute('data-theme', newTheme);
-  localStorage.setItem('index-editor-theme', newTheme);
+  localStorage.setItem('quiz-theme', newTheme);
   updateThemeIcon();
   updateStats();
 }
