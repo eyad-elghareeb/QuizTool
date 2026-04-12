@@ -251,23 +251,23 @@ input[type=radio] { display: none; }
 }
 
 /* Mode selection */
-.mode-section { margin-bottom: 1.25rem; }
+.mode-section { margin-bottom: 1rem; }
 .mode-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.65rem;
+  gap: 0.5rem;
 }
 .mode-label { cursor: pointer; }
 .mode-option {
-  padding: 0.8rem;
+  padding: 0.5rem;
   border-radius: var(--radius);
   border: 1.5px solid var(--border);
   background: var(--surface2);
   transition: all var(--transition);
   text-align: center;
 }
-.mode-option .mo-title { font-weight: 600; font-size: 0.9rem; }
-.mode-option .mo-sub  { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.2rem; }
+.mode-option .mo-title { font-weight: 600; font-size: 0.8rem; }
+.mode-option .mo-sub  { display: none; }
 .mode-selected { border-color: var(--accent) !important; background: var(--accent-dim) !important; }
 
 .btn-start {
@@ -735,14 +735,12 @@ input[type=radio]:checked + .option-label .option-key { background: var(--accent
           <input type="radio" name="quiz-mode" value="exam" checked>
           <div class="mode-option mode-selected">
             <div class="mo-title">📝 Exam Mode</div>
-            <div class="mo-sub">Timer + blind answers</div>
           </div>
         </label>
         <label class="mode-label">
           <input type="radio" name="quiz-mode" value="learning">
           <div class="mode-option">
             <div class="mo-title">📚 Learning Mode</div>
-            <div class="mo-sub">Instant feedback</div>
           </div>
         </label>
       </div>
@@ -756,14 +754,12 @@ input[type=radio]:checked + .option-label .option-key { background: var(--accent
           <input type="radio" name="quiz-order" value="random" checked>
           <div class="mode-option mode-order-selected">
             <div class="mo-title">🔀 Random</div>
-            <div class="mo-sub">Fresh shuffle every session</div>
           </div>
         </label>
         <label class="mode-label">
           <input type="radio" name="quiz-order" value="sequential">
           <div class="mode-option">
             <div class="mo-title">📋 Sequential</div>
-            <div class="mo-sub">Bank order, top to bottom</div>
           </div>
         </label>
       </div>
