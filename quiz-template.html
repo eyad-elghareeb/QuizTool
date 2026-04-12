@@ -783,289 +783,35 @@ input[type=radio]:checked + .option-label .option-key {
 
 /* PDF Export Section */
 .pdf-export-section {
-  margin-top: 1.5rem;
-  margin-bottom: 1rem;
-  padding: 1rem;
-  border-radius: var(--radius);
-  background: var(--surface);
-  border: 1.5px solid var(--border);
+  margin-top: 1.5rem; margin-bottom: 1rem; padding: 1rem;
+  border-radius: var(--radius); background: var(--surface); border: 1.5px solid var(--border);
 }
-.export-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  align-items: center;
-  margin-bottom: 0.85rem;
-}
+.export-options { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-bottom: 0.85rem; }
 .export-option {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.45rem 0.65rem;
-  border-radius: 6px;
-  background: var(--surface2);
-  border: 1.5px solid var(--border);
-  cursor: pointer;
-  transition: all var(--transition);
-  flex: 1;
-  min-width: 120px;
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.45rem 0.65rem;
+  border-radius: 6px; background: var(--surface2); border: 1.5px solid var(--border);
+  cursor: pointer; transition: all var(--transition); flex: 1; min-width: 120px;
 }
-.export-option:hover {
-  border-color: var(--accent);
-  background: var(--accent-dim);
-}
-.export-option input[type="checkbox"] {
-  display: none;
-}
-.export-option input[type="checkbox"]:checked + .export-checkbox-visual {
-  border-color: var(--accent);
-  background: var(--accent);
-}
-.export-option input[type="checkbox"]:checked + .export-checkbox-visual svg {
-  display: block;
-}
+.export-option:hover { border-color: var(--accent); background: var(--accent-dim); }
+.export-option input[type="checkbox"] { display: none; }
+.export-option input[type="checkbox"]:checked + .export-checkbox-visual { border-color: var(--accent); background: var(--accent); }
+.export-option input[type="checkbox"]:checked + .export-checkbox-visual svg { display: block; }
 .export-checkbox-visual {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  border: 2px solid var(--border);
-  background: var(--surface);
-  position: relative;
-  transition: all var(--transition);
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 16px; height: 16px; border-radius: 4px; border: 2px solid var(--border);
+  background: var(--surface); transition: all var(--transition); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
 }
-.export-checkbox-visual svg {
-  display: none;
-  width: 10px;
-  height: 10px;
-  stroke: #000;
-  stroke-width: 3;
-  fill: none;
-}
-.export-label {
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--text);
-  flex: 1;
-}
-.export-badge {
-  font-size: 0.65rem;
-  padding: 0.1rem 0.4rem;
-  border-radius: 3px;
-  background: var(--accent-dim);
-  color: var(--accent);
-  font-weight: 600;
-}
+.export-checkbox-visual svg { display: none; width: 10px; height: 10px; stroke: #000; stroke-width: 3; fill: none; }
+.export-label { font-size: 0.82rem; font-weight: 500; color: var(--text); flex: 1; }
+.export-badge { font-size: 0.65rem; padding: 0.1rem 0.4rem; border-radius: 3px; background: var(--accent-dim); color: var(--accent); font-weight: 600; }
 .btn-export-pdf {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.85rem 1.75rem;
-  border-radius: var(--radius);
-  background: var(--surface2);
-  color: var(--text);
-  border: 1.5px solid var(--border);
-  font-weight: 700;
-  font-size: 0.95rem;
-  transition: all var(--transition);
-  text-decoration: none;
-  width: 100%;
-  justify-content: center;
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.85rem 1.75rem;
+  border-radius: var(--radius); background: var(--surface2); color: var(--text);
+  border: 1.5px solid var(--border); font-weight: 700; font-size: 0.95rem;
+  transition: all var(--transition); text-decoration: none; width: 100%; justify-content: center;
 }
-.btn-export-pdf:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-  opacity: 1;
-}
+.btn-export-pdf:hover { border-color: var(--accent); color: var(--accent); opacity: 1; }
 
-/* Print Styles for PDF Export */
-@media print {
-  .no-print { display: none !important; }
-  body { 
-    background: white !important; 
-    color: black !important;
-    overflow: visible !important;
-  }
-  #result-screen {
-    display: block !important;
-    height: auto !important;
-    position: relative !important;
-  }
-  .result-body {
-    overflow: visible !important;
-    height: auto !important;
-  }
-  .result-tabs,
-  .result-actions,
-  .pdf-export-section,
-  .topbar,
-  .topbar-actions,
-  .theme-toggle-btn {
-    display: none !important;
-  }
-  .result-list {
-    display: block !important;
-  }
-  .result-item {
-    break-inside: avoid;
-    page-break-inside: avoid;
-    border: 1px solid #ddd !important;
-    margin-bottom: 1rem;
-    background: white !important;
-    color: black !important;
-  }
-  .result-item-body {
-    display: block !important;
-    max-height: none !important;
-    overflow: visible !important;
-  }
-  .score-banner {
-    break-after: avoid;
-    page-break-after: avoid;
-    background: #f8f9fa !important;
-    color: black !important;
-  }
-  .explanation-box {
-    break-inside: avoid;
-    page-break-inside: avoid;
-    background: #f0f0f0 !important;
-    color: black !important;
-  }
-  .score-circle {
-    border-color: black !important;
-    color: black !important;
-  }
-  .score-details h3 {
-    color: black !important;
-  }
-  .result-item-header {
-    background: #f5f5f5 !important;
-    color: black !important;
-  }
-  .result-q-text {
-    color: black !important;
-  }
-  .ar-label {
-    color: #666 !important;
-  }
-  .answer-row {
-    border-color: #ddd !important;
-  }
-  .answer-row span:last-child {
-    color: black !important;
-  }
-  .explanation-box strong {
-    color: #333 !important;
-  }
-  /* Force light mode variables for print */
-  :root {
-    --bg: white !important;
-    --surface: white !important;
-    --surface2: #f8f8f8 !important;
-    --text: black !important;
-    --text-muted: #666 !important;
-  }
-}
-
-/* ═══════════════════════════════════════════
-   TOAST
-═══════════════════════════════════════════ */
-.toast {
-  position: fixed;
-  bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(80px);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 0.65rem 1.2rem;
-  font-size: 0.88rem;
-  font-weight: 500;
-  box-shadow: var(--shadow);
-  z-index: 9999;
-  transition: transform 0.3s ease, opacity 0.3s ease;
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  max-width: 90%;
-}
-.toast.show { transform: translateX(-50%) translateY(0); }
-
-/* ═══════════════════════════════════════════
-   MODAL (Confirm submit)
-═══════════════════════════════════════════ */
-.modal-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(4px);
-  z-index: 1000;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-}
-.modal-overlay.open { display: flex; }
-.modal {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 2rem;
-  max-width: 420px;
-  width: 100%;
-  box-shadow: var(--shadow);
-  animation: slideUp 0.25s ease;
-}
-@keyframes slideUp { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform: translateY(0); } }
-.modal h3 { font-family: 'Playfair Display', serif; font-size: 1.3rem; margin-bottom: 0.75rem; }
-.modal p  { color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; margin-bottom: 1.25rem; }
-.modal-unanswered { font-weight: 600; color: var(--wrong); }
-.modal-actions { display: flex; gap: 0.75rem; }
-.modal-actions .btn-cancel {
-  flex: 1;
-  padding: 0.75rem;
-  border-radius: 10px;
-  background: var(--surface2);
-  border: 1.5px solid var(--border);
-  color: var(--text);
-  font-weight: 600;
-  font-size: 0.9rem;
-  transition: all var(--transition);
-}
-.modal-actions .btn-cancel:hover { border-color: var(--accent); }
-.modal-actions .btn-confirm {
-  flex: 1;
-  padding: 0.75rem;
-  border-radius: 10px;
-  background: var(--correct);
-  border: none;
-  color: #fff;
-  font-weight: 700;
-  font-size: 0.9rem;
-  transition: all var(--transition);
-}
-.modal-actions .btn-confirm:hover { opacity: 0.85; }
-
-/* ═══════════════════════════════════════════
-   PROGRESS BAR
-═══════════════════════════════════════════ */
-.progress-bar-wrap {
-  height: 3px;
-  background: var(--surface2);
-  position: relative;
-  flex-shrink: 0;
-}
-.progress-bar-fill {
-  height: 100%;
-  background: var(--accent);
-  transition: width 0.4s ease;
-  border-radius: 0 2px 2px 0;
-}
-
-/* ═══════════════════════════════════════════
-   MISC
-═══════════════════════════════════════════ */
 .hidden { display: none !important; }
 </style>
 </head>
@@ -1209,23 +955,6 @@ input[type=radio]:checked + .option-label .option-key {
       </div>
     </div>
 
-    <!-- Tabs -->
-    <div class="result-tabs">
-      <button class="tab-btn active" onclick="filterResults('all', this)">All Questions</button>
-      <button class="tab-btn" onclick="filterResults('correct', this)">✓ Correct</button>
-      <button class="tab-btn" onclick="filterResults('wrong', this)">✗ Wrong</button>
-      <button class="tab-btn" onclick="filterResults('skipped', this)">— Skipped</button>
-      <button class="tab-btn" onclick="filterResults('flagged', this)">⚑ Flagged</button>
-    </div>
-
-    <!-- Result items -->
-    <div class="result-list" id="result-list"></div>
-
-    <div class="result-actions">
-      <button class="btn-restart" onclick="restartQuiz()">↺ Retake Quiz</button>
-      <a href="#" class="btn-restart btn-secondary" onclick="navigateToIndex(event); return false;">🏠 Return to Hub</a>
-    </div>
-
     <!-- PDF Export Section -->
     <div class="pdf-export-section">
       <div class="export-options">
@@ -1264,6 +993,23 @@ input[type=radio]:checked + .option-label .option-key {
         </svg>
         Export to PDF
       </button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="result-tabs">
+      <button class="tab-btn active" onclick="filterResults('all', this)">All Questions</button>
+      <button class="tab-btn" onclick="filterResults('correct', this)">✓ Correct</button>
+      <button class="tab-btn" onclick="filterResults('wrong', this)">✗ Wrong</button>
+      <button class="tab-btn" onclick="filterResults('skipped', this)">— Skipped</button>
+      <button class="tab-btn" onclick="filterResults('flagged', this)">⚑ Flagged</button>
+    </div>
+
+    <!-- Result items -->
+    <div class="result-list" id="result-list"></div>
+
+    <div class="result-actions">
+      <button class="btn-restart" onclick="restartQuiz()">↺ Retake Quiz</button>
+      <a href="#" class="btn-restart btn-secondary" onclick="navigateToIndex(event); return false;">🏠 Return to Hub</a>
     </div>
   </div>
 </div>
@@ -1413,7 +1159,7 @@ function adjustTime(delta) {
 function startQuiz() {
   // Clear any existing progress when starting a new quiz
   clearProgress();
-  
+
   const timeMins = parseInt(document.getElementById('time-input').value) || 30;
 
   state.current  = 0;
@@ -1425,7 +1171,7 @@ function startQuiz() {
   state.mode     = document.querySelector('input[name="quiz-mode"]:checked').value;
 
   showScreen('quiz-screen');
-  
+
   if(state.mode === 'learning') {
     // Hide timer in learning mode
     document.getElementById('timer-display').classList.add('hidden');
@@ -1440,10 +1186,10 @@ function startQuiz() {
     const legendWr = document.getElementById('legend-wrong');
     if(legendWr) legendWr.style.display = 'none';
   }
-  
+
   buildNavGrid();
   renderQuestion(0);
-  
+
   if(state.mode !== 'learning') {
     startTimer();
   }
@@ -1572,14 +1318,14 @@ function renderQuestion(idx) {
 /* ── ANSWER SELECTION ────────────────────────────────────── */
 function selectAnswer(qIdx, optIdx) {
   if (state.mode === 'learning' && state.answers[qIdx] !== undefined) return;
-  
+
   state.answers[qIdx] = optIdx;
   updateNavGrid();
   updateNavStats();
   // update progress
   const done = Object.keys(state.answers).length;
   document.getElementById('progress-fill').style.width = (done / QUESTIONS.length * 100) + '%';
-  
+
   // In learning mode: re-render to show explanation and highlights
   if(state.mode === 'learning') {
     renderQuestion(qIdx);
@@ -1625,7 +1371,7 @@ function updateNavGrid() {
     const btn = document.getElementById(`nav-btn-${i}`);
     if(!btn) return;
     btn.className = 'nav-btn';
-    
+
     if(i === state.current) {
       btn.classList.add('current');
     } else if(state.answers[i] !== undefined) {
@@ -1664,7 +1410,7 @@ function attemptSubmit() {
     confirmSubmit();
     return;
   }
-  
+
   const unanswered = QUESTIONS.length - Object.keys(state.answers).length;
   if(unanswered > 0) {
     document.getElementById('modal-unanswered').textContent = unanswered;
@@ -1801,112 +1547,16 @@ function restartQuiz() {
   showScreen('start-screen');
 }
 
-/* ── PDF EXPORT ─────────────────────────────────────────────── */
-function onExportFilterChange(checkbox) {
-  // If "All" is checked, uncheck others. If others are checked, uncheck "All"
-  const allCheckbox = document.querySelector('input[name="export-all"]');
-  const wrongCheckbox = document.querySelector('input[name="export-wrong"]');
-  const flaggedCheckbox = document.querySelector('input[name="export-flagged"]');
-  
-  if (checkbox.name === 'export-all' && checkbox.checked) {
-    wrongCheckbox.checked = false;
-    flaggedCheckbox.checked = false;
-  } else if (checkbox.name !== 'export-all' && checkbox.checked) {
-    allCheckbox.checked = false;
-  }
-  
-  // If nothing is checked, re-check "All"
-  if (!allCheckbox.checked && !wrongCheckbox.checked && !flaggedCheckbox.checked) {
-    allCheckbox.checked = true;
-  }
-}
-
-function exportToPDF() {
-  // Determine which filters are active
-  const allCheckbox = document.querySelector('input[name="export-all"]');
-  const wrongCheckbox = document.querySelector('input[name="export-wrong"]');
-  const flaggedCheckbox = document.querySelector('input[name="export-flagged"]');
-  
-  let filter = 'all';
-  if (!allCheckbox.checked) {
-    if (wrongCheckbox.checked && !flaggedCheckbox.checked) {
-      filter = 'wrong';
-    } else if (flaggedCheckbox.checked && !wrongCheckbox.checked) {
-      filter = 'flagged';
-    } else if (wrongCheckbox.checked && flaggedCheckbox.checked) {
-      filter = 'wrong+flagged';
-    }
-  }
-  
-  // Update badges
-  updateExportBadges();
-  
-  // Filter the results before printing
-  filterResultsForExport(filter);
-  
-  // Trigger print
-  setTimeout(() => {
-    window.print();
-  }, 100);
-}
-
-function updateExportBadges() {
-  let allCount = 0, wrongCount = 0, flaggedCount = 0;
-  
-  QUESTIONS.forEach((q, i) => {
-    const ans = state.answers[i];
-    const isCorrect = ans === q.correct;
-    const isSkipped = ans === undefined;
-    const isFlagged = state.flagged[i];
-    
-    allCount++;
-    if (!isCorrect && !isSkipped) wrongCount++;
-    if (isFlagged) flaggedCount++;
-  });
-  
-  document.getElementById('badge-all').textContent = allCount;
-  document.getElementById('badge-wrong').textContent = wrongCount;
-  document.getElementById('badge-flagged').textContent = flaggedCount;
-}
-
-function filterResultsForExport(filter) {
-  // Temporarily filter the result items for printing
-  const list = document.getElementById('result-list');
-  const items = list.querySelectorAll('.result-item');
-  
-  items.forEach(item => {
-    const idx = parseInt(item.dataset.idx);
-    const q = QUESTIONS[idx];
-    const ans = state.answers[idx];
-    const isCorrect = ans === q.correct;
-    const isSkipped = ans === undefined;
-    const isFlagged = state.flagged[idx];
-    
-    let showItem = false;
-    if (filter === 'all') {
-      showItem = true;
-    } else if (filter === 'wrong') {
-      showItem = !isCorrect && !isSkipped;
-    } else if (filter === 'flagged') {
-      showItem = isFlagged;
-    } else if (filter === 'wrong+flagged') {
-      showItem = (!isCorrect && !isSkipped) || isFlagged;
-    }
-    
-    item.style.display = showItem ? 'block' : 'none';
-  });
-}
-
 /* ── THEME ───────────────────────────────────────────────── */
 function toggleTheme() {
   const html = document.documentElement;
   const isDark = html.getAttribute('data-theme') === 'dark';
   const newTheme = isDark ? 'light' : 'dark';
   html.setAttribute('data-theme', newTheme);
-  
+
   // Save preference to localStorage so it persists when returning to index.html
-  localStorage.setItem('quiz-theme', newTheme); 
-  
+  localStorage.setItem('quiz-theme', newTheme);
+
   updateThemeIcon();
 }
 
@@ -1917,7 +1567,7 @@ function navigateToIndex(event) {
 }
 function updateThemeIcon() {
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-  
+
   // Note: Added .theme-toggle-btn specifically so we don't accidentally overwrite the Home 🏠 button!
   document.querySelectorAll('.theme-toggle-btn').forEach(btn => {
     btn.textContent = isDark ? '☀' : '☾';
@@ -1930,23 +1580,23 @@ let pendingRestoreData = null; // Store pending restore data for optional restor
 
 function showToast(msg, actions = []) {
   const t = document.getElementById('toast');
-  
+
   // Clear any existing content
   t.innerHTML = '';
-  
+
   // Create message span
   const msgSpan = document.createElement('span');
   msgSpan.textContent = msg;
   msgSpan.style.flex = '1';
   t.appendChild(msgSpan);
-  
+
   // Add action buttons if provided
   if (actions.length > 0) {
     const actionsContainer = document.createElement('div');
     actionsContainer.style.display = 'flex';
     actionsContainer.style.gap = '0.5rem';
     actionsContainer.style.marginLeft = '0.75rem';
-    
+
     actions.forEach(action => {
       const btn = document.createElement('button');
       btn.textContent = action.label;
@@ -1979,13 +1629,13 @@ function showToast(msg, actions = []) {
       };
       actionsContainer.appendChild(btn);
     });
-    
+
     t.appendChild(actionsContainer);
   }
-  
+
   t.classList.add('show');
   clearTimeout(toastTimer);
-  
+
   // Auto-hide only if no actions (for simple toasts)
   if (actions.length === 0) {
     toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
@@ -2004,13 +1654,13 @@ const STORAGE_KEY = `quiz_progress_${STORAGE_VERSION}_${(QUIZ_CONFIG.uid || wind
  */
 function saveProgress() {
   if (state.submitted) return;
-  
+
   // Don't save if there's no progress yet (prevents blank saves on first load/exit)
   const hasAnswers = Object.keys(state.answers || {}).length > 0;
   const hasFlags = Object.values(state.flagged || {}).some(v => v === true);
   const hasTime = (state.elapsed || 0) > 10;
   if (!hasAnswers && !hasFlags && !hasTime) return;
-  
+
   const saveData = {
     version: STORAGE_VERSION,
     quizTitle: QUIZ_CONFIG.title,
@@ -2024,14 +1674,14 @@ function saveProgress() {
     timestamp: Date.now(),
     savedAt: Date.now() // Separate field for time calculation
   };
-  
+
   try {
     // Validate data before saving
     if (!isValidSaveData(saveData)) {
       console.warn('Invalid save data, skipping save');
       return;
     }
-    
+
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
     console.log('Progress saved successfully');
   } catch (e) {
@@ -2070,7 +1720,7 @@ function clearOldSaves() {
   try {
     const now = Date.now();
     const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
-    
+
     Object.keys(localStorage).forEach(key => {
       if (key.startsWith('quiz_progress_')) {
         try {
@@ -2098,31 +1748,31 @@ function restoreProgress() {
   // Kept for backward compatibility if called elsewhere
   const saved = localStorage.getItem(STORAGE_KEY);
   if (!saved) return false;
-  
+
   try {
     const data = JSON.parse(saved);
-    
+
     // Check if data is from a compatible version
     if (data.version !== STORAGE_VERSION) {
       console.log('Incompatible save version, starting fresh');
       localStorage.removeItem(STORAGE_KEY);
       return false;
     }
-    
+
     // Verify this save is for the same quiz
     if (data.quizTitle !== QUIZ_CONFIG.title) {
       console.log('Save is for a different quiz, starting fresh');
       localStorage.removeItem(STORAGE_KEY);
       return false;
     }
-    
+
     // Verify question count hasn't changed
     if (data.totalQuestions !== QUESTIONS.length) {
       console.log('Quiz structure has changed, starting fresh');
       localStorage.removeItem(STORAGE_KEY);
       return false;
     }
-    
+
     // Only restore if less than 7 days old
     const maxAge = 7 * 24 * 60 * 60 * 1000;
     if (Date.now() - data.timestamp > maxAge) {
@@ -2130,7 +1780,7 @@ function restoreProgress() {
       localStorage.removeItem(STORAGE_KEY);
       return false;
     }
-    
+
     // Do the actual restore
     doRestoreProgress(data);
     return true;
@@ -2159,9 +1809,9 @@ function confirmResetProgress() {
     state.timerSecs = (parseInt(document.getElementById('time-input').value) || 30) * 60;
     state.submitted = false;
     state.mode = 'exam';
-    
+
     showToast('🔄 Progress reset! Starting fresh...');
-    
+
     setTimeout(() => {
       showScreen('start-screen');
     }, 1000);
@@ -2195,39 +1845,39 @@ let restoreToastTimeout = null;
 function checkSavedProgress() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (!saved) return;
-  
+
   try {
     const data = JSON.parse(saved);
-    
+
     // Validate the saved data
     if (data.version !== STORAGE_VERSION) {
       console.log('Incompatible save version, starting fresh');
       localStorage.removeItem(STORAGE_KEY);
       return;
     }
-    
+
     if (data.quizTitle !== QUIZ_CONFIG.title) {
       console.log('Save is for a different quiz, starting fresh');
       localStorage.removeItem(STORAGE_KEY);
       return;
     }
-    
+
     if (data.totalQuestions !== QUESTIONS.length) {
       console.log('Quiz structure has changed, starting fresh');
       localStorage.removeItem(STORAGE_KEY);
       return;
     }
-    
+
     const maxAge = 7 * 24 * 60 * 60 * 1000;
     if (Date.now() - data.timestamp > maxAge) {
       console.log('Save is too old, starting fresh');
       localStorage.removeItem(STORAGE_KEY);
       return;
     }
-    
+
     // Store pending restore data
     pendingRestoreData = data;
-    
+
     // Show toast with optional restore button
     showToast("📂 Previous progress found!", [
       {
@@ -2248,7 +1898,7 @@ function checkSavedProgress() {
         }
       }
     ]);
-    
+
     // Auto-dismiss after 15 seconds if user hasn't interacted
     restoreToastTimeout = setTimeout(() => {
       console.log('Auto-dismissing restore toast after 15 seconds');
@@ -2260,7 +1910,7 @@ function checkSavedProgress() {
         toast.classList.remove('show');
       }
     }, 15000);
-    
+
   } catch(e) {
     console.error('Error checking saved progress:', e);
     localStorage.removeItem(STORAGE_KEY);
@@ -2275,7 +1925,7 @@ function doRestoreProgress(data) {
   if (!data.savedAt) {
     data.savedAt = data.timestamp;
   }
-  
+
   // Validate all answer indices are still valid
   for (const [qIdx, optIdx] of Object.entries(data.answers)) {
     const qIndex = parseInt(qIdx);
@@ -2288,19 +1938,19 @@ function doRestoreProgress(data) {
       delete data.answers[qIdx];
     }
   }
-  
+
   // Restore state
   state.current = Math.min(data.current, QUESTIONS.length - 1);
   state.answers = data.answers;
   state.flagged = data.flagged || {};
-  
+
   // Restore timer values exactly as saved (time doesn't count while page is closed)
   state.elapsed = data.elapsed || 0;
   state.timerSecs = data.timerSecs || 0;
-  
+
   state.mode = data.mode;
   state.submitted = false;
-  
+
   setTimeout(() => {
     if(state.mode === 'learning') {
       document.getElementById('timer-display').classList.add('hidden');
@@ -2315,9 +1965,167 @@ function doRestoreProgress(data) {
   }, 500);
 }
 
+
+/* ── PDF EXPORT ─────────────────────────────────────────────── */
+function onExportFilterChange(checkbox) {
+  const allCb     = document.querySelector('input[name="export-all"]');
+  const wrongCb   = document.querySelector('input[name="export-wrong"]');
+  const flaggedCb = document.querySelector('input[name="export-flagged"]');
+  if (checkbox.name === 'export-all' && checkbox.checked) {
+    wrongCb.checked = false; flaggedCb.checked = false;
+  } else if (checkbox.name !== 'export-all' && checkbox.checked) {
+    allCb.checked = false;
+  }
+  if (!allCb.checked && !wrongCb.checked && !flaggedCb.checked) allCb.checked = true;
+}
+
+function updateExportBadges() {
+  const qs = (typeof SESSION_QUESTIONS !== 'undefined' && SESSION_QUESTIONS && SESSION_QUESTIONS.length)
+    ? SESSION_QUESTIONS : QUESTIONS;
+  let allC = 0, wrongC = 0, flaggedC = 0;
+  qs.forEach((q, i) => {
+    const ans = state.answers[i];
+    allC++;
+    if (ans !== undefined && ans !== q.correct) wrongC++;
+    if (state.flagged[i]) flaggedC++;
+  });
+  document.getElementById('badge-all').textContent     = allC;
+  document.getElementById('badge-wrong').textContent   = wrongC;
+  document.getElementById('badge-flagged').textContent = flaggedC;
+}
+
+function exportToPDF() {
+  const allCb     = document.querySelector('input[name="export-all"]');
+  const wrongCb   = document.querySelector('input[name="export-wrong"]');
+  const flaggedCb = document.querySelector('input[name="export-flagged"]');
+
+  let filter = 'all';
+  if (!allCb.checked) {
+    if (wrongCb.checked && !flaggedCb.checked)      filter = 'wrong';
+    else if (flaggedCb.checked && !wrongCb.checked) filter = 'flagged';
+    else if (wrongCb.checked && flaggedCb.checked)  filter = 'wrong+flagged';
+  }
+
+  showToast('Generating PDF...');
+
+  const qs      = (typeof SESSION_QUESTIONS !== 'undefined' && SESSION_QUESTIONS && SESSION_QUESTIONS.length)
+    ? SESSION_QUESTIONS : QUESTIONS;
+  const title   = document.title || 'Quiz Results';
+  const pct     = document.getElementById('res-pct').textContent;
+  const grade   = document.getElementById('res-grade').textContent;
+  const correct = document.getElementById('res-correct').textContent;
+  const wrongN  = document.getElementById('res-wrong').textContent;
+  const skipped = document.getElementById('res-skipped').textContent;
+  const timeEl  = document.getElementById('res-time');
+  const timeUsed = timeEl ? timeEl.textContent : '--';
+
+  const filterLabels = {
+    'all':          'All Questions',
+    'wrong':        'Wrong Answers',
+    'flagged':      'Flagged Questions',
+    'wrong+flagged':'Wrong + Flagged'
+  };
+
+  const toExport = [];
+  qs.forEach((q, i) => {
+    const ans       = state.answers[i];
+    const isCorrect = ans === q.correct;
+    const isSkipped = ans === undefined;
+    const isFlagged = !!state.flagged[i];
+    const show = filter === 'all'
+      || (filter === 'wrong'         && !isCorrect && !isSkipped)
+      || (filter === 'flagged'       && isFlagged)
+      || (filter === 'wrong+flagged' && ((!isCorrect && !isSkipped) || isFlagged));
+    if (show) toExport.push({ q, i, ans, isCorrect, isSkipped, isFlagged });
+  });
+
+  let html = '<div style="font-family:Arial,sans-serif;max-width:780px;margin:0 auto;padding:20px;color:#1c1917;">'
+    + '<h1 style="font-size:22px;margin:0 0 4px;font-family:Georgia,serif;">' + title + '</h1>'
+    + '<p style="color:#78716c;margin:0 0 16px;font-size:13px;">Quiz Results &mdash; ' + new Date().toLocaleDateString() + '</p>'
+    + '<div style="background:#f8f6f1;border-radius:12px;padding:18px 20px;margin-bottom:22px;border:1px solid #d0ccc5;display:flex;gap:18px;align-items:center;flex-wrap:wrap;">'
+    +   '<div style="width:84px;height:84px;border-radius:50%;border:4px solid #c27803;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;background:rgba(194,120,3,.10);">'
+    +     '<div style="font-size:20px;font-weight:700;color:#c27803;line-height:1;">' + pct + '</div>'
+    +     '<div style="font-size:9px;color:#78716c;text-transform:uppercase;letter-spacing:.04em;">Score</div>'
+    +   '</div>'
+    +   '<div style="flex:1;min-width:180px;">'
+    +     '<h2 style="font-family:Georgia,serif;font-size:17px;margin:0 0 10px;">' + grade + '</h2>'
+    +     '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+    +       '<div style="background:#fff;border:1px solid #d0ccc5;border-radius:8px;padding:7px 12px;text-align:center;min-width:62px;"><div style="font-size:16px;font-weight:700;color:#16a34a;">' + correct + '</div><div style="font-size:10px;color:#78716c;">Correct</div></div>'
+    +       '<div style="background:#fff;border:1px solid #d0ccc5;border-radius:8px;padding:7px 12px;text-align:center;min-width:62px;"><div style="font-size:16px;font-weight:700;color:#dc2626;">' + wrongN  + '</div><div style="font-size:10px;color:#78716c;">Wrong</div></div>'
+    +       '<div style="background:#fff;border:1px solid #d0ccc5;border-radius:8px;padding:7px 12px;text-align:center;min-width:62px;"><div style="font-size:16px;font-weight:700;color:#78716c;">' + skipped + '</div><div style="font-size:10px;color:#78716c;">Skipped</div></div>'
+    +       '<div style="background:#fff;border:1px solid #d0ccc5;border-radius:8px;padding:7px 12px;text-align:center;min-width:62px;"><div style="font-size:16px;font-weight:700;">' + timeUsed + '</div><div style="font-size:10px;color:#78716c;">Time</div></div>'
+    +     '</div>'
+    +   '</div>'
+    + '</div>'
+    + '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#78716c;margin:0 0 12px;">'
+    +   (filterLabels[filter] || 'Questions') + ' (' + toExport.length + ')'
+    + '</h3>';
+
+  toExport.forEach(function(item) {
+    var q = item.q, i = item.i, ans = item.ans;
+    var isCorrect = item.isCorrect, isSkipped = item.isSkipped, isFlagged = item.isFlagged;
+    var sc   = isSkipped ? '#78716c' : (isCorrect ? '#16a34a' : '#dc2626');
+    var icon = isSkipped ? '-' : (isCorrect ? 'OK' : 'X');
+    var bgH  = isSkipped ? '#f8f6f1' : (isCorrect ? 'rgba(22,163,74,.06)' : 'rgba(220,38,38,.06)');
+    var uAns = ans !== undefined ? (KEYS[ans] + '. ' + q.options[ans]) : 'Not answered';
+    var cAns = KEYS[q.correct] + '. ' + q.options[q.correct];
+    html += '<div style="border:1.5px solid ' + sc + ';border-radius:10px;margin-bottom:14px;overflow:hidden;page-break-inside:avoid;">'
+      +   '<div style="padding:12px 15px;background:' + bgH + ';">'
+      +     '<div style="display:flex;gap:10px;align-items:flex-start;">'
+      +       '<div style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex-shrink:0;background:rgba(0,0,0,.06);color:' + sc + ';">' + icon + '</div>'
+      +       '<div>'
+      +         '<div style="font-size:10px;color:#78716c;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">Q' + (i+1) + (isFlagged ? ' &bull; Flagged' : '') + '</div>'
+      +         '<div style="font-size:14px;font-weight:500;line-height:1.5;">' + q.question + '</div>'
+      +       '</div>'
+      +     '</div>'
+      +   '</div>'
+      +   '<div style="padding:10px 15px 12px;border-top:1px solid #e5e0db;">';
+    if (!isSkipped) {
+      html += '<div style="background:' + (isCorrect ? 'rgba(22,163,74,.08)' : 'rgba(220,38,38,.08)') + ';border-radius:6px;padding:7px 11px;margin-bottom:7px;font-size:12px;"><span style="font-size:10px;text-transform:uppercase;font-weight:700;opacity:.6;margin-right:8px;">Your Answer</span>' + uAns + '</div>';
+    }
+    if (!isCorrect) {
+      html += '<div style="background:rgba(22,163,74,.08);border-radius:6px;padding:7px 11px;margin-bottom:7px;font-size:12px;"><span style="font-size:10px;text-transform:uppercase;font-weight:700;opacity:.6;margin-right:8px;">Correct Answer</span>' + cAns + '</div>';
+    }
+    if (q.explanation) {
+      html += '<div style="background:#f8f6f1;border-left:3px solid #c27803;border-radius:0 6px 6px 0;padding:9px 11px;font-size:12px;color:#44403c;line-height:1.6;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#1c1917;margin-bottom:3px;">Explanation</div>' + q.explanation + '</div>';
+    }
+    html += '</div></div>';
+  });
+  html += '</div>';
+
+  var filename = title.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '_results.pdf';
+  var opt = {
+    margin:      [10, 10, 10, 10],
+    filename:    filename,
+    image:       { type: 'jpeg', quality: 0.97 },
+    html2canvas: { scale: 2, useCORS: true, logging: false },
+    jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  var container = document.createElement('div');
+  container.innerHTML = html;
+
+  function runExport() {
+    html2pdf().set(opt).from(container).save()
+      .then(function() { showToast('PDF downloaded!'); })
+      .catch(function() { showToast('PDF failed - try again'); });
+  }
+
+  if (typeof html2pdf !== 'undefined') {
+    runExport();
+  } else {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    s.onload  = runExport;
+    s.onerror = function() { showToast('Failed to load PDF library'); };
+    document.head.appendChild(s);
+  }
+}
+
 /* ── BOOT ────────────────────────────────────────────────── */
 initUI();
 checkSavedProgress();
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" defer></script>
 </body>
 </html>

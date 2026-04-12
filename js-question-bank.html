@@ -614,194 +614,6 @@ input[type=radio]:checked + .option-label .option-key { background: var(--accent
 .btn-secondary { background: var(--surface2); color: var(--text); border-color: var(--border); }
 .btn-secondary:hover { border-color: var(--accent); color: var(--accent); opacity: 1; }
 
-/* PDF Export Section */
-.pdf-export-section {
-  margin-top: 1.5rem;
-  margin-bottom: 1rem;
-  padding: 1rem;
-  border-radius: var(--radius);
-  background: var(--surface);
-  border: 1.5px solid var(--border);
-}
-.export-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  align-items: center;
-  margin-bottom: 0.85rem;
-}
-.export-option {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.45rem 0.65rem;
-  border-radius: 6px;
-  background: var(--surface2);
-  border: 1.5px solid var(--border);
-  cursor: pointer;
-  transition: all var(--transition);
-  flex: 1;
-  min-width: 120px;
-}
-.export-option:hover {
-  border-color: var(--accent);
-  background: var(--accent-dim);
-}
-.export-option input[type="checkbox"] {
-  display: none;
-}
-.export-option input[type="checkbox"]:checked + .export-checkbox-visual {
-  border-color: var(--accent);
-  background: var(--accent);
-}
-.export-option input[type="checkbox"]:checked + .export-checkbox-visual svg {
-  display: block;
-}
-.export-checkbox-visual {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  border: 2px solid var(--border);
-  background: var(--surface);
-  position: relative;
-  transition: all var(--transition);
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.export-checkbox-visual svg {
-  display: none;
-  width: 10px;
-  height: 10px;
-  stroke: #000;
-  stroke-width: 3;
-  fill: none;
-}
-.export-label {
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--text);
-  flex: 1;
-}
-.export-badge {
-  font-size: 0.65rem;
-  padding: 0.1rem 0.4rem;
-  border-radius: 3px;
-  background: var(--accent-dim);
-  color: var(--accent);
-  font-weight: 600;
-}
-.btn-export-pdf {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.85rem 1.75rem;
-  border-radius: var(--radius);
-  background: var(--surface2);
-  color: var(--text);
-  border: 1.5px solid var(--border);
-  font-weight: 700;
-  font-size: 0.95rem;
-  transition: all var(--transition);
-  text-decoration: none;
-  width: 100%;
-  justify-content: center;
-}
-.btn-export-pdf:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-  opacity: 1;
-}
-
-/* Print Styles for PDF Export */
-@media print {
-  .no-print { display: none !important; }
-  body { 
-    background: white !important; 
-    color: black !important;
-    overflow: visible !important;
-  }
-  #result-screen {
-    display: block !important;
-    height: auto !important;
-    position: relative !important;
-  }
-  .result-body {
-    overflow: visible !important;
-    height: auto !important;
-  }
-  .result-tabs,
-  .result-actions,
-  .pdf-export-section,
-  .topbar,
-  .topbar-actions,
-  .theme-toggle-btn {
-    display: none !important;
-  }
-  .result-list {
-    display: block !important;
-  }
-  .result-item {
-    break-inside: avoid;
-    page-break-inside: avoid;
-    border: 1px solid #ddd !important;
-    margin-bottom: 1rem;
-    background: white !important;
-    color: black !important;
-  }
-  .result-item-body {
-    display: block !important;
-    max-height: none !important;
-    overflow: visible !important;
-  }
-  .score-banner {
-    break-after: avoid;
-    page-break-after: avoid;
-    background: #f8f9fa !important;
-    color: black !important;
-  }
-  .explanation-box {
-    break-inside: avoid;
-    page-break-inside: avoid;
-    background: #f0f0f0 !important;
-    color: black !important;
-  }
-  .score-circle {
-    border-color: black !important;
-    color: black !important;
-  }
-  .score-details h3 {
-    color: black !important;
-  }
-  .result-item-header {
-    background: #f5f5f5 !important;
-    color: black !important;
-  }
-  .result-q-text {
-    color: black !important;
-  }
-  .ar-label {
-    color: #666 !important;
-  }
-  .answer-row {
-    border-color: #ddd !important;
-  }
-  .answer-row span:last-child {
-    color: black !important;
-  }
-  .explanation-box strong {
-    color: #333 !important;
-  }
-  :root {
-    --bg: white !important;
-    --surface: white !important;
-    --surface2: #f8f8f8 !important;
-    --text: black !important;
-    --text-muted: #666 !important;
-  }
-}
-
 /* Toast */
 .toast {
   position: fixed;
@@ -843,6 +655,73 @@ input[type=radio]:checked + .option-label .option-key { background: var(--accent
   color: #fff; font-weight: 700; font-size: 0.9rem; transition: all var(--transition);
 }
 .modal-actions .btn-confirm:hover { opacity: 0.85; }
+
+/* PDF Export Section */
+.pdf-export-section {
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+}
+.export-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.85rem;
+}
+.export-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 6px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: all var(--transition);
+  flex: 1;
+  min-width: 120px;
+}
+.export-option:hover { border-color: var(--accent); background: var(--accent-dim); }
+.export-option input[type="checkbox"] { display: none; }
+.export-option input[type="checkbox"]:checked + .export-checkbox-visual {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.export-option input[type="checkbox"]:checked + .export-checkbox-visual svg { display: block; }
+.export-checkbox-visual {
+  width: 16px; height: 16px;
+  border-radius: 4px;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  transition: all var(--transition);
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.export-checkbox-visual svg {
+  display: none; width: 10px; height: 10px;
+  stroke: #000; stroke-width: 3; fill: none;
+}
+.export-label { font-size: 0.82rem; font-weight: 500; color: var(--text); flex: 1; }
+.export-badge {
+  font-size: 0.65rem; padding: 0.1rem 0.4rem;
+  border-radius: 3px; background: var(--accent-dim);
+  color: var(--accent); font-weight: 600;
+}
+.btn-export-pdf {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.85rem 1.75rem;
+  border-radius: var(--radius);
+  background: var(--surface2); color: var(--text);
+  border: 1.5px solid var(--border);
+  font-weight: 700; font-size: 0.95rem;
+  transition: all var(--transition);
+  text-decoration: none; width: 100%; justify-content: center;
+}
+.btn-export-pdf:hover { border-color: var(--accent); color: var(--accent); opacity: 1; }
 
 .hidden { display: none !important; }
 </style>
@@ -1026,18 +905,6 @@ input[type=radio]:checked + .option-label .option-key { background: var(--accent
         </div>
       </div>
     </div>
-    <div class="result-tabs">
-      <button class="tab-btn active" onclick="filterResults('all', this)">All Questions</button>
-      <button class="tab-btn" onclick="filterResults('correct', this)">✓ Correct</button>
-      <button class="tab-btn" onclick="filterResults('wrong', this)">✗ Wrong</button>
-      <button class="tab-btn" onclick="filterResults('skipped', this)">— Skipped</button>
-      <button class="tab-btn" onclick="filterResults('flagged', this)">⚑ Flagged</button>
-    </div>
-    <div class="result-list" id="result-list"></div>
-    <div class="result-actions">
-      <button class="btn-restart" onclick="showScreen('start-screen')">↺ New Session</button>
-      <a href="#" class="btn-restart btn-secondary" onclick="navigateToIndex(event); return false;">🏠 Return to Hub</a>
-    </div>
 
     <!-- PDF Export Section -->
     <div class="pdf-export-section">
@@ -1077,6 +944,19 @@ input[type=radio]:checked + .option-label .option-key { background: var(--accent
         </svg>
         Export to PDF
       </button>
+    </div>
+
+    <div class="result-tabs">
+      <button class="tab-btn active" onclick="filterResults('all', this)">All Questions</button>
+      <button class="tab-btn" onclick="filterResults('correct', this)">✓ Correct</button>
+      <button class="tab-btn" onclick="filterResults('wrong', this)">✗ Wrong</button>
+      <button class="tab-btn" onclick="filterResults('skipped', this)">— Skipped</button>
+      <button class="tab-btn" onclick="filterResults('flagged', this)">⚑ Flagged</button>
+    </div>
+    <div class="result-list" id="result-list"></div>
+    <div class="result-actions">
+      <button class="btn-restart" onclick="showScreen('start-screen')">↺ New Session</button>
+      <a href="#" class="btn-restart btn-secondary" onclick="navigateToIndex(event); return false;">🏠 Return to Hub</a>
     </div>
   </div>
 </div>
@@ -2485,7 +2365,6 @@ function renderResultItems(filter) {
 
     const el = document.createElement('div');
     el.className = `result-item ${statusClass}`;
-    el.dataset.idx = i;
     el.innerHTML = `
       <div class="result-item-header" onclick="toggleResultItem(this)">
         <div class="result-status-icon">${icon}</div>
@@ -2526,94 +2405,6 @@ function filterResults(filter, btn) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderResultItems(filter);
-}
-
-/* ── PDF EXPORT ─────────────────────────────────────────────── */
-function onExportFilterChange(checkbox) {
-  const allCheckbox = document.querySelector('input[name="export-all"]');
-  const wrongCheckbox = document.querySelector('input[name="export-wrong"]');
-  const flaggedCheckbox = document.querySelector('input[name="export-flagged"]');
-  
-  if (checkbox.name === 'export-all' && checkbox.checked) {
-    wrongCheckbox.checked = false;
-    flaggedCheckbox.checked = false;
-  } else if (checkbox.name !== 'export-all' && checkbox.checked) {
-    allCheckbox.checked = false;
-  }
-  
-  if (!allCheckbox.checked && !wrongCheckbox.checked && !flaggedCheckbox.checked) {
-    allCheckbox.checked = true;
-  }
-}
-
-function exportToPDF() {
-  const allCheckbox = document.querySelector('input[name="export-all"]');
-  const wrongCheckbox = document.querySelector('input[name="export-wrong"]');
-  const flaggedCheckbox = document.querySelector('input[name="export-flagged"]');
-  
-  let filter = 'all';
-  if (!allCheckbox.checked) {
-    if (wrongCheckbox.checked && !flaggedCheckbox.checked) {
-      filter = 'wrong';
-    } else if (flaggedCheckbox.checked && !wrongCheckbox.checked) {
-      filter = 'flagged';
-    } else if (wrongCheckbox.checked && flaggedCheckbox.checked) {
-      filter = 'wrong+flagged';
-    }
-  }
-  
-  updateExportBadges();
-  filterResultsForExport(filter);
-  
-  setTimeout(() => {
-    window.print();
-  }, 100);
-}
-
-function updateExportBadges() {
-  let allCount = 0, wrongCount = 0, flaggedCount = 0;
-  
-  SESSION_QUESTIONS.forEach((q, i) => {
-    const ans = state.answers[i];
-    const isCorrect = ans === q.correct;
-    const isSkipped = ans === undefined;
-    const isFlagged = state.flagged[i];
-    
-    allCount++;
-    if (!isCorrect && !isSkipped) wrongCount++;
-    if (isFlagged) flaggedCount++;
-  });
-  
-  document.getElementById('badge-all').textContent = allCount;
-  document.getElementById('badge-wrong').textContent = wrongCount;
-  document.getElementById('badge-flagged').textContent = flaggedCount;
-}
-
-function filterResultsForExport(filter) {
-  const list = document.getElementById('result-list');
-  const items = list.querySelectorAll('.result-item');
-  
-  items.forEach(item => {
-    const idx = parseInt(item.dataset.idx);
-    const q = SESSION_QUESTIONS[idx];
-    const ans = state.answers[idx];
-    const isCorrect = ans === q.correct;
-    const isSkipped = ans === undefined;
-    const isFlagged = state.flagged[idx];
-    
-    let showItem = false;
-    if (filter === 'all') {
-      showItem = true;
-    } else if (filter === 'wrong') {
-      showItem = !isCorrect && !isSkipped;
-    } else if (filter === 'flagged') {
-      showItem = isFlagged;
-    } else if (filter === 'wrong+flagged') {
-      showItem = (!isCorrect && !isSkipped) || isFlagged;
-    }
-    
-    item.style.display = showItem ? 'block' : 'none';
-  });
 }
 
 /* ─── CONFIRM RESET (mid-quiz) ───────────────────────────────── */
@@ -2736,6 +2527,175 @@ window.addEventListener('visibilitychange', () => {
   }
 });
 
+
+/* ── PDF EXPORT ─────────────────────────────────────────────── */
+function onExportFilterChange(checkbox) {
+  const allCb     = document.querySelector('input[name="export-all"]');
+  const wrongCb   = document.querySelector('input[name="export-wrong"]');
+  const flaggedCb = document.querySelector('input[name="export-flagged"]');
+  if (checkbox.name === 'export-all' && checkbox.checked) {
+    wrongCb.checked = false; flaggedCb.checked = false;
+  } else if (checkbox.name !== 'export-all' && checkbox.checked) {
+    allCb.checked = false;
+  }
+  if (!allCb.checked && !wrongCb.checked && !flaggedCb.checked) allCb.checked = true;
+}
+
+function updateExportBadges() {
+  const qs = (typeof SESSION_QUESTIONS !== 'undefined' && SESSION_QUESTIONS && SESSION_QUESTIONS.length)
+    ? SESSION_QUESTIONS : QUESTIONS;
+  let allC = 0, wrongC = 0, flaggedC = 0;
+  qs.forEach((q, i) => {
+    const ans = state.answers[i];
+    allC++;
+    if (ans !== undefined && ans !== q.correct) wrongC++;
+    if (state.flagged[i]) flaggedC++;
+  });
+  document.getElementById('badge-all').textContent     = allC;
+  document.getElementById('badge-wrong').textContent   = wrongC;
+  document.getElementById('badge-flagged').textContent = flaggedC;
+}
+
+function exportToPDF() {
+  const allCb     = document.querySelector('input[name="export-all"]');
+  const wrongCb   = document.querySelector('input[name="export-wrong"]');
+  const flaggedCb = document.querySelector('input[name="export-flagged"]');
+
+  let filter = 'all';
+  if (!allCb.checked) {
+    if (wrongCb.checked && !flaggedCb.checked)      filter = 'wrong';
+    else if (flaggedCb.checked && !wrongCb.checked) filter = 'flagged';
+    else if (wrongCb.checked && flaggedCb.checked)  filter = 'wrong+flagged';
+  }
+
+  showToast('Generating PDF...');
+
+  const qs      = (typeof SESSION_QUESTIONS !== 'undefined' && SESSION_QUESTIONS && SESSION_QUESTIONS.length)
+    ? SESSION_QUESTIONS : QUESTIONS;
+  const title   = document.title || 'Quiz Results';
+  const pct     = document.getElementById('res-pct').textContent;
+  const grade   = document.getElementById('res-grade').textContent;
+  const correct = document.getElementById('res-correct').textContent;
+  const wrongN  = document.getElementById('res-wrong').textContent;
+  const skipped = document.getElementById('res-skipped').textContent;
+  const timeEl  = document.getElementById('res-time');
+  const timeUsed = timeEl ? timeEl.textContent : '--';
+
+  const filterLabels = {
+    'all':          'All Questions',
+    'wrong':        'Wrong Answers',
+    'flagged':      'Flagged Questions',
+    'wrong+flagged':'Wrong + Flagged'
+  };
+
+  const toExport = [];
+  qs.forEach((q, i) => {
+    const ans       = state.answers[i];
+    const isCorrect = ans === q.correct;
+    const isSkipped = ans === undefined;
+    const isFlagged = !!state.flagged[i];
+    const show = filter === 'all'
+      || (filter === 'wrong'         && !isCorrect && !isSkipped)
+      || (filter === 'flagged'       && isFlagged)
+      || (filter === 'wrong+flagged' && ((!isCorrect && !isSkipped) || isFlagged));
+    if (show) toExport.push({ q, i, ans, isCorrect, isSkipped, isFlagged });
+  });
+
+  let html = '<div style="font-family:Arial,sans-serif;max-width:780px;margin:0 auto;padding:20px;color:#1c1917;">'
+    + '<h1 style="font-size:22px;margin:0 0 4px;font-family:Georgia,serif;">' + title + '</h1>'
+    + '<p style="color:#78716c;margin:0 0 16px;font-size:13px;">Quiz Results &mdash; ' + new Date().toLocaleDateString() + '</p>'
+    + '<div style="background:#f8f6f1;border-radius:12px;padding:18px 20px;margin-bottom:22px;border:1px solid #d0ccc5;display:flex;gap:18px;align-items:center;flex-wrap:wrap;">'
+    +   '<div style="width:84px;height:84px;border-radius:50%;border:4px solid #c27803;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;background:rgba(194,120,3,.10);">'
+    +     '<div style="font-size:20px;font-weight:700;color:#c27803;line-height:1;">' + pct + '</div>'
+    +     '<div style="font-size:9px;color:#78716c;text-transform:uppercase;letter-spacing:.04em;">Score</div>'
+    +   '</div>'
+    +   '<div style="flex:1;min-width:180px;">'
+    +     '<h2 style="font-family:Georgia,serif;font-size:17px;margin:0 0 10px;">' + grade + '</h2>'
+    +     '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+    +       '<div style="background:#fff;border:1px solid #d0ccc5;border-radius:8px;padding:7px 12px;text-align:center;min-width:62px;"><div style="font-size:16px;font-weight:700;color:#16a34a;">' + correct + '</div><div style="font-size:10px;color:#78716c;">Correct</div></div>'
+    +       '<div style="background:#fff;border:1px solid #d0ccc5;border-radius:8px;padding:7px 12px;text-align:center;min-width:62px;"><div style="font-size:16px;font-weight:700;color:#dc2626;">' + wrongN  + '</div><div style="font-size:10px;color:#78716c;">Wrong</div></div>'
+    +       '<div style="background:#fff;border:1px solid #d0ccc5;border-radius:8px;padding:7px 12px;text-align:center;min-width:62px;"><div style="font-size:16px;font-weight:700;color:#78716c;">' + skipped + '</div><div style="font-size:10px;color:#78716c;">Skipped</div></div>'
+    +       '<div style="background:#fff;border:1px solid #d0ccc5;border-radius:8px;padding:7px 12px;text-align:center;min-width:62px;"><div style="font-size:16px;font-weight:700;">' + timeUsed + '</div><div style="font-size:10px;color:#78716c;">Time</div></div>'
+    +     '</div>'
+    +   '</div>'
+    + '</div>'
+    + '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#78716c;margin:0 0 12px;">'
+    +   (filterLabels[filter] || 'Questions') + ' (' + toExport.length + ')'
+    + '</h3>';
+
+  toExport.forEach(function(item) {
+    var q = item.q, i = item.i, ans = item.ans;
+    var isCorrect = item.isCorrect, isSkipped = item.isSkipped, isFlagged = item.isFlagged;
+    var sc   = isSkipped ? '#78716c' : (isCorrect ? '#16a34a' : '#dc2626');
+    var icon = isSkipped ? '-' : (isCorrect ? 'OK' : 'X');
+    var bgH  = isSkipped ? '#f8f6f1' : (isCorrect ? 'rgba(22,163,74,.06)' : 'rgba(220,38,38,.06)');
+    var uAns = ans !== undefined ? (KEYS[ans] + '. ' + q.options[ans]) : 'Not answered';
+    var cAns = KEYS[q.correct] + '. ' + q.options[q.correct];
+    html += '<div style="border:1.5px solid ' + sc + ';border-radius:10px;margin-bottom:14px;overflow:hidden;page-break-inside:avoid;">'
+      +   '<div style="padding:12px 15px;background:' + bgH + ';">'
+      +     '<div style="display:flex;gap:10px;align-items:flex-start;">'
+      +       '<div style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex-shrink:0;background:rgba(0,0,0,.06);color:' + sc + ';">' + icon + '</div>'
+      +       '<div>'
+      +         '<div style="font-size:10px;color:#78716c;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">Q' + (i+1) + (isFlagged ? ' &bull; Flagged' : '') + '</div>'
+      +         '<div style="font-size:14px;font-weight:500;line-height:1.5;">' + q.question + '</div>'
+      +       '</div>'
+      +     '</div>'
+      +   '</div>'
+      +   '<div style="padding:10px 15px 12px;border-top:1px solid #e5e0db;">';
+    if (!isSkipped) {
+      html += '<div style="background:' + (isCorrect ? 'rgba(22,163,74,.08)' : 'rgba(220,38,38,.08)') + ';border-radius:6px;padding:7px 11px;margin-bottom:7px;font-size:12px;"><span style="font-size:10px;text-transform:uppercase;font-weight:700;opacity:.6;margin-right:8px;">Your Answer</span>' + uAns + '</div>';
+    }
+    if (!isCorrect) {
+      html += '<div style="background:rgba(22,163,74,.08);border-radius:6px;padding:7px 11px;margin-bottom:7px;font-size:12px;"><span style="font-size:10px;text-transform:uppercase;font-weight:700;opacity:.6;margin-right:8px;">Correct Answer</span>' + cAns + '</div>';
+    }
+    if (q.explanation) {
+      html += '<div style="background:#f8f6f1;border-left:3px solid #c27803;border-radius:0 6px 6px 0;padding:9px 11px;font-size:12px;color:#44403c;line-height:1.6;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#1c1917;margin-bottom:3px;">Explanation</div>' + q.explanation + '</div>';
+    }
+    html += '</div></div>';
+  });
+  html += '</div>';
+
+  var filename = title.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '_results.pdf';
+  var opt = {
+    margin:      [10, 10, 10, 10],
+    filename:    filename,
+    image:       { type: 'jpeg', quality: 0.97 },
+    html2canvas: { scale: 2, useCORS: true, logging: false },
+    jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  var container = document.createElement('div');
+  container.innerHTML = html;
+
+  function runExport() {
+    if (typeof html2pdf === 'undefined') {
+      showToast('PDF library still loading, try again in a moment');
+      return;
+    }
+    try {
+      html2pdf().set(opt).from(container).save()
+        .then(function() { showToast('PDF downloaded!'); })
+        .catch(function(err) { 
+          console.error('PDF export error:', err);
+          showToast('PDF failed - try again'); 
+        });
+    } catch (err) {
+      console.error('PDF export error:', err);
+      showToast('PDF failed - try again');
+    }
+  }
+
+  if (typeof html2pdf !== 'undefined') {
+    runExport();
+  } else {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    s.onload  = runExport;
+    s.onerror = function() { showToast('Failed to load PDF library'); };
+    document.head.appendChild(s);
+  }
+}
+
 /* ─── BOOT ───────────────────────────────────────────────────── */
 initUI();
 checkSavedProgress();
@@ -2747,5 +2707,6 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" defer></script>
 </body>
 </html>
