@@ -614,6 +614,194 @@ input[type=radio]:checked + .option-label .option-key { background: var(--accent
 .btn-secondary { background: var(--surface2); color: var(--text); border-color: var(--border); }
 .btn-secondary:hover { border-color: var(--accent); color: var(--accent); opacity: 1; }
 
+/* PDF Export Section */
+.pdf-export-section {
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+}
+.export-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.85rem;
+}
+.export-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 6px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: all var(--transition);
+  flex: 1;
+  min-width: 120px;
+}
+.export-option:hover {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+.export-option input[type="checkbox"] {
+  display: none;
+}
+.export-option input[type="checkbox"]:checked + .export-checkbox-visual {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.export-option input[type="checkbox"]:checked + .export-checkbox-visual svg {
+  display: block;
+}
+.export-checkbox-visual {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  position: relative;
+  transition: all var(--transition);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.export-checkbox-visual svg {
+  display: none;
+  width: 10px;
+  height: 10px;
+  stroke: #000;
+  stroke-width: 3;
+  fill: none;
+}
+.export-label {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text);
+  flex: 1;
+}
+.export-badge {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  background: var(--accent-dim);
+  color: var(--accent);
+  font-weight: 600;
+}
+.btn-export-pdf {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.75rem;
+  border-radius: var(--radius);
+  background: var(--surface2);
+  color: var(--text);
+  border: 1.5px solid var(--border);
+  font-weight: 700;
+  font-size: 0.95rem;
+  transition: all var(--transition);
+  text-decoration: none;
+  width: 100%;
+  justify-content: center;
+}
+.btn-export-pdf:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  opacity: 1;
+}
+
+/* Print Styles for PDF Export */
+@media print {
+  .no-print { display: none !important; }
+  body { 
+    background: white !important; 
+    color: black !important;
+    overflow: visible !important;
+  }
+  #result-screen {
+    display: block !important;
+    height: auto !important;
+    position: relative !important;
+  }
+  .result-body {
+    overflow: visible !important;
+    height: auto !important;
+  }
+  .result-tabs,
+  .result-actions,
+  .pdf-export-section,
+  .topbar,
+  .topbar-actions,
+  .theme-toggle-btn {
+    display: none !important;
+  }
+  .result-list {
+    display: block !important;
+  }
+  .result-item {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border: 1px solid #ddd !important;
+    margin-bottom: 1rem;
+    background: white !important;
+    color: black !important;
+  }
+  .result-item-body {
+    display: block !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  .score-banner {
+    break-after: avoid;
+    page-break-after: avoid;
+    background: #f8f9fa !important;
+    color: black !important;
+  }
+  .explanation-box {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    background: #f0f0f0 !important;
+    color: black !important;
+  }
+  .score-circle {
+    border-color: black !important;
+    color: black !important;
+  }
+  .score-details h3 {
+    color: black !important;
+  }
+  .result-item-header {
+    background: #f5f5f5 !important;
+    color: black !important;
+  }
+  .result-q-text {
+    color: black !important;
+  }
+  .ar-label {
+    color: #666 !important;
+  }
+  .answer-row {
+    border-color: #ddd !important;
+  }
+  .answer-row span:last-child {
+    color: black !important;
+  }
+  .explanation-box strong {
+    color: #333 !important;
+  }
+  :root {
+    --bg: white !important;
+    --surface: white !important;
+    --surface2: #f8f8f8 !important;
+    --text: black !important;
+    --text-muted: #666 !important;
+  }
+}
+
 /* Toast */
 .toast {
   position: fixed;
@@ -849,6 +1037,46 @@ input[type=radio]:checked + .option-label .option-key { background: var(--accent
     <div class="result-actions">
       <button class="btn-restart" onclick="showScreen('start-screen')">↺ New Session</button>
       <a href="#" class="btn-restart btn-secondary" onclick="navigateToIndex(event); return false;">🏠 Return to Hub</a>
+    </div>
+
+    <!-- PDF Export Section -->
+    <div class="pdf-export-section">
+      <div class="export-options">
+        <label class="export-option">
+          <input type="checkbox" name="export-all" checked onchange="onExportFilterChange(this)">
+          <span class="export-checkbox-visual">
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </span>
+          <span class="export-label">All</span>
+          <span class="export-badge" id="badge-all">0</span>
+        </label>
+        <label class="export-option">
+          <input type="checkbox" name="export-wrong" onchange="onExportFilterChange(this)">
+          <span class="export-checkbox-visual">
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </span>
+          <span class="export-label">Wrong</span>
+          <span class="export-badge" id="badge-wrong">0</span>
+        </label>
+        <label class="export-option">
+          <input type="checkbox" name="export-flagged" onchange="onExportFilterChange(this)">
+          <span class="export-checkbox-visual">
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </span>
+          <span class="export-label">Flagged</span>
+          <span class="export-badge" id="badge-flagged">0</span>
+        </label>
+      </div>
+      <button class="btn-export-pdf" onclick="exportToPDF()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+        Export to PDF
+      </button>
     </div>
   </div>
 </div>
@@ -1677,6 +1905,7 @@ function buildResults() {
   document.getElementById('res-grade').textContent = grade;
 
   renderResultItems('all');
+  updateExportBadges();
 }
 
 function renderResultItems(filter) {
@@ -1701,6 +1930,7 @@ function renderResultItems(filter) {
 
     const el = document.createElement('div');
     el.className = `result-item ${statusClass}`;
+    el.dataset.idx = i;
     el.innerHTML = `
       <div class="result-item-header" onclick="toggleResultItem(this)">
         <div class="result-status-icon">${icon}</div>
@@ -1741,6 +1971,94 @@ function filterResults(filter, btn) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderResultItems(filter);
+}
+
+/* ── PDF EXPORT ─────────────────────────────────────────────── */
+function onExportFilterChange(checkbox) {
+  const allCheckbox = document.querySelector('input[name="export-all"]');
+  const wrongCheckbox = document.querySelector('input[name="export-wrong"]');
+  const flaggedCheckbox = document.querySelector('input[name="export-flagged"]');
+  
+  if (checkbox.name === 'export-all' && checkbox.checked) {
+    wrongCheckbox.checked = false;
+    flaggedCheckbox.checked = false;
+  } else if (checkbox.name !== 'export-all' && checkbox.checked) {
+    allCheckbox.checked = false;
+  }
+  
+  if (!allCheckbox.checked && !wrongCheckbox.checked && !flaggedCheckbox.checked) {
+    allCheckbox.checked = true;
+  }
+}
+
+function exportToPDF() {
+  const allCheckbox = document.querySelector('input[name="export-all"]');
+  const wrongCheckbox = document.querySelector('input[name="export-wrong"]');
+  const flaggedCheckbox = document.querySelector('input[name="export-flagged"]');
+  
+  let filter = 'all';
+  if (!allCheckbox.checked) {
+    if (wrongCheckbox.checked && !flaggedCheckbox.checked) {
+      filter = 'wrong';
+    } else if (flaggedCheckbox.checked && !wrongCheckbox.checked) {
+      filter = 'flagged';
+    } else if (wrongCheckbox.checked && flaggedCheckbox.checked) {
+      filter = 'wrong+flagged';
+    }
+  }
+  
+  updateExportBadges();
+  filterResultsForExport(filter);
+  
+  setTimeout(() => {
+    window.print();
+  }, 100);
+}
+
+function updateExportBadges() {
+  let allCount = 0, wrongCount = 0, flaggedCount = 0;
+  
+  SESSION_QUESTIONS.forEach((q, i) => {
+    const ans = state.answers[i];
+    const isCorrect = ans === q.correct;
+    const isSkipped = ans === undefined;
+    const isFlagged = state.flagged[i];
+    
+    allCount++;
+    if (!isCorrect && !isSkipped) wrongCount++;
+    if (isFlagged) flaggedCount++;
+  });
+  
+  document.getElementById('badge-all').textContent = allCount;
+  document.getElementById('badge-wrong').textContent = wrongCount;
+  document.getElementById('badge-flagged').textContent = flaggedCount;
+}
+
+function filterResultsForExport(filter) {
+  const list = document.getElementById('result-list');
+  const items = list.querySelectorAll('.result-item');
+  
+  items.forEach(item => {
+    const idx = parseInt(item.dataset.idx);
+    const q = SESSION_QUESTIONS[idx];
+    const ans = state.answers[idx];
+    const isCorrect = ans === q.correct;
+    const isSkipped = ans === undefined;
+    const isFlagged = state.flagged[idx];
+    
+    let showItem = false;
+    if (filter === 'all') {
+      showItem = true;
+    } else if (filter === 'wrong') {
+      showItem = !isCorrect && !isSkipped;
+    } else if (filter === 'flagged') {
+      showItem = isFlagged;
+    } else if (filter === 'wrong+flagged') {
+      showItem = (!isCorrect && !isSkipped) || isFlagged;
+    }
+    
+    item.style.display = showItem ? 'block' : 'none';
+  });
 }
 
 /* ─── CONFIRM RESET (mid-quiz) ───────────────────────────────── */
