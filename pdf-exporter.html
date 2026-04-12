@@ -197,6 +197,182 @@ body {
 .answer-key.hidden { display: none; }
 .answer-key strong { color: #d32f2f; }
 
+/* 2-Column Textbook Layout */
+.textbook-layout {
+  column-count: 2;
+  column-gap: 2.5rem;
+  column-rule: 1px solid #ccc;
+}
+.textbook-layout .quiz-header {
+  column-span: all;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+}
+.textbook-layout .question-item {
+  margin-bottom: 1.5rem;
+  break-inside: avoid;
+}
+.textbook-layout .question-text {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+.textbook-layout .options-list {
+  margin-left: 0.75rem;
+}
+.textbook-layout .option-item {
+  margin-bottom: 0.3rem;
+  font-size: 0.95rem;
+}
+.textbook-layout .answer-key {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  font-size: 0.85rem;
+}
+
+/* ── Styled/Beautiful Output ── */
+.styled-output .quiz-header {
+  text-align: center;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #fff;
+  border-radius: 16px;
+  padding: 2.5rem 2rem;
+  margin-bottom: 2rem;
+  border: none;
+}
+.styled-output .quiz-header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.4rem;
+  margin-bottom: 0.5rem;
+  color: #fff;
+}
+.styled-output .quiz-header p {
+  color: rgba(255,255,255,0.8);
+  font-size: 1rem;
+}
+.styled-output .quiz-header .header-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+.styled-output .quiz-header .header-meta {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.6);
+  margin-top: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.styled-output .question-item {
+  background: #fff;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 14px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  transition: box-shadow 0.2s;
+}
+.styled-output .question-item:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+
+.styled-output .q-badge {
+  display: inline-block;
+  background: #f0a500;
+  color: #000;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  margin-bottom: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.styled-output .question-text {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  line-height: 1.6;
+  color: #1a1a1a;
+}
+
+.styled-output .options-list {
+  list-style: none;
+  margin-left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.styled-output .option-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1.5px solid #e8e8e8;
+  background: #fafafa;
+  margin-bottom: 0;
+}
+
+.styled-output .option-letter {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: #f0f0f0;
+  border: 1.5px solid #d0d0d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  color: #333;
+}
+
+.styled-output .option-text {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #333;
+  padding-top: 0.15rem;
+}
+
+.styled-output .answer-key {
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border-left: 4px solid #22c55e;
+  border-radius: 0 10px 10px 0;
+  font-size: 0.9rem;
+}
+
+.styled-output .answer-key strong {
+  color: #16a34a;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: block;
+  margin-bottom: 0.3rem;
+}
+
+.styled-output .answer-key .explanation-text {
+  margin-top: 0.4rem;
+  color: #555;
+  line-height: 1.6;
+  font-size: 0.88rem;
+}
+
+.styled-output .section-divider {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 2px dashed #d0d0d0;
+  text-align: center;
+  font-size: 0.75rem;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
 @media print {
   .no-print { display: none !important; }
   body { background: white !important; color: black !important; }
@@ -206,6 +382,54 @@ body {
     box-shadow: none !important;
     padding: 0 !important;
     margin: 0 !important;
+  }
+  #print-area.textbook-layout .quiz-header {
+    column-span: all;
+    page-break-after: avoid;
+  }
+  #print-area.textbook-layout {
+    column-gap: 2rem;
+    column-rule: 1px solid #ddd;
+  }
+  #print-area:not(.textbook-layout) .quiz-header {
+    page-break-after: always;
+  }
+  /* Styled output print tweaks */
+  #print-area.styled-output .question-item {
+    box-shadow: none;
+    break-inside: avoid;
+  }
+  #print-area.styled-output.textbook-layout {
+    column-gap: 1.75rem;
+  }
+  #print-area.styled-output.textbook-layout .question-item {
+    padding: 1rem 1.15rem;
+    margin-bottom: 1.15rem;
+  }
+  #print-area.styled-output.textbook-layout .q-badge {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  #print-area.styled-output.textbook-layout .question-text {
+    font-size: 0.95rem;
+    margin-bottom: 0.75rem;
+  }
+  #print-area.styled-output.textbook-layout .option-item {
+    padding: 0.55rem 0.75rem;
+    font-size: 0.88rem;
+  }
+  #print-area.styled-output.textbook-layout .option-letter {
+    width: 22px;
+    height: 22px;
+    font-size: 0.7rem;
+  }
+  #print-area.styled-output.textbook-layout .option-text {
+    font-size: 0.88rem;
+  }
+  #print-area.styled-output.textbook-layout .answer-key {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.8rem;
   }
 }
 
@@ -241,13 +465,25 @@ body {
     <div id="preview-controls" class="controls" style="display: none;">
       <label class="toggle-wrap">
         <input type="checkbox" id="show-answers" checked onchange="updatePreview()">
-        <span>Show Answers & Explanations</span>
+        <span>Show Answers</span>
+      </label>
+      <label class="toggle-wrap">
+        <input type="checkbox" id="two-column" checked onchange="updatePreview()">
+        <span>2-Column</span>
+      </label>
+      <label class="toggle-wrap">
+        <input type="checkbox" id="styled-mode" onchange="updatePreview()">
+        <span>✨ Styled Output</span>
       </label>
       <button class="btn btn-primary" onclick="window.print()">🖨️ Print to PDF</button>
     </div>
-    
+
     <div id="preview-hint" style="text-align: center; margin-bottom: 1rem; color: var(--text-muted); display: none;">
       Scroll down to see the preview. The actual PDF will have a clean white background.
+    </div>
+
+    <div id="file-type-indicator" style="text-align: center; margin-bottom: 0.5rem; color: var(--accent); font-weight: 600; display: none;">
+      📄 Quiz File Detected
     </div>
   </div>
 
@@ -260,7 +496,8 @@ body {
 <script>
 let quizData = {
   config: {},
-  questions: []
+  questions: [],
+  fileType: 'quiz' // 'quiz' or 'bank'
 };
 
 const dropZone = document.getElementById('drop-zone');
@@ -269,6 +506,7 @@ const status = document.getElementById('status');
 const previewControls = document.getElementById('preview-controls');
 const printArea = document.getElementById('print-area');
 const previewHint = document.getElementById('preview-hint');
+const fileTypeIndicator = document.getElementById('file-type-indicator');
 
 // Drag and drop handlers
 dropZone.addEventListener('dragover', (e) => {
@@ -295,25 +533,44 @@ function handleFile(file) {
   }
 
   showStatus('Processing file...', '');
-  
+
   const reader = new FileReader();
   reader.onload = (e) => {
     try {
       const content = e.target.result;
+
+      // Try to detect bank file format first
+      const bankConfigMatch = content.match(/const BANK_CONFIG\s*=\s*({[\s\S]*?});/);
+      const questionBankMatch = content.match(/const QUESTION_BANK\s*=\s*(\[[\s\S]*?\]);/);
       
-      // Extraction using regex
-      // Using new Function to safely evaluate the JS object/array literal
-      const configMatch = content.match(/const QUIZ_CONFIG\s*=\s*({[\s\S]*?});/);
+      // Try quiz file format
+      const quizConfigMatch = content.match(/const QUIZ_CONFIG\s*=\s*({[\s\S]*?});/);
       const questionsMatch = content.match(/const QUESTIONS\s*=\s*(\[[\s\S]*?\]);/);
-      
-      if (!configMatch || !questionsMatch) {
-        throw new Error('Could not find quiz data in the uploaded file. Make sure it is a valid QuizTool export.');
+
+      if (bankConfigMatch && questionBankMatch) {
+        // Bank file format
+        quizData.fileType = 'bank';
+        quizData.config = new Function('return ' + bankConfigMatch[1])();
+        quizData.questions = new Function('return ' + questionBankMatch[1])();
+        
+        fileTypeIndicator.textContent = '🏦 Bank File Detected';
+        fileTypeIndicator.style.display = 'block';
+        
+        showStatus(`Successfully loaded bank "${quizData.config.title}" with ${quizData.questions.length} questions.`, '');
+      } else if (quizConfigMatch && questionsMatch) {
+        // Quiz file format
+        quizData.fileType = 'quiz';
+        quizData.config = new Function('return ' + quizConfigMatch[1])();
+        quizData.questions = new Function('return ' + questionsMatch[1])();
+        
+        fileTypeIndicator.textContent = '📄 Quiz File Detected';
+        fileTypeIndicator.style.display = 'block';
+        
+        showStatus(`Successfully loaded quiz "${quizData.config.title}" with ${quizData.questions.length} questions.`, '');
+      } else {
+        throw new Error('Could not find quiz data in the uploaded file. Make sure it is a valid QuizTool quiz or bank export.');
       }
-      
-      quizData.config = new Function('return ' + configMatch[1])();
-      quizData.questions = new Function('return ' + questionsMatch[1])();
-      
-      showStatus(`Successfully loaded "${quizData.config.title}" with ${quizData.questions.length} questions.`, '');
+
       previewControls.style.display = 'flex';
       previewHint.style.display = 'block';
       updatePreview();
@@ -332,35 +589,90 @@ function showStatus(msg, type) {
 
 function updatePreview() {
   const showAnswers = document.getElementById('show-answers').checked;
+  const useTwoColumn = document.getElementById('two-column').checked;
+  const useStyled = document.getElementById('styled-mode').checked;
   const letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-  
-  let html = `
-    <div class="quiz-header">
-      <h1>${quizData.config.title}</h1>
-      <p>${quizData.config.description || ''}</p>
-    </div>
-  `;
-  
-  quizData.questions.forEach((q, i) => {
+
+  // Apply layout classes
+  if (useTwoColumn) {
+    printArea.classList.add('textbook-layout');
+  } else {
+    printArea.classList.remove('textbook-layout');
+  }
+  if (useStyled) {
+    printArea.classList.add('styled-output');
+  } else {
+    printArea.classList.remove('styled-output');
+  }
+
+  let html = '';
+
+  if (useStyled) {
+    // ── Styled Header ──
     html += `
-      <div class="question-item">
-        <div class="question-text">${i + 1}. ${q.question}</div>
-        <div class="options-list">
-          ${q.options.map((opt, optIdx) => `
-            <div class="option-item">
-              <span class="option-letter">${letters[optIdx]}.</span>
-              <span class="option-text">${opt}</span>
-            </div>
-          `).join('')}
-        </div>
-        <div class="answer-key ${showAnswers ? '' : 'hidden'}">
-          <strong>Correct Answer: ${letters[q.correct]}</strong>
-          ${q.explanation ? `<div style="margin-top: 0.4rem;">${q.explanation}</div>` : ''}
-        </div>
+      <div class="quiz-header">
+        ${quizData.config.icon ? `<span class="header-icon">${quizData.config.icon}</span>` : ''}
+        <h1>${quizData.config.title}</h1>
+        <p>${quizData.config.description || ''}</p>
+        <div class="header-meta">${quizData.questions.length} Questions · ${quizData.fileType === 'bank' ? 'Question Bank' : 'Quiz'}</div>
       </div>
     `;
+  } else {
+    // ── Plain Header ──
+    html += `
+      <div class="quiz-header">
+        <h1>${quizData.config.title}</h1>
+        <p>${quizData.config.description || ''}</p>
+        ${quizData.config.icon ? `<p style="font-size: 2rem; margin-top: 0.5rem;">${quizData.config.icon}</p>` : ''}
+      </div>
+    `;
+  }
+
+  // ── Questions ──
+  quizData.questions.forEach((q, i) => {
+    if (useStyled) {
+      html += `
+        <div class="question-item">
+          <div class="q-badge">Question ${i + 1}</div>
+          <div class="question-text">${q.question}</div>
+          <div class="options-list">
+            ${q.options.map((opt, optIdx) => `
+              <div class="option-item">
+                <span class="option-letter">${letters[optIdx]}</span>
+                <span class="option-text">${opt}</span>
+              </div>
+            `).join('')}
+          </div>
+          ${showAnswers ? `
+            <div class="answer-key">
+              <strong>✓ Correct Answer: ${letters[q.correct]}. ${q.options[q.correct]}</strong>
+              ${q.explanation ? `<div class="explanation-text">${q.explanation}</div>` : ''}
+            </div>
+          ` : ''}
+        </div>
+      `;
+    } else {
+      // ── Plain Style ──
+      html += `
+        <div class="question-item">
+          <div class="question-text">${i + 1}. ${q.question}</div>
+          <div class="options-list">
+            ${q.options.map((opt, optIdx) => `
+              <div class="option-item">
+                <span class="option-letter">${letters[optIdx]}.</span>
+                <span class="option-text">${opt}</span>
+              </div>
+            `).join('')}
+          </div>
+          <div class="answer-key ${showAnswers ? '' : 'hidden'}">
+            <strong>Correct Answer: ${letters[q.correct]}</strong>
+            ${q.explanation ? `<div style="margin-top: 0.4rem;">${q.explanation}</div>` : ''}
+          </div>
+        </div>
+      `;
+    }
   });
-  
+
   printArea.innerHTML = html;
   printArea.style.display = 'block';
 }
