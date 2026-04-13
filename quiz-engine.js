@@ -2141,14 +2141,13 @@ function confirmResetProgress() {
   }
 }
 
-// Stop timer when user leaves the page/tab
+// Pause timer when user leaves the page/tab, resume when they come back
 window.addEventListener('visibilitychange', function() {
   if (document.hidden && !state.submitted && state.mode !== 'learning') {
     stopTimer();
   } else if (!document.hidden && !state.submitted && state.mode !== 'learning' && state.timerID === null) {
-    // Resume timer when user comes back (only if it was stopped due to visibility change)
-    lastTime = Date.now();
-    timerPaused = false;
+    // Restart the interval — startTimer() resets lastTime & timerPaused internally
+    startTimer();
   }
 });
 

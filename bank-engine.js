@@ -2205,12 +2205,13 @@ window.addEventListener('beforeunload', function() {
 });
 
 /* ─── VISIBILITY CHANGE ──────────────────────────────────────── */
+// Pause timer when user leaves the page/tab, resume when they come back
 window.addEventListener('visibilitychange', () => {
   if (document.hidden && !state.submitted && state.mode !== 'learning') {
     stopTimer();
   } else if (!document.hidden && !state.submitted && state.mode !== 'learning' && state.timerID === null) {
-    lastTime = Date.now();
-    timerPaused = false;
+    // Restart the interval — startTimer() resets lastTime & timerPaused internally
+    startTimer();
   }
 });
 
