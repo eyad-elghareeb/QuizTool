@@ -3303,6 +3303,13 @@ checkSavedProgress();
     // Don't process shortcuts if help is open
     if (isOpen) return;
 
+    // Don't process shortcuts if restore toast is showing
+    var restoreToast = document.getElementById('toast');
+    if (restoreToast && restoreToast.classList.contains('show')) {
+      // Check if it has action buttons (restore/dismiss)
+      if (restoreToast.querySelector('button')) return;
+    }
+
     // Only process if quiz screen is active
     var quizScreen = document.getElementById('quiz-screen');
     if (!quizScreen || !quizScreen.classList.contains('active')) return;
@@ -3310,10 +3317,10 @@ checkSavedProgress();
     // Navigation: Arrow keys
     if (e.key === 'ArrowLeft') {
       e.preventDefault();
-      if (state.current > 0) renderQuestion(state.current - 1);
+      if (typeof state !== 'undefined' && state.current > 0) renderQuestion(state.current - 1);
     } else if (e.key === 'ArrowRight') {
       e.preventDefault();
-      if (state.current < QUESTIONS.length - 1) renderQuestion(state.current + 1);
+      if (typeof state !== 'undefined' && state.current < QUESTIONS.length - 1) renderQuestion(state.current + 1);
     }
 
     // Answer selection: A, B, C, D, E
@@ -3321,7 +3328,7 @@ checkSavedProgress();
     if (answerKeys.includes(e.key.toLowerCase())) {
       e.preventDefault();
       var keyIndex = answerKeys.indexOf(e.key.toLowerCase());
-      if (keyIndex < QUESTIONS[state.current].options.length) {
+      if (typeof state !== 'undefined' && keyIndex < QUESTIONS[state.current].options.length) {
         state.answers[state.current] = keyIndex;
         var radio = document.getElementById('opt-' + state.current + '-' + keyIndex);
         if (radio) {
@@ -3340,13 +3347,13 @@ checkSavedProgress();
     // Flag: F
     if (e.key.toLowerCase() === 'f') {
       e.preventDefault();
-      toggleFlag(state.current);
+      if (typeof state !== 'undefined') toggleFlag(state.current);
     }
 
     // Submit: Enter
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (state.submitted !== true) {
+      if (typeof state !== 'undefined' && state.submitted !== true) {
         attemptSubmit();
       }
     }
@@ -3354,7 +3361,7 @@ checkSavedProgress();
     // Jump to question: Number keys (1-9)
     if (e.key >= '1' && e.key <= '9') {
       var qNum = parseInt(e.key) - 1;
-      if (qNum < QUESTIONS.length) {
+      if (typeof state !== 'undefined' && qNum < QUESTIONS.length) {
         e.preventDefault();
         renderQuestion(qNum);
       }
