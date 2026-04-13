@@ -65,8 +65,53 @@
 
   function getStorageKey(uid) { return STORAGE_PREFIX + uid; }
 
+  /* -- Get the project root name from ENGINE_BASE (e.g. "MU61S8") -- */
+  var _rootName = '';
+  try {
+    _rootName = new URL(ENGINE_BASE || '', location.href).pathname
+      .replace(/\/$/, '').replace(/^\//, '');
+  } catch (e) {}
+
+  /* -- Normalize a stored d.path by stripping the project root prefix -- */
+  function _normStoredPath(p) {
+    if (!p) return '';
+    var s = p.replace(/^\//, '');
+    if (_rootName && s.indexOf(_rootName + '/') === 0) {
+      s = s.substring(_rootName.length + 1);
+    } else if (_rootName && s === _rootName) {
+      s = '';
+    }
+    return s;
+  }
+
+  /* -- Normalize a folder path to strip the project root prefix --
+     e.g. "MU61S8/gyn/dep/" -> "gyn/dep/"
+     e.g. "gyn/dep/" -> "gyn/dep/" (no change) */
+  function _normalizeFolderPath(p) {
+    if (!p) return '';
+    var s = p.replace(/^\//, '');
+    if (_rootName && s.indexOf(_rootName + '/') === 0) {
+      s = s.substring(_rootName.length + 1);
+    } else if (_rootName && s === _rootName) {
+      s = '';
+    }
+    // Ensure trailing slash
+    if (s && s.charAt(s.length - 1) !== '/') s += '/';
+    return s;
+  }
+
+  /* -- Get folder segments RELATIVE to ENGINE_BASE (project root) --
+     e.g. "/MU61S8/gyn/dep/index.html" -> ["gyn", "gyn/dep"]
+     This matches the format used by computeFolderPath() in quiz/bank-engine.js */
   function getFolderSegments(path) {
-    var parts = path.replace(/\/[^/]*$/, '').split('/').filter(Boolean);
+    var cleaned = path.replace(/\/[^\/]*$/, '').replace(/^\//, '');
+    // Strip project root prefix
+    if (_rootName && cleaned.indexOf(_rootName + '/') === 0) {
+      cleaned = cleaned.substring(_rootName.length + 1);
+    } else if (_rootName && cleaned === _rootName) {
+      cleaned = '';
+    }
+    var parts = cleaned.split('/').filter(Boolean);
     var segs = [];
     for (var i = 0; i < parts.length; i++) segs.push(parts.slice(0, i + 1).join('/'));
     return segs;
@@ -88,12 +133,11 @@
     var all = getAllTrackerData();
     if (scope === 'folder' && scopePath) {
       return all.filter(function (d) {
-        // Check both stored folderPath and d.path
-        var fp = d.folderPath || '';
-        var dp = d.path || '';
-        var _n = function (p) { return p.replace(/^\//, ''); };
-        var target = _n(scopePath);
-        return (fp && _n(fp).indexOf(target) === 0) || (dp && _n(dp).indexOf(target) === 0);
+        // Check stored folderPath (ENGINE_BASE-relative) and d.path (full URL, normalized)
+        var fp = (d.folderPath || '').replace(/^\//, '');
+        var dp = _normStoredPath(d.path);
+        var target = scopePath.replace(/^\//, '');
+        return (fp && fp.indexOf(target) === 0) || (dp && dp.indexOf(target) === 0);
       });
     }
     return all;
@@ -103,30 +147,36 @@
   var _folderTitleCache = {};
 
   /* Extract folder path from tracker entry — prefer stored folderPath,
-     otherwise fall back to deriving it from the URL path relative to ENGINE_BASE */
+     otherwise fall back to deriving it from the URL path relative to ENGINE_BASE.
+     ALWAYS normalizes the result to be relative to the project root. */
   function getFolderForEntry(d) {
+    var raw = '';
+
     // Use folderPath stored by quiz-engine.js (relative to project root)
-    if (d.folderPath) return d.folderPath;
+    if (d.folderPath) {
+      raw = d.folderPath;
+    } else {
+      // Fallback: derive from d.path relative to ENGINE_BASE
+      try {
+        var rootAbs = new URL(ENGINE_BASE || '', location.href).href;
+        // Build absolute URL from stored path
+        var absUrl = new URL(d.path || '', location.origin).href;
+        if (absUrl.indexOf(rootAbs) === 0) {
+          var relative = absUrl.substring(rootAbs.length);
+          raw = relative.replace(/[^/]*$/, '') || '';
+        }
+      } catch (e) {}
 
-    // Fallback: derive from d.path relative to ENGINE_BASE
-    try {
-      var rootAbs = new URL(ENGINE_BASE || '', location.href).href;
-      // Build absolute URL from stored path
-      var absUrl = new URL(d.path || '', location.origin).href;
-      if (absUrl.indexOf(rootAbs) === 0) {
-        var relative = absUrl.substring(rootAbs.length);
-        return relative.replace(/[^/]*$/, '') || '';
+      // Last resort: extract from d.path and strip root prefix
+      if (!raw && d.path) {
+        var cleaned = d.path.replace(/^\//, '').replace(/\\/g, '/');
+        var parts = cleaned.split('/');
+        if (parts.length > 1) raw = parts.slice(0, -1).join('/') + '/';
       }
-    } catch (e) {}
-
-    // Last resort: extract first folder segment from path
-    if (d.path) {
-      var cleaned = d.path.replace(/^\//, '').replace(/\\/g, '/');
-      var parts = cleaned.split('/');
-      // Skip the first segment if it looks like a project root (same as ENGINE_BASE depth)
-      if (parts.length > 1) return parts.slice(0, -1).join('/') + '/';
     }
-    return '';
+
+    // ALWAYS normalize: strip project root prefix to get relative path
+    return _normalizeFolderPath(raw);
   }
 
   /* Get the top-level folder from a full folder path for grouping.
@@ -153,8 +203,8 @@
           if (!html) return null;
           var match = html.match(/<title>([^<]+)<\/title>/i);
           if (match) {
-            var title = match[1].trim();
-            _folderTitleCache[folderPath] = title;
+            var title = cleanTitle(match[1].trim());
+            if (title) _folderTitleCache[folderPath] = title;
             return title;
           }
           return null;
@@ -169,33 +219,35 @@
   function discoverAndCacheFolderTitles(data) {
     var folders = {};
     data.forEach(function (d) {
-      // Use stored folderTitle directly if available
       if (d.folderTitle) {
-        var folder = d.folderPath || getFolderForEntry(d);
-        if (folder) _folderTitleCache[folder] = cleanTitle(d.folderTitle);
-        // Also cache the top-level folder title only if not already set
-        // Use a more specific title for the parent by stripping sub-folder details
-        var topFolder = getTopLevelFolder(folder);
-        if (topFolder && topFolder !== folder && !_folderTitleCache[topFolder]) {
-          // For parent folder, derive a shorter title from the sub-folder title
-          // e.g. "Gynecology Department book questions" → "Gynecology"
-          var parentTitle = cleanTitle(d.folderTitle);
-          // Try to extract the subject name (first word or known subject)
-          var subjectMatch = parentTitle.match(/^(Gynecology|Cardiology|Surgery|Pediatrics|Internal Medicine|Surg)/i);
-          _folderTitleCache[topFolder] = subjectMatch ? subjectMatch[1] : parentTitle.split(/\s+(?:Department|book|Past|MCQ|Ai|Made)/i)[0];
+        // ONLY cache for the exact folder path — never derive parent titles
+        // from child data (that causes wrong titles like surg showing Gynecology).
+        var folder = _normalizeFolderPath(d.folderPath) || getFolderForEntry(d);
+        if (folder && !_folderTitleCache[folder]) {
+          _folderTitleCache[folder] = cleanTitle(d.folderTitle);
         }
       }
     });
-    // For entries without stored folderTitle, try to fetch
-    var promises = [];
+    // For entries without stored folderTitle, try to fetch from index.html
     data.forEach(function (d) {
       if (!d.folderTitle) {
-        var folder = d.folderPath || getFolderForEntry(d);
+        var folder = _normalizeFolderPath(d.folderPath) || getFolderForEntry(d);
         if (folder && !_folderTitleCache[folder]) {
           folders[folder] = true;
         }
       }
     });
+    // Also fetch titles for parent folders that are still missing
+    data.forEach(function (d) {
+      var folder = _normalizeFolderPath(d.folderPath) || getFolderForEntry(d);
+      if (folder) {
+        var top = getTopLevelFolder(folder);
+        if (top && top !== folder && !_folderTitleCache[top]) {
+          folders[top] = true;
+        }
+      }
+    });
+    var promises = [];
     Object.keys(folders).forEach(function (folder) {
       promises.push(fetchFolderTitle(folder));
     });
@@ -206,13 +258,12 @@
   function updateBadge() {
     var segments = getFolderSegments(location.pathname);
     var folderPath = segments.length > 0 ? segments[segments.length - 1] : '';
-    var _norm = function (p) { return p.replace(/^\//, ''); };
     var data = folderPath
       ? getAllTrackerData().filter(function (d) {
-          var fp = d.folderPath || '';
-          var dp = d.path || '';
-          var target = _norm(folderPath);
-          return (fp && _norm(fp).indexOf(target) === 0) || (dp && _norm(dp).indexOf(target) === 0);
+          var fp = (d.folderPath || '').replace(/^\//, '');
+          var dp = _normStoredPath(d.path);
+          var target = folderPath.replace(/^\//, '');
+          return (fp && fp.indexOf(target) === 0) || (dp && dp.indexOf(target) === 0);
         })
       : getAllTrackerData();
     var total = 0;
@@ -228,8 +279,8 @@
   /* ── Extract a clean folder display name from a full HTML <title> ── */
   function cleanTitle(raw) {
     if (!raw) return '';
-    // Strip common prefixes like "MU61 Quiz - " or "MU61 Quiz"
-    return raw.replace(/^MU61\s+Quiz\s*[-–—]\s*/i, '').trim();
+    // Strip common prefixes like "MU61 Quiz - ", "Mansoura MCQ - ", etc.
+    return raw.replace(/^(?:MU61\s+Quiz|Mansoura\s+MCQ)\s*[-–—]\s*/i, '').trim();
   }
 
   /* ── Open dashboard ────────────────────────────────────────── */
@@ -238,55 +289,81 @@
     var scopeBar = document.getElementById('dash-scope-bar');
     if (!scopeBar) return;
 
-    // Pre-cache titles for current page's folders using document.title
-    // so scope tabs can show proper names immediately
+    // Step 1: Pre-cache titles from document.title (current page only)
     var pageFolder = segments.length > 0 ? segments[segments.length - 1] + '/' : '';
     if (pageFolder && !_folderTitleCache[pageFolder]) {
       var cleaned = cleanTitle(document.title);
       if (cleaned) _folderTitleCache[pageFolder] = cleaned;
     }
-    // Also cache parent folders from known tracker entries
+
+    // Step 2: Pre-cache from stored tracker data (sync — only for EXACT folder paths).
+    // Do NOT set parent folder titles here — that causes wrong titles (e.g., surg gets Gynecology).
+    // Parent folder titles are resolved via eager fetch from the parent's own index.html.
     var allData = getAllTrackerData();
     allData.forEach(function (d) {
       if (d.folderTitle) {
-        var f = d.folderPath || '';
-        if (f) {
-          if (!_folderTitleCache[f]) _folderTitleCache[f] = cleanTitle(d.folderTitle);
-        }
-        var top = getTopLevelFolder(f);
-        if (top && top !== f && !_folderTitleCache[top]) {
-          _folderTitleCache[top] = cleanTitle(d.folderTitle);
+        var f = _normalizeFolderPath(d.folderPath) || '';
+        if (f && !_folderTitleCache[f]) {
+          _folderTitleCache[f] = cleanTitle(d.folderTitle);
         }
       }
     });
 
-    var tabs = [];
+    // Step 3: Eagerly fetch any folder titles that are still missing BEFORE building tabs.
+    // This is critical for parent-folder tabs whose index.html we haven't loaded yet.
+    var foldersToFetch = [];
     if (segments.length >= 1) {
-      var folderKey1 = segments[segments.length - 1] + '/';
-      var label1 = _folderTitleCache[folderKey1] || decodeURIComponent(segments[segments.length - 1]);
-      tabs.push({ id: 'folder', label: label1, path: segments[segments.length - 1] });
+      var fk1 = segments[segments.length - 1] + '/';
+      if (!_folderTitleCache[fk1]) foldersToFetch.push(fk1);
     }
     if (segments.length >= 2) {
-      var folderKey2 = segments[segments.length - 2] + '/';
-      var label2 = _folderTitleCache[folderKey2] || decodeURIComponent(segments[segments.length - 2]);
-      tabs.push({ id: 'folder', label: label2, path: segments[segments.length - 2] });
+      var fk2 = segments[segments.length - 2] + '/';
+      if (!_folderTitleCache[fk2]) foldersToFetch.push(fk2);
     }
-    tabs.push({ id: 'all', label: 'All Quizzes', path: '' });
+    // Also fetch the top-level subject folder if we have 3+ depth
+    if (segments.length >= 3) {
+      var fk3 = segments[segments.length - 3] + '/';
+      if (!_folderTitleCache[fk3]) foldersToFetch.push(fk3);
+    }
 
-    var scopeHTML = '';
-    tabs.forEach(function (t, i) {
-      scopeHTML += '<button class="dash-scope-tab' + (i === 0 ? ' active' : '')
-        + '" data-scope="' + t.id + '" data-path="' + (t.path || '') + '"'
-        + ' onclick="switchDashScope(\'' + t.id + '\',\'' + (t.path || '') + '\')">'
-        + escHtml(t.label) + '</button>';
-    });
-    scopeBar.innerHTML = scopeHTML;
+    var buildTabs = function () {
+      var tabs = [];
+      if (segments.length >= 1) {
+        var folderKey1 = segments[segments.length - 1] + '/';
+        var label1 = _folderTitleCache[folderKey1] || decodeURIComponent(segments[segments.length - 1]);
+        tabs.push({ id: 'folder', label: label1, path: segments[segments.length - 1] });
+      }
+      if (segments.length >= 2) {
+        var folderKey2 = segments[segments.length - 2] + '/';
+        var label2 = _folderTitleCache[folderKey2] || decodeURIComponent(segments[segments.length - 2]);
+        tabs.push({ id: 'folder', label: label2, path: segments[segments.length - 2] });
+      }
+      tabs.push({ id: 'all', label: 'All Quizzes', path: '' });
 
-    currentScope = 'folder';
-    currentScopePath = tabs.length > 0 ? tabs[0].path : '';
-    renderDashboard();
-    var overlay = document.getElementById('tracker-dashboard');
-    if (overlay) overlay.classList.add('open');
+      var scopeHTML = '';
+      tabs.forEach(function (t, i) {
+        scopeHTML += '<button class="dash-scope-tab' + (i === 0 ? ' active' : '')
+          + '" data-scope="' + t.id + '" data-path="' + (t.path || '') + '"'
+          + ' onclick="switchDashScope(\'' + t.id + '\',\'' + (t.path || '') + '\')">'
+          + escHtml(t.label) + '</button>';
+      });
+      scopeBar.innerHTML = scopeHTML;
+
+      currentScope = 'folder';
+      currentScopePath = tabs.length > 0 ? tabs[0].path : '';
+      renderDashboard();
+      var overlay = document.getElementById('tracker-dashboard');
+      if (overlay) overlay.classList.add('open');
+    };
+
+    if (foldersToFetch.length > 0) {
+      // Fetch missing titles, then build tabs with complete cache
+      Promise.all(foldersToFetch.map(function (f) { return fetchFolderTitle(f); }))
+        .then(function () { buildTabs(); })
+        .catch(function () { buildTabs(); }); // build tabs even if fetch fails
+    } else {
+      buildTabs();
+    }
   };
 
   window.switchDashScope = function (scope, path) {
@@ -344,8 +421,9 @@
 
       var folder = getFolderForEntry(d);
       var topFolder = getTopLevelFolder(folder);
-      // Use stored folderTitle first, then check cache, then null
-      var folderTitle = cleanTitle(d.folderTitle) || _folderTitleCache[topFolder] || _folderTitleCache[folder] || null;
+      // Build title lookup: try stored title (cleaned), then cache for folder, then cache for topFolder
+      var storedTitle = d.folderTitle ? cleanTitle(d.folderTitle) : '';
+      var folderTitle = storedTitle || _folderTitleCache[folder] || _folderTitleCache[topFolder] || null;
 
       // Create a new group for this quiz
       groups.push({
@@ -367,12 +445,18 @@
     groups.forEach(function (g) {
       // Show folder heading if top-level folder changed and we have a title
       if (g.topFolder && g.topFolder !== lastTopFolder) {
-        // Look up the best title: stored title, then cache for exact folder, then cache for top folder
+        // Look up the best title: stored title, cache for exact folder, cache for top folder
         var displayFolderTitle = g.folderTitle
           || _folderTitleCache[g.topFolder]
           || _folderTitleCache[g.folder]
           || decodeURIComponent(g.topFolder.replace(/\/$/, ''));
-        html += '<div class="dash-folder-title">' + escFolderIcon(escHtml(displayFolderTitle)) + '</div>';
+        // Don't show raw folder name if it matches the project root
+        if (displayFolderTitle && displayFolderTitle === _rootName) {
+          displayFolderTitle = '';
+        }
+        if (displayFolderTitle) {
+          html += '<div class="dash-folder-title">' + escFolderIcon(escHtml(displayFolderTitle)) + '</div>';
+        }
         lastTopFolder = g.topFolder;
       }
 
