@@ -1566,7 +1566,7 @@ function onCustomCount(val) {
 }
 
 function autoSetTime(n) {
-  const autoMins = Math.max(5, Math.ceil(n * 1.5));
+  const autoMins = Math.max(1, n);
   document.getElementById('time-input').value = autoMins;
 }
 
