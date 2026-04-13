@@ -1082,10 +1082,6 @@ input[type=radio]:checked + .option-label .option-key {
   </a>
 
   <div class="start-card">
-    <button class="icon-btn" onclick="openTrackerDashboard()" style="position:absolute;top:10px;right:10px" title="Question Tracker">
-      <span>📊</span><span id="tracker-badge-count" style="position:absolute;top:-3px;right:-3px;min-width:15px;height:15px;border-radius:8px;background:var(--text-muted);color:var(--surface);font-size:0.55rem;font-weight:700;display:none;align-items:center;justify-content:center;padding:0 3px;line-height:1;opacity:0.75">0</span>
-    </button>
-
     <div class="start-icon">📝</div>
     <h1 id="quiz-title">Quiz Title</h1>
     <p class="subtitle" id="quiz-desc">Answer all questions before the timer runs out.</p>
