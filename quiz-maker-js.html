@@ -294,7 +294,7 @@ function copyPrompt() {
 
 function generateQuiz() {
   const input = document.getElementById('js-input').value.trim();
-  
+
   if(!input) {
     alert('Please paste your questions array first!');
     return;
@@ -312,14 +312,21 @@ function generateQuiz() {
     if (!cleaned.endsWith(']'))   cleaned = cleaned + ']';
 
     let arr;
+    
+    // Try JSON.parse first (safest and fastest for large arrays)
     try {
-      arr = new Function('return ' + cleaned)();
-    } catch(innerE) {
-      // Try JSON parse as fallback
+      arr = JSON.parse(cleaned);
+    } catch(jsonE) {
+      // If JSON.parse fails, try Function constructor (handles single quotes, unquoted keys, etc.)
       try {
-        arr = JSON.parse(cleaned);
-      } catch(jsonE) {
-        throw new Error('Syntax error: ' + innerE.message);
+        // For very large inputs, use a safer parsing approach
+        if (cleaned.length > 500000) {
+          arr = parseLargeJSArray(cleaned);
+        } else {
+          arr = new Function('return ' + cleaned)();
+        }
+      } catch(funcE) {
+        throw new Error('Syntax error: ' + funcE.message);
       }
     }
 
@@ -328,11 +335,11 @@ function generateQuiz() {
     if(!Array.isArray(parsedQuestions)) {
       throw new Error("Input is not an array");
     }
-    
+
     const title = document.getElementById('quiz-title').value || 'Generated Quiz';
     const description = document.getElementById('quiz-description').value || 'Imported from JS questions';
     const uid = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-    
+
     window.generatedQuiz = {
       config: {
         uid: uid,
@@ -341,14 +348,29 @@ function generateQuiz() {
       },
       questions: parsedQuestions
     };
-    
+
     document.getElementById('output-area').style.display = 'block';
     alert(`Successfully parsed ${parsedQuestions.length} questions!`);
-    
+
   } catch (e) {
     alert('Error parsing JavaScript array: ' + e.message);
     console.error(e);
   }
+}
+
+/**
+ * Safer parser for large JS arrays - avoids eval-like approaches when possible
+ */
+function parseLargeJSArray(str) {
+  let jsonStr = str
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/.*$/gm, '')
+    .replace(/(\{|,)\s*([a-zA-Z_$][a-zA-Z_$0-9]*)\s*:/g, '$1"$2":')
+    .replace(/'([^'\\]*(?:\\.[^'\\]*)*)'/g, '"$1"')
+    .replace(/,\s*([\]\}])/g, '$1')
+    .trim();
+  
+  return JSON.parse(jsonStr);
 }
 
 function downloadQuiz() {

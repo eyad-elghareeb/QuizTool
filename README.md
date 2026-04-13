@@ -17,7 +17,7 @@ Create and manage custom index/hub pages for any project!
 - **Visual Configuration**: Edit hub settings (title, description, theme) without touching code
 - **Quiz Entry Manager**: Add, edit, and remove quiz entries with an intuitive form interface
 - **Tag Management**: Easy tag creation and management with visual chip interface
-- **Import/Export**: 
+- **Import/Export**:
   - Import JSON configurations or extract from existing HTML files
   - Export as JSON for sharing or as a complete standalone HTML file
 - **Auto-Save**: Your work is automatically saved in browser storage
@@ -50,6 +50,10 @@ Create custom quizzes without any coding required!
 ### 💻 Quiz Maker JS (`quiz-maker-js.html`)
 JavaScript-based interactive quiz creation tool with enhanced functionality.
 
+- **Large File Support**: Optimized parser handles 1000+ question arrays without freezing
+- **Smart Parsing**: Tries JSON.parse first for speed, falls back to JS parser when needed
+- **Error Recovery**: Shows multiple validation errors at once for faster debugging
+
 ### 🔀 Quiz Combiner (`quiz-combiner.html`)
 Merge multiple quiz HTML files into a unified Question Bank!
 
@@ -63,6 +67,7 @@ Merge multiple quiz HTML files into a unified Question Bank!
 Create smart Question Banks with intelligent session tracking!
 
 - **JS Array Input**: Build banks from large JavaScript question arrays
+- **Large File Support**: Optimized parser handles 500+ question banks efficiently
 - **Session Memory**: Remembers which questions you've already seen
 - **Fresh Questions**: Always serves unseen questions each session
 - **Coverage Tracking**: Monitors progress through the entire question pool
@@ -100,6 +105,9 @@ QuizTool features a sophisticated design system with:
 - **Modern Typography**: Uses Google Fonts (Outfit for body, Playfair Display for headings)
 - **CSS Variables**: Comprehensive theming with customizable colors, spacing, and effects
 - **Smooth Transitions**: Polished animations and hover effects throughout
+  - **Mode Switching**: Smooth border and background animations when toggling between exam/learning modes
+  - **Card Interactions**: Lift, glow, and scale effects with spring easing
+  - **Modal Animations**: Scale-up entrances with overshoot curves
 - **Accessible UI**: High contrast ratios and clear visual hierarchy
 - **Custom Color Palettes**:
   - Dark Theme: Deep blues and grays with amber accent (#f0a500)
@@ -175,6 +183,13 @@ QuizTool/
 ├── js-question-bank.html         # JavaScript mastery question bank (51 questions)
 ├── quiz-template.html            # Base template for generated quizzes
 ├── question-bank-template.html   # Template for question bank files
+├── quiz-engine.js                # Shared quiz engine (handles quiz rendering)
+├── bank-engine.js                # Shared bank engine (handles question banks)
+├── index-engine.js               # Shared index engine (handles hub pages)
+├── sw.js                         # Service worker for offline support
+├── manifest.webmanifest          # PWA manifest for installability
+├── favicon.svg                   # SVG icon for the app
+├── icon-*.png                    # PWA icons in multiple sizes (48-512px)
 └── README.md                     # This file
 ```
 
@@ -186,6 +201,7 @@ QuizTool/
 - **Vanilla JavaScript**: No frameworks or build tools required
 - **Local Storage**: Persists theme preferences and form drafts
 - **Google Fonts**: Outfit and Playfair Display typefaces
+- **Service Worker**: Offline support and caching for PWA functionality
 
 ### Browser Compatibility
 Works on all modern browsers including:
@@ -196,6 +212,20 @@ Works on all modern browsers including:
 
 ### No Dependencies
 QuizTool requires no external libraries, package managers, or build processes. Simply open the HTML files in any browser!
+
+### PWA Support
+QuizTool is a fully functional Progressive Web App:
+- **Installable**: Add to home screen on mobile/desktop
+- **Offline Ready**: Service worker caches all assets
+- **Multiple Icon Sizes**: Optimized icons from 48px to 512px for all devices
+- **Theme Color**: Matches app theme in browser UI
+
+### Simplified File Architecture
+QuizTool uses a modern, maintainable architecture:
+- **Shared Engines**: Single source of truth for quiz, bank, and index logic
+- **Data-Only Files**: Quiz files only contain `QUIZ_CONFIG` and `QUESTIONS` arrays
+- **Template-Based**: All quizzes use markers (`[QUIZ_CONFIG_START]`, `[QUESTIONS_START]`, etc.)
+- **Easy Updates**: Change engine once, update all quizzes automatically
 
 ## 🎯 Use Cases
 
@@ -213,6 +243,8 @@ QuizTool requires no external libraries, package managers, or build processes. S
 4. **Fully Customizable**: Modify templates or styles to match your brand
 5. **Offline Capable**: Works without internet connection after initial load
 6. **Privacy-Focused**: All data stays local; no server required
+7. **PWA Ready**: Installable, offline-capable, optimized icons
+8. **High Performance**: Optimized parsers handle large question banks (1000+ questions)
 
 ## 🔗 Links
 

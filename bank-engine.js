@@ -316,7 +316,7 @@ input[type=radio] { display: none; }
   border-radius: var(--radius);
   border: 1.5px solid var(--border);
   background: var(--surface2);
-  transition: border-color var(--transition);
+  transition: border-color var(--transition), background var(--transition);
   text-align: center;
 }
 .mode-option:hover {

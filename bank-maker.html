@@ -375,14 +375,23 @@ function parseAndPreview() {
     if (!cleaned.endsWith(']'))   cleaned = cleaned + ']';
 
     let arr;
+    
+    // Try JSON.parse first (safest and fastest for large arrays)
     try {
-      arr = new Function('return ' + cleaned)();
-    } catch(innerE) {
-      // Try JSON parse as fallback
+      // JSON.parse requires double quotes, so try directly first
+      arr = JSON.parse(cleaned);
+    } catch(jsonE) {
+      // If JSON.parse fails, try Function constructor (handles single quotes, unquoted keys, etc.)
       try {
-        arr = JSON.parse(cleaned);
-      } catch(jsonE) {
-        throw new Error('Syntax error in array: ' + innerE.message);
+        // For very large inputs, use a safer parsing approach
+        if (cleaned.length > 500000) {
+          // For large inputs, try to sanitize and use Function more safely
+          arr = parseLargeJSArray(cleaned);
+        } else {
+          arr = new Function('return ' + cleaned)();
+        }
+      } catch(funcE) {
+        throw new Error('Syntax error: ' + funcE.message);
       }
     }
 
@@ -390,14 +399,19 @@ function parseAndPreview() {
     if (arr.length === 0) throw new Error('Array is empty');
 
     // Validate structure
-    arr.forEach((q, i) => {
-      if (!q.question)            throw new Error(`Question ${i+1}: missing "question" field`);
-      if (!Array.isArray(q.options)) throw new Error(`Question ${i+1}: missing "options" array`);
-      if (q.options.length < 2)   throw new Error(`Question ${i+1}: needs at least 2 options`);
-      if (q.correct === undefined) throw new Error(`Question ${i+1}: missing "correct" index`);
-      if (q.correct < 0 || q.correct >= q.options.length)
-        throw new Error(`Question ${i+1}: "correct" index out of range`);
-    });
+    const errors = [];
+    for (let i = 0; i < arr.length && errors.length < 10; i++) {
+      const q = arr[i];
+      if (!q.question) errors.push(`Question ${i+1}: missing "question" field`);
+      else if (!Array.isArray(q.options)) errors.push(`Question ${i+1}: missing "options" array`);
+      else if (q.options.length < 2) errors.push(`Question ${i+1}: needs at least 2 options`);
+      else if (q.correct === undefined) errors.push(`Question ${i+1}: missing "correct" index`);
+      else if (q.correct < 0 || q.correct >= q.options.length) errors.push(`Question ${i+1}: "correct" index out of range`);
+    }
+    
+    if (errors.length > 0) {
+      throw new Error(errors.join('\n') + (arr.length > 10 ? '\n... (showing first 10 errors)' : ''));
+    }
 
     parsedBank = arr;
 
@@ -422,6 +436,31 @@ function parseAndPreview() {
   }
 }
 
+/**
+ * Safer parser for large JS arrays - avoids eval-like approaches when possible
+ */
+function parseLargeJSArray(str) {
+  // Convert JS-style array to valid JSON by:
+  // 1. Converting single quotes to double quotes (carefully)
+  // 2. Adding quotes to unquoted keys
+  // 3. Removing trailing commas
+  
+  let jsonStr = str
+    // Remove comments (// and /* */)
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/.*$/gm, '')
+    // Add quotes to object keys
+    .replace(/(\{|,)\s*([a-zA-Z_$][a-zA-Z_$0-9]*)\s*:/g, '$1"$2":')
+    // Convert single-quoted strings to double-quoted (simple cases)
+    // This is a simplification - won't handle escaped quotes perfectly
+    .replace(/'([^'\\]*(?:\\.[^'\\]*)*)'/g, '"$1"')
+    // Remove trailing commas in objects/arrays
+    .replace(/,\s*([\]\}])/g, '$1')
+    .trim();
+  
+  return JSON.parse(jsonStr);
+}
+
 /* ─── DOWNLOAD BANK ──────────────────────────────────────── */
 function downloadBank() {
   if (!parsedBank) return;
@@ -431,53 +470,64 @@ function downloadBank() {
   const icon  = document.getElementById('bank-icon').value.trim()  || '🗃️';
   const uid   = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
 
-  fetch('question-bank-template.html')
-    .then(res => {
-      if (!res.ok) throw new Error('Could not load question-bank-template.html — make sure it is in the same folder.');
-      return res.text();
-    })
-    .then(template => {
-      const configObj = { uid, title, description: desc, icon };
-      const configJs  = `const BANK_CONFIG = ${JSON.stringify(configObj, null, 2)};`;
-      const bankJs    = `const QUESTION_BANK = ${JSON.stringify(parsedBank, null, 2)};`;
+  // Show loading state
+  showToast('📦 Generating bank file...');
 
-      let out = template;
+  // Use setTimeout to allow UI to update before heavy processing
+  setTimeout(() => {
+    try {
+      fetch('question-bank-template.html')
+        .then(res => {
+          if (!res.ok) throw new Error('Could not load question-bank-template.html — make sure it is in the same folder.');
+          return res.text();
+        })
+        .then(template => {
+          const configObj = { uid, title, description: desc, icon };
+          const configJs  = `const BANK_CONFIG = ${JSON.stringify(configObj, null, 2)};`;
+          const bankJs    = `const QUESTION_BANK = ${JSON.stringify(parsedBank, null, 2)};`;
 
-      // Replace BANK_CONFIG
-      const cfgStart = '/* [BANK_CONFIG_START] */';
-      const cfgEnd   = '/* [BANK_CONFIG_END] */';
-      const ci1 = out.indexOf(cfgStart), ci2 = out.indexOf(cfgEnd);
-      if (ci1 !== -1 && ci2 !== -1) {
-        out = out.substring(0, ci1 + cfgStart.length) + '\n' + configJs + '\n' + out.substring(ci2);
-      }
+          let out = template;
 
-      // Replace QUESTION_BANK
-      const qStart = '/* [QUESTION_BANK_START] */';
-      const qEnd   = '/* [QUESTION_BANK_END] */';
-      const qi1 = out.indexOf(qStart), qi2 = out.indexOf(qEnd);
-      if (qi1 !== -1 && qi2 !== -1) {
-        out = out.substring(0, qi1 + qStart.length) + '\n' + bankJs + '\n' + out.substring(qi2);
-      }
+          // Replace BANK_CONFIG
+          const cfgStart = '/* [BANK_CONFIG_START] */';
+          const cfgEnd   = '/* [BANK_CONFIG_END] */';
+          const ci1 = out.indexOf(cfgStart), ci2 = out.indexOf(cfgEnd);
+          if (ci1 !== -1 && ci2 !== -1) {
+            out = out.substring(0, ci1 + cfgStart.length) + '\n' + configJs + '\n' + out.substring(ci2);
+          }
 
-      // Replace <title>
-      out = out.replace(/<title>.*?<\/title>/, () => `<title>${title}</title>`);
+          // Replace QUESTION_BANK
+          const qStart = '/* [QUESTION_BANK_START] */';
+          const qEnd   = '/* [QUESTION_BANK_END] */';
+          const qi1 = out.indexOf(qStart), qi2 = out.indexOf(qEnd);
+          if (qi1 !== -1 && qi2 !== -1) {
+            out = out.substring(0, qi1 + qStart.length) + '\n' + bankJs + '\n' + out.substring(qi2);
+          }
 
-      const blob = new Blob([out], { type: 'text/html' });
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      a.href = url;
-      const safeName = title.replace(/[^a-z0-9\s-]/gi,'').trim().replace(/\s+/g,'-').toLowerCase();
-      a.download = (safeName || 'question-bank') + '.html';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 100);
-      showToast(`💾 ${a.download} downloaded!`);
-    })
-    .catch(err => {
-      console.error(err);
-      showToast('❌ ' + err.message);
-    });
+          // Replace <title>
+          out = out.replace(/<title>.*?<\/title>/, () => `<title>${title}</title>`);
+
+          // Create and download blob
+          const blob = new Blob([out], { type: 'text/html;charset=utf-8' });
+          const url  = URL.createObjectURL(blob);
+          const a    = document.createElement('a');
+          a.href = url;
+          const safeName = title.replace(/[^a-z0-9\s-]/gi,'').trim().replace(/\s+/g,'-').toLowerCase();
+          a.download = (safeName || 'question-bank') + '.html';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          showToast(`💾 ${a.download} downloaded!`);
+        })
+        .catch(err => {
+          console.error(err);
+          showToast('❌ ' + err.message);
+        });
+    } catch(err) {
+      showToast('❌ Generation error: ' + err.message);
+    }
+  }, 50);
 }
 
 /* ─── RESET FORM ─────────────────────────────────────────── */

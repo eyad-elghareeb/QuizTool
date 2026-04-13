@@ -1,13 +1,49 @@
 {
-  "name": "QuizTool",
-  "short_name": "QuizTool",
-  "description": "Quiz creation and management tool. Create, edit, combine and export quizzes.",
-  "start_url": "./index.html",
+  "name": "MU61 Quiz",
+  "short_name": "MU61 Quiz",
+  "description": "MU61 Interactive Quiz. Test your medical knowledge.",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#0d1117",
   "theme_color": "#0d1117",
   "icons": [
+    {
+      "src": "icon-48.png",
+      "sizes": "48x48",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
     {
       "src": "favicon.svg",
       "sizes": "any",

@@ -292,6 +292,7 @@ input[type=radio] { display: none; }
   align-items: center;
   justify-content: center;
   min-height: 80px;
+  transition: border-color var(--transition), background var(--transition);
 }
 
 @media (max-width: 480px) {
