@@ -301,9 +301,30 @@ function generateQuiz() {
   }
 
   try {
-    // Safely evaluate the input
-    parsedQuestions = eval(`(${input})`);
-    
+    // Clean up common issues: trailing commas, BOM, etc.
+    let cleaned = input
+      .replace(/^\uFEFF/, '')              // Remove BOM
+      .replace(/,\s*([\]\}])/g, '$1')     // Remove trailing commas
+      .trim();
+
+    // Ensure it starts with [ and ends with ]
+    if (!cleaned.startsWith('[')) cleaned = '[' + cleaned;
+    if (!cleaned.endsWith(']'))   cleaned = cleaned + ']';
+
+    let arr;
+    try {
+      arr = new Function('return ' + cleaned)();
+    } catch(innerE) {
+      // Try JSON parse as fallback
+      try {
+        arr = JSON.parse(cleaned);
+      } catch(jsonE) {
+        throw new Error('Syntax error: ' + innerE.message);
+      }
+    }
+
+    parsedQuestions = arr;
+
     if(!Array.isArray(parsedQuestions)) {
       throw new Error("Input is not an array");
     }

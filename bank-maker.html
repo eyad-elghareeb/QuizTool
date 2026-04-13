@@ -364,7 +364,28 @@ function parseAndPreview() {
   if (!input) { showToast('⚠️ Please paste your questions array first!'); return; }
 
   try {
-    const arr = eval(`(${input})`);
+    // Clean up common issues: trailing commas, BOM, etc.
+    let cleaned = input
+      .replace(/^\uFEFF/, '')              // Remove BOM
+      .replace(/,\s*([\]\}])/g, '$1')     // Remove trailing commas
+      .trim();
+
+    // Ensure it starts with [ and ends with ]
+    if (!cleaned.startsWith('[')) cleaned = '[' + cleaned;
+    if (!cleaned.endsWith(']'))   cleaned = cleaned + ']';
+
+    let arr;
+    try {
+      arr = new Function('return ' + cleaned)();
+    } catch(innerE) {
+      // Try JSON parse as fallback
+      try {
+        arr = JSON.parse(cleaned);
+      } catch(jsonE) {
+        throw new Error('Syntax error in array: ' + innerE.message);
+      }
+    }
+
     if (!Array.isArray(arr)) throw new Error('Input must be a JavaScript array');
     if (arr.length === 0) throw new Error('Array is empty');
 
