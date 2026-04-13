@@ -30,6 +30,8 @@
   _addLink('icon',       ENGINE_BASE + 'favicon.svg', {type: 'image/svg+xml'});
   _addLink('apple-touch-icon', ENGINE_BASE + 'favicon.svg');
 
+  /* ── Inject CSS ──────────────────────────────────────────────── */
+  
   // Set background immediately to prevent flash of white
   var savedTheme = localStorage.getItem('quiz-theme') || 'dark';
   document.documentElement.setAttribute('data-theme', savedTheme);
@@ -37,8 +39,7 @@
   document.body.style.color = savedTheme === 'light' ? '#1c1917' : '#e6edf3';
   document.body.style.transition = 'background 0.2s ease, color 0.2s ease';
   document.body.style.overflow = 'hidden';
-
-  /* ── Inject CSS ──────────────────────────────────────────────── */
+  
   var _style = document.createElement('style');
   _style.textContent = `/* ═══════════════════════════════════════════
    CSS VARIABLES & THEME
@@ -1070,7 +1071,8 @@ input[type=radio]:checked + .option-label .option-key {
   document.head.appendChild(_style);
 
   /* ── Build DOM ───────────────────────────────────────────────── */
-  document.body.innerHTML = `
+  try {
+    document.body.innerHTML = `
 <!-- ═══════════════════════════ START ═══════════════════════════ -->
 <div id="start-screen" class="screen active">
   <a href="#" class="hub-back-btn" onclick="navigateToIndex(event); return false;">
@@ -1290,6 +1292,10 @@ input[type=radio]:checked + .option-label .option-key {
 <!-- ════════════════════════════════════════════════════════════════
      ▼ DROP IN YOUR QUESTIONS HERE ▼
 ═══════════════════════════════════════════════════════════════════ -->`;
+  } catch(e) {
+    console.error('[QuizEngine] Error building DOM:', e);
+    document.body.innerHTML = '<div style="padding:2rem;text-align:center;font-family:sans-serif;"><h1>❌ DOM Build Error</h1><p>' + e.message + '</p></div>';
+  }
 
   /* ── Register Service Worker ─────────────────────────────────── */
   if ('serviceWorker' in navigator) {
@@ -2351,8 +2357,28 @@ function exportToPDF() {
 }
 
 /* ── BOOT ────────────────────────────────────────────────── */
-initUI();
-checkSavedProgress();
+try {
+  console.log('[QuizEngine] Initializing quiz engine...');
+  console.log('[QuizEngine] QUIZ_CONFIG defined:', typeof QUIZ_CONFIG !== 'undefined');
+  console.log('[QuizEngine] QUESTIONS defined:', typeof QUESTIONS !== 'undefined');
+  
+  if (typeof QUIZ_CONFIG === 'undefined') {
+    console.error('[QuizEngine] ERROR: QUIZ_CONFIG is not defined!');
+    document.body.innerHTML = '<div style="padding:2rem;text-align:center;font-family:sans-serif;"><h1>❌ Error</h1><p>QUIZ_CONFIG is not defined. Please check your quiz file.</p></div>';
+  } else if (typeof QUESTIONS === 'undefined') {
+    console.error('[QuizEngine] ERROR: QUESTIONS is not defined!');
+    document.body.innerHTML = '<div style="padding:2rem;text-align:center;font-family:sans-serif;"><h1>❌ Error</h1><p>QUESTIONS is not defined. Please check your quiz file.</p></div>';
+  } else {
+    console.log('[QuizEngine] Quiz config loaded:', QUIZ_CONFIG.title);
+    console.log('[QuizEngine] Questions count:', QUESTIONS.length);
+    initUI();
+    checkSavedProgress();
+    console.log('[QuizEngine] UI initialized successfully');
+  }
+} catch(e) {
+  console.error('[QuizEngine] Fatal error during initialization:', e);
+  document.body.innerHTML = '<div style="padding:2rem;text-align:center;font-family:sans-serif;"><h1>❌ Quiz Engine Error</h1><p>' + e.message + '</p><pre style="text-align:left;max-width:600px;margin:1rem auto;background:#f5f5f5;padding:1rem;">' + e.stack + '</pre></div>';
+}
 
 /* ================================================================
    TRACKER PANEL
