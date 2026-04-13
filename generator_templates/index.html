@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QuizTool Project Generator</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230d1117'/><circle cx='50' cy='50' r='28' fill='none' stroke='%23f0a500' stroke-width='3.5'/><rect x='44' y='32' width='12' height='36' rx='2' fill='%23f0a500'/><rect x='32' y='44' width='36' height='12' rx='2' fill='%23f0a500'/></svg>">
+<meta name="theme-color" content="#0d1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2330;--border:#30363d;--text:#e6edf3;--text-muted:#8b949e;--accent:#f0a500;--accent-dim:rgba(240,165,0,0.12);--correct:#2ea043;--correct-bg:rgba(46,160,67,0.12);--wrong:#da3633;--wrong-bg:rgba(218,54,51,0.12);--radius:12px;--shadow:0 4px 24px rgba(0,0,0,0.4);--transition:0.2s ease-out}
+[data-theme="light"]{--bg:#f3f0eb;--surface:#fff;--surface2:#f8f6f1;--border:#d0ccc5;--text:#1c1917;--text-muted:#78716c;--accent:#c27803;--accent-dim:rgba(194,120,3,0.10);--shadow:0 4px 24px rgba(0,0,0,0.10)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;transition:background var(--transition),color var(--transition)}
+.topbar{display:flex;align-items:center;padding:0.75rem 1.5rem;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+.topbar-title{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;flex:1;color:var(--text)}
+.icon-btn{width:36px;height:36px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-muted);transition:all var(--transition);font-size:1rem;cursor:pointer}
+.icon-btn:hover{color:var(--text);border-color:var(--accent)}
+.container{max-width:960px;margin:0 auto;padding:2rem 1.5rem}
+h1{font-family:'Playfair Display',serif;font-size:clamp(1.8rem,4vw,2.5rem);margin-bottom:0.5rem}
+h1 span{color:var(--accent)}
+.subtitle{color:var(--text-muted);font-size:1rem;margin-bottom:2rem}
+.section{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
+.section h2{font-family:'Playfair Display',serif;font-size:1.2rem;margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:1px solid var(--border)}
+.form-group{margin-bottom:1rem}
+.form-group label{display:block;margin-bottom:0.4rem;font-weight:500;color:var(--text);font-size:0.9rem}
+.form-group input,.form-group textarea,.form-group select{width:100%;padding:0.7rem 0.85rem;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;font-size:0.95rem;transition:border-color var(--transition)}
+.form-group input:focus,.form-group textarea:focus,.form-group select:focus{outline:none;border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:60px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media(max-width:600px){.form-row{grid-template-columns:1fr}}
+.btn{padding:0.7rem 1.4rem;border-radius:8px;font-weight:600;font-size:0.9rem;cursor:pointer;transition:all var(--transition);border:none;font-family:inherit}
+.btn-primary{background:var(--accent);color:#000}
+.btn-primary:hover{opacity:0.88;transform:translateY(-1px)}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1.5px solid var(--border)}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
+.btn-danger{background:var(--wrong-bg);color:var(--wrong);border:1px solid var(--wrong)}
+.btn-danger:hover{background:var(--wrong);color:#fff}
+.btn-sm{padding:0.4rem 0.8rem;font-size:0.8rem}
+.btn-block{width:100%;text-align:center}
+
+/* Folder cards */
+.folder-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1rem;position:relative}
+.folder-card .folder-num{position:absolute;top:-10px;left:0.75rem;background:var(--accent);color:#000;font-weight:700;font-size:0.7rem;padding:0.15rem 0.6rem;border-radius:5px}
+.folder-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem}
+.folder-header h3{font-size:1rem;font-weight:600}
+
+/* Quiz entries */
+.quiz-entry{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem;margin-bottom:0.75rem;position:relative}
+.quiz-entry .q-num{position:absolute;top:-8px;left:0.6rem;background:var(--flagged-bg);color:var(--flagged);font-weight:700;font-size:0.65rem;padding:0.1rem 0.5rem;border-radius:4px}
+.quiz-row{display:grid;grid-template-columns:40px 1fr;gap:0.5rem;margin-bottom:0.5rem}
+.quiz-row input{padding:0.5rem 0.6rem;font-size:0.85rem}
+.quiz-row .icon-input{width:40px;text-align:center;font-size:1.2rem}
+.tags-row{display:flex;flex-wrap:wrap;gap:0.3rem;margin-top:0.5rem}
+.tag-chip{display:inline-flex;align-items:center;gap:0.25rem;padding:0.2rem 0.5rem;background:var(--accent-dim);border:1px solid var(--accent);border-radius:5px;font-size:0.75rem;color:var(--accent)}
+.tag-chip .remove-tag{cursor:pointer;font-weight:700;font-size:0.9rem}
+.tag-chip .remove-tag:hover{color:var(--wrong)}
+.tag-input{border:1px solid var(--border);background:var(--surface2);color:var(--text);padding:0.2rem 0.5rem;border-radius:5px;font-size:0.75rem;width:100px;font-family:inherit}
+.tag-input:focus{outline:none;border-color:var(--accent)}
+
+/* Preview panel */
+.preview-panel{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:1rem;max-height:300px;overflow-y:auto;font-family:monospace;font-size:0.8rem;white-space:pre-wrap;word-break:break-all;color:var(--text-muted)}
+
+/* Toast */
+.toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:0.75rem 1.5rem;font-size:0.95rem;font-weight:500;box-shadow:var(--shadow);z-index:9999;transition:transform 0.3s ease,opacity 0.3s ease;white-space:nowrap;opacity:0;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+.toast.success{border-color:var(--correct)}
+.toast.error{border-color:var(--wrong)}
+
+/* Loading spinner */
+.spinner{display:inline-block;width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.6s linear infinite;margin-right:0.5rem;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.stat-bar{display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1.5rem}
+.stat-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:0.75rem 1.25rem;text-align:center;flex:1;min-width:100px}
+.stat-item .sv{font-size:1.5rem;font-weight:700;color:var(--accent);display:block}
+.stat-item .sl{font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-title">🚀 Project Generator</div>
+  <button class="icon-btn" onclick="toggleTheme()" id="theme-toggle" title="Toggle theme">☀</button>
+</div>
+
+<div class="container">
+  <h1>Create Your <span>Quiz Project</span></h1>
+  <p class="subtitle">Configure your project structure and generate a ready-to-deploy ZIP file</p>
+
+  <!-- Stats -->
+  <div class="stat-bar">
+    <div class="stat-item"><span class="sv" id="stat-folders">0</span><span class="sl">Folders</span></div>
+    <div class="stat-item"><span class="sv" id="stat-quizzes">0</span><span class="sl">Total Quizzes</span></div>
+    <div class="stat-item"><span class="sv" id="stat-files">0</span><span class="sl">Output Files</span></div>
+  </div>
+
+  <!-- Project Config -->
+  <div class="section">
+    <h2>⚙️ Project Configuration</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Project Name (folder/zip name)</label>
+        <input type="text" id="project-name" value="MyQuiz" oninput="updatePreview()">
+      </div>
+      <div class="form-group">
+        <label>Top Bar Title</label>
+        <input type="text" id="topbar-title" value="Quiz Hub" oninput="updatePreview()">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Hero Title (HTML supported)</label>
+      <input type="text" id="hero-title" value='Select Your <span>Subject</span>' oninput="updatePreview()">
+    </div>
+    <div class="form-group">
+      <label>Hero Description</label>
+      <textarea id="hero-desc" rows="2" oninput="updatePreview()">Test your knowledge across various subjects. Choose a subject below to begin.</textarea>
+    </div>
+    <div class="form-group">
+      <label>Default Theme</label>
+      <select id="default-theme" onchange="updatePreview()">
+        <option value="dark">Dark</option>
+        <option value="light">Light</option>
+      </select>
+    </div>
+    <div style="background:var(--correct-bg);border:1px solid var(--correct);border-radius:8px;padding:0.6rem 0.85rem;font-size:0.8rem;color:var(--correct);display:flex;align-items:center;gap:0.5rem">
+      ✓ PWA Ready — includes favicon, manifest, service worker, and apple touch icon
+    </div>
+  </div>
+
+  <!-- Folders & Quizzes -->
+  <div class="section">
+    <h2>📁 Folders & Quizzes</h2>
+    <div id="folders-container"></div>
+    <button class="btn btn-secondary btn-block" onclick="addFolder()" style="margin-top:0.5rem">+ Add Folder</button>
+  </div>
+
+  <!-- Actions -->
+  <div class="section">
+    <h2>📦 Generate</h2>
+    <div class="preview-panel" id="preview-panel"></div>
+    <div style="display:flex;gap:1rem;margin-top:1rem;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="generateZip()" id="btn-generate" style="flex:1;min-width:200px">📥 Generate & Download ZIP</button>
+      <button class="btn btn-secondary" onclick="exportConfig()">📋 Export Config JSON</button>
+      <button class="btn btn-secondary" onclick="importConfig()">📂 Import Config JSON</button>
+    </div>
+    <input type="file" id="config-file-input" accept=".json" style="display:none" onchange="handleConfigImport(event)">
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let folderCounter = 0;
+let quizCounters = {};
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+/* Theme */
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  localStorage.setItem('generator-theme', html.getAttribute('data-theme'));
+  document.getElementById('theme-toggle').textContent = isDark ? '☾' : '☀';
+}
+(function(){
+  const s = localStorage.getItem('generator-theme');
+  if(s) document.documentElement.setAttribute('data-theme', s);
+  document.getElementById('theme-toggle').textContent = s === 'light' ? '☾' : '☀';
+})();
+
+/* Config */
+function getConfig() {
+  const folders = [];
+  document.querySelectorAll('.folder-card').forEach(fc => {
+    const folderName = fc.querySelector('.folder-name')?.value?.trim();
+    if (!folderName) return;
+    const quizzes = [];
+    fc.querySelectorAll('.quiz-entry').forEach(qe => {
+      const title = qe.querySelector('.qe-title')?.value?.trim();
+      const url = qe.querySelector('.qe-url')?.value?.trim();
+      if (title && url) {
+        const tags = qe.dataset.tags ? qe.dataset.tags.split(',').filter(Boolean) : [];
+        quizzes.push({
+          title: title,
+          description: qe.querySelector('.qe-desc')?.value?.trim() || '',
+          icon: qe.querySelector('.qe-icon')?.value?.trim() || '📝',
+          tags: tags,
+          url: url
+        });
+      }
+    });
+    folders.push({
+      name: folderName,
+      description: fc.querySelector('.folder-desc')?.value?.trim() || '',
+      icon: fc.querySelector('.folder-icon')?.value?.trim() || '📁',
+      quizzes: quizzes
+    });
+  });
+
+  return {
+    project_name: document.getElementById('project-name').value,
+    topbar_title: document.getElementById('topbar-title').value,
+    hero_title: document.getElementById('hero-title').value,
+    hero_description: document.getElementById('hero-desc').value,
+    default_theme: document.getElementById('default-theme').value,
+    folders: folders
+  };
+}
+
+/* Folders */
+function addFolder(data) {
+  folderCounter++;
+  const id = folderCounter;
+  quizCounters[id] = 0;
+  const d = data || {};
+  const quizzes = d.quizzes || [];
+  const container = document.getElementById('folders-container');
+  const div = document.createElement('div');
+  div.className = 'folder-card';
+  div.id = 'folder-' + id;
+  div.innerHTML = `
+    <span class="folder-num">Folder ${container.children.length + 1}</span>
+    <div class="folder-header">
+      <h3>📁 Folder</h3>
+      <div style="display:flex;gap:0.5rem">
+        <button class="btn btn-sm btn-secondary" onclick="addQuiz(${id})">+ Add Quiz</button>
+        <button class="btn btn-sm btn-danger" onclick="removeFolder(${id})">✕</button>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Folder Name (directory)</label>
+        <input type="text" class="folder-name" placeholder="e.g. Cardiology" value="${esc(d.name||'')}" oninput="updatePreview()">
+      </div>
+      <div class="form-group">
+        <label>Folder Icon (emoji)</label>
+        <input type="text" class="folder-icon" placeholder="📁" value="${esc(d.icon||'📁')}" maxlength="4" oninput="updatePreview()">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Folder Description</label>
+      <input type="text" class="folder-desc" placeholder="Brief description..." value="${esc(d.description||'')}" oninput="updatePreview()">
+    </div>
+    <div class="quizzes-container" id="quizzes-${id}"></div>
+  `;
+  container.appendChild(div);
+
+  // Add existing quizzes
+  quizzes.forEach(q => addQuiz(id, q));
+
+  updatePreview();
+  updateStats();
+}
+
+function removeFolder(id) {
+  const el = document.getElementById('folder-' + id);
+  if (el) el.remove();
+  delete quizCounters[id];
+  renumberFolders();
+  updatePreview();
+  updateStats();
+}
+
+function renumberFolders() {
+  document.querySelectorAll('.folder-card').forEach((fc, i) => {
+    const num = fc.querySelector('.folder-num');
+    if (num) num.textContent = `Folder ${i + 1}`;
+  });
+}
+
+/* Quizzes */
+function addQuiz(folderId, data) {
+  if (!quizCounters[folderId]) quizCounters[folderId] = 0;
+  quizCounters[folderId]++;
+  const qid = quizCounters[folderId];
+  const d = data || {};
+  const tags = d.tags || [];
+  const qc = document.getElementById('quizzes-' + folderId);
+  if (!qc) return;
+  const div = document.createElement('div');
+  div.className = 'quiz-entry';
+  div.dataset.tags = tags.join(',');
+  div.innerHTML = `
+    <span class="q-num">Q${qc.children.length + 1}</span>
+    <div class="quiz-row">
+      <input type="text" class="icon-input qe-icon" placeholder="📝" value="${esc(d.icon||'📝')}" maxlength="4" oninput="updatePreview()">
+      <input type="text" class="qe-title" placeholder="Quiz title..." value="${esc(d.title||'')}" oninput="updatePreview()">
+    </div>
+    <div class="quiz-row">
+      <input type="text" class="qe-url" placeholder="path/to/quiz.html" value="${esc(d.url||'')}" oninput="updatePreview()" style="grid-column:1/-1">
+    </div>
+    <div class="quiz-row">
+      <input type="text" class="qe-desc" placeholder="Brief description..." value="${esc(d.description||'')}" oninput="updatePreview()" style="grid-column:1/-1">
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.5rem">
+      <div class="tags-row">
+        ${tags.map((t, i) => `<span class="tag-chip">${esc(t)}<span class="remove-tag" onclick="removeTag(this, '${esc(t)}')">&times;</span></span>`).join('')}
+        <input type="text" class="tag-input" placeholder="+ tag" onkeydown="handleTagInput(event, this)">
+      </div>
+      <button class="btn btn-sm btn-danger" onclick="removeQuiz(this)">✕</button>
+    </div>
+  `;
+  qc.appendChild(div);
+  renumberQuizzes(qc);
+  updatePreview();
+  updateStats();
+}
+
+function removeQuiz(btn) {
+  const entry = btn.closest('.quiz-entry');
+  const qc = entry.parentElement;
+  entry.remove();
+  renumberQuizzes(qc);
+  updatePreview();
+  updateStats();
+}
+
+function renumberQuizes(qc) {
+  qc.querySelectorAll('.quiz-entry').forEach((e, i) => {
+    const num = e.querySelector('.q-num');
+    if (num) num.textContent = `Q${i + 1}`;
+  });
+}
+
+function renumberQuizzes(qc) {
+  qc.querySelectorAll('.quiz-entry').forEach((e, i) => {
+    const num = e.querySelector('.q-num');
+    if (num) num.textContent = `Q${i + 1}`;
+  });
+}
+
+function handleTagInput(e, input) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const tag = input.value.trim();
+    if (!tag) return;
+    const entry = input.closest('.quiz-entry');
+    if (!entry) return;
+    const tagsRow = entry.querySelector('.tags-row');
+    // Check duplicate
+    if (entry.dataset.tags.split(',').includes(tag)) { input.value = ''; return; }
+    const chip = document.createElement('span');
+    chip.className = 'tag-chip';
+    chip.innerHTML = `${esc(tag)}<span class="remove-tag" onclick="removeTag(this, '${esc(tag)}')">&times;</span>`;
+    tagsRow.insertBefore(chip, input);
+    // Update data attribute
+    const currentTags = entry.dataset.tags ? entry.dataset.tags.split(',').filter(Boolean) : [];
+    currentTags.push(tag);
+    entry.dataset.tags = currentTags.join(',');
+    input.value = '';
+    updatePreview();
+  }
+}
+
+function removeTag(span, tag) {
+  const entry = span.closest('.quiz-entry');
+  const chip = span.parentElement;
+  chip.remove();
+  if (entry) {
+    const currentTags = entry.dataset.tags ? entry.dataset.tags.split(',').filter(Boolean) : [];
+    const idx = currentTags.indexOf(tag);
+    if (idx > -1) currentTags.splice(idx, 1);
+    entry.dataset.tags = currentTags.join(',');
+    updatePreview();
+  }
+}
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* Preview */
+function updatePreview() {
+  const config = getConfig();
+  const totalQuizzes = config.folders.reduce((sum, f) => sum + f.quizzes.length, 0);
+  const totalFiles = 5 + config.folders.length; // engines(3) + favicon + sw + manifest + root index + folder indexes
+  document.getElementById('preview-panel').textContent = JSON.stringify({
+    project: config.project_name,
+    title: config.topbar_title,
+    folders: config.folders.length,
+    quizzes: totalQuizzes
+  }, null, 2);
+  updateStats();
+}
+
+function updateStats() {
+  const config = getConfig();
+  const totalQuizzes = config.folders.reduce((sum, f) => sum + f.quizzes.length, 0);
+  document.getElementById('stat-folders').textContent = config.folders.length;
+  document.getElementById('stat-quizzes').textContent = totalQuizzes;
+  document.getElementById('stat-files').textContent = 5 + config.folders.length + 1;
+}
+
+/* Generate ZIP */
+async function generateZip() {
+  const config = getConfig();
+  if (!config.folders.length) { showToast('❌ Add at least one folder!', 'error'); return; }
+  const btn = document.getElementById('btn-generate');
+  btn.innerHTML = '<span class="spinner"></span> Generating...';
+  btn.disabled = true;
+
+  try {
+    const resp = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config)
+    });
+    if (!resp.ok) throw new Error('Generation failed');
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (config.project_name || 'quiz-project') + '.zip';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('✅ Project generated and downloaded!', 'success');
+  } catch (err) {
+    showToast('❌ ' + err.message, 'error');
+  }
+  btn.innerHTML = '📥 Generate & Download ZIP';
+  btn.disabled = false;
+}
+
+/* Export / Import Config */
+function exportConfig() {
+  const config = getConfig();
+  const json = JSON.stringify(config, null, 2);
+  navigator.clipboard.writeText(json).then(() => {
+    showToast('✅ Config copied to clipboard!', 'success');
+  }).catch(() => {
+    const blob = new Blob([json], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'project-config.json';
+    a.click();
+    showToast('✅ Config downloaded!', 'success');
+  });
+}
+
+function importConfig() { document.getElementById('config-file-input').click(); }
+
+function handleConfigImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const config = JSON.parse(ev.target.result);
+      loadConfig(config);
+      showToast('✅ Config imported!', 'success');
+    } catch(err) {
+      showToast('❌ Invalid JSON: ' + err.message, 'error');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function loadConfig(config) {
+  document.getElementById('project-name').value = config.project_name || 'MyQuiz';
+  document.getElementById('topbar-title').value = config.topbar_title || 'Quiz Hub';
+  document.getElementById('hero-title').value = config.hero_title || 'Select Your <span>Subject</span>';
+  document.getElementById('hero-desc').value = config.hero_description || '';
+  document.getElementById('default-theme').value = config.default_theme || 'dark';
+
+  // Clear existing
+  document.getElementById('folders-container').innerHTML = '';
+  folderCounter = 0;
+  quizCounters = {};
+
+  (config.folders || []).forEach(f => addFolder(f));
+  updatePreview();
+}
+
+/* Init with sample */
+window.addEventListener('DOMContentLoaded', () => {
+  addFolder({
+    name: 'Cardiology',
+    description: 'Cardiology quizzes and resources',
+    icon: '🫀',
+    quizzes: [
+      { title: '60th Mid', description: 'Cardiology 60th Mid Exam', icon: '📝', tags: ['Mid'], url: '60th-mid.html' }
+    ]
+  });
+  addFolder({
+    name: 'Neurology',
+    description: 'Neurology quizzes',
+    icon: '🧠',
+    quizzes: [
+      { title: 'Neuro Exam 1', description: 'First neurology exam', icon: '📝', tags: ['Exam'], url: 'neuro-1.html' }
+    ]
+  });
+});
+</script>
+
+</body>
+</html>
