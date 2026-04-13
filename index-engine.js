@@ -9,6 +9,11 @@
   var _cs = document.currentScript;
   var ENGINE_BASE = _cs ? _cs.src.replace(/[^\/]*$/, '') : '';
 
+  /* ── Inject tracker dashboard extra styles ─────────────────── */
+  var _trackerStyle = document.createElement('style');
+  _trackerStyle.textContent = '.dash-folder-title{font-family:"Playfair Display",serif;font-size:1.05rem;font-weight:700;color:var(--accent);padding:0.75rem 0 0.4rem;margin-bottom:0.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:0.4rem}';
+  document.head.appendChild(_trackerStyle);
+
   /* ── Theme ─────────────────────────────────────────────────── */
   var savedTheme = localStorage.getItem('quiz-theme') || 'dark';
   document.documentElement.setAttribute('data-theme', savedTheme);
@@ -83,6 +88,56 @@
       });
     }
     return all;
+  }
+
+  /* ── Folder title cache ────────────────────────────────────── */
+  var _folderTitleCache = {};
+
+  function extractFolderFromPath(path) {
+    if (!path) return '';
+    var cleaned = path.replace(/^\//, '').replace(/\\/g, '/');
+    var parts = cleaned.split('/');
+    if (parts.length > 1) {
+      return parts[0] + '/';
+    }
+    return '';
+  }
+
+  function fetchFolderTitle(folderPath) {
+    if (!folderPath) return Promise.resolve(null);
+    if (_folderTitleCache[folderPath]) return Promise.resolve(_folderTitleCache[folderPath]);
+
+    return fetch(folderPath + 'index.html')
+      .then(function (resp) {
+        if (!resp.ok) return null;
+        return resp.text();
+      })
+      .then(function (html) {
+        if (!html) return null;
+        var match = html.match(/<title>([^<]+)<\/title>/i);
+        if (match) {
+          var title = match[1].trim();
+          _folderTitleCache[folderPath] = title;
+          return title;
+        }
+        return null;
+      })
+      .catch(function () { return null; });
+  }
+
+  function discoverAndCacheFolderTitles(data) {
+    var folders = {};
+    data.forEach(function (d) {
+      var folder = extractFolderFromPath(d.path);
+      if (folder && !_folderTitleCache[folder]) {
+        folders[folder] = true;
+      }
+    });
+    var promises = [];
+    Object.keys(folders).forEach(function (folder) {
+      promises.push(fetchFolderTitle(folder));
+    });
+    return Promise.all(promises);
   }
 
   /* ── Badge ─────────────────────────────────────────────────── */
@@ -167,7 +222,18 @@
 
     data.sort(function (a, b) { return (b.timestamp || 0) - (a.timestamp || 0); });
 
-    var html = '';
+    // Discover folder titles first, then render
+    discoverAndCacheFolderTitles(data).then(function () {
+      renderDashboardContent(body, data);
+    });
+  }
+
+  function renderDashboardContent(body, data) {
+    // Group items by folder
+    var groups = []; // { folder, folderTitle, items }
+    var currentFolder = null;
+    var currentGroup = null;
+
     data.forEach(function (d) {
       var wrongItems = d.wrong || [];
       var flaggedItems = d.flagged || [];
@@ -176,28 +242,60 @@
       var uniqueFlagged = flaggedItems.filter(function (q) { return !wrongIdxs[q.idx]; });
       if (!wrongItems.length && !uniqueFlagged.length) return;
 
-      var dateStr = d.timestamp
-        ? new Date(d.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+      var folder = extractFolderFromPath(d.path);
+      var folderTitle = _folderTitleCache[folder] || null;
+
+      // Create a new group for this quiz
+      groups.push({
+        folder: folder,
+        folderTitle: folderTitle,
+        uid: d.uid,
+        title: d.title || 'Unknown Quiz',
+        wrongItems: wrongItems,
+        flaggedItems: uniqueFlagged,
+        flaggedItemsAll: flaggedItems,
+        timestamp: d.timestamp
+      });
+    });
+
+    var html = '';
+    var lastFolder = '__none__';
+
+    groups.forEach(function (g) {
+      // Show folder heading if folder changed and we have a title
+      if (g.folder && g.folder !== lastFolder) {
+        var displayFolderTitle = g.folderTitle || decodeURIComponent(g.folder.replace(/\/$/, ''));
+        html += '<div class="dash-folder-title">' + escFolderIcon(displayFolderTitle) + '</div>';
+        lastFolder = g.folder;
+      }
+
+      var dateStr = g.timestamp
+        ? new Date(g.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
         : '';
 
       html += '<div class="dash-quiz-group">';
-      html += '<div class="dash-quiz-title">' + (d.title || 'Unknown Quiz');
-      if (wrongItems.length)   html += ' <span class="quiz-badge wrong-badge">' + wrongItems.length + ' wrong</span>';
-      if (flaggedItems.length) html += ' <span class="quiz-badge flag-badge">' + flaggedItems.length + ' flagged</span>';
+      html += '<div class="dash-quiz-title">' + (g.title);
+      if (g.wrongItems.length)   html += ' <span class="quiz-badge wrong-badge">' + g.wrongItems.length + ' wrong</span>';
+      if (g.flaggedItemsAll.length) html += ' <span class="quiz-badge flag-badge">' + g.flaggedItemsAll.length + ' flagged</span>';
       if (dateStr)             html += ' <span style="font-size:0.7rem;color:var(--text-muted);font-weight:400;margin-left:auto;">' + dateStr + '</span>';
       html += '</div>';
 
-      wrongItems.forEach(function (q) {
-        var isAlsoFlagged = flaggedItems.some(function (f) { return f.idx === q.idx; });
-        html += buildItem(d.uid, q, isAlsoFlagged ? 'Wrong + Flagged' : 'Wrong', 'wrong', '\u2717');
+      g.wrongItems.forEach(function (q) {
+        var isAlsoFlagged = g.flaggedItemsAll.some(function (f) { return f.idx === q.idx; });
+        html += buildItem(g.uid, q, isAlsoFlagged ? 'Wrong + Flagged' : 'Wrong', 'wrong', '\u2717');
       });
-      uniqueFlagged.forEach(function (q) {
-        html += buildItem(d.uid, q, 'Flagged', 'flagged', '\u2691');
+      g.flaggedItems.forEach(function (q) {
+        html += buildItem(g.uid, q, 'Flagged', 'flagged', '\u2691');
       });
       html += '</div>';
     });
 
     body.innerHTML = html || '<div class="dash-empty"><div class="dash-empty-icon">\u2705</div><p>No wrong or flagged questions tracked. Great job!</p></div>';
+  }
+
+  function escFolderIcon(title) {
+    // Add a folder icon before the title
+    return '\uD83D\uDCC1 ' + title;
   }
 
   function buildItem(uid, q, typeLabel, iconClass, iconText) {
