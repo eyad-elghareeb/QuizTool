@@ -2443,6 +2443,57 @@ checkSavedProgress();
   /* ══════════════════════════════════════════
      SAVE — called after quiz submission
      ══════════════════════════════════════════ */
+
+  /* ── Compute folder path & title relative to project root ── */
+  function computeFolderPath() {
+    // ENGINE_BASE points to the project root (where bank-engine.js lives)
+    // Use it to compute the folder of the current quiz relative to the root.
+    // Works on both local servers and GitHub Pages (where the repo slug is
+    // included in ENGINE_BASE via document.currentScript.src).
+    try {
+      var rootUrl = ENGINE_BASE || '';
+      // Resolve rootUrl relative to current location for proper URL construction.
+      // If ENGINE_BASE is already absolute (which it is from .src), this is a no-op.
+      var rootAbs = new URL(rootUrl, location.href).href;
+      var pageAbs = location.href;
+      // Get the relative path from project root to current page
+      var relative = pageAbs.substring(rootAbs.length);
+      // Remove filename to get folder path
+      var folderPath = relative.replace(/[^/]*$/, '');
+      return folderPath || '';
+    } catch (e) {
+      // Fallback: use path-based extraction
+      var cleaned = location.pathname.replace(/^\//, '');
+      var parts = cleaned.split('/');
+      if (parts.length > 1) return parts.slice(0, -1).join('/') + '/';
+      return '';
+    }
+  }
+
+  var _folderTitleCache = {};
+
+  function fetchAndCacheFolderTitle(folderPath) {
+    if (!folderPath || _folderTitleCache[folderPath]) {
+      return Promise.resolve(_folderTitleCache[folderPath] || null);
+    }
+    var rootAbs = '';
+    try { rootAbs = new URL(ENGINE_BASE || '', location.href).href; } catch(e) { rootAbs = ''; }
+    var indexUrl = rootAbs + folderPath + 'index.html';
+    return fetch(indexUrl)
+      .then(function(resp) { return resp.ok ? resp.text() : null; })
+      .then(function(html) {
+        if (!html) return null;
+        var match = html.match(/<title>([^<]+)<\/title>/i);
+        if (match) {
+          var title = match[1].trim();
+          _folderTitleCache[folderPath] = title;
+          return title;
+        }
+        return null;
+      })
+      .catch(function() { return null; });
+  }
+
   window.saveTrackerData = function() {
     try {
       var cfg = getConfig();
@@ -2468,6 +2519,8 @@ checkSavedProgress();
 
       if (!wrongQs.length && !flaggedQs.length) return;
 
+      var folderPath = computeFolderPath();
+
       var data = {
         uid:         cfg.uid || location.pathname,
         title:       cfg.title || document.title,
@@ -2477,16 +2530,28 @@ checkSavedProgress();
         flaggedCount: flaggedQs.length,
         wrong:       wrongQs,
         flagged:     flaggedQs,
-        path:        location.pathname
+        path:        location.pathname,
+        folderPath:  folderPath
       };
 
-      localStorage.setItem(getStorageKey(data.uid), JSON.stringify(data));
+      // Try to fetch folder title and save it with the data
+      fetchAndCacheFolderTitle(folderPath).then(function(folderTitle) {
+        if (folderTitle) data.folderTitle = folderTitle;
+        localStorage.setItem(getStorageKey(data.uid), JSON.stringify(data));
 
-      var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
-      if (keys.indexOf(data.uid) === -1) { keys.push(data.uid); }
-      localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(keys));
+        var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
+        if (keys.indexOf(data.uid) === -1) { keys.push(data.uid); }
+        localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(keys));
 
-      updateDashboardBadge();
+        updateDashboardBadge();
+      }).catch(function() {
+        // Save without folder title if fetch fails
+        localStorage.setItem(getStorageKey(data.uid), JSON.stringify(data));
+        var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
+        if (keys.indexOf(data.uid) === -1) { keys.push(data.uid); }
+        localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(keys));
+        updateDashboardBadge();
+      });
     } catch (e) { console.error('Tracker save error:', e); }
   };
 
@@ -2516,7 +2581,11 @@ checkSavedProgress();
     if (scope === 'folder' && scopePath) {
       return all.filter(function(d) {
         var _n = function(p) { return p.replace(/^\//, ''); };
-        return d.path && _n(d.path).indexOf(_n(scopePath)) === 0;
+        // Check both stored folderPath and d.path for backward compat
+        var fp = d.folderPath || '';
+        var dp = d.path || '';
+        var target = _n(scopePath);
+        return (fp && _n(fp).indexOf(target) === 0) || (dp && _n(dp).indexOf(target) === 0);
       });
     }
 
@@ -2547,6 +2616,25 @@ checkSavedProgress();
     var cfg = getConfig();
     var segments = getFolderSegments(location.pathname);
 
+    // Pre-populate folder title cache from existing tracker data so scope tabs
+    // can show clean titles instead of raw folder names
+    var _allData = getAllTrackerData();
+    _allData.forEach(function(d) {
+      if (d.folderTitle && d.folderPath) {
+        if (!_folderTitleCache[d.folderPath]) {
+          _folderTitleCache[d.folderPath] = d.folderTitle.replace(/^MU61\s+Quiz\s*[-–—]\s*/i, '').trim();
+        }
+      }
+    });
+    // Also cache from current page's own document.title
+    if (segments.length >= 2) {
+      var _pageFolder = segments[segments.length - 1] + '/';
+      if (!_folderTitleCache[_pageFolder]) {
+        var _cleaned = document.title.replace(/^MU61\s+Quiz\s*[-–—]\s*/i, '').trim();
+        if (_cleaned) _folderTitleCache[_pageFolder] = _cleaned;
+      }
+    }
+
     // Build scope tabs
     var scopeBar = document.getElementById('dash-scope-bar');
     var tabs = [];
@@ -2556,8 +2644,9 @@ checkSavedProgress();
 
     // Tab: nearest meaningful folder (skip the root project dir if only 1 segment)
     if (segments.length >= 2) {
-      var folderName = decodeURIComponent(segments[segments.length - 1]);
-      tabs.push({ id: 'folder', label: folderName, path: segments[segments.length - 1] });
+      var folderKey = segments[segments.length - 1] + '/';
+      var folderLabel = _folderTitleCache[folderKey] || decodeURIComponent(segments[segments.length - 1]);
+      tabs.push({ id: 'folder', label: folderLabel, path: segments[segments.length - 1] });
     }
 
     // Tab: All
