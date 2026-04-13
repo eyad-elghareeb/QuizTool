@@ -270,8 +270,7 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
   justify-content: center;
   padding: 1rem;
 }
-.dash-overlay.open { display: flex; animation: dashFadeIn 0.2s ease; }
-@keyframes dashFadeIn { from { opacity: 0; } to { opacity: 1; } }
+.dash-overlay.open { display: flex; }
 
 .dash-modal {
   background: var(--surface);
@@ -283,9 +282,7 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
   display: flex;
   flex-direction: column;
   box-shadow: 0 8px 40px rgba(0,0,0,0.5);
-  animation: dashSlideUp 0.25s ease;
 }
-@keyframes dashSlideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
 .dash-header {
   display: flex; align-items: center; gap: 0.75rem;
@@ -420,6 +417,263 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
   .dash-stat .ds-val { font-size: 1.2rem; }
   .dash-body { padding: 0.75rem 1rem; }
 }
+
+/* ANIM-SYSTEM-V2-INJECTED */
+
+/* ════════════════════════════════════════════════════════════════
+   SMOOTH ANIMATION SYSTEM  v2  —  auto-injected
+   Easing · Entrance · Hover · Press · Modal · Ripple
+════════════════════════════════════════════════════════════════ */
+
+/* ── Easing tokens ──────────────────────────────────────────── */
+:root {
+  --ease-out    : cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring : cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-in-out : cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* Upgrade global transition to use better curve */
+  --transition  : 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Page-load entrance keyframes ──────────────────────────── */
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes cardReveal {
+  from { opacity: 0; transform: translateY(32px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+@keyframes iconPop {
+  0%   { transform: scale(0.7) rotate(-8deg); opacity: 0; }
+  60%  { transform: scale(1.15) rotate(4deg); }
+  100% { transform: scale(1)    rotate(0deg); opacity: 1; }
+}
+
+/* ── Topbar ─────────────────────────────────────────────────── */
+.topbar {
+  animation: slideDown 0.45s var(--ease-out) both;
+}
+
+/* ── Hero ────────────────────────────────────────────────────── */
+.hero h1 {
+  animation: fadeUp 0.55s 0.1s var(--ease-out) both;
+}
+.hero p {
+  animation: fadeUp 0.55s 0.22s var(--ease-out) both;
+}
+
+/* ── Card entrance (stagger via --i set by JS) ──────────────── */
+.quiz-card {
+  animation: cardReveal 0.5s calc(0.28s + var(--i, 0) * 70ms) var(--ease-out) both;
+  will-change: transform, opacity;
+}
+
+/* ── Card icon pop ──────────────────────────────────────────── */
+.card-icon {
+  animation: iconPop 0.5s calc(0.38s + var(--i, 0) * 70ms) var(--ease-spring) both;
+  will-change: transform;
+}
+
+/* ── Card hover: lift + glow shadow + smooth border ────────── */
+.quiz-card {
+  transition:
+    transform      0.32s var(--ease-out),
+    box-shadow     0.32s var(--ease-out),
+    border-color   0.28s var(--ease-out);
+}
+.quiz-card:hover {
+  transform   : translateY(-8px) scale(1.012);
+  border-color: var(--accent);
+  box-shadow  :
+    0 24px 48px rgba(0,0,0,0.28),
+    0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+/* ── Card active press ──────────────────────────────────────── */
+.quiz-card:active {
+  transform   : translateY(-2px) scale(0.99) !important;
+  transition-duration: 0.1s !important;
+}
+
+/* ── Card icon micro-bounce on card hover ───────────────────── */
+.quiz-card:hover .card-icon {
+  transform : scale(1.1) rotate(-6deg);
+  transition: transform 0.35s var(--ease-spring);
+}
+/* Reset icon transition for normal state */
+.quiz-card .card-icon {
+  transition: transform 0.28s var(--ease-out);
+}
+
+/* ── Primary button ─────────────────────────────────────────── */
+.btn-take-quiz {
+  position  : relative;
+  overflow  : hidden;
+  transition:
+    opacity    0.22s var(--ease-out),
+    transform  0.22s var(--ease-out),
+    box-shadow 0.22s var(--ease-out) !important;
+}
+.btn-take-quiz:hover {
+  opacity   : 1 !important;
+  transform : translateY(-2px) !important;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.btn-take-quiz:active {
+  transform : scale(0.97) translateY(0px) !important;
+  transition-duration: 0.09s !important;
+}
+
+/* ── GitHub button (QuizTool) ───────────────────────────────── */
+.github-btn {
+  position  : relative;
+  overflow  : hidden;
+  transition:
+    transform    0.28s var(--ease-out),
+    border-color 0.22s var(--ease-out),
+    color        0.22s var(--ease-out),
+    box-shadow   0.28s var(--ease-out) !important;
+}
+.github-btn:hover {
+  transform   : translateY(-3px);
+  border-color: var(--accent);
+  color       : var(--accent);
+  box-shadow  : 0 6px 20px rgba(0,0,0,0.2);
+}
+.github-btn:active {
+  transform      : scale(0.97) !important;
+  transition-duration: 0.09s !important;
+}
+
+/* ── Ripple wave ─────────────────────────────────────────────── */
+@keyframes ripple {
+  to { transform: scale(5); opacity: 0; }
+}
+.ripple-wave {
+  position      : absolute;
+  border-radius : 50%;
+  width         : 60px;
+  height        : 60px;
+  margin-top    : -30px;
+  margin-left   : -30px;
+  background    : rgba(255, 255, 255, 0.22);
+  transform     : scale(0);
+  animation     : ripple 0.55s var(--ease-out) forwards;
+  pointer-events: none;
+}
+
+/* ── Icon buttons ───────────────────────────────────────────── */
+.icon-btn {
+  transition: all 0.22s var(--ease-out) !important;
+}
+.icon-btn:hover {
+  transform: translateY(-1px);
+  color: var(--text) !important;
+  border-color: var(--accent) !important;
+}
+.icon-btn:active {
+  transform      : scale(0.87) !important;
+  transition-duration: 0.08s !important;
+}
+
+/* ── Theme toggle spin ──────────────────────────────────────── */
+@keyframes spinPop {
+  0%   { transform: rotate(0deg)   scale(1);    }
+  40%  { transform: rotate(200deg) scale(0.85); }
+  70%  { transform: rotate(320deg) scale(1.1);  }
+  100% { transform: rotate(360deg) scale(1);    }
+}
+.theme-spinning {
+  animation: spinPop 0.5s var(--ease-spring) forwards !important;
+}
+
+/* ── Tracker badge pulse ────────────────────────────────────── */
+@keyframes badgePulse {
+  0%   { transform: scale(1);    }
+  50%  { transform: scale(1.35); }
+  100% { transform: scale(1);    }
+}
+.tracker-badge:not(:empty) {
+  animation: badgePulse 0.4s var(--ease-spring);
+}
+
+/* ── Dash overlay: fade + blur ──────────────────────────────── */
+@keyframes overlayIn {
+  from { opacity: 0; backdrop-filter: blur(0px); }
+  to   { opacity: 1; backdrop-filter: blur(8px); }
+}
+.dash-overlay.open {
+  animation: overlayIn 0.3s var(--ease-out) both !important;
+}
+
+/* ── Modal: spring scale-up from slight below ───────────────── */
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(28px) scale(0.93); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+.dash-modal {
+  animation: modalIn 0.38s var(--ease-spring) both !important;
+}
+
+/* ── Modal close ────────────────────────────────────────────── */
+@keyframes modalOut {
+  from { opacity: 1; transform: translateY(0)    scale(1);    }
+  to   { opacity: 0; transform: translateY(16px) scale(0.96); }
+}
+.dash-overlay.closing {
+  animation: overlayOut 0.22s var(--ease-in-out) both !important;
+}
+.dash-overlay.closing .dash-modal {
+  animation: modalOut 0.22s var(--ease-in-out) both !important;
+}
+@keyframes overlayOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* ── Dash q-item hover ──────────────────────────────────────── */
+.dash-q-item {
+  transition:
+    border-color 0.2s var(--ease-out),
+    transform    0.2s var(--ease-out),
+    background   0.2s var(--ease-out) !important;
+}
+.dash-q-item:hover {
+  border-color: var(--accent);
+  transform   : translateX(3px);
+}
+
+/* ── Dash close/action buttons ──────────────────────────────── */
+.dash-close-btn:active,
+.btn-dash-action:active,
+.btn-dash-close:active {
+  transform      : scale(0.94) !important;
+  transition-duration: 0.08s !important;
+}
+
+/* ── Footer note ────────────────────────────────────────────── */
+.footer-note {
+  animation: fadeIn 0.6s 0.7s var(--ease-out) both;
+}
+
+/* ── Respect prefers-reduced-motion ─────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration  : 0.01ms !important;
+    animation-delay     : 0ms    !important;
+    transition-duration : 0.01ms !important;
+  }
+}
+
 </style>
 </head>
 <body>

@@ -973,6 +973,11 @@ input[type=radio]:checked + .option-label .option-key { background: var(--accent
 `;
   document.head.appendChild(_style);
 
+  /* ── Inject Animation System v2 ────────────────────────────── */
+  var _animStyle = document.createElement('style');
+  _animStyle.textContent = '/* ════════════════════════════════════════════════════════════════\n   SMOOTH ANIMATION SYSTEM  v2\n   Easing · Entrance · Hover · Press · Modal · Ripple\n════════════════════════════════════════════════════════════════ */\n\n/* ── Easing tokens ──────────────────────────────────────────── */\n:root {\n  --ease-out    : cubic-bezier(0.16, 1, 0.3, 1);\n  --ease-spring : cubic-bezier(0.34, 1.56, 0.64, 1);\n  --ease-in-out : cubic-bezier(0.65, 0, 0.35, 1);\n  --transition  : 0.22s cubic-bezier(0.16, 1, 0.3, 1);\n}\n\n/* ── Screen transitions ────────────────────────────────────── */\n@keyframes screenFadeIn {\n  from { opacity: 0; }\n  to   { opacity: 1; }\n}\n\n/* ── Start screen entrance ─────────────────────────────────── */\n@keyframes slideDown {\n  from { opacity: 0; transform: translateY(-18px); }\n  to   { opacity: 1; transform: translateY(0); }\n}\n@keyframes fadeUp {\n  from { opacity: 0; transform: translateY(24px); }\n  to   { opacity: 1; transform: translateY(0); }\n}\n@keyframes iconPop {\n  0%   { transform: scale(0.7) rotate(-8deg); opacity: 0; }\n  60%  { transform: scale(1.15) rotate(4deg); }\n  100% { transform: scale(1)    rotate(0deg); opacity: 1; }\n}\n\n.topbar { animation: slideDown 0.45s var(--ease-out) both; }\n#start-screen .start-card { animation: fadeUp 0.55s 0.1s var(--ease-out) both; }\n#start-screen .start-icon { animation: iconPop 0.5s 0.2s var(--ease-spring) both; }\n\n/* ── Card hover effects ────────────────────────────────────── */\n.start-card {\n  transition:\n    transform      0.32s var(--ease-out),\n    box-shadow     0.32s var(--ease-out),\n    border-color   0.28s var(--ease-out) !important;\n}\n.start-card:hover {\n  transform   : translateY(-5px) scale(1.008);\n  box-shadow  : 0 16px 40px rgba(0,0,0,0.45);\n}\n\n.start-icon {\n  transition: transform 0.35s var(--ease-spring) !important;\n}\n.start-card:hover .start-icon {\n  transform : scale(1.08) rotate(-4deg);\n}\n\n/* ── Button effects ────────────────────────────────────────── */\n.btn-start, .btn-nav, .btn-restart {\n  position  : relative;\n  overflow  : hidden;\n  transition:\n    opacity    0.22s var(--ease-out),\n    transform  0.22s var(--ease-out),\n    box-shadow 0.22s var(--ease-out) !important;\n}\n.btn-start:hover, .btn-nav.primary:hover, .btn-restart:hover {\n  opacity   : 0.92 !important;\n  transform : translateY(-2px) !important;\n  box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 40%, transparent);\n}\n.btn-start:active, .btn-nav:active, .btn-restart:active {\n  transform : scale(0.97) translateY(0px) !important;\n  transition-duration: 0.09s !important;\n}\n\n/* ── Ripple wave ─────────────────────────────────────────────── */\n@keyframes ripple {\n  to { transform: scale(5); opacity: 0; }\n}\n.ripple-wave {\n  position      : absolute;\n  border-radius : 50%;\n  width         : 60px;\n  height        : 60px;\n  margin-top    : -30px;\n  margin-left   : -30px;\n  background    : rgba(255, 255, 255, 0.22);\n  transform     : scale(0);\n  animation     : ripple 0.55s var(--ease-out) forwards;\n  pointer-events: none;\n}\n\n/* ── Icon buttons ───────────────────────────────────────────── */\n.icon-btn, .hub-back-btn, .theme-btn-fixed {\n  transition: all 0.22s var(--ease-out) !important;\n}\n.hub-back-btn:hover, .theme-btn-fixed:hover {\n  transform: translateY(-1px);\n  color: var(--text) !important;\n  border-color: var(--accent) !important;\n}\n.icon-btn:active, .hub-back-btn:active, .theme-btn-fixed:active {\n  transform      : scale(0.87) !important;\n  transition-duration: 0.08s !important;\n}\n\n/* ── Theme toggle spin ──────────────────────────────────────── */\n@keyframes spinPop {\n  0%   { transform: rotate(0deg)   scale(1);    }\n  40%  { transform: rotate(200deg) scale(0.85); }\n  70%  { transform: rotate(320deg) scale(1.1);  }\n  100% { transform: rotate(360deg) scale(1);    }\n}\n.theme-spinning {\n  animation: spinPop 0.5s var(--ease-spring) forwards !important;\n}\n\n/* ── Option hover effects ──────────────────────────────────── */\n.option-label {\n  transition:\n    transform    0.2s var(--ease-out),\n    border-color 0.2s var(--ease-out),\n    background   0.2s var(--ease-out) !important;\n}\n.option-label:hover {\n  transform   : translateX(4px);\n  border-color: var(--accent) !important;\n}\n\n/* ── Nav button effects ────────────────────────────────────── */\n.nav-btn {\n  transition:\n    transform    0.15s var(--ease-out),\n    border-color 0.2s var(--ease-out),\n    background   0.2s var(--ease-out) !important;\n}\n.nav-btn:hover {\n  transform   : scale(1.08);\n  border-color: var(--accent) !important;\n}\n.nav-btn:active {\n  transform      : scale(0.95) !important;\n  transition-duration: 0.08s !important;\n}\n\n/* ── Flag button pulse ─────────────────────────────────────── */\n@keyframes badgePulse {\n  0%   { transform: scale(1);    }\n  50%  { transform: scale(1.15); }\n  100% { transform: scale(1);    }\n}\n.flag-btn.active svg {\n  animation: badgePulse 0.4s var(--ease-spring);\n}\n\n/* ── Modal effects ─────────────────────────────────────────── */\n.modal-overlay {\n  transition: opacity 0.25s var(--ease-out) !important;\n}\n.modal {\n  animation: modalIn 0.38s var(--ease-spring) both !important;\n}\n@keyframes modalIn {\n  from { opacity: 0; transform: translateY(28px) scale(0.93); }\n  to   { opacity: 1; transform: translateY(0)    scale(1);    }\n}\n\n/* ── Result item animations ────────────────────────────────── */\n.result-item {\n  animation: fadeUp 0.4s var(--ease-out) both;\n}\n.result-item:nth-child(1) { animation-delay: 0.05s; }\n.result-item:nth-child(2) { animation-delay: 0.1s; }\n.result-item:nth-child(3) { animation-delay: 0.15s; }\n.result-item:nth-child(4) { animation-delay: 0.2s; }\n.result-item:nth-child(5) { animation-delay: 0.25s; }\n.result-item:nth-child(n+6) { animation-delay: 0.3s; }\n\n/* ── Stat box hover ────────────────────────────────────────── */\n.bank-stat-box, .meta-item {\n  transition:\n    transform    0.2s var(--ease-out),\n    border-color 0.2s var(--ease-out) !important;\n}\n.bank-stat-box:hover, .meta-item:hover {\n  transform   : translateY(-2px);\n  border-color: var(--accent) !important;\n}\n\n/* ── Timer warning pulse ───────────────────────────────────── */\n@keyframes pulse {\n  0%, 100% { opacity: 1; }\n  50%      { opacity: 0.6; }\n}\n\n/* ── Respect prefers-reduced-motion ─────────────────────────── */\n@media (prefers-reduced-motion: reduce) {\n  *, *::before, *::after {\n    animation-duration  : 0.01ms !important;\n    animation-delay     : 0ms    !important;\n    transition-duration : 0.01ms !important;\n  }\n}';
+  document.head.appendChild(_animStyle);
+
   document.body.innerHTML = `
 <!-- ═══════════════════════════ START SCREEN ═══════════════════════════ -->
 <div id="start-screen" class="screen active">
@@ -3084,6 +3089,53 @@ checkSavedProgress();
       }
     }
   });
+
+  /* ── Animation Helpers ─────────────────────────────────────── */
+  (function () {
+    'use strict';
+
+    /* 1. Ripple effect for primary buttons */
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest('.btn-start, .btn-nav.primary, .btn-restart');
+      if (!btn) return;
+      var wave = document.createElement('span');
+      wave.className = 'ripple-wave';
+      var r = btn.getBoundingClientRect();
+      wave.style.left = (e.clientX - r.left) + 'px';
+      wave.style.top  = (e.clientY - r.top)  + 'px';
+      btn.appendChild(wave);
+      wave.addEventListener('animationend', function () { wave.remove(); });
+    });
+
+    /* 2. Theme toggle spin */
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest('.theme-toggle-btn, #theme-toggle');
+      if (!btn) return;
+      btn.classList.remove('theme-spinning');
+      void btn.offsetWidth; /* reflow to restart */
+      btn.classList.add('theme-spinning');
+      btn.addEventListener('animationend', function () {
+        btn.classList.remove('theme-spinning');
+      }, { once: true });
+    });
+
+    /* 3. Smooth screen transitions */
+    var _origShowScreen = window.showScreen;
+    if (_origShowScreen) {
+      window.showScreen = function (id) {
+        var current = document.querySelector('.screen.active');
+        if (current) {
+          current.style.opacity = '0';
+          setTimeout(function () {
+            current.classList.remove('active');
+            _origShowScreen(id);
+          }, 150);
+        } else {
+          _origShowScreen(id);
+        }
+      };
+    }
+  })();
 
 })();
 

@@ -14,6 +14,11 @@
   _trackerStyle.textContent = '.dash-folder-title{font-family:"Playfair Display",serif;font-size:1.05rem;font-weight:700;color:var(--accent);padding:0.75rem 0 0.4rem;margin-bottom:0.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:0.4rem}';
   document.head.appendChild(_trackerStyle);
 
+  /* ── Inject Animation System v2 ────────────────────────────── */
+  var _animStyle = document.createElement('style');
+  _animStyle.textContent = '/* ════════════════════════════════════════════════════════════════\n   SMOOTH ANIMATION SYSTEM  v2\n   Easing · Entrance · Hover · Press · Modal · Ripple\n════════════════════════════════════════════════════════════════ */\n\n/* ── Easing tokens ──────────────────────────────────────────── */\n:root {\n  --ease-out    : cubic-bezier(0.16, 1, 0.3, 1);\n  --ease-spring : cubic-bezier(0.34, 1.56, 0.64, 1);\n  --ease-in-out : cubic-bezier(0.65, 0, 0.35, 1);\n\n  /* Upgrade global transition to use better curve */\n  --transition  : 0.22s cubic-bezier(0.16, 1, 0.3, 1);\n}\n\n/* ── Page-load entrance keyframes ──────────────────────────── */\n@keyframes slideDown {\n  from { opacity: 0; transform: translateY(-18px); }\n  to   { opacity: 1; transform: translateY(0); }\n}\n@keyframes fadeUp {\n  from { opacity: 0; transform: translateY(24px); }\n  to   { opacity: 1; transform: translateY(0); }\n}\n@keyframes fadeIn {\n  from { opacity: 0; }\n  to   { opacity: 1; }\n}\n@keyframes cardReveal {\n  from { opacity: 0; transform: translateY(32px) scale(0.96); }\n  to   { opacity: 1; transform: translateY(0)    scale(1);    }\n}\n@keyframes iconPop {\n  0%   { transform: scale(0.7) rotate(-8deg); opacity: 0; }\n  60%  { transform: scale(1.15) rotate(4deg); }\n  100% { transform: scale(1)    rotate(0deg); opacity: 1; }\n}\n\n/* ── Topbar ─────────────────────────────────────────────────── */\n.topbar {\n  animation: slideDown 0.45s var(--ease-out) both;\n}\n\n/* ── Hero ────────────────────────────────────────────────────── */\n.hero h1 {\n  animation: fadeUp 0.55s 0.1s var(--ease-out) both;\n}\n.hero p {\n  animation: fadeUp 0.55s 0.22s var(--ease-out) both;\n}\n\n/* ── Card entrance (stagger via --i set by JS) ──────────────── */\n.quiz-card {\n  animation: cardReveal 0.5s calc(0.28s + var(--i, 0) * 70ms) var(--ease-out) both;\n  will-change: transform, opacity;\n}\n\n/* ── Card icon pop ──────────────────────────────────────────── */\n.card-icon {\n  animation: iconPop 0.5s calc(0.38s + var(--i, 0) * 70ms) var(--ease-spring) both;\n  will-change: transform;\n}\n\n/* ── Card hover: lift + glow shadow + smooth border ────────── */\n.quiz-card {\n  transition:\n    transform      0.32s var(--ease-out),\n    box-shadow     0.32s var(--ease-out),\n    border-color   0.28s var(--ease-out);\n}\n.quiz-card:hover {\n  transform   : translateY(-8px) scale(1.012);\n  border-color: var(--accent);\n  box-shadow  :\n    0 24px 48px rgba(0,0,0,0.28),\n    0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);\n}\n\n/* ── Card active press ──────────────────────────────────────── */\n.quiz-card:active {\n  transform   : translateY(-2px) scale(0.99) !important;\n  transition-duration: 0.1s !important;\n}\n\n/* ── Card icon micro-bounce on card hover ───────────────────── */\n.quiz-card:hover .card-icon {\n  transform : scale(1.1) rotate(-6deg);\n  transition: transform 0.35s var(--ease-spring);\n}\n/* Reset icon transition for normal state */\n.quiz-card .card-icon {\n  transition: transform 0.28s var(--ease-out);\n}\n\n/* ── Primary button ─────────────────────────────────────────── */\n.btn-take-quiz {\n  position  : relative;\n  overflow  : hidden;\n  transition:\n    opacity    0.22s var(--ease-out),\n    transform  0.22s var(--ease-out),\n    box-shadow 0.22s var(--ease-out) !important;\n}\n.btn-take-quiz:hover {\n  opacity   : 1 !important;\n  transform : translateY(-2px) !important;\n  box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 45%, transparent);\n}\n.btn-take-quiz:active {\n  transform : scale(0.97) translateY(0px) !important;\n  transition-duration: 0.09s !important;\n}\n\n/* ── GitHub button (QuizTool) ───────────────────────────────── */\n.github-btn {\n  position  : relative;\n  overflow  : hidden;\n  transition:\n    transform    0.28s var(--ease-out),\n    border-color 0.22s var(--ease-out),\n    color        0.22s var(--ease-out),\n    box-shadow   0.28s var(--ease-out) !important;\n}\n.github-btn:hover {\n  transform   : translateY(-3px);\n  border-color: var(--accent);\n  color       : var(--accent);\n  box-shadow  : 0 6px 20px rgba(0,0,0,0.2);\n}\n.github-btn:active {\n  transform      : scale(0.97) !important;\n  transition-duration: 0.09s !important;\n}\n\n/* ── Ripple wave ─────────────────────────────────────────────── */\n@keyframes ripple {\n  to { transform: scale(5); opacity: 0; }\n}\n.ripple-wave {\n  position      : absolute;\n  border-radius : 50%;\n  width         : 60px;\n  height        : 60px;\n  margin-top    : -30px;\n  margin-left   : -30px;\n  background    : rgba(255, 255, 255, 0.22);\n  transform     : scale(0);\n  animation     : ripple 0.55s var(--ease-out) forwards;\n  pointer-events: none;\n}\n\n/* ── Icon buttons ───────────────────────────────────────────── */\n.icon-btn {\n  transition: all 0.22s var(--ease-out) !important;\n}\n.icon-btn:hover {\n  transform: translateY(-1px);\n  color: var(--text) !important;\n  border-color: var(--accent) !important;\n}\n.icon-btn:active {\n  transform      : scale(0.87) !important;\n  transition-duration: 0.08s !important;\n}\n\n/* ── Theme toggle spin ──────────────────────────────────────── */\n@keyframes spinPop {\n  0%   { transform: rotate(0deg)   scale(1);    }\n  40%  { transform: rotate(200deg) scale(0.85); }\n  70%  { transform: rotate(320deg) scale(1.1);  }\n  100% { transform: rotate(360deg) scale(1);    }\n}\n.theme-spinning {\n  animation: spinPop 0.5s var(--ease-spring) forwards !important;\n}\n\n/* ── Tracker badge pulse ────────────────────────────────────── */\n@keyframes badgePulse {\n  0%   { transform: scale(1);    }\n  50%  { transform: scale(1.35); }\n  100% { transform: scale(1);    }\n}\n.tracker-badge:not(:empty) {\n  animation: badgePulse 0.4s var(--ease-spring);\n}\n\n/* ── Dash overlay: fade + blur ──────────────────────────────── */\n@keyframes overlayIn {\n  from { opacity: 0; backdrop-filter: blur(0px); }\n  to   { opacity: 1; backdrop-filter: blur(8px); }\n}\n.dash-overlay.open {\n  animation: overlayIn 0.3s var(--ease-out) both !important;\n}\n\n/* ── Modal: spring scale-up from slight below ───────────────── */\n@keyframes modalIn {\n  from { opacity: 0; transform: translateY(28px) scale(0.93); }\n  to   { opacity: 1; transform: translateY(0)    scale(1);    }\n}\n.dash-modal {\n  animation: modalIn 0.38s var(--ease-spring) both !important;\n}\n\n/* ── Modal close ────────────────────────────────────────────── */\n@keyframes modalOut {\n  from { opacity: 1; transform: translateY(0)    scale(1);    }\n  to   { opacity: 0; transform: translateY(16px) scale(0.96); }\n}\n.dash-overlay.closing {\n  animation: overlayOut 0.22s var(--ease-in-out) both !important;\n}\n.dash-overlay.closing .dash-modal {\n  animation: modalOut 0.22s var(--ease-in-out) both !important;\n}\n@keyframes overlayOut {\n  from { opacity: 1; }\n  to   { opacity: 0; }\n}\n\n/* ── Dash q-item hover ──────────────────────────────────────── */\n.dash-q-item {\n  transition:\n    border-color 0.2s var(--ease-out),\n    transform    0.2s var(--ease-out),\n    background   0.2s var(--ease-out) !important;\n}\n.dash-q-item:hover {\n  border-color: var(--accent);\n  transform   : translateX(3px);\n}\n\n/* ── Dash close/action buttons ──────────────────────────────── */\n.dash-close-btn:active,\n.btn-dash-action:active,\n.btn-dash-close:active {\n  transform      : scale(0.94) !important;\n  transition-duration: 0.08s !important;\n}\n\n/* ── Footer note ────────────────────────────────────────────── */\n.footer-note {\n  animation: fadeIn 0.6s 0.7s var(--ease-out) both;\n}\n\n/* ── Respect prefers-reduced-motion ─────────────────────────── */\n@media (prefers-reduced-motion: reduce) {\n  *, *::before, *::after {\n    animation-duration  : 0.01ms !important;\n    animation-delay     : 0ms    !important;\n    transition-duration : 0.01ms !important;\n  }\n}';
+  document.head.appendChild(_animStyle);
+
   /* ── Theme ─────────────────────────────────────────────────── */
   var savedTheme = localStorage.getItem('quiz-theme') || 'dark';
   document.documentElement.setAttribute('data-theme', savedTheme);
@@ -439,5 +444,68 @@
   /* ── Init ──────────────────────────────────────────────────── */
   updateBadge();
   window.__indexEngineReady = true;
+
+  /* ── Animation Helpers ─────────────────────────────────────── */
+  (function () {
+    'use strict';
+
+    /* 1. Stagger cards by setting CSS --i on each .quiz-card */
+    function staggerCards() {
+      document.querySelectorAll('.quiz-card').forEach(function (card, i) {
+        card.style.setProperty('--i', i);
+      });
+    }
+
+    /* Patch renderQuizzes to stagger after each render */
+    var _origRender = window.renderQuizzes;
+    window.renderQuizzes = function () {
+      if (_origRender) _origRender.apply(this, arguments);
+      staggerCards();
+    };
+
+    /* Also stagger whatever is already in the DOM */
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', staggerCards);
+    } else {
+      staggerCards();
+    }
+
+    /* 2. Ripple effect for primary CTA + github buttons */
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest('.btn-take-quiz, .github-btn');
+      if (!btn) return;
+      var wave = document.createElement('span');
+      wave.className = 'ripple-wave';
+      var r = btn.getBoundingClientRect();
+      wave.style.left = (e.clientX - r.left) + 'px';
+      wave.style.top  = (e.clientY - r.top)  + 'px';
+      btn.appendChild(wave);
+      wave.addEventListener('animationend', function () { wave.remove(); });
+    });
+
+    /* 3. Theme toggle spin */
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest('#theme-toggle');
+      if (!btn) return;
+      btn.classList.remove('theme-spinning');
+      void btn.offsetWidth; /* reflow to restart */
+      btn.classList.add('theme-spinning');
+      btn.addEventListener('animationend', function () {
+        btn.classList.remove('theme-spinning');
+      }, { once: true });
+    });
+
+    /* 4. Smooth modal close (add .closing class before hiding) */
+    var _origClose = window.closeTrackerDashboard;
+    window.closeTrackerDashboard = function () {
+      var overlay = document.getElementById('tracker-dashboard');
+      if (!overlay || !overlay.classList.contains('open')) return;
+      overlay.classList.add('closing');
+      overlay.addEventListener('animationend', function onEnd() {
+        overlay.removeEventListener('animationend', onEnd);
+        overlay.classList.remove('open', 'closing');
+      });
+    };
+  })();
 
 })();
