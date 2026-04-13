@@ -1,13 +1,42 @@
-<!DOCTYPE html>
-<html lang="en" data-theme="dark">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>JavaScript Mastery Bank</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-<style>
-/* ═══════════════════════════════════════════
+/* ================================================================
+   bank-engine.js  —  Shared engine for all question-bank files.
+   Load this after defining BANK_CONFIG and QUESTION_BANK globals.
+   ================================================================ */
+(function () {
+  'use strict';
+
+  var _cs  = document.currentScript;
+  var ENGINE_BASE = _cs ? _cs.src.replace(/[^\/]*$/, '') : (window.__QUIZ_ENGINE_BASE || '');
+
+  function _addLink(rel, href, extra) {
+    var el = document.createElement('link');
+    el.rel = rel; el.href = href;
+    if (extra) Object.assign(el, extra);
+    document.head.appendChild(el);
+  }
+  function _addMeta(name, content) {
+    var m = document.createElement('meta'); m.name = name; m.content = content;
+    document.head.appendChild(m);
+  }
+
+  _addMeta('theme-color', '#0d1117');
+  _addLink('preconnect', 'https://fonts.googleapis.com');
+  _addLink('preconnect', 'https://fonts.gstatic.com', {crossOrigin: ''});
+  _addLink('stylesheet', 'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap');
+  _addLink('manifest',   ENGINE_BASE + 'manifest.webmanifest');
+  _addLink('icon',       ENGINE_BASE + 'favicon.svg', {type: 'image/svg+xml'});
+  _addLink('apple-touch-icon', ENGINE_BASE + 'favicon.svg');
+
+  // Set background immediately to prevent flash of white
+  var savedTheme = localStorage.getItem('quiz-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  document.body.style.background = savedTheme === 'light' ? '#f3f0eb' : '#0d1117';
+  document.body.style.color = savedTheme === 'light' ? '#1c1917' : '#e6edf3';
+  document.body.style.transition = 'background 0.2s ease, color 0.2s ease';
+  document.body.style.overflow = 'hidden';
+
+  var _style = document.createElement('style');
+  _style.textContent = `/* ═══════════════════════════════════════════
    CSS VARIABLES & THEME
 ═══════════════════════════════════════════ */
 :root {
@@ -120,6 +149,7 @@ input[type=radio] { display: none; }
   max-width: 520px;
   width: 100%;
   box-shadow: var(--shadow);
+  position: relative;
 }
 .start-icon {
   width: 60px; height: 60px;
@@ -658,68 +688,32 @@ input[type=radio]:checked + .option-label .option-key { background: var(--accent
 
 /* PDF Export Section */
 .pdf-export-section {
-  margin-top: 1.5rem;
-  margin-bottom: 1rem;
-  padding: 1rem;
-  border-radius: var(--radius);
-  background: var(--surface);
-  border: 1.5px solid var(--border);
+  margin-top: 1.5rem; margin-bottom: 1rem; padding: 1rem;
+  border-radius: var(--radius); background: var(--surface); border: 1.5px solid var(--border);
 }
-.export-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  align-items: center;
-  margin-bottom: 0.85rem;
-}
+.export-options { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-bottom: 0.85rem; }
 .export-option {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.45rem 0.65rem;
-  border-radius: 6px;
-  background: var(--surface2);
-  border: 1.5px solid var(--border);
-  cursor: pointer;
-  transition: all var(--transition);
-  flex: 1;
-  min-width: 120px;
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.45rem 0.65rem;
+  border-radius: 6px; background: var(--surface2); border: 1.5px solid var(--border);
+  cursor: pointer; transition: all var(--transition); flex: 1; min-width: 120px;
 }
 .export-option:hover { border-color: var(--accent); background: var(--accent-dim); }
 .export-option input[type="checkbox"] { display: none; }
-.export-option input[type="checkbox"]:checked + .export-checkbox-visual {
-  border-color: var(--accent);
-  background: var(--accent);
-}
+.export-option input[type="checkbox"]:checked + .export-checkbox-visual { border-color: var(--accent); background: var(--accent); }
 .export-option input[type="checkbox"]:checked + .export-checkbox-visual svg { display: block; }
 .export-checkbox-visual {
-  width: 16px; height: 16px;
-  border-radius: 4px;
-  border: 2px solid var(--border);
-  background: var(--surface);
-  transition: all var(--transition);
-  flex-shrink: 0;
+  width: 16px; height: 16px; border-radius: 4px; border: 2px solid var(--border);
+  background: var(--surface); transition: all var(--transition); flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
 }
-.export-checkbox-visual svg {
-  display: none; width: 10px; height: 10px;
-  stroke: #000; stroke-width: 3; fill: none;
-}
+.export-checkbox-visual svg { display: none; width: 10px; height: 10px; stroke: #000; stroke-width: 3; fill: none; }
 .export-label { font-size: 0.82rem; font-weight: 500; color: var(--text); flex: 1; }
-.export-badge {
-  font-size: 0.65rem; padding: 0.1rem 0.4rem;
-  border-radius: 3px; background: var(--accent-dim);
-  color: var(--accent); font-weight: 600;
-}
+.export-badge { font-size: 0.65rem; padding: 0.1rem 0.4rem; border-radius: 3px; background: var(--accent-dim); color: var(--accent); font-weight: 600; }
 .btn-export-pdf {
-  display: flex; align-items: center; gap: 0.5rem;
-  padding: 0.85rem 1.75rem;
-  border-radius: var(--radius);
-  background: var(--surface2); color: var(--text);
-  border: 1.5px solid var(--border);
-  font-weight: 700; font-size: 0.95rem;
-  transition: all var(--transition);
-  text-decoration: none; width: 100%; justify-content: center;
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.85rem 1.75rem;
+  border-radius: var(--radius); background: var(--surface2); color: var(--text);
+  border: 1.5px solid var(--border); font-weight: 700; font-size: 0.95rem;
+  transition: all var(--transition); text-decoration: none; width: 100%; justify-content: center;
 }
 .btn-export-pdf:hover { border-color: var(--accent); color: var(--accent); opacity: 1; }
 
@@ -897,14 +891,10 @@ input[type=radio]:checked + .option-label .option-key { background: var(--accent
   .dash-stat .ds-val { font-size: 1.2rem; }
   .dash-body { padding: 0.75rem 1rem; }
 }
+`;
+  document.head.appendChild(_style);
 
-</style>
-<link rel="manifest" href="../../manifest.webmanifest">
-<link rel="icon" href="../../favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="../../favicon.svg">
-</head>
-<body>
-
+  document.body.innerHTML = `
 <!-- ═══════════════════════════ START SCREEN ═══════════════════════════ -->
 <div id="start-screen" class="screen active">
   <a href="#" class="hub-back-btn" onclick="navigateToIndex(event); return false;">
@@ -917,10 +907,8 @@ input[type=radio]:checked + .option-label .option-key { background: var(--accent
   <button class="theme-btn-fixed theme-toggle-btn" onclick="toggleTheme()" title="Toggle theme">☀</button>
 
   <div class="start-card">
-<button class="icon-btn" onclick="openTrackerDashboard()" style="position:absolute;top:10px;right:10px" title="Question Tracker">
-      <span style="position:relative;display:inline-flex;align-items:center;justify-content:center;">
-        <span>📊</span><span id="tracker-badge-count" style="position:absolute;top:-3px;right:-3px;min-width:15px;height:15px;border-radius:8px;background:var(--text-muted);color:var(--surface);font-size:0.55rem;font-weight:700;display:none;align-items:center;justify-content:center;padding:0 3px;line-height:1;opacity:0.75">0</span>
-      </span>
+    <button class="icon-btn" onclick="openTrackerDashboard()" style="position:absolute;top:10px;right:10px" title="Question Tracker">
+      <span>📊</span><span id="tracker-badge-count" style="position:absolute;top:-3px;right:-3px;min-width:15px;height:15px;border-radius:8px;background:var(--text-muted);color:var(--surface);font-size:0.55rem;font-weight:700;display:none;align-items:center;justify-content:center;padding:0 3px;line-height:1;opacity:0.75">0</span>
     </button>
 <div class="start-icon" id="start-icon">🗃️</div>
     <h1 id="bank-title">Question Bank</h1>
@@ -1156,586 +1144,18 @@ input[type=radio]:checked + .option-label .option-key { background: var(--accent
 
 <!-- ════════════════════════════════════════════════════════════════
      ▼ BANK CONFIGURATION — Edit below
-═══════════════════════════════════════════════════════════════════ -->
-<script>
-/* [BANK_CONFIG_START] */
-const BANK_CONFIG = {
-  "uid": "js_mastery_bank_v1",
-  "title": "JavaScript Mastery Bank",
-  "description": "51 carefully crafted JavaScript questions — covering fundamentals, scope, async, arrays, and more. Fresh questions every session.",
-  "icon": "⚡"
-};
-/* [BANK_CONFIG_END] */
+═══════════════════════════════════════════════════════════════════ -->`;
 
-/* [QUESTION_BANK_START] */
-const QUESTION_BANK = [
-  {
-    "question": "What does `typeof null` return in JavaScript?",
-    "options": [
-      "\"null\"",
-      "\"undefined\"",
-      "\"object\"",
-      "\"number\""
-    ],
-    "correct": 2,
-    "explanation": "This is a well-known JavaScript bug. `typeof null` returns 'object', but null is actually a primitive value. This quirk has been preserved for backward compatibility since JavaScript's earliest days."
-  },
-  {
-    "question": "Which array method adds one or more elements to the END of an array?",
-    "options": [
-      "unshift()",
-      "push()",
-      "concat()",
-      "splice()"
-    ],
-    "correct": 1,
-    "explanation": "push() adds elements to the end of an array and returns the new length. unshift() adds to the beginning, concat() creates a new merged array, and splice() can add/remove at any position."
-  },
-  {
-    "question": "What will `0.1 + 0.2 === 0.3` evaluate to?",
-    "options": [
-      "true",
-      "false",
-      "undefined",
-      "NaN"
-    ],
-    "correct": 1,
-    "explanation": "Due to floating-point precision in binary representation, 0.1 + 0.2 equals 0.30000000000000004 in JavaScript. Use Number.EPSILON for safe float comparisons."
-  },
-  {
-    "question": "What is the output of `NaN === NaN` in JavaScript?",
-    "options": [
-      "true",
-      "false",
-      "undefined",
-      "TypeError"
-    ],
-    "correct": 1,
-    "explanation": "NaN is the only value in JavaScript that is not equal to itself. Use Number.isNaN() or Object.is(x, NaN) to reliably check for NaN."
-  },
-  {
-    "question": "Which keyword creates a block-scoped variable that CANNOT be reassigned?",
-    "options": [
-      "var",
-      "let",
-      "const",
-      "static"
-    ],
-    "correct": 2,
-    "explanation": "const creates a block-scoped binding that cannot be reassigned. However, if the value is an object or array, its contents can still be mutated — only the binding itself is constant."
-  },
-  {
-    "question": "What does the spread operator `...` do with an array?",
-    "options": [
-      "Creates a deep copy",
-      "Merges two arrays into one object",
-      "Expands the array into individual elements",
-      "Sorts the array in place"
-    ],
-    "correct": 2,
-    "explanation": "The spread operator expands an iterable into individual elements. For example, Math.max(...[1,2,3]) is equivalent to Math.max(1, 2, 3). It also enables shallow copies of arrays."
-  },
-  {
-    "question": "What is a closure in JavaScript?",
-    "options": [
-      "A way to close a browser window",
-      "A function that retains access to variables in its outer lexical scope even after the outer function returns",
-      "A method to end an async operation",
-      "An immediately invoked code block"
-    ],
-    "correct": 1,
-    "explanation": "A closure is formed when a function is defined inside another function and retains a reference to the outer scope's variables. This is a core JavaScript pattern used for data privacy and factory functions."
-  },
-  {
-    "question": "Which method converts a JavaScript object to a JSON string?",
-    "options": [
-      "JSON.parse()",
-      "JSON.stringify()",
-      "JSON.encode()",
-      "JSON.convert()"
-    ],
-    "correct": 1,
-    "explanation": "JSON.stringify() serializes a JavaScript value to a JSON string. Its reverse, JSON.parse(), parses a JSON string back to a JavaScript value."
-  },
-  {
-    "question": "What is 'hoisting' in JavaScript?",
-    "options": [
-      "Moving DOM elements up the tree",
-      "var and function declarations being moved to the top of their scope during the compilation phase",
-      "Increasing a variable's value during runtime",
-      "Loading scripts asynchronously"
-    ],
-    "correct": 1,
-    "explanation": "Hoisting moves var declarations and function declarations to the top of their scope before code runs. Only declarations are hoisted, not initializations. let and const are hoisted but not initialized, creating the TDZ."
-  },
-  {
-    "question": "What does `Array.prototype.map()` return?",
-    "options": [
-      "The original array, modified",
-      "A new array with transformed elements",
-      "A Boolean",
-      "The first matching element"
-    ],
-    "correct": 1,
-    "explanation": "map() creates and returns a NEW array with the results of calling the callback on every element. It never modifies the original array and always returns an array of the same length."
-  },
-  {
-    "question": "Which of these is NOT a JavaScript primitive type?",
-    "options": [
-      "Symbol",
-      "BigInt",
-      "Object",
-      "undefined"
-    ],
-    "correct": 2,
-    "explanation": "Object is not a primitive — it is a reference type. JavaScript's 7 primitives are: string, number, bigint, boolean, undefined, symbol, and null."
-  },
-  {
-    "question": "What does `Promise.all([p1, p2, p3])` do?",
-    "options": [
-      "Runs promises sequentially",
-      "Returns the first promise to resolve",
-      "Resolves when ALL promises resolve, or rejects when any one rejects",
-      "Ignores all rejections and collects values"
-    ],
-    "correct": 2,
-    "explanation": "Promise.all() runs promises in parallel. It resolves with an array of all results only when ALL promises resolve. If any one rejects, it immediately rejects with that error. Use Promise.allSettled() to get all outcomes."
-  },
-  {
-    "question": "What is the difference between `==` and `===`?",
-    "options": [
-      "`==` checks value only; `===` checks value and type",
-      "`===` is faster but otherwise identical",
-      "`==` checks reference; `===` checks value",
-      "They are identical in modern JavaScript"
-    ],
-    "correct": 0,
-    "explanation": "== performs type coercion before comparing ('1' == 1 is true), while === (strict equality) checks both value AND type without coercion ('1' === 1 is false). Prefer === to avoid unexpected coercion bugs."
-  },
-  {
-    "question": "What does `Object.keys(obj)` return?",
-    "options": [
-      "All properties including inherited ones",
-      "An array of the object's own enumerable property names",
-      "An array of all property values",
-      "The number of properties"
-    ],
-    "correct": 1,
-    "explanation": "Object.keys() returns an array of a given object's own enumerable string-keyed property names. It does NOT include inherited properties or Symbol-keyed properties."
-  },
-  {
-    "question": "What is the Temporal Dead Zone (TDZ)?",
-    "options": [
-      "A time-zone offset for Date objects",
-      "The period between entering a scope and a let/const declaration being initialized",
-      "When a Promise is pending",
-      "A deprecated JavaScript feature"
-    ],
-    "correct": 1,
-    "explanation": "Variables declared with let and const exist in the TDZ from the start of their block until the declaration is reached. Accessing them in the TDZ throws a ReferenceError."
-  },
-  {
-    "question": "What does `Array.prototype.reduce()` do?",
-    "options": [
-      "Removes duplicate elements",
-      "Reduces the array length by one",
-      "Applies a reducer function on each element to produce a single accumulated value",
-      "Filters out falsy values"
-    ],
-    "correct": 2,
-    "explanation": "reduce() calls a reducer function (accumulator, currentValue) on each element from left to right, accumulating a single result. An initial accumulator value can optionally be provided."
-  },
-  {
-    "question": "Which creates an Immediately Invoked Function Expression (IIFE)?",
-    "options": [
-      "function() {}()",
-      "(function() {})()",
-      "function()() {}",
-      "invoke(function() {})"
-    ],
-    "correct": 1,
-    "explanation": "An IIFE is created by wrapping a function in parentheses to make it an expression, then immediately invoking it with (). It's commonly used to create isolated scopes."
-  },
-  {
-    "question": "What does `Object.freeze(obj)` do?",
-    "options": [
-      "Creates a deep clone",
-      "Prevents adding, removing, or modifying properties",
-      "Converts the object to a string",
-      "Locks the prototype chain"
-    ],
-    "correct": 1,
-    "explanation": "Object.freeze() makes an object immutable at the top level — no properties can be added, removed, or changed. It's shallow: nested objects are NOT automatically frozen."
-  },
-  {
-    "question": "What is event bubbling in the DOM?",
-    "options": [
-      "An error propagation mechanism",
-      "Events propagating UP through the DOM tree from target to root",
-      "CSS animation triggered by events",
-      "A method for chaining event listeners"
-    ],
-    "correct": 1,
-    "explanation": "When an event fires on an element, it runs handlers on that element, then its parent, then the parent's parent, all the way up to the root. Use event.stopPropagation() to stop bubbling."
-  },
-  {
-    "question": "What does the `async` keyword do to a function?",
-    "options": [
-      "Runs the function in a Web Worker",
-      "Makes the function always return a Promise",
-      "Makes the function run faster",
-      "Prevents the function from ever throwing"
-    ],
-    "correct": 1,
-    "explanation": "An async function always returns a Promise. Non-Promise return values are automatically wrapped in Promise.resolve(). async also enables the use of await inside the function body."
-  },
-  {
-    "question": "What is a pure function?",
-    "options": [
-      "A function with no parameters",
-      "A function that always returns the same output for the same inputs with no side effects",
-      "A function declared with const",
-      "An arrow function with no body"
-    ],
-    "correct": 1,
-    "explanation": "A pure function (1) always returns the same result for the same arguments, and (2) produces no side effects (no mutation of external state). Pure functions are predictable, easy to test, and safe to memoize."
-  },
-  {
-    "question": "What does destructuring assignment allow?",
-    "options": [
-      "Deleting object properties in bulk",
-      "Unpacking values from arrays or object properties into distinct variables",
-      "Creating a deep copy of an object",
-      "Converting between primitive types"
-    ],
-    "correct": 1,
-    "explanation": "Destructuring provides concise syntax to extract values from arrays or properties from objects. E.g., const {x, y} = point or const [first, ...rest] = array."
-  },
-  {
-    "question": "What is the purpose of `Symbol()` in JavaScript?",
-    "options": [
-      "Creating regular expressions",
-      "Creating unique, immutable primitive values often used as collision-free property keys",
-      "Defining mathematical constants",
-      "Declaring private class methods"
-    ],
-    "correct": 1,
-    "explanation": "Every Symbol() call produces a guaranteed unique primitive. Two Symbol() calls with the same description are never equal. This makes them ideal as unique property keys to avoid accidental name collisions."
-  },
-  {
-    "question": "What does `Array.prototype.some()` return?",
-    "options": [
-      "The first matching element",
-      "An array of all matching elements",
-      "true if at least one element passes the test; otherwise false",
-      "The index of the first match"
-    ],
-    "correct": 2,
-    "explanation": "some() tests whether at least one array element passes the test function. It returns true the moment the first matching element is found (short-circuits), or false if none match."
-  },
-  {
-    "question": "What is the prototype chain in JavaScript?",
-    "options": [
-      "The list of methods on Function.prototype",
-      "A series of linked prototype objects through which property lookup traverses until null",
-      "The order CSS rules are applied",
-      "The call stack during recursive execution"
-    ],
-    "correct": 1,
-    "explanation": "Every object has a [[Prototype]] link. When accessing a property, JavaScript searches the object itself, then its prototype, then the prototype's prototype, and so on until null is reached."
-  },
-  {
-    "question": "What does `void 0` evaluate to?",
-    "options": [
-      "0",
-      "null",
-      "false",
-      "undefined"
-    ],
-    "correct": 3,
-    "explanation": "The void operator evaluates an expression and always returns undefined. void 0 is used when you need a guaranteed undefined value (since the undefined identifier could theoretically be shadowed in old code)."
-  },
-  {
-    "question": "What does `Array.prototype.flat()` do?",
-    "options": [
-      "Removes null and undefined values",
-      "Sorts the array",
-      "Creates a new array with sub-arrays merged to a specified depth",
-      "Removes duplicate elements"
-    ],
-    "correct": 2,
-    "explanation": "flat() creates a new array with nested array elements merged into it. Default depth is 1. Pass Infinity to fully flatten any depth of nesting."
-  },
-  {
-    "question": "What is the key difference between `call()` and `apply()`?",
-    "options": [
-      "call() is synchronous; apply() is async",
-      "call() passes extra arguments individually; apply() passes them as an array",
-      "apply() is deprecated in ES6+",
-      "They are completely identical"
-    ],
-    "correct": 1,
-    "explanation": "Both call() and apply() invoke a function with a specified this context. The difference is argument passing: fn.call(ctx, a, b) vs fn.apply(ctx, [a, b]). The modern spread operator often replaces apply()."
-  },
-  {
-    "question": "What does `Object.assign(target, source)` do?",
-    "options": [
-      "Creates a deep clone of source",
-      "Shallow-copies own enumerable properties from source to target, returning target",
-      "Creates a new frozen merged object",
-      "Merges prototype chains"
-    ],
-    "correct": 1,
-    "explanation": "Object.assign() copies all enumerable own properties from one or more source objects to a target. It's a shallow copy and returns the modified target object. It triggers setters on the target."
-  },
-  {
-    "question": "What is a WeakMap?",
-    "options": [
-      "A Map with fewer methods",
-      "A Map where keys can be any primitive",
-      "A Map where keys are objects held weakly, allowing garbage collection when no other references exist",
-      "A read-only version of Map"
-    ],
-    "correct": 2,
-    "explanation": "WeakMap keys must be objects and are held by weak references. If the key object has no other references, it can be garbage collected and the entry is removed. Useful for storing private metadata without memory leaks."
-  },
-  {
-    "question": "What does the `delete` operator do?",
-    "options": [
-      "Removes a variable from scope",
-      "Removes a property from an object",
-      "Deallocates memory immediately",
-      "Empties an array in place"
-    ],
-    "correct": 1,
-    "explanation": "delete removes a property from an object and returns true if successful. It cannot delete variables, function parameters, or non-configurable properties. It does NOT free memory directly."
-  },
-  {
-    "question": "What is memoization?",
-    "options": [
-      "Saving quiz progress to localStorage",
-      "Caching function results so the same computation is not repeated for the same inputs",
-      "Converting objects to strings",
-      "The JavaScript engine's JIT compilation step"
-    ],
-    "correct": 1,
-    "explanation": "Memoization caches the result of a function call keyed by its arguments. On subsequent calls with the same arguments, the cached result is returned immediately, avoiding expensive recomputation."
-  },
-  {
-    "question": "What does `Array.from('hello')` return?",
-    "options": [
-      "\"hello\"",
-      "[\"hello\"]",
-      "[\"h\",\"e\",\"l\",\"l\",\"o\"]",
-      "A TypeError"
-    ],
-    "correct": 2,
-    "explanation": "Array.from() creates a new array from an array-like or iterable object. Since strings are iterable, Array.from('hello') yields an array of individual characters."
-  },
-  {
-    "question": "What is currying?",
-    "options": [
-      "Adding metadata to function names",
-      "Transforming a multi-argument function into a chain of single-argument functions",
-      "Combining two functions into one",
-      "Sorting functions by execution time"
-    ],
-    "correct": 1,
-    "explanation": "Currying transforms f(a, b, c) into f(a)(b)(c). Each invocation returns a new function that takes the next argument. This enables partial application and helps create reusable, configurable function pipelines."
-  },
-  {
-    "question": "What does `Promise.race([p1, p2])` return?",
-    "options": [
-      "The resolved promise with the largest value",
-      "A promise that settles as soon as the FIRST input promise settles",
-      "Runs in parallel and collects all results",
-      "Always returns the first promise in the array"
-    ],
-    "correct": 1,
-    "explanation": "Promise.race() returns a Promise that mirrors the first input Promise to settle (resolve or reject), regardless of the others. Useful for implementing timeouts on async operations."
-  },
-  {
-    "question": "What is the `arguments` object in a regular function?",
-    "options": [
-      "An array of the function's declared parameters",
-      "An array-like object containing all arguments passed to the function",
-      "A method returning function metadata",
-      "The arguments passed to setTimeout"
-    ],
-    "correct": 1,
-    "explanation": "arguments is an array-like (not a real array) object available inside regular functions. It contains all passed arguments by index. NOT available in arrow functions. Modern code typically uses rest parameters (...args) instead."
-  },
-  {
-    "question": "What does `typeof function(){}` return?",
-    "options": [
-      "\"object\"",
-      "\"class\"",
-      "\"function\"",
-      "\"callable\""
-    ],
-    "correct": 2,
-    "explanation": "typeof returns 'function' for any function. While functions ARE objects in JavaScript, typeof differentiates them by returning 'function' rather than 'object'."
-  },
-  {
-    "question": "What does `Array.prototype.every()` return?",
-    "options": [
-      "Every element of the array",
-      "A new transformed array",
-      "true ONLY if ALL elements pass the test",
-      "The element at every nth position"
-    ],
-    "correct": 2,
-    "explanation": "every() returns true only if the callback returns truthy for every single element. It short-circuits and returns false on the first failing element — the opposite of some()."
-  },
-  {
-    "question": "What is the main difference between `let` and `var`?",
-    "options": [
-      "`let` has function scope; `var` has block scope",
-      "`var` has function scope; `let` has block scope",
-      "Both have global scope",
-      "let is hoisted; var is not"
-    ],
-    "correct": 1,
-    "explanation": "var is function-scoped (or global outside a function) and is hoisted to the function top. let is block-scoped (limited to the nearest {} block) and is in the TDZ until its declaration line."
-  },
-  {
-    "question": "What role does the event loop play in JavaScript?",
-    "options": [
-      "Looping through all DOM elements on render",
-      "Managing heap memory allocation",
-      "Moving tasks from the callback queue to the call stack when the stack is empty",
-      "Handling CSS transitions"
-    ],
-    "correct": 2,
-    "explanation": "JavaScript is single-threaded. The event loop continuously monitors the call stack and task/microtask queues. When the stack is empty, it moves the next task to the stack, enabling non-blocking async behavior."
-  },
-  {
-    "question": "What does `JSON.parse('null')` return?",
-    "options": [
-      "The string 'null'",
-      "undefined",
-      "0",
-      "null"
-    ],
-    "correct": 3,
-    "explanation": "JSON.parse('null') returns the JavaScript primitive null. JSON null is a valid JSON value that maps directly to JavaScript's null primitive."
-  },
-  {
-    "question": "What does `'use strict'` mode enable?",
-    "options": [
-      "A TypeScript type-checking mode",
-      "Stricter parsing that throws on common silent mistakes and disables confusing features",
-      "Locking variable types at declaration",
-      "A browser performance optimization"
-    ],
-    "correct": 1,
-    "explanation": "Strict mode throws errors for previously silent mistakes (e.g., assigning to undeclared variables), disables misleading syntax (e.g., with statement), and prevents certain insecure actions."
-  },
-  {
-    "question": "What does `Array.prototype.find()` return?",
-    "options": [
-      "The index of the first match",
-      "An array of all matches",
-      "The FIRST element satisfying the test, or undefined if none",
-      "true or false"
-    ],
-    "correct": 2,
-    "explanation": "find() returns the first element for which the callback returns truthy, or undefined if no match. For the index, use findIndex(). For all matches, use filter()."
-  },
-  {
-    "question": "What is optional chaining (`?.`) used for?",
-    "options": [
-      "Declaring optional parameters",
-      "Safely accessing nested properties — returns undefined instead of throwing if an intermediate value is null/undefined",
-      "Marking object properties as optional",
-      "Chaining array methods without errors"
-    ],
-    "correct": 1,
-    "explanation": "Optional chaining ?. short-circuits to undefined instead of throwing a TypeError when the left side is null or undefined. E.g., user?.address?.city is safe even if user or address is null."
-  },
-  {
-    "question": "What does the nullish coalescing operator (`??`) return?",
-    "options": [
-      "Whether a value is null",
-      "The right operand ONLY if the left is null or undefined; otherwise the left operand",
-      "Converts null to false",
-      "A ternary shorthand for all falsy values"
-    ],
-    "correct": 1,
-    "explanation": "?? returns the right side only when the left is null OR undefined. Unlike ||, it does not trigger for other falsy values like 0, '' or false. 0 ?? 'default' returns 0; 0 || 'default' returns 'default'."
-  },
-  {
-    "question": "What does a generator function (`function*`) allow?",
-    "options": [
-      "Running a function multiple times faster",
-      "Pausing execution at yield expressions and resuming later while maintaining state",
-      "Generating random numbers with a seed",
-      "Creating recursive functions automatically"
-    ],
-    "correct": 1,
-    "explanation": "Generator functions return an iterator. Calling .next() runs the function until the next yield, pausing it there. This enables lazy evaluation, infinite sequences, and async control flow patterns."
-  },
-  {
-    "question": "What is the key difference between `for...in` and `for...of`?",
-    "options": [
-      "`for...in` iterates arrays; `for...of` iterates objects",
-      "`for...in` iterates enumerable property KEYS; `for...of` iterates iterable VALUES",
-      "They are interchangeable for all data structures",
-      "`for...of` is deprecated"
-    ],
-    "correct": 1,
-    "explanation": "for...in loops over all enumerable property keys (including inherited ones). for...of loops over the values of an iterable (arrays, strings, Maps, Sets, generators). Never use for...in on arrays."
-  },
-  {
-    "question": "What does `Array.prototype.splice(start, deleteCount, ...items)` do?",
-    "options": [
-      "Returns a merged copy of two arrays",
-      "Returns a portion of the array without modifying it",
-      "Changes the array IN PLACE by removing/replacing elements and optionally inserting new ones",
-      "Splits a string into an array"
-    ],
-    "correct": 2,
-    "explanation": "splice() mutates the original array. It removes deleteCount elements at start and optionally inserts new elements. Returns an array of the removed elements. For non-mutating slicing, use slice()."
-  },
-  {
-    "question": "What does `localStorage.getItem('missingKey')` return when the key doesn't exist?",
-    "options": [
-      "0",
-      "undefined",
-      "null",
-      "An empty string"
-    ],
-    "correct": 2,
-    "explanation": "localStorage.getItem() returns null (not undefined) when the requested key does not exist. This distinction matters when conditionally checking stored values."
-  },
-  {
-    "question": "What does `Function.prototype.bind(ctx)` return?",
-    "options": [
-      "Immediately calls the function with ctx as this",
-      "A new function permanently bound to ctx as its this value",
-      "Merges two functions",
-      "Adds an event listener"
-    ],
-    "correct": 1,
-    "explanation": "bind() creates and returns a new function with this permanently fixed to the provided context, along with any preset arguments. Unlike call()/apply(), it does not invoke the function immediately."
-  },
-  {
-    "question": "What is the result of `[] + []` in JavaScript?",
-    "options": [
-      "[]",
-      "[[]]",
-      "An empty string (\"\")",
-      "A TypeError"
-    ],
-    "correct": 2,
-    "explanation": "When + is applied to two empty arrays, both are coerced to empty strings via .toString(), resulting in \"\" + \"\" = \"\". JavaScript's type coercion rules are notoriously surprising with the + operator."
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register(ENGINE_BASE + 'sw.js').catch(function () {});
+    });
   }
-];
-/* [QUESTION_BANK_END] */
-</script>
+})();
 
-<!-- ════════════════ BANK ENGINE ════════════════ -->
-<script>
+/* ================================================================
+   BANK ENGINE
+   ================================================================ */
 /* ══════════════════════════════════════════════════
    QUESTION BANK ENGINE
 ══════════════════════════════════════════════════ */
@@ -2884,43 +2304,10 @@ function exportToPDF() {
 /* ─── BOOT ───────────────────────────────────────────────────── */
 initUI();
 checkSavedProgress();
-</script>
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.register('../../sw.js').catch(function () {});
-  });
-}
-</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" defer></script>
 
-<!-- ═══════════════ TRACKER DASHBOARD ═══════════════ -->
-<div class="dash-overlay" id="tracker-dashboard">
-  <div class="dash-modal">
-    <div class="dash-header">
-      <h2 id="dash-title-text">📊 Question Tracker</h2>
-      <button class="dash-close-btn" onclick="closeTrackerDashboard()">✕</button>
-    </div>
-    <div class="dash-scope-bar" id="dash-scope-bar">
-      <!-- Scope tabs injected dynamically -->
-    </div>
-    <div class="dash-summary">
-      <div class="dash-stat"><div class="ds-val red" id="dash-total-wrong">0</div><div class="ds-lbl">Wrong</div></div>
-      <div class="dash-stat"><div class="ds-val blue" id="dash-total-flagged">0</div><div class="ds-lbl">Flagged</div></div>
-      <div class="dash-stat"><div class="ds-val green" id="dash-total-quizzes">0</div><div class="ds-lbl">Quizzes</div></div>
-    </div>
-    <div class="dash-body" id="dash-body">
-      <!-- Dynamically filled -->
-    </div>
-    <div class="dash-footer">
-      <button class="btn-dash-action" onclick="exportTrackerToPDF()" title="Export tracked questions to PDF">📄 Export PDF</button>
-      <button class="btn-dash-action btn-dash-danger" onclick="clearAllTrackerData()">🗑 Clear All</button>
-      <button class="btn-dash-close" onclick="closeTrackerDashboard()">Close</button>
-    </div>
-  </div>
-</div>
-
-<script>
+/* ================================================================
+   TRACKER PANEL
+   ================================================================ */
 /* ════════════════════════════════════════════════════════════════
    QUESTION TRACKER DASHBOARD  v2
    ─────────────────────────────────────────────────────────────
@@ -3349,7 +2736,5 @@ if ('serviceWorker' in navigator) {
   updateDashboardBadge();
 
 })();
-</script>
 
-</body>
-</html>
+window.__HTML2PDF_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';

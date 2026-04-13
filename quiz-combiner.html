@@ -446,15 +446,20 @@ function handleFiles(files) {
 /* ── PARSER ─────────────────────────────────────────────────── */
 function parseQuizFile(html, filename) {
   // Extract QUESTIONS array between markers
-  const qStart = html.indexOf('/* [QUESTIONS_START] */');
-  const qEnd   = html.indexOf('/* [QUESTIONS_END] */');
+  // Support both quiz-template (QUESTIONS) and question-bank-template (QUESTION_BANK)
+  const isBank   = html.includes('/* [QUESTION_BANK_START] */');
+  const varName  = isBank ? 'QUESTION_BANK' : 'QUESTIONS';
+  const markerS  = isBank ? '/* [QUESTION_BANK_START] */' : '/* [QUESTIONS_START] */';
+  const markerE  = isBank ? '/* [QUESTION_BANK_END] */'   : '/* [QUESTIONS_END] */';
+  const qStart   = html.indexOf(markerS);
+  const qEnd     = html.indexOf(markerE);
   if (qStart === -1 || qEnd === -1) {
-    throw new Error('No [QUESTIONS_START] / [QUESTIONS_END] markers found — is this a quiz-template file?');
+    throw new Error('No question-array markers found — is this a quiz-template or question-bank-template file?');
   }
-  const block = html.slice(qStart + '/* [QUESTIONS_START] */'.length, qEnd).trim();
+  const block = html.slice(qStart + markerS.length, qEnd).trim();
 
-  // Strip "const QUESTIONS = " prefix and trailing ";"
-  const arrMatch = block.match(/const\s+QUESTIONS\s*=\s*([\s\S]*?);?\s*$/);
+  // Strip "const QUESTIONS = " / "const QUESTION_BANK = " prefix and trailing ";"
+  const arrMatch = block.match(new RegExp('const\\s+' + varName + '\\s*=\\s*([\\s\\S]*?);?\\s*$'));
   const arrayStr = arrMatch ? arrMatch[1].replace(/;\s*$/, '') : block;
 
   let questions;
@@ -477,8 +482,8 @@ function parseQuizFile(html, filename) {
 
   // Try to extract the quiz title from QUIZ_CONFIG
   let title = filename.replace(/\.html$/i, '').replace(/[-_]/g, ' ');
-  const cfgStart = html.indexOf('/* [QUIZ_CONFIG_START] */');
-  const cfgEnd   = html.indexOf('/* [QUIZ_CONFIG_END] */');
+  const cfgStart = html.indexOf('/* [QUIZ_CONFIG_START] */') !== -1 ? html.indexOf('/* [QUIZ_CONFIG_START] */') : html.indexOf('/* [BANK_CONFIG_START] */');
+  const cfgEnd   = html.indexOf('/* [QUIZ_CONFIG_END] */')   !== -1 ? html.indexOf('/* [QUIZ_CONFIG_END] */')   : html.indexOf('/* [BANK_CONFIG_END] */');
   if (cfgStart !== -1 && cfgEnd !== -1) {
     const cfgBlock = html.slice(cfgStart, cfgEnd);
     const titleMatch = cfgBlock.match(/title\s*:\s*["'`]([^"'`]+)["'`]/);

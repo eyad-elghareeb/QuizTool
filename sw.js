@@ -14,7 +14,9 @@ var PRECACHE_REL_PATHS = [
   'pdf-exporter.html',
   'index-editor.html',
   'manifest.webmanifest',
-  'favicon.svg'
+  'favicon.svg',
+  'quiz-engine.js',
+  'bank-engine.js'
 ];
 
 function hrefFromScope(scope, relPath) {

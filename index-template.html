@@ -22,14 +22,15 @@
   --text-muted: #8b949e;
   --accent:     #f0a500;
   --accent-dim: rgba(240,165,0,0.12);
-  --radius:     12px;
-  --shadow:     0 4px 24px rgba(0,0,0,0.4);
   --correct:    #2ea043;
   --correct-bg: rgba(46,160,67,0.12);
   --wrong:      #da3633;
   --wrong-bg:   rgba(218,54,51,0.12);
   --flagged:    #58a6ff;
   --flagged-bg: rgba(88,166,255,0.12);
+  --skip:       #6e7681;
+  --radius:     12px;
+  --shadow:     0 4px 24px rgba(0,0,0,0.4);
   --transition: 0.2s ease;
 }
 [data-theme="light"] {
@@ -458,17 +459,20 @@ const QUIZZES = [
 ──────────────────────────────────────────────────────────────────*/
 
 // 1. Render the Quiz Cards dynamically
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 function renderQuizzes() {
   const grid = document.getElementById('quiz-grid');
   grid.innerHTML = QUIZZES.map(quiz => `
     <div class="quiz-card">
-      <div class="card-icon">${quiz.icon}</div>
-      <h2 class="card-title">${quiz.title}</h2>
-      <p class="card-desc">${quiz.description}</p>
+      <div class="card-icon">${escHtml(quiz.icon)}</div>
+      <h2 class="card-title">${escHtml(quiz.title)}</h2>
+      <p class="card-desc">${escHtml(quiz.description)}</p>
       <div class="card-meta">
-        ${quiz.tags.map(tag => `<span class="meta-badge">${tag}</span>`).join('')}
+        ${quiz.tags.map(tag => `<span class="meta-badge">${escHtml(tag)}</span>`).join('')}
       </div>
-      <a href="${quiz.url}" class="btn-take-quiz">Start →</a>
+      <a href="${escHtml(quiz.url)}" class="btn-take-quiz">Start →</a>
     </div>
   `).join('');
 }
