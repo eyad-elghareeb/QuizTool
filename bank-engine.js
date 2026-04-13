@@ -1495,22 +1495,12 @@ function doRestoreProgress(data) {
     // Set CSS variable for portrait nav grid (same as startQuiz does)
     document.documentElement.style.setProperty('--q-count', SESSION_QUESTIONS.length);
 
-    if(state.mode === 'learning') {
-      document.getElementById('timer-display').classList.add('hidden');
-      document.getElementById('legend-text-answered').textContent = 'Correct';
-      document.getElementById('legend-wrong').style.display = 'flex';
-    } else {
-      document.getElementById('timer-display').classList.remove('hidden');
-      document.getElementById('legend-text-answered').textContent = 'Answered';
-      document.getElementById('legend-wrong').style.display = 'none';
-    }
+    document.getElementById('timer-display').classList.remove('hidden');
     showScreen('quiz-screen');
     buildNavGrid();
     renderQuestion(state.current);
     updateTimerDisplay();
-    if(state.mode !== 'learning') {
-      startTimer();
-    }
+    startTimer();
   }, 500);
 }
 
@@ -1765,19 +1755,19 @@ function startQuiz() {
 
   showScreen('quiz-screen');
 
+  document.getElementById('timer-display').classList.remove('hidden');
+
   if (mode === 'learning') {
-    document.getElementById('timer-display').classList.add('hidden');
     document.getElementById('legend-text-answered').textContent = 'Correct';
     document.getElementById('legend-wrong').style.display = 'flex';
   } else {
-    document.getElementById('timer-display').classList.remove('hidden');
     document.getElementById('legend-text-answered').textContent = 'Answered';
     document.getElementById('legend-wrong').style.display = 'none';
   }
 
   buildNavGrid();
   renderQuestion(0);
-  if (mode !== 'learning') startTimer();
+  startTimer();
 }
 
 /* ─── SCREEN MANAGER ─────────────────────────────────────────── */
@@ -1793,19 +1783,23 @@ function startTimer() {
   timerPaused = false;
   lastTime = Date.now();
   state.timerID = setInterval(() => {
-    if (!timerPaused && state.timerSecs > 0) {
+    if (!timerPaused && (state.timerSecs > 0 || state.mode === 'learning')) {
       const now = Date.now();
       const delta = Math.floor((now - lastTime) / 1000);
       if (delta >= 1) {
         state.elapsed   += delta;
-        state.timerSecs -= delta;
         lastTime = now;
-        updateTimerDisplay();
-        if (state.timerSecs <= 0) {
-          stopTimer();
-          showToast("⏰ Time's up! Submitting…");
-          setTimeout(confirmSubmit, 1500);
+        // In exam mode, count down the timer
+        if (state.mode !== 'learning') {
+          state.timerSecs -= delta;
+          if (state.timerSecs <= 0) {
+            state.timerSecs = 0;
+            stopTimer();
+            showToast("⏰ Time's up! Submitting…");
+            setTimeout(confirmSubmit, 1500);
+          }
         }
+        updateTimerDisplay();
       }
     }
   }, 100);
@@ -1817,12 +1811,20 @@ function stopTimer() {
 }
 
 function updateTimerDisplay() {
-  const secs = Math.max(0, state.timerSecs || 0);
+  // In learning mode show elapsed (count-up), in exam mode show remaining (countdown)
+  const secs = state.mode === 'learning'
+    ? (state.elapsed || 0)
+    : Math.max(0, state.timerSecs || 0);
   const m = Math.floor(secs / 60), s = secs % 60;
   document.getElementById('timer-text').textContent =
     String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
   const el = document.getElementById('timer-display');
-  if (secs < 120) el.classList.add('warn'); else el.classList.remove('warn');
+  // Warning state only in exam mode when time is low
+  if (state.mode !== 'learning' && secs < 120) {
+    el.classList.add('warn');
+  } else {
+    el.classList.remove('warn');
+  }
 }
 
 /* ─── RENDER QUESTION ────────────────────────────────────────── */
@@ -2207,9 +2209,9 @@ window.addEventListener('beforeunload', function() {
 /* ─── VISIBILITY CHANGE ──────────────────────────────────────── */
 // Pause timer when user leaves the page/tab, resume when they come back
 window.addEventListener('visibilitychange', () => {
-  if (document.hidden && !state.submitted && state.mode !== 'learning') {
+  if (document.hidden && !state.submitted) {
     stopTimer();
-  } else if (!document.hidden && !state.submitted && state.mode !== 'learning' && state.timerID === null) {
+  } else if (!document.hidden && !state.submitted && state.timerID === null) {
     // Restart the interval — startTimer() resets lastTime & timerPaused internally
     startTimer();
   }
