@@ -1400,7 +1400,7 @@ input[type=radio]:checked + .option-label .option-key {
 /* ════════════════════════════════════════════════════════════════
    QUIZ ENGINE
 ════════════════════════════════════════════════════════════════ */
-const KEYS =['A','B','C','D','E','F','G','H'];
+const KEYS =['A','B','C','D','E','F','G','H','I','J','K','L'];
 let state = {
   current:   0,
   answers:   {},   // { qIndex: optionIndex }
