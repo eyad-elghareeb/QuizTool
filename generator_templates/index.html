@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2330;--border:#30363d;--text:#e6edf3;--text-muted:#8b949e;--accent:#f0a500;--accent-dim:rgba(240,165,0,0.12);--correct:#2ea043;--correct-bg:rgba(46,160,67,0.12);--wrong:#da3633;--wrong-bg:rgba(218,54,51,0.12);--radius:12px;--shadow:0 4px 24px rgba(0,0,0,0.4);--transition:0.2s ease-out}
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2330;--border:#30363d;--text:#e6edf3;--text-muted:#8b949e;--accent:#f0a500;--accent-dim:rgba(240,165,0,0.12);--correct:#2ea043;--correct-bg:rgba(46,160,67,0.12);--wrong:#da3633;--wrong-bg:rgba(218,54,51,0.12);--flagged:#58a6ff;--flagged-bg:rgba(88,166,255,0.12);--radius:12px;--shadow:0 4px 24px rgba(0,0,0,0.4);--transition:0.2s ease-out}
 [data-theme="light"]{--bg:#f3f0eb;--surface:#fff;--surface2:#f8f6f1;--border:#d0ccc5;--text:#1c1917;--text-muted:#78716c;--accent:#c27803;--accent-dim:rgba(194,120,3,0.10);--shadow:0 4px 24px rgba(0,0,0,0.10)}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{min-height:100%}
@@ -27,8 +27,10 @@ h1 span{color:var(--accent)}
 .section h2{font-family:'Playfair Display',serif;font-size:1.2rem;margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:1px solid var(--border)}
 .form-group{margin-bottom:1rem}
 .form-group label{display:block;margin-bottom:0.4rem;font-weight:500;color:var(--text);font-size:0.9rem}
-.form-group input,.form-group textarea,.form-group select{width:100%;padding:0.7rem 0.85rem;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;font-size:0.95rem;transition:border-color var(--transition)}
-.form-group input:focus,.form-group textarea:focus,.form-group select:focus{outline:none;border-color:var(--accent)}
+.form-group input,.form-group textarea,.form-group select{width:100%;padding:0.7rem 0.85rem;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;font-size:0.95rem;transition:border-color var(--transition),box-shadow var(--transition)}
+.form-group input:focus,.form-group textarea:focus,.form-group select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+.form-group input::placeholder,.form-group textarea::placeholder{color:var(--text-muted);opacity:0.7}
+.form-group input:hover,.form-group textarea:hover,.form-group select:hover{border-color:var(--text-muted)}
 .form-group textarea{resize:vertical;min-height:60px}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
 @media(max-width:600px){.form-row{grid-template-columns:1fr}}
@@ -41,25 +43,58 @@ h1 span{color:var(--accent)}
 .btn-danger:hover{background:var(--wrong);color:#fff}
 .btn-sm{padding:0.4rem 0.8rem;font-size:0.8rem}
 .btn-block{width:100%;text-align:center}
+.btn-icon{width:32px;height:32px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-muted);transition:all var(--transition);cursor:pointer;font-size:1rem}
+.btn-icon:hover{color:var(--text);border-color:var(--accent)}
+.btn-icon.drag-handle{cursor:grab}
+.btn-icon.drag-handle:active{cursor:grabbing}
 
 /* Folder cards */
-.folder-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1rem;position:relative}
+.folder-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1rem;position:relative;transition:all var(--transition)}
+.folder-card.dragging{opacity:0.5;transform:scale(0.98)}
+.folder-card.drag-over-folder{border-color:var(--accent);background:var(--accent-dim);box-shadow:0 0 0 3px var(--accent-dim)}
+.folder-card.drag-over-folder::after{content:'📝 Drop quiz here';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--accent);color:#000;padding:0.75rem 1.5rem;border-radius:8px;font-weight:700;font-size:0.9rem;z-index:10;pointer-events:none}
 .folder-card .folder-num{position:absolute;top:-10px;left:0.75rem;background:var(--accent);color:#000;font-weight:700;font-size:0.7rem;padding:0.15rem 0.6rem;border-radius:5px}
 .folder-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem}
-.folder-header h3{font-size:1rem;font-weight:600}
+.folder-header h3{font-size:1rem;font-weight:600;display:flex;align-items:center;gap:0.5rem}
+
+/* Subfolder container */
+.subfolder-container{margin-left:1.5rem;border-left:2px solid var(--border);padding-left:1rem;margin-top:0.75rem}
+.add-subfolder-btn{width:100%;padding:0.6rem;border:2px dashed var(--border);border-radius:8px;background:transparent;color:var(--text-muted);font-size:0.85rem;cursor:pointer;transition:all var(--transition);margin-top:0.5rem}
+.add-subfolder-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
 
 /* Quiz entries */
-.quiz-entry{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem;margin-bottom:0.75rem;position:relative}
-.quiz-entry .q-num{position:absolute;top:-8px;left:0.6rem;background:var(--flagged-bg);color:var(--flagged);font-weight:700;font-size:0.65rem;padding:0.1rem 0.5rem;border-radius:4px}
+.quiz-entry{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem;margin-bottom:0.75rem;position:relative;transition:all var(--transition)}
+.quiz-entry.dragging{opacity:0.5;transform:scale(0.98)}
+.quiz-entry .q-num{position:absolute;top:-8px;left:2.5rem;background:var(--flagged-bg);color:var(--flagged);font-weight:700;font-size:0.65rem;padding:0.1rem 0.5rem;border-radius:4px}
 .quiz-row{display:grid;grid-template-columns:40px 1fr;gap:0.5rem;margin-bottom:0.5rem}
-.quiz-row input{padding:0.5rem 0.6rem;font-size:0.85rem}
-.quiz-row .icon-input{width:40px;text-align:center;font-size:1.2rem}
+.quiz-row input{padding:0.6rem 0.75rem;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;font-size:0.9rem;transition:border-color var(--transition),box-shadow var(--transition);width:100%}
+.quiz-row input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+.quiz-row input:hover{border-color:var(--text-muted)}
+.quiz-row input::placeholder{color:var(--text-muted);opacity:0.6}
+.quiz-row .icon-input{width:60px;text-align:center;font-size:1.2rem}
+.quiz-row input.qe-icon{width:60px;text-align:center;font-size:1.2rem}
 .tags-row{display:flex;flex-wrap:wrap;gap:0.3rem;margin-top:0.5rem}
 .tag-chip{display:inline-flex;align-items:center;gap:0.25rem;padding:0.2rem 0.5rem;background:var(--accent-dim);border:1px solid var(--accent);border-radius:5px;font-size:0.75rem;color:var(--accent)}
 .tag-chip .remove-tag{cursor:pointer;font-weight:700;font-size:0.9rem}
 .tag-chip .remove-tag:hover{color:var(--wrong)}
 .tag-input{border:1px solid var(--border);background:var(--surface2);color:var(--text);padding:0.2rem 0.5rem;border-radius:5px;font-size:0.75rem;width:100px;font-family:inherit}
 .tag-input:focus{outline:none;border-color:var(--accent)}
+
+/* Drag and drop zone */
+.drop-zone{border:2px dashed var(--border);border-radius:12px;padding:2rem;text-align:center;transition:all var(--transition);cursor:pointer;background:var(--surface2);margin-bottom:1rem}
+.drop-zone:hover{border-color:var(--accent);background:var(--accent-dim)}
+.drop-zone.drag-over{border-color:var(--accent);background:var(--accent-dim);transform:scale(1.02)}
+.drop-zone-icon{font-size:3rem;margin-bottom:0.5rem;opacity:0.6}
+.drop-zone-text{color:var(--text-muted);font-size:0.9rem}
+.drop-zone-text strong{color:var(--accent)}
+.drop-zone-file-list{margin-top:1rem;text-align:left;max-height:150px;overflow-y:auto}
+.drop-zone-file-item{display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:0.4rem;font-size:0.8rem}
+.drop-zone-file-icon{font-size:1.2rem}
+.drop-zone-file-name{flex:1;font-weight:500;color:var(--text)}
+.drop-zone-file-status{color:var(--correct);font-size:0.75rem;font-weight:600}
+.drop-zone-file-status.error{color:var(--wrong)}
+.drop-zone-file-remove{color:var(--text-muted);cursor:pointer;font-size:1rem;padding:0.2rem}
+.drop-zone-file-remove:hover{color:var(--wrong)}
 
 /* Preview panel */
 .preview-panel{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:1rem;max-height:300px;overflow-y:auto;font-family:monospace;font-size:0.8rem;white-space:pre-wrap;word-break:break-all;color:var(--text-muted)}
@@ -79,6 +114,8 @@ h1 span{color:var(--accent)}
 .stat-item .sv{font-size:1.5rem;font-weight:700;color:var(--accent);display:block}
 .stat-item .sl{font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em}
 
+/* Drag ghost */
+.drag-ghost{position:fixed;pointer-events:none;z-index:10000;background:var(--surface);border:2px solid var(--accent);border-radius:8px;padding:0.75rem 1rem;font-size:0.9rem;font-weight:600;box-shadow:var(--shadow);opacity:0.9}
 </style>
 </head>
 <body>
@@ -90,7 +127,7 @@ h1 span{color:var(--accent)}
 
 <div class="container">
   <h1>Create Your <span>Quiz Project</span></h1>
-  <p class="subtitle">Generate a production-ready quiz site (like MU61S8) with folders, quizzes, and automated deployment</p>
+  <p class="subtitle">Generate a production-ready quiz site with nested folders, drag-drop reordering, and auto-deployment</p>
 
   <!-- Stats -->
   <div class="stat-bar">
@@ -105,11 +142,11 @@ h1 span{color:var(--accent)}
     <div class="form-row">
       <div class="form-group">
         <label>Project Name (folder/zip name)</label>
-        <input type="text" id="project-name" value="MyQuiz" oninput="updatePreview()">
+        <input type="text" id="project-name" value="MyQuizProject" oninput="updatePreview()">
       </div>
       <div class="form-group">
-        <label>Top Bar Title</label>
-        <input type="text" id="topbar-title" value="Quiz Hub" oninput="updatePreview()">
+        <label>Top Bar Title (shown in header & browser tab)</label>
+        <input type="text" id="topbar-title" value="My Quiz Hub" oninput="updatePreview()">
       </div>
     </div>
     <div class="form-group">
@@ -135,6 +172,22 @@ h1 span{color:var(--accent)}
   <!-- Folders & Quizzes -->
   <div class="section">
     <h2>📁 Folders & Quizzes</h2>
+    
+    <div style="background:var(--accent-dim);border:1px solid var(--accent);border-radius:8px;padding:0.6rem 0.85rem;font-size:0.8rem;color:var(--accent);display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem">
+      💡 <strong>Tip:</strong> Drag quizzes between folders by grabbing the ⠿ handle and dropping onto another folder card
+    </div>
+    
+    <!-- Drag and Drop Zone -->
+    <div class="drop-zone" id="drop-zone">
+      <div class="drop-zone-icon">📂</div>
+      <div class="drop-zone-text">
+        <strong>Click to browse</strong> or drag & drop quiz/bank HTML files here<br>
+        <span style="font-size:0.8rem;opacity:0.7">Files will be automatically parsed and indexed</span>
+      </div>
+      <div class="drop-zone-file-list" id="drop-zone-file-list"></div>
+    </div>
+    <input type="file" id="file-input" accept=".html,.htm" multiple style="display:none">
+    
     <div id="folders-container"></div>
     <button class="btn btn-secondary btn-block" onclick="addFolder()" style="margin-top:0.5rem">+ Add Folder</button>
   </div>
@@ -157,6 +210,11 @@ h1 span{color:var(--accent)}
 <script>
 let folderCounter = 0;
 let quizCounters = {};
+let droppedFiles = [];
+let droppedFilesContent = {}; // Store actual file contents (filename -> content)
+let draggedElement = null;
+let draggedType = null; // 'folder' or 'quiz'
+let draggedParentId = null;
 
 function showToast(msg, type = '') {
   const t = document.getElementById('toast');
@@ -179,14 +237,381 @@ function toggleTheme() {
   document.getElementById('theme-toggle').textContent = s === 'light' ? '☾' : '☀';
 })();
 
+/* File Parser - Extract quiz/bank config from HTML files */
+function parseQuizFile(content, fileName) {
+  const result = {
+    type: 'unknown',
+    config: null,
+    fileName: fileName,
+    error: null
+  };
+
+  try {
+    // Try to extract QUIZ_CONFIG
+    const quizConfigMatch = content.match(/\/\*\s*\[QUIZ_CONFIG_START\]\s*\*\/[\s\S]*?const\s+QUIZ_CONFIG\s*=\s*({[\s\S]*?});[\s\S]*?\/\*\s*\[QUIZ_CONFIG_END\]\s*\*\//);
+    if (quizConfigMatch) {
+      result.type = 'quiz';
+      const configStr = quizConfigMatch[1];
+      const parseFn = new Function('return ' + configStr);
+      result.config = parseFn();
+      return result;
+    }
+
+    // Try to extract BANK_CONFIG
+    const bankConfigMatch = content.match(/\/\*\s*\[BANK_CONFIG_START\]\s*\*\/[\s\S]*?const\s+BANK_CONFIG\s*=\s*({[\s\S]*?});[\s\S]*?\/\*\s*\[BANK_CONFIG_END\]\s*\*\//);
+    if (bankConfigMatch) {
+      result.type = 'bank';
+      const configStr = bankConfigMatch[1];
+      const parseFn = new Function('return ' + configStr);
+      result.config = parseFn();
+      return result;
+    }
+
+    // Fallback: try to find any CONFIG object
+    const anyConfigMatch = content.match(/const\s+(?:QUIZ|BANK)_CONFIG\s*=\s*({[\s\S]*?title[\s\S]*?});/);
+    if (anyConfigMatch) {
+      const configStr = anyConfigMatch[1];
+      const parseFn = new Function('return ' + configStr);
+      const config = parseFn();
+      result.type = config.uid ? 'quiz' : 'bank';
+      result.config = config;
+      return result;
+    }
+
+    result.error = 'No quiz or bank configuration found in file';
+  } catch (e) {
+    result.error = 'Failed to parse file: ' + e.message;
+  }
+
+  return result;
+}
+
+/* Drag and Drop Handler for Files */
+function initDragAndDrop() {
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('file-input');
+
+  dropZone.addEventListener('click', (e) => {
+    if (e.target.classList.contains('drop-zone-file-remove')) return;
+    fileInput.click();
+  });
+
+  fileInput.addEventListener('change', (e) => {
+    handleFiles(e.target.files);
+    fileInput.value = '';
+  });
+
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+  });
+
+  dropZone.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    if (!dropZone.contains(e.relatedTarget)) {
+      dropZone.classList.remove('drag-over');
+    }
+  });
+
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    handleFiles(e.dataTransfer.files);
+  });
+
+  function handleFiles(files) {
+    Array.from(files).forEach(file => {
+      if (!file.name.endsWith('.html') && !file.name.endsWith('.htm')) {
+        showToast(`❌ ${file.name} is not an HTML file`, 'error');
+        return;
+      }
+
+      if (droppedFiles.some(f => f.name === file.name && f.size === file.size)) {
+        showToast(`⚠️ ${file.name} already added`, 'error');
+        return;
+      }
+
+      droppedFiles.push(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target.result;
+        
+        // Store the actual file content
+        droppedFilesContent[file.name] = content;
+        
+        const parsed = parseQuizFile(content, file.name);
+        addFileToList(file, parsed);
+        
+        if (parsed.config) {
+          autoImportFile(parsed, file.name);
+          showToast(`✅ ${parsed.config.title || file.name} imported!`, 'success');
+        } else {
+          showToast(`❌ ${parsed.error || 'Failed to parse file'}`, 'error');
+        }
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  function addFileToList(file, parsed) {
+    const fileList = document.getElementById('drop-zone-file-list');
+    const item = document.createElement('div');
+    item.className = 'drop-zone-file-item';
+    item.dataset.fileName = file.name;
+    
+    const icon = parsed.type === 'quiz' ? '📝' : parsed.type === 'bank' ? '🗃️' : '📄';
+    const status = parsed.config ? '✓ Parsed' : '✕ Error';
+    const statusClass = parsed.config ? '' : 'error';
+    
+    item.innerHTML = `
+      <span class="drop-zone-file-icon">${icon}</span>
+      <span class="drop-zone-file-name">${file.name}</span>
+      <span class="drop-zone-file-status ${statusClass}">${status}</span>
+      <span class="drop-zone-file-remove" onclick="removeDroppedFile('${file.name}', this)">✕</span>
+    `;
+    
+    fileList.appendChild(item);
+  }
+}
+
+function removeDroppedFile(fileName, element) {
+  droppedFiles = droppedFiles.filter(f => f.name !== fileName);
+  delete droppedFilesContent[fileName]; // Remove stored content
+  const item = element.closest('.drop-zone-file-item');
+  if (item) item.remove();
+}
+
+function autoImportFile(parsed, fileName) {
+  const config = parsed.config;
+  if (!config) return;
+
+  // Use filename as folder name (cleaner), fallback to config title
+  const cleanName = fileName.replace('.html', '').replace('.htm', '').replace(/[-_]/g, ' ');
+  const folderName = cleanName || config.title || 'Imported';
+  const quizTitle = config.title || fileName;
+  const description = config.description || '';
+  const icon = config.icon || (parsed.type === 'bank' ? '🗃️' : '📝');
+  
+  let folderCard = null;
+  document.querySelectorAll('.folder-card').forEach(fc => {
+    const nameInput = fc.querySelector('.folder-name');
+    if (nameInput && nameInput.value.toLowerCase() === folderName.toLowerCase()) {
+      folderCard = fc;
+    }
+  });
+
+  if (!folderCard) {
+    addFolder({
+      name: folderName,
+      description: `Auto-imported from ${fileName}`,
+      icon: icon,
+      quizzes: []
+    });
+    
+    const folders = document.querySelectorAll('.folder-card');
+    folderCard = folders[folders.length - 1];
+  }
+
+  const quizzesContainer = folderCard.querySelector('.quizzes-container');
+  if (quizzesContainer) {
+    const folderId = folderCard.id.replace('folder-', '');
+    addQuiz(folderId, {
+      title: quizTitle,
+      description: description,
+      icon: icon,
+      tags: [parsed.type === 'bank' ? 'Bank' : 'Quiz'],
+      url: fileName
+    });
+  }
+}
+
+/* Drag and Drop Reordering */
+let dragGhost = null;
+let currentDropTarget = null;
+
+function initDragReordering() {
+  // Folder drag handlers
+  document.querySelectorAll('.folder-card').forEach(folder => {
+    makeDraggable(folder, 'folder');
+  });
+
+  // Quiz drag handlers
+  document.querySelectorAll('.quiz-entry').forEach(quiz => {
+    makeDraggable(quiz, 'quiz');
+  });
+}
+
+function makeDraggable(element, type) {
+  const handle = element.querySelector('.drag-handle');
+  if (!handle) return;
+
+  // Remove old listeners by cloning
+  const newHandle = handle.cloneNode(true);
+  handle.parentNode.replaceChild(newHandle, handle);
+  
+  newHandle.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    draggedElement = element;
+    draggedType = type;
+    
+    if (type === 'folder') {
+      draggedParentId = element.parentElement.id || 'folders-container';
+    } else {
+      const container = element.closest('.quizzes-container');
+      draggedParentId = container ? container.id : null;
+    }
+    
+    // Create drag ghost
+    dragGhost = element.cloneNode(true);
+    dragGhost.classList.add('drag-ghost');
+    dragGhost.style.position = 'fixed';
+    dragGhost.style.width = element.offsetWidth + 'px';
+    dragGhost.style.pointerEvents = 'none';
+    dragGhost.style.opacity = '0.9';
+    dragGhost.style.zIndex = '10000';
+    document.body.appendChild(dragGhost);
+    
+    element.classList.add('dragging');
+    element.style.opacity = '0.3';
+    
+    document.addEventListener('mousemove', onDrag);
+    document.addEventListener('mouseup', onDrop);
+  });
+
+  function onDrag(e) {
+    if (!draggedElement || !dragGhost) return;
+    
+    // Move ghost
+    dragGhost.style.left = (e.clientX - 50) + 'px';
+    dragGhost.style.top = (e.clientY - 20) + 'px';
+    
+    if (draggedType === 'quiz') {
+      // Find folder under cursor
+      const elementUnder = document.elementFromPoint(e.clientX, e.clientY);
+      const folderUnder = elementUnder?.closest('.folder-card');
+      
+      // Remove previous highlight
+      if (currentDropTarget && currentDropTarget !== folderUnder) {
+        currentDropTarget.classList.remove('drag-over-folder');
+      }
+      
+      // Highlight new target
+      if (folderUnder && folderUnder !== draggedElement?.closest('.folder-card')) {
+        folderUnder.classList.add('drag-over-folder');
+        currentDropTarget = folderUnder;
+      } else {
+        currentDropTarget = null;
+      }
+      
+      // Reorder within same container
+      const container = draggedElement.parentElement;
+      if (container && container.classList.contains('quizzes-container')) {
+        const siblings = Array.from(container.children)
+          .filter(el => el !== draggedElement && el.classList.contains('quiz-entry'));
+        
+        const nextElement = siblings.find(sibling => {
+          const rect = sibling.getBoundingClientRect();
+          return e.clientY < rect.top + rect.height / 2;
+        });
+        
+        if (nextElement) {
+          container.insertBefore(draggedElement, nextElement);
+        } else {
+          container.appendChild(draggedElement);
+        }
+      }
+    } else if (draggedType === 'folder') {
+      // Reorder folders
+      const container = draggedElement.parentElement;
+      if (container) {
+        const siblings = Array.from(container.children)
+          .filter(el => el !== draggedElement && el.classList.contains('folder-card'));
+        
+        const nextElement = siblings.find(sibling => {
+          const rect = sibling.getBoundingClientRect();
+          return e.clientY < rect.top + rect.height / 2;
+        });
+        
+        if (nextElement) {
+          container.insertBefore(draggedElement, nextElement);
+        } else {
+          container.appendChild(draggedElement);
+        }
+      }
+    }
+  }
+
+  function onDrop(e) {
+    if (!draggedElement) return;
+    
+    // Remove ghost and styling
+    if (dragGhost) {
+      dragGhost.remove();
+      dragGhost = null;
+    }
+    
+    draggedElement.classList.remove('dragging');
+    draggedElement.style.opacity = '';
+    
+    // Check if dropped on a folder (for quiz moves)
+    if (draggedType === 'quiz' && currentDropTarget) {
+      const sourceFolder = draggedElement.closest('.folder-card');
+      const targetFolder = currentDropTarget;
+      
+      // Only move if different folder
+      if (sourceFolder !== targetFolder) {
+        const targetContainer = targetFolder.querySelector('.quizzes-container');
+        if (targetContainer) {
+          // Remove from old location
+          draggedElement.remove();
+          
+          // Add to end of target
+          targetContainer.appendChild(draggedElement);
+          
+          // Renumber both
+          const sourceQc = sourceFolder?.querySelector('.quizzes-container');
+          if (sourceQc) renumberQuizzes(sourceQc);
+          renumberQuizzes(targetContainer);
+          
+          // Update Q number
+          const qNum = targetContainer.querySelectorAll('.quiz-entry').length;
+          const numBadge = draggedElement.querySelector('.q-num');
+          if (numBadge) numBadge.textContent = `Q${qNum}`;
+          
+          const targetName = targetFolder.querySelector('.folder-name')?.value || 'folder';
+          showToast(`✅ Quiz moved to ${targetName}`, 'success');
+        }
+      }
+      
+      targetFolder.classList.remove('drag-over-folder');
+    }
+    
+    // Cleanup
+    currentDropTarget = null;
+    draggedElement = null;
+    draggedType = null;
+    draggedParentId = null;
+    
+    document.removeEventListener('mousemove', onDrag);
+    document.removeEventListener('mouseup', onDrop);
+    
+    updatePreview();
+    updateStats();
+  }
+}
+
 /* Config */
 function getConfig() {
   const folders = [];
-  document.querySelectorAll('.folder-card').forEach(fc => {
-    const folderName = fc.querySelector('.folder-name')?.value?.trim();
+  
+  function processFolderElement(folderEl, parentArray) {
+    const folderName = folderEl.querySelector('.folder-name')?.value?.trim();
     if (!folderName) return;
+    
     const quizzes = [];
-    fc.querySelectorAll('.quiz-entry').forEach(qe => {
+    folderEl.querySelectorAll(':scope > .quizzes-container > .quiz-entry').forEach(qe => {
       const title = qe.querySelector('.qe-title')?.value?.trim();
       const url = qe.querySelector('.qe-url')?.value?.trim();
       if (title && url) {
@@ -200,12 +625,28 @@ function getConfig() {
         });
       }
     });
-    folders.push({
+    
+    const folder = {
       name: folderName,
-      description: fc.querySelector('.folder-desc')?.value?.trim() || '',
-      icon: fc.querySelector('.folder-icon')?.value?.trim() || '📁',
-      quizzes: quizzes
-    });
+      description: folderEl.querySelector('.folder-desc')?.value?.trim() || '',
+      icon: folderEl.querySelector('.folder-icon')?.value?.trim() || '📁',
+      quizzes: quizzes,
+      subfolders: []
+    };
+    
+    // Process subfolders
+    const subfolderContainer = folderEl.querySelector('.subfolder-container');
+    if (subfolderContainer) {
+      subfolderContainer.querySelectorAll(':scope > .folder-card').forEach(subfolderEl => {
+        processFolderElement(subfolderEl, folder.subfolders);
+      });
+    }
+    
+    parentArray.push(folder);
+  }
+  
+  document.querySelectorAll('#folders-container > .folder-card').forEach(folderEl => {
+    processFolderElement(folderEl, folders);
   });
 
   return {
@@ -219,21 +660,28 @@ function getConfig() {
 }
 
 /* Folders */
-function addFolder(data) {
+function addFolder(data, parentContainer = null) {
   folderCounter++;
   const id = folderCounter;
   quizCounters[id] = 0;
   const d = data || {};
   const quizzes = d.quizzes || [];
-  const container = document.getElementById('folders-container');
+  const container = parentContainer || document.getElementById('folders-container');
   const div = document.createElement('div');
   div.className = 'folder-card';
   div.id = 'folder-' + id;
+  
+  const level = container.id === 'folders-container' ? 0 : parseInt(container.dataset.level || 0) + 1;
+  div.dataset.level = level;
+  
+  const subfolderId = 'subfolder-container-' + id;
+  
   div.innerHTML = `
-    <span class="folder-num">Folder ${container.children.length + 1}</span>
+    <span class="folder-num">Folder ${Array.from(container.children).filter(c => c.classList.contains('folder-card')).length + 1}</span>
     <div class="folder-header">
-      <h3>📁 Folder</h3>
+      <h3><span class="btn-icon drag-handle" title="Drag to reorder">⠿</span> 📁 Folder</h3>
       <div style="display:flex;gap:0.5rem">
+        <button class="btn btn-sm btn-secondary" onclick="addSubfolder(${id})">+ Add Subfolder</button>
         <button class="btn btn-sm btn-secondary" onclick="addQuiz(${id})">+ Add Quiz</button>
         <button class="btn btn-sm btn-danger" onclick="removeFolder(${id})">✕</button>
       </div>
@@ -241,7 +689,7 @@ function addFolder(data) {
     <div class="form-row">
       <div class="form-group">
         <label>Folder Name (directory)</label>
-        <input type="text" class="folder-name" placeholder="e.g. Cardiology" value="${esc(d.name||'')}" oninput="updatePreview()">
+        <input type="text" class="folder-name" placeholder="e.g. Cardiology or Exams" value="${esc(d.name||'')}" oninput="updatePreview()">
       </div>
       <div class="form-group">
         <label>Folder Icon (emoji)</label>
@@ -253,14 +701,24 @@ function addFolder(data) {
       <input type="text" class="folder-desc" placeholder="Brief description..." value="${esc(d.description||'')}" oninput="updatePreview()">
     </div>
     <div class="quizzes-container" id="quizzes-${id}"></div>
+    <div class="subfolder-container" id="${subfolderId}" data-level="${level}"></div>
   `;
   container.appendChild(div);
 
-  // Add existing quizzes
   quizzes.forEach(q => addQuiz(id, q));
-
+  
+  initDragReordering();
   updatePreview();
   updateStats();
+}
+
+function addSubfolder(parentFolderId) {
+  const parentFolder = document.getElementById('folder-' + parentFolderId);
+  if (!parentFolder) return;
+  
+  const subfolderContainer = parentFolder.querySelector('.subfolder-container');
+  addFolder({}, subfolderContainer);
+  showToast('✅ Subfolder added', 'success');
 }
 
 function removeFolder(id) {
@@ -273,7 +731,7 @@ function removeFolder(id) {
 }
 
 function renumberFolders() {
-  document.querySelectorAll('.folder-card').forEach((fc, i) => {
+  document.querySelectorAll('#folders-container > .folder-card').forEach((fc, i) => {
     const num = fc.querySelector('.folder-num');
     if (num) num.textContent = `Folder ${i + 1}`;
   });
@@ -294,14 +752,15 @@ function addQuiz(folderId, data) {
   div.innerHTML = `
     <span class="q-num">Q${qc.children.length + 1}</span>
     <div class="quiz-row">
-      <input type="text" class="icon-input qe-icon" placeholder="📝" value="${esc(d.icon||'📝')}" maxlength="4" oninput="updatePreview()">
+      <span class="btn-icon drag-handle" title="Drag to reorder">⠿</span>
       <input type="text" class="qe-title" placeholder="Quiz title..." value="${esc(d.title||'')}" oninput="updatePreview()">
     </div>
     <div class="quiz-row">
-      <input type="text" class="qe-url" placeholder="path/to/quiz.html" value="${esc(d.url||'')}" oninput="updatePreview()" style="grid-column:1/-1">
+      <input type="text" class="qe-icon" placeholder="📝" value="${esc(d.icon||'📝')}" maxlength="4" oninput="updatePreview()">
+      <input type="text" class="qe-url" placeholder="path/to/quiz.html" value="${esc(d.url||'')}" oninput="updatePreview()">
     </div>
     <div class="quiz-row">
-      <input type="text" class="qe-desc" placeholder="Brief description..." value="${esc(d.description||'')}" oninput="updatePreview()" style="grid-column:1/-1">
+      <input type="text" class="qe-desc" placeholder="Brief description..." value="${esc(d.description||'')}" oninput="updatePreview()">
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.5rem">
       <div class="tags-row">
@@ -313,6 +772,7 @@ function addQuiz(folderId, data) {
   `;
   qc.appendChild(div);
   renumberQuizzes(qc);
+  initDragReordering();
   updatePreview();
   updateStats();
 }
@@ -324,13 +784,6 @@ function removeQuiz(btn) {
   renumberQuizzes(qc);
   updatePreview();
   updateStats();
-}
-
-function renumberQuizes(qc) {
-  qc.querySelectorAll('.quiz-entry').forEach((e, i) => {
-    const num = e.querySelector('.q-num');
-    if (num) num.textContent = `Q${i + 1}`;
-  });
 }
 
 function renumberQuizzes(qc) {
@@ -348,13 +801,11 @@ function handleTagInput(e, input) {
     const entry = input.closest('.quiz-entry');
     if (!entry) return;
     const tagsRow = entry.querySelector('.tags-row');
-    // Check duplicate
     if (entry.dataset.tags.split(',').includes(tag)) { input.value = ''; return; }
     const chip = document.createElement('span');
     chip.className = 'tag-chip';
     chip.innerHTML = `${esc(tag)}<span class="remove-tag" onclick="removeTag(this, '${esc(tag)}')">&times;</span>`;
     tagsRow.insertBefore(chip, input);
-    // Update data attribute
     const currentTags = entry.dataset.tags ? entry.dataset.tags.split(',').filter(Boolean) : [];
     currentTags.push(tag);
     entry.dataset.tags = currentTags.join(',');
@@ -382,7 +833,6 @@ function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').re
 function updatePreview() {
   const config = getConfig();
   const totalQuizzes = config.folders.reduce((sum, f) => sum + f.quizzes.length, 0);
-  const totalFiles = 5 + config.folders.length; // engines(3) + favicon + sw + manifest + root index + folder indexes
   document.getElementById('preview-panel').textContent = JSON.stringify({
     project: config.project_name,
     title: config.topbar_title,
@@ -394,19 +844,37 @@ function updatePreview() {
 
 function updateStats() {
   const config = getConfig();
-  const totalQuizzes = config.folders.reduce((sum, f) => sum + f.quizzes.length, 0);
-  // Base files: engines(3) + sw + manifest + favicon + icons(6) + workflows(2) + scripts(2) + gitignore + test = 16
-  // Plus: root index + folder indexes + quiz HTML files
+  
+  function countItems(folderList) {
+    let totalQuizzes = 0;
+    let totalFolders = 0;
+    folderList.forEach(f => {
+      totalFolders++;
+      totalQuizzes += f.quizzes.length;
+      if (f.subfolders) {
+        const sub = countItems(f.subfolders);
+        totalFolders += sub.folders;
+        totalQuizzes += sub.quizzes;
+      }
+    });
+    return { folders: totalFolders, quizzes: totalQuizzes };
+  }
+  
+  const counts = countItems(config.folders);
   const baseFiles = 16;
-  document.getElementById('stat-folders').textContent = config.folders.length;
-  document.getElementById('stat-quizzes').textContent = totalQuizzes;
-  document.getElementById('stat-files').textContent = baseFiles + 1 + config.folders.length + totalQuizzes;
+  document.getElementById('stat-folders').textContent = counts.folders;
+  document.getElementById('stat-quizzes').textContent = counts.quizzes;
+  document.getElementById('stat-files').textContent = baseFiles + 1 + counts.folders + counts.quizzes;
 }
 
 /* Generate ZIP */
 async function generateZip() {
   const config = getConfig();
   if (!config.folders.length) { showToast('❌ Add at least one folder!', 'error'); return; }
+  
+  // Include dropped file contents in the config
+  config.dropped_files = droppedFilesContent;
+  
   const btn = document.getElementById('btn-generate');
   btn.innerHTML = '<span class="spinner"></span> Generating...';
   btn.disabled = true;
@@ -469,23 +937,35 @@ function handleConfigImport(e) {
 }
 
 function loadConfig(config) {
-  document.getElementById('project-name').value = config.project_name || 'MyQuiz';
-  document.getElementById('topbar-title').value = config.topbar_title || 'Quiz Hub';
+  document.getElementById('project-name').value = config.project_name || 'MyQuizProject';
+  document.getElementById('topbar-title').value = config.topbar_title || 'My Quiz Hub';
   document.getElementById('hero-title').value = config.hero_title || 'Select Your <span>Subject</span>';
   document.getElementById('hero-desc').value = config.hero_description || '';
   document.getElementById('default-theme').value = config.default_theme || 'dark';
 
-  // Clear existing
   document.getElementById('folders-container').innerHTML = '';
   folderCounter = 0;
   quizCounters = {};
 
-  (config.folders || []).forEach(f => addFolder(f));
+  function loadFolders(folders, parentContainer = null) {
+    folders.forEach(f => {
+      addFolder(f, parentContainer);
+      if (f.subfolders && f.subfolders.length) {
+        const lastFolder = document.querySelectorAll('.folder-card')[document.querySelectorAll('.folder-card').length - 1];
+        const subfolderContainer = lastFolder.querySelector('.subfolder-container');
+        loadFolders(f.subfolders, subfolderContainer);
+      }
+    });
+  }
+
+  loadFolders(config.folders || []);
   updatePreview();
 }
 
 /* Init with sample */
 window.addEventListener('DOMContentLoaded', () => {
+  initDragAndDrop();
+  
   addFolder({
     name: 'Cardiology',
     description: 'Cardiology quizzes and resources',

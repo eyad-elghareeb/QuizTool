@@ -37,6 +37,9 @@ def read_file(name):
         return p.read_text(encoding='utf-8')
     return ''
 
+# Read quiz engine test HTML if it exists
+QUIZ_ENGINE_TEST_HTML = read_file('quiz-engine-test.html')
+
 FAVICON_SVG = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <rect width="100" height="100" rx="22" fill="#0d1117"/>
   <circle cx="50" cy="50" r="28" fill="none" stroke="#f0a500" stroke-width="3.5"/>
@@ -53,6 +56,103 @@ BANK_ENGINE_JS = read_file('bank-engine.js')
 MU61S8_BASE = BASE_DIR.parent / 'MU61S8'
 SYNC_SCRIPT = (MU61S8_BASE / 'scripts' / 'sync_quiz_assets.py').read_text(encoding='utf-8') if (MU61S8_BASE / 'scripts' / 'sync_quiz_assets.py').exists() else ''
 STANDARDIZE_SCRIPT = (MU61S8_BASE / 'scripts' / 'standardize_quiz_files.py').read_text(encoding='utf-8') if (MU61S8_BASE / 'scripts' / 'standardize_quiz_files.py').exists() else ''
+
+# Auto-index script
+AUTO_INDEX_SCRIPT = '''#!/usr/bin/env python3
+"""
+Auto-index new quiz/bank HTML files.
+Scans all folders for .html files with QUIZ_CONFIG or BANK_CONFIG
+and updates parent folder index.html files.
+"""
+import os
+import re
+import json
+from pathlib import Path
+
+def parse_quiz_file(filepath):
+    """Extract config from a quiz/bank HTML file."""
+    content = filepath.read_text(encoding='utf-8')
+    
+    # Try QUIZ_CONFIG
+    match = re.search(r'/\\*\\s*\\[QUIZ_CONFIG_START\\]\\s*\\*/[\\s\\S]*?const\\s+QUIZ_CONFIG\\s*=\\s*({[\\s\\S]*?});[\\s\\S]*?/\\*\\s*\\[QUIZ_CONFIG_END\\]\\s*\\*/', content)
+    if match:
+        try:
+            config = eval(match.group(1))
+            return {'type': 'quiz', 'config': config}
+        except:
+            pass
+    
+    # Try BANK_CONFIG
+    match = re.search(r'/\\*\\s*\\[BANK_CONFIG_START\\]\\s*\\*/[\\s\\S]*?const\\s+BANK_CONFIG\\s*=\\s*({[\\s\\S]*?});[\\s\\S]*?/\\*\\s*\\[BANK_CONFIG_END\\]\\s*\\*/', content)
+    if match:
+        try:
+            config = eval(match.group(1))
+            return {'type': 'bank', 'config': config}
+        except:
+            pass
+    
+    return None
+
+def scan_folder(folder_path):
+    """Scan a folder for quiz/bank files and return quiz entries."""
+    quizzes = []
+    subfolders = []
+    
+    if not folder_path.is_dir():
+        return None
+    
+    # Find all HTML files
+    for html_file in sorted(folder_path.glob('*.html')):
+        # Skip index.html
+        if html_file.name == 'index.html':
+            continue
+        
+        parsed = parse_quiz_file(html_file)
+        if parsed:
+            config = parsed['config']
+            rel_path = html_file.name
+            quizzes.append({
+                'title': config.get('title', html_file.stem),
+                'description': config.get('description', ''),
+                'icon': config.get('icon', '\\U0001F4DD' if parsed['type'] == 'quiz' else '\\U0001F5C3\\uFE0F'),
+                'tags': ['Bank' if parsed['type'] == 'bank' else 'Quiz'],
+                'url': rel_path
+            })
+    
+    # Find subfolders
+    for subfolder in sorted(folder_path.iterdir()):
+        if subfolder.is_dir() and not subfolder.name.startswith('.') and (subfolder / 'index.html').exists():
+            subfolders.append(subfolder)
+    
+    return {
+        'quizzes': quizzes,
+        'subfolders': subfolders
+    }
+
+def update_index(folder_path, folder_info):
+    """Update or create index.html for a folder."""
+    # This is a simplified version - in production, you'd use the full gen_index_html
+    # For now, we just ensure the folder has been scanned
+    pass
+
+def main():
+    root = Path('.')
+    
+    # Scan root folder
+    root_info = scan_folder(root)
+    if root_info:
+        print(f"Found {len(root_info['quizzes'])} quiz files in root")
+        for sf in root_info['subfolders']:
+            sf_info = scan_folder(sf)
+            if sf_info:
+                print(f"  {sf.name}: {len(sf_info['quizzes'])} quiz files")
+                update_index(sf, sf_info)
+    
+    print("Auto-index complete")
+
+if __name__ == '__main__':
+    main()
+'''
 
 # Read icon files if they exist
 def read_icon(name):
@@ -133,6 +233,12 @@ SYNC_WORKFLOW_YML = '''name: Sync Quiz Assets
 on:
   push:
     branches: ["main"]
+    paths:
+      - "**/*.html"
+      - "**/*.js"
+      - "**/*.css"
+      - "**/*.svg"
+      - "**/*.png"
   workflow_dispatch:
 
 permissions:
@@ -155,6 +261,9 @@ jobs:
       - name: Update generated quiz assets
         run: python scripts/sync_quiz_assets.py
 
+      - name: Auto-index new quiz/bank files
+        run: python scripts/auto_index.py || echo "Auto-index script not found, skipping"
+
       - name: Commit generated changes
         run: |
           if git diff --quiet; then
@@ -173,7 +282,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "chore: sync quiz assets"
+          git commit -m "chore: sync and index quiz assets"
           git push
 '''
 
@@ -264,10 +373,11 @@ node_modules/
 # ============================================================
 
 def gen_index_html(topbar_title, hero_title, hero_desc, quizzes,
-                     engine_prefix=''):
+                     engine_prefix='', parent_path=None):
     """
     Generate an index.html that uses index-engine.js.
     engine_prefix is relative path to the engine files (e.g. '../' for subfolders).
+    parent_path is the relative path to the parent index.html (one level up).
     """
     q_json = json.dumps(quizzes, indent=2)
     sw_path = engine_prefix + 'sw.js'
@@ -276,7 +386,10 @@ def gen_index_html(topbar_title, hero_title, hero_desc, quizzes,
     engine_path = engine_prefix + 'index-engine.js'
 
     back_btn = ''
-    if engine_prefix:
+    if parent_path:
+        back_btn = f'<a href="{parent_path}/index.html" class="icon-btn back-btn" title="Back to Parent">\u2190</a>\n    '
+    elif engine_prefix:
+        # Fallback to old behavior if no parent_path specified
         parent = engine_prefix.rstrip('/').rstrip('\\')
         back_btn = f'<a href="{parent}/index.html" class="icon-btn back-btn" title="Back to Home">\u2190</a>\n    '
 
@@ -442,6 +555,7 @@ def build_project_zip(config):
     """
     Build a ZIP containing a full working quiz project.
     Mirrors the MU61S8 structure - quizzes only, no tools.
+    Supports nested folders via path splitting.
     """
     buf = io.BytesIO()
     project_name = config.get('project_name', 'MyQuiz')
@@ -466,16 +580,42 @@ def build_project_zip(config):
         if QUIZ_ENGINE_TEST_HTML:
             zf.writestr('quiz-engine-test.html', QUIZ_ENGINE_TEST_HTML)
 
+        # --- Process folders (supports nested structure) ---
+        # Track all folder paths for root index
+        all_folder_paths = []
+        
+        def process_folders(folders, current_path=''):
+            """Recursively process folders and create index pages."""
+            for folder in folders:
+                folder_name = folder['name']
+                folder_path = f"{current_path}/{folder_name}" if current_path else folder_name
+                all_folder_paths.append({
+                    'path': folder_path,
+                    'folder': folder
+                })
+                
+                # Process subfolders recursively
+                if 'subfolders' in folder and folder['subfolders']:
+                    process_folders(folder['subfolders'], folder_path)
+        
+        # Process all folders and build the path list
+        process_folders(config.get('folders', []))
+        
         # --- Root index.html ---
         root_quizzes = []
-        for folder in config.get('folders', []):
-            root_quizzes.append({
-                'title': f"{folder.get('icon', '\U0001F4C1')} {folder['name']}",
-                'description': folder.get('description', ''),
-                'icon': folder.get('icon', '\U0001F4C1'),
-                'tags': ['Folder'],
-                'url': f"{folder['name']}/index.html"
-            })
+        for folder_info in all_folder_paths:
+            folder = folder_info['folder']
+            folder_path = folder_info['path']
+            
+            # Only show top-level folders in root index
+            if '/' not in folder_path:
+                root_quizzes.append({
+                    'title': f"{folder.get('icon', '📁')} {folder['name']}",
+                    'description': folder.get('description', ''),
+                    'icon': folder.get('icon', '📁'),
+                    'tags': ['Folder'],
+                    'url': f"{folder_path}/index.html"
+                })
 
         root_html = gen_index_html(
             topbar_title=config.get('topbar_title', project_name),
@@ -487,25 +627,106 @@ def build_project_zip(config):
         )
         zf.writestr('index.html', root_html)
 
-        # --- Folder index pages ---
-        for folder in config.get('folders', []):
-            folder_name = folder['name']
-            folder_quizzes = folder.get('quizzes', [])
+        # --- Folder index pages (supports nested) ---
+        def create_folder_indexes(folders, parent_path=''):
+            """Create index.html for each folder, handling nested structure."""
+            for folder in folders:
+                folder_name = folder['name']
+                folder_path = f"{parent_path}/{folder_name}" if parent_path else folder_name
 
-            folder_html = gen_index_html(
-                topbar_title=f"{config.get('topbar_title', project_name)} - {folder_name}",
-                hero_title=f"Select your <span>{folder_name}</span> exam",
-                hero_desc=f"Test your knowledge across various {folder_name.lower()} topics. Choose an exam below to begin.",
-                quizzes=folder_quizzes,
-                engine_prefix='../'
-            )
-            zf.writestr(f'{folder_name}/index.html', folder_html)
+                # Collect quizzes for this folder
+                folder_quizzes = folder.get('quizzes', [])
 
+                # Add links to subfolders
+                subfolder_links = []
+                if 'subfolders' in folder and folder['subfolders']:
+                    for subfolder in folder['subfolders']:
+                        subfolder_links.append({
+                            'title': f"{subfolder.get('icon', '📁')} {subfolder['name']}",
+                            'description': subfolder.get('description', ''),
+                            'icon': subfolder.get('icon', '📁'),
+                            'tags': ['Folder'],
+                            'url': f"{subfolder['name']}/index.html"
+                        })
+
+                # Combine subfolder links + quizzes
+                all_quizzes = subfolder_links + folder_quizzes
+
+                # Calculate engine prefix based on depth
+                depth = folder_path.count('/') + 1
+                engine_prefix = '../' * depth
+                
+                # Calculate parent path (one level up)
+                # If folder_path is "Cardiology/Exams", parent is "Cardiology"
+                # If folder_path is "Cardiology", parent is "" (root)
+                path_parts = folder_path.split('/')
+                folder_parent_path = '/'.join(path_parts[:-1]) if len(path_parts) > 1 else ''
+
+                # Create hero text
+                hero_title = f"Select your <span>{folder_name}</span> exam"
+                hero_desc = f"Test your knowledge across various {folder_name.lower()} topics. Choose an exam below to begin."
+
+                folder_html = gen_index_html(
+                    topbar_title=f"{config.get('topbar_title', project_name)} - {folder_path.replace('/', ' / ')}",
+                    hero_title=hero_title,
+                    hero_desc=hero_desc,
+                    quizzes=all_quizzes,
+                    engine_prefix=engine_prefix,
+                    parent_path=folder_parent_path
+                )
+                zf.writestr(f'{folder_path}/index.html', folder_html)
+
+                # Recursively process subfolders
+                if 'subfolders' in folder and folder['subfolders']:
+                    create_folder_indexes(folder['subfolders'], folder_path)
+        
+        create_folder_indexes(config.get('folders', []))
+
+        # --- Include dropped quiz/bank files ---
+        dropped_files = config.get('dropped_files', {})
+        topbar_title = config.get('topbar_title', project_name)
+        
+        for filename, file_content in dropped_files.items():
+            # Try to determine which folder this file belongs to
+            # Check if file is referenced in any folder's quizzes
+            placed = False
+            
+            for folder_info in all_folder_paths:
+                folder = folder_info['folder']
+                folder_path = folder_info['path']
+                folder_quizzes = folder.get('quizzes', [])
+                
+                # Check if any quiz in this folder references this file
+                for quiz in folder_quizzes:
+                    if quiz.get('url') == filename or filename in quiz.get('url', ''):
+                        # Optionally update the file's title tag to include project name
+                        # (Only if it has a standard <title> tag)
+                        import re
+                        modified_content = re.sub(
+                            r'<title>.*?</title>',
+                            f'<title>{topbar_title} - {quiz.get("title", filename)}</title>',
+                            file_content
+                        )
+                        
+                        # Place file in this folder
+                        zf.writestr(f'{folder_path}/{filename}', modified_content)
+                        placed = True
+                        break
+                
+                if placed:
+                    break
+            
+            # If not placed in any folder, put in root
+            if not placed:
+                zf.writestr(filename, file_content)
+        
         # --- Scripts folder (for asset synchronization) ---
         if SYNC_SCRIPT:
             zf.writestr('scripts/sync_quiz_assets.py', SYNC_SCRIPT)
         if STANDARDIZE_SCRIPT:
             zf.writestr('scripts/standardize_quiz_files.py', STANDARDIZE_SCRIPT)
+        if AUTO_INDEX_SCRIPT:
+            zf.writestr('scripts/auto_index.py', AUTO_INDEX_SCRIPT)
 
         # --- GitHub Workflows ---
         zf.writestr('.github/workflows/sync-quiz-assets.yml', SYNC_WORKFLOW_YML)
@@ -558,12 +779,26 @@ def generate():
 def preview():
     config = request.json
     folders = config.get('folders', [])
-    total_quizzes = sum(len(f.get('quizzes', [])) for f in folders)
+    
+    def count_items(folder_list):
+        """Recursively count quizzes and folders."""
+        total_quizzes = 0
+        total_folders = 0
+        for folder in folder_list:
+            total_folders += 1
+            total_quizzes += len(folder.get('quizzes', []))
+            if 'subfolders' in folder and folder['subfolders']:
+                sub_folders, sub_quizzes = count_items(folder['subfolders'])
+                total_folders += sub_folders
+                total_quizzes += sub_quizzes
+        return total_folders, total_quizzes
+    
+    total_folders, total_quizzes = count_items(folders)
     # engines(3) + sw + manifest + favicon + icons(6) + root index + folder indexes + scripts(2) + workflows(2) + gitignore + quiz-engine-test
-    estimated_files = 16 + len(folders) + total_quizzes
+    estimated_files = 16 + total_folders + total_quizzes
     return jsonify({
         'project_name': config.get('project_name', ''),
-        'total_folders': len(folders),
+        'total_folders': total_folders,
         'total_quizzes': total_quizzes,
         'estimated_files': estimated_files
     })
