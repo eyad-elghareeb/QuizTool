@@ -1925,6 +1925,7 @@ function filterResults(filter, btn) {
 
 /* ── RESTART ─────────────────────────────────────────────── */
 function restartQuiz() {
+  stopTimer();  // ← kill the running interval first
   clearProgress();
   
   // Clear pending restore data to prevent auto-restore prompt
@@ -2191,6 +2192,7 @@ function clearProgress() {
  */
 function confirmResetProgress() {
   if (confirm('Are you sure you want to reset your progress? This cannot be undone.')) {
+    stopTimer();  // ← kill the running interval first
     clearProgress();
     // Reset state
     state.current = 0;
@@ -2200,7 +2202,7 @@ function confirmResetProgress() {
     state.timerSecs = (parseInt(document.getElementById('time-input').value) || 30) * 60;
     state.submitted = false;
     state.mode = 'exam';
-    
+
     // Clear pending restore data to prevent auto-restore prompt
     pendingRestoreData = null;
     if (restoreToastTimeout) {
