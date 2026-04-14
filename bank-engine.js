@@ -970,6 +970,23 @@ input[type=radio]:checked + .option-label .option-key { background: var(--accent
   .dash-stat .ds-val { font-size: 1.2rem; }
   .dash-body { padding: 0.75rem 1rem; }
 }
+
+@media (max-width: 640px) {
+  .q-header {
+    flex-wrap: wrap;
+  }
+  .q-number-badge {
+    order: 1;
+  }
+  .q-actions {
+    order: 2;
+    margin-left: auto;
+  }
+  .q-text {
+    order: 3;
+    width: 100%;
+  }
+}
 `;
   document.head.appendChild(_style);
 

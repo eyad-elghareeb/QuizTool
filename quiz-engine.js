@@ -304,6 +304,23 @@ input[type=radio] { display: none; }
   }
 }
 
+@media (max-width: 640px) {
+  .q-header {
+    flex-wrap: wrap;
+  }
+  .q-number-badge {
+    order: 1;
+  }
+  .q-actions {
+    order: 2;
+    margin-left: auto;
+  }
+  .q-text {
+    order: 3;
+    width: 100%;
+  }
+}
+
 /* ═══════════════════════════════════════════
    QUIZ SCREEN LAYOUT
 ═══════════════════════════════════════════ */
