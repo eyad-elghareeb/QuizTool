@@ -317,7 +317,9 @@ input[type=radio] { display: none; }
   }
   .q-text {
     order: 3;
+    flex: 0 0 100%;
     width: 100%;
+    margin-top: 0.35rem;
   }
 }
 
