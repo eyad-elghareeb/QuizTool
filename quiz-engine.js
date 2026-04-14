@@ -305,21 +305,23 @@ input[type=radio] { display: none; }
 }
 
 @media (max-width: 640px) {
-  .q-header {
-    flex-wrap: wrap;
+  .question-area .q-header {
+    flex-wrap: wrap !important;
   }
-  .q-number-badge {
-    order: 1;
+  .question-area .q-number-badge {
+    order: 1 !important;
+    flex-shrink: 0 !important;
   }
-  .q-actions {
-    order: 2;
-    margin-left: auto;
+  .question-area .q-actions {
+    order: 2 !important;
+    margin-left: auto !important;
   }
-  .q-text {
-    order: 3;
-    flex: 0 0 100%;
-    width: 100%;
-    margin-top: 0.35rem;
+  .question-area .q-text {
+    order: 3 !important;
+    flex: 0 0 100% !important;
+    width: 100% !important;
+    margin-top: 0.5rem !important;
+    margin-bottom: 0 !important;
   }
 }
 
