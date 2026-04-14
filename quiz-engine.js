@@ -1436,6 +1436,7 @@ let state = {
 };
 let timerPaused = false;
 let lastTime = Date.now();
+let submitTimeout = null;  // tracks the setTimeout(confirmSubmit) from timer expiry
 
 /* ── MODE SELECTION HANDLERS ───────────────────────────────── */
 document.querySelectorAll('input[name="quiz-mode"]').forEach(input => {
@@ -1588,7 +1589,7 @@ function startTimer() {
             state.timerSecs = 0;
             stopTimer();
             showToast("⏰ Time's up! Submitting…");
-            setTimeout(confirmSubmit, 1500);
+            submitTimeout = setTimeout(confirmSubmit, 1500);
           }
         }
         updateTimerDisplay();
@@ -1601,6 +1602,10 @@ function stopTimer() {
   if(state.timerID) {
     clearInterval(state.timerID);
     state.timerID = null;
+  }
+  if (submitTimeout) {
+    clearTimeout(submitTimeout);
+    submitTimeout = null;
   }
   timerPaused = true;
 }
@@ -1927,14 +1932,18 @@ function filterResults(filter, btn) {
 function restartQuiz() {
   stopTimer();  // ← kill the running interval first
   clearProgress();
-  
+
   // Clear pending restore data to prevent auto-restore prompt
   pendingRestoreData = null;
   if (restoreToastTimeout) {
     clearTimeout(restoreToastTimeout);
     restoreToastTimeout = null;
   }
-  
+  if (restoreScreenTimeout) {
+    clearTimeout(restoreScreenTimeout);
+    restoreScreenTimeout = null;
+  }
+
   showScreen('start-screen');
 }
 
@@ -2192,7 +2201,7 @@ function clearProgress() {
  */
 function confirmResetProgress() {
   if (confirm('Are you sure you want to reset your progress? This cannot be undone.')) {
-    stopTimer();  // ← kill the running interval first
+    stopTimer();  // ← kill the running interval + submit timeout
     clearProgress();
     // Reset state
     state.current = 0;
@@ -2203,11 +2212,15 @@ function confirmResetProgress() {
     state.submitted = false;
     state.mode = 'exam';
 
-    // Clear pending restore data to prevent auto-restore prompt
+    // Clear all pending async actions that could steal the screen
     pendingRestoreData = null;
     if (restoreToastTimeout) {
       clearTimeout(restoreToastTimeout);
       restoreToastTimeout = null;
+    }
+    if (restoreScreenTimeout) {
+      clearTimeout(restoreScreenTimeout);
+      restoreScreenTimeout = null;
     }
 
     showScreen('start-screen');
@@ -2219,8 +2232,9 @@ function confirmResetProgress() {
 window.addEventListener('visibilitychange', function() {
   if (document.hidden && !state.submitted) {
     stopTimer();
-  } else if (!document.hidden && !state.submitted && state.timerID === null) {
-    // Restart the interval — startTimer() resets lastTime & timerPaused internally
+  } else if (!document.hidden && !state.submitted && state.timerID === null
+             && document.getElementById('quiz-screen').classList.contains('active')) {
+    // Only restart the interval if the quiz screen is actually showing
     startTimer();
   }
 });
@@ -2237,6 +2251,7 @@ window.addEventListener('beforeunload', function() {
 
 // Check for saved progress on init
 let restoreToastTimeout = null;
+let restoreScreenTimeout = null;  // tracks the setTimeout inside doRestoreProgress
 
 function checkSavedProgress() {
   const saved = localStorage.getItem(STORAGE_KEY);
@@ -2347,7 +2362,9 @@ function doRestoreProgress(data) {
   state.mode = data.mode;
   state.submitted = false;
 
-  setTimeout(() => {
+  if (restoreScreenTimeout) clearTimeout(restoreScreenTimeout);
+  restoreScreenTimeout = setTimeout(() => {
+    restoreScreenTimeout = null;
     document.getElementById('timer-display').classList.remove('hidden');
     showScreen('quiz-screen');
     buildNavGrid();

@@ -1286,6 +1286,7 @@ let state = {
 };
 let timerPaused = false;
 let lastTime = Date.now();
+let submitTimeout = null;  // tracks the setTimeout(confirmSubmit) from timer expiry
 
 // Start screen config
 let selectedCount = 20;
@@ -1298,6 +1299,7 @@ const STORAGE_VERSION = 'v1';
 const STORAGE_KEY = `quiz_progress_${STORAGE_VERSION}_${(BANK_CONFIG.uid || window.location.pathname).replace(/[^a-zA-Z0-9]/g, '_')}`;
 let pendingRestoreData = null;
 let restoreToastTimeout = null;
+let restoreScreenTimeout = null;  // tracks the setTimeout inside doRestoreProgress
 
 /**
  * Safely save quiz progress to localStorage
@@ -1514,7 +1516,9 @@ function doRestoreProgress(data) {
   state.mode = data.mode;
   state.submitted = false;
 
-  setTimeout(() => {
+  if (restoreScreenTimeout) clearTimeout(restoreScreenTimeout);
+  restoreScreenTimeout = setTimeout(() => {
+    restoreScreenTimeout = null;
     // Set CSS variable for portrait nav grid (same as startQuiz does)
     document.documentElement.style.setProperty('--q-count', SESSION_QUESTIONS.length);
 
@@ -1849,7 +1853,7 @@ function startTimer() {
             state.timerSecs = 0;
             stopTimer();
             showToast("⏰ Time's up! Submitting…");
-            setTimeout(confirmSubmit, 1500);
+            submitTimeout = setTimeout(confirmSubmit, 1500);
           }
         }
         updateTimerDisplay();
@@ -1860,6 +1864,7 @@ function startTimer() {
 
 function stopTimer() {
   if (state.timerID) { clearInterval(state.timerID); state.timerID = null; }
+  if (submitTimeout) { clearTimeout(submitTimeout); submitTimeout = null; }
   timerPaused = true;
 }
 
@@ -2152,17 +2157,21 @@ function confirmResetProgress() {
   state.answers = {};
   state.flagged = {};
   state.elapsed = 0;
-  
+
   // Clear saved progress when manually resetting
   clearProgress();
-  
-  // Clear pending restore data to prevent auto-restore prompt
+
+  // Clear all pending async actions that could steal the screen
   pendingRestoreData = null;
   if (restoreToastTimeout) {
     clearTimeout(restoreToastTimeout);
     restoreToastTimeout = null;
   }
-  
+  if (restoreScreenTimeout) {
+    clearTimeout(restoreScreenTimeout);
+    restoreScreenTimeout = null;
+  }
+
   showScreen('start-screen');
 }
 
@@ -2275,8 +2284,9 @@ window.addEventListener('beforeunload', function() {
 window.addEventListener('visibilitychange', () => {
   if (document.hidden && !state.submitted) {
     stopTimer();
-  } else if (!document.hidden && !state.submitted && state.timerID === null) {
-    // Restart the interval — startTimer() resets lastTime & timerPaused internally
+  } else if (!document.hidden && !state.submitted && state.timerID === null
+             && document.getElementById('quiz-screen').classList.contains('active')) {
+    // Only restart the interval if the quiz screen is actually showing
     startTimer();
   }
 });
