@@ -1796,7 +1796,12 @@ function startQuiz() {
 /* ─── SCREEN MANAGER ─────────────────────────────────────────── */
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+  const target = document.getElementById(id);
+  // Force animation restart by removing and re-adding the class with a reflow
+  target.classList.add('active');
+  target.style.animation = 'none';
+  target.offsetHeight; /* trigger reflow */
+  target.style.animation = '';
   if (id === 'start-screen') updateStartScreenStats();
 }
 
