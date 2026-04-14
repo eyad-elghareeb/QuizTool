@@ -90,7 +90,7 @@ h1 span{color:var(--accent)}
 
 <div class="container">
   <h1>Create Your <span>Quiz Project</span></h1>
-  <p class="subtitle">Configure your project structure and generate a ready-to-deploy ZIP file</p>
+  <p class="subtitle">Generate a production-ready quiz site (like MU61S8) with folders, quizzes, and automated deployment</p>
 
   <!-- Stats -->
   <div class="stat-bar">
@@ -128,7 +128,7 @@ h1 span{color:var(--accent)}
       </select>
     </div>
     <div style="background:var(--correct-bg);border:1px solid var(--correct);border-radius:8px;padding:0.6rem 0.85rem;font-size:0.8rem;color:var(--correct);display:flex;align-items:center;gap:0.5rem">
-      ✓ PWA Ready — includes favicon, manifest, service worker, and apple touch icon
+      ✓ PWA Ready — includes favicon, manifest, service worker, apple touch icon, and all PWA icon sizes (48-512px)
     </div>
   </div>
 
@@ -395,9 +395,12 @@ function updatePreview() {
 function updateStats() {
   const config = getConfig();
   const totalQuizzes = config.folders.reduce((sum, f) => sum + f.quizzes.length, 0);
+  // Base files: engines(3) + sw + manifest + favicon + icons(6) + workflows(2) + scripts(2) + gitignore + test = 16
+  // Plus: root index + folder indexes + quiz HTML files
+  const baseFiles = 16;
   document.getElementById('stat-folders').textContent = config.folders.length;
   document.getElementById('stat-quizzes').textContent = totalQuizzes;
-  document.getElementById('stat-files').textContent = 5 + config.folders.length + 1;
+  document.getElementById('stat-files').textContent = baseFiles + 1 + config.folders.length + totalQuizzes;
 }
 
 /* Generate ZIP */

@@ -44,53 +44,28 @@ FAVICON_SVG = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <rect x="32" y="44" width="36" height="12" rx="2" fill="#f0a500"/>
 </svg>'''
 
-SW_JS = '''const CACHE_NAME = 'quiz-cache-v1';
-const PRECACHE_URLS = [
-  './',
-  './index.html',
-  './index-engine.js',
-  './quiz-engine.js',
-  './bank-engine.js',
-  './manifest.webmanifest',
-  './favicon.svg'
-];
-
-self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE_URLS))
-      .then(() => self.skipWaiting())
-  );
-});
-
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
-  );
-});
-
-self.addEventListener('fetch', e => {
-  e.respondWith(
-    caches.match(e.request).then(cached => {
-      if (cached) return cached;
-      return fetch(e.request).then(response => {
-        if (!response || response.status !== 200 || response.type !== 'basic') {
-          return response;
-        }
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then(cache => {
-          cache.put(e.request, clone);
-        });
-        return response;
-      });
-    }).catch(() => caches.match('./index.html'))
-  );
-});
-'''
+SW_JS = read_file('sw.js')
 INDEX_ENGINE_JS = read_file('index-engine.js')
 QUIZ_ENGINE_JS = read_file('quiz-engine.js')
 BANK_ENGINE_JS = read_file('bank-engine.js')
+
+# Read sync scripts from MU61S8
+MU61S8_BASE = BASE_DIR.parent / 'MU61S8'
+SYNC_SCRIPT = (MU61S8_BASE / 'scripts' / 'sync_quiz_assets.py').read_text(encoding='utf-8') if (MU61S8_BASE / 'scripts' / 'sync_quiz_assets.py').exists() else ''
+STANDARDIZE_SCRIPT = (MU61S8_BASE / 'scripts' / 'standardize_quiz_files.py').read_text(encoding='utf-8') if (MU61S8_BASE / 'scripts' / 'standardize_quiz_files.py').exists() else ''
+
+# Read icon files if they exist
+def read_icon(name):
+    p = BASE_DIR / name
+    if p.exists():
+        return p.read_bytes()
+    return None
+
+ICON_FILES = {}
+for icon_name in ['icon-48.png', 'icon-72.png', 'icon-96.png', 'icon-144.png', 'icon-192.png', 'icon-512.png']:
+    data = read_icon(icon_name)
+    if data:
+        ICON_FILES[icon_name] = data
 
 MANIFEST_JSON = lambda name: json.dumps({
     "name": f"{name} Quiz",
@@ -107,6 +82,42 @@ MANIFEST_JSON = lambda name: json.dumps({
             "sizes": "any",
             "type": "image/svg+xml",
             "purpose": "any"
+        },
+        {
+            "src": "icon-48.png",
+            "sizes": "48x48",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "icon-72.png",
+            "sizes": "72x72",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "icon-96.png",
+            "sizes": "96x96",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "icon-144.png",
+            "sizes": "144x144",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
         }
     ]
 }, indent=2)
@@ -430,7 +441,7 @@ if('serviceWorker' in navigator){{window.addEventListener('load',function(){{nav
 def build_project_zip(config):
     """
     Build a ZIP containing a full working quiz project.
-    Mirrors the MU61S8 structure.
+    Mirrors the MU61S8 structure - quizzes only, no tools.
     """
     buf = io.BytesIO()
     project_name = config.get('project_name', 'MyQuiz')
@@ -446,6 +457,14 @@ def build_project_zip(config):
         zf.writestr('favicon.svg', FAVICON_SVG)
         zf.writestr('sw.js', SW_JS)
         zf.writestr('manifest.webmanifest', MANIFEST_JSON(project_name))
+
+        # --- Icon files (PNG icons for PWA) ---
+        for icon_name, icon_data in ICON_FILES.items():
+            zf.writestr(icon_name, icon_data)
+
+        # --- Diagnostic test page ---
+        if QUIZ_ENGINE_TEST_HTML:
+            zf.writestr('quiz-engine-test.html', QUIZ_ENGINE_TEST_HTML)
 
         # --- Root index.html ---
         root_quizzes = []
@@ -481,6 +500,12 @@ def build_project_zip(config):
                 engine_prefix='../'
             )
             zf.writestr(f'{folder_name}/index.html', folder_html)
+
+        # --- Scripts folder (for asset synchronization) ---
+        if SYNC_SCRIPT:
+            zf.writestr('scripts/sync_quiz_assets.py', SYNC_SCRIPT)
+        if STANDARDIZE_SCRIPT:
+            zf.writestr('scripts/standardize_quiz_files.py', STANDARDIZE_SCRIPT)
 
         # --- GitHub Workflows ---
         zf.writestr('.github/workflows/sync-quiz-assets.yml', SYNC_WORKFLOW_YML)
@@ -534,11 +559,13 @@ def preview():
     config = request.json
     folders = config.get('folders', [])
     total_quizzes = sum(len(f.get('quizzes', [])) for f in folders)
+    # engines(3) + sw + manifest + favicon + icons(6) + root index + folder indexes + scripts(2) + workflows(2) + gitignore + quiz-engine-test
+    estimated_files = 16 + len(folders) + total_quizzes
     return jsonify({
         'project_name': config.get('project_name', ''),
         'total_folders': len(folders),
         'total_quizzes': total_quizzes,
-        'estimated_files': 5 + len(folders) + 1
+        'estimated_files': estimated_files
     })
 
 
@@ -558,8 +585,16 @@ def main():
     print(f"  QuizTool Project Generator")
     print(f"{'=' * 60}")
     print(f"\n  Starting web UI on http://localhost:{port}")
-    print(f"  Configure your project and generate a ZIP file.")
-    print(f"  Press Ctrl+C to stop.\n")
+    print(f"  Configure your project and generate a ready-to-deploy ZIP.")
+    print(f"\n  Generated project structure (similar to MU61S8):")
+    print(f"    ✓ Engine files (quiz, bank, index)")
+    print(f"    ✓ Service worker with offline support")
+    print(f"    ✓ PWA manifest with all icon sizes")
+    print(f"    ✓ GitHub Actions workflows (sync + deploy)")
+    print(f"    ✓ Asset synchronization scripts")
+    print(f"    ✓ Quiz engine test page")
+    print(f"    ✗ No QuizTool utilities (quiz-maker, bank-maker, etc.)")
+    print(f"\n  Press Ctrl+C to stop.\n")
 
     threading.Thread(target=open_browser, args=(port,), daemon=True).start()
 

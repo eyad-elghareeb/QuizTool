@@ -1,5 +1,5 @@
 # QuizTool 🎯
-A modern, feature-rich quiz creation and management platform built with vanilla HTML, CSS, and JavaScript. Create custom quizzes, manage multiple exam types, and test knowledge across various subjects—all in a beautiful, responsive interface.
+A modern, feature-rich quiz creation and management platform built with vanilla HTML, CSS, and JavaScript. Create custom quizzes, manage multiple exam types, and deploy production-ready quiz sites—all in a beautiful, responsive interface.
 
 ## ✨ Features
 
@@ -10,6 +10,55 @@ A modern, feature-rich quiz creation and management platform built with vanilla 
 - **Theme Support**: Built-in dark/light mode toggle with persistent user preference
 - **Responsive Design**: Optimized for desktop, tablet, and mobile devices
 - **Easy Extension**: Simply add new quiz configurations to the `QUIZZES` array to expand your quiz library
+
+### 🚀 Project Generator (`generate_project.py`)
+Generate production-ready quiz sites similar to MU61S8 with a single command!
+
+- **Web UI Configuration**: Easy-to-use interface at http://localhost:5500
+- **MU61S8 Structure**: Generates clean quiz-only instances (no QuizTool utilities)
+- **Automated Deployment**: Includes GitHub Actions workflows for auto-deployment
+- **Asset Synchronization**: Scripts to auto-update index pages and service worker precache
+- **Complete PWA Support**: All icon sizes (48px-512px), manifest, and offline-capable service worker
+- **Folder Support**: Create multi-folder quiz structures with nested index pages
+- **One-Click Export**: Download ready-to-deploy ZIP with proper file structure
+
+**Generated Project Includes:**
+- ✓ Engine files (quiz-engine.js, bank-engine.js, index-engine.js)
+- ✓ Service worker with html2pdf.js precaching for offline PDF export
+- ✓ PWA manifest with all icon sizes
+- ✓ GitHub Actions workflows (sync + deploy to GitHub Pages)
+- ✓ Asset synchronization scripts from MU61S8
+- ✓ Quiz engine test page for diagnostics
+- ✓ .gitignore with proper exclusions
+
+**Generated Project Structure:**
+```
+project-name/
+├── .github/workflows/           # Auto-deployment workflows
+│   ├── sync-quiz-assets.yml    # Updates index pages & SW precache
+│   └── jekyll-gh-pages.yml     # Deploys to GitHub Pages
+├── scripts/                     # Asset management scripts
+│   ├── sync_quiz_assets.py     # Auto-sync quiz assets
+│   └── standardize_quiz_files.py
+├── [folder1]/index.html        # Folder quiz listings
+├── [folder2]/index.html
+├── index.html                   # Root hub page
+├── index-engine.js              # Hub page engine
+├── quiz-engine.js               # Quiz playback engine
+├── bank-engine.js               # Question bank engine
+├── sw.js                        # Service worker (offline support)
+├── manifest.webmanifest         # PWA manifest
+├── favicon.svg                  # SVG favicon
+├── icon-*.png                   # PWA icons (48px-512px)
+├── quiz-engine-test.html        # Diagnostic page
+└── .gitignore                   # Git ignore rules
+```
+
+**Usage:**
+```bash
+python generate_project.py
+# Web UI opens at http://localhost:5500
+```
 
 ### 📝 Index Editor (`index-editor.html`)
 Create and manage custom index/hub pages for any project!
@@ -152,6 +201,38 @@ Use the Index Editor to create branded hub pages for any collection of tools or 
 
 **Pro Tip**: You can also import an existing `index.html` file into the editor to modify it, or paste a JSON configuration directly.
 
+### Generating a Production-Ready Quiz Site
+
+Use the Project Generator to create a deployable quiz site (like MU61S8):
+
+1. Run the generator:
+   ```bash
+   python generate_project.py
+   ```
+2. Configure your project in the web UI (opens at http://localhost:5500):
+   - Set project name, titles, and description
+   - Add folders for different subjects/categories
+   - Add quiz entries with URLs for each folder
+3. Click **"📥 Generate & Download ZIP"**
+4. Extract the ZIP to your project folder
+5. Add your quiz HTML files to the appropriate folders
+6. Commit and push to GitHub:
+   ```bash
+   git init
+   git add .
+   git commit -m "Initial quiz project"
+   git remote add origin https://github.com/your-username/your-repo.git
+   git push -u origin main
+   ```
+7. GitHub Actions will automatically:
+   - Sync quiz assets (update index pages and service worker)
+   - Deploy to GitHub Pages
+
+**Note**: The generated project includes `scripts/sync_quiz_assets.py` which auto-discovers quiz files and updates:
+- All `index.html` files with proper quiz listings
+- Service worker precache list with all HTML files
+- Cache version hash for automatic updates
+
 ### Adding New Quizzes to the Hub
 
 Edit the `QUIZZES` array in `index.html`:
@@ -183,6 +264,9 @@ QuizTool/
 ├── js-question-bank.html         # JavaScript mastery question bank (51 questions)
 ├── quiz-template.html            # Base template for generated quizzes
 ├── question-bank-template.html   # Template for question bank files
+├── generate_project.py           # Production-ready project generator
+├── generator_templates/          # Templates for the generator
+│   └── index.html                # Generator web UI
 ├── quiz-engine.js                # Shared quiz engine (handles quiz rendering)
 ├── bank-engine.js                # Shared bank engine (handles question banks)
 ├── index-engine.js               # Shared index engine (handles hub pages)
@@ -190,6 +274,7 @@ QuizTool/
 ├── manifest.webmanifest          # PWA manifest for installability
 ├── favicon.svg                   # SVG icon for the app
 ├── icon-*.png                    # PWA icons in multiple sizes (48-512px)
+├── GENERATOR_UPDATES.md          # Documentation for generator updates
 └── README.md                     # This file
 ```
 
@@ -239,12 +324,14 @@ QuizTool uses a modern, maintainable architecture:
 
 1. **No Coding Required**: Build quizzes through an intuitive visual interface
 2. **Instant Deployment**: Generated quizzes are standalone HTML files
-3. **Professional Design**: Polished, modern UI that looks great on any device
-4. **Fully Customizable**: Modify templates or styles to match your brand
-5. **Offline Capable**: Works without internet connection after initial load
-6. **Privacy-Focused**: All data stays local; no server required
-7. **PWA Ready**: Installable, offline-capable, optimized icons
-8. **High Performance**: Optimized parsers handle large question banks (1000+ questions)
+3. **Production-Ready Generator**: Deploy quiz sites like MU61S8 with automated workflows
+4. **Professional Design**: Polished, modern UI that looks great on any device
+5. **Fully Customizable**: Modify templates or styles to match your brand
+6. **Offline Capable**: Works without internet connection after initial load
+7. **Privacy-Focused**: All data stays local; no server required
+8. **PWA Ready**: Installable, offline-capable, optimized icons
+9. **High Performance**: Optimized parsers handle large question banks (1000+ questions)
+10. **Automated Deployment**: GitHub Actions handle asset sync and deployment
 
 ## 🔗 Links
 

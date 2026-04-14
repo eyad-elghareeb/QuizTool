@@ -6,6 +6,9 @@ const CACHE_NAME = 'mu61-cache-' + CACHE_VERSION;
 const GOOGLE_FONT_CSS =
   'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap';
 
+const HTML2PDF_CDN =
+  'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+
 var PRECACHE_REL_PATHS = [
   'quiz-engine.js',
   'bank-engine.js',
@@ -101,14 +104,9 @@ var PRECACHE_REL_PATHS = [
   'quiz-engine-test.html'
 ];
 
+/* ── Build a full URL from scope + relative path ── */
 function hrefFromScope(scope, relPath) {
-  var parts = relPath.split('/');
-  var enc = parts
-    .map(function (p) {
-      return encodeURIComponent(p);
-    })
-    .join('/');
-  return new URL(enc, scope).href;
+  return new URL(relPath, scope).href;
 }
 
 function shouldStore(res) {
@@ -149,22 +147,32 @@ function precacheGoogleFonts(cache) {
     .catch(function () {});
 }
 
+/* ── Precache html2pdf.js CDN bundle for offline PDF export ── */
+function precacheHtml2Pdf(cache) {
+  return fetch(HTML2PDF_CDN, { mode: 'cors', credentials: 'omit' })
+    .then(function (res) {
+      if (res.ok) return cache.put(HTML2PDF_CDN, res);
+    })
+    .catch(function () {});
+}
+
+/* ══════════════════════════════════════════════════════════════
+   INSTALL — precache everything
+   ══════════════════════════════════════════════════════════════ */
 self.addEventListener('install', function (event) {
   event.waitUntil(
     (async function () {
       var scope = self.registration.scope;
       var cache = await caches.open(CACHE_NAME);
 
-      var coreOnly = [
-        hrefFromScope(scope, 'manifest.webmanifest'),
-        hrefFromScope(scope, 'favicon.svg')
-      ];
+      /* Core assets (manifest + favicon) */
       await Promise.all(
-        coreOnly.map(function (u) {
-          return cache.add(u).catch(function () {});
+        ['manifest.webmanifest', 'favicon.svg'].map(function (f) {
+          return cache.add(hrefFromScope(scope, f)).catch(function () {});
         })
       );
 
+      /* All HTML + JS files */
       await Promise.all(
         PRECACHE_REL_PATHS.map(function (rel) {
           var u = hrefFromScope(scope, rel);
@@ -172,12 +180,18 @@ self.addEventListener('install', function (event) {
         })
       );
 
+      /* Cross-origin CDN resources */
       await precacheGoogleFonts(cache);
+      await precacheHtml2Pdf(cache);
+
       await self.skipWaiting();
     })()
   );
 });
 
+/* ══════════════════════════════════════════════════════════════
+   ACTIVATE — clean old caches, claim clients immediately
+   ══════════════════════════════════════════════════════════════ */
 self.addEventListener('activate', function (event) {
   event.waitUntil(
     (async function () {
@@ -192,7 +206,11 @@ self.addEventListener('activate', function (event) {
   );
 });
 
-/** HTML: network first (fresh when online, updates cache), then cache, then hub fallback. */
+/* ══════════════════════════════════════════════════════════════
+   FETCH — routing strategy
+   ══════════════════════════════════════════════════════════════ */
+
+/** Navigation requests (HTML pages): network-first with cache fallback + hub fallback. */
 function handleNavigate(event, request) {
   return (async function () {
     var cache = await caches.open(CACHE_NAME);
@@ -205,16 +223,24 @@ function handleNavigate(event, request) {
       }
       return res;
     } catch (err) {
+      /* Offline: try exact match first */
       var cached = await cache.match(request);
       if (cached) return cached;
-      var fb = await cache.match(new URL('index.html', self.registration.scope));
+
+      /* Try matching without query/hash (some browsers append them) */
+      var cleanUrl = request.url.split('?')[0].split('#')[0];
+      cached = await cache.match(cleanUrl);
+      if (cached) return cached;
+
+      /* Last resort: serve the main hub page */
+      var fb = await cache.match(hrefFromScope(self.registration.scope, 'index.html'));
       if (fb) return fb;
       throw err;
     }
   })();
 }
 
-/** Assets & cross-origin: cache first, then network (populate cache). */
+/** Assets & cross-origin: cache-first, then network (populates cache on miss). */
 function handleAsset(event, request) {
   return (async function () {
     var cache = await caches.open(CACHE_NAME);
@@ -229,6 +255,10 @@ function handleAsset(event, request) {
       }
       return res;
     } catch (err) {
+      /* Offline miss for asset — try matching without query string */
+      var cleanUrl = request.url.split('?')[0].split('#')[0];
+      var cachedClean = await cache.match(cleanUrl);
+      if (cachedClean) return cachedClean;
       throw err;
     }
   })();
