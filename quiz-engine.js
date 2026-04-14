@@ -322,6 +322,8 @@ input[type=radio] { display: none; }
     width: 100% !important;
     margin-top: 0.5rem !important;
     margin-bottom: 0 !important;
+    font-size: 1.15rem !important;
+    line-height: 1.8 !important;
   }
 }
 
