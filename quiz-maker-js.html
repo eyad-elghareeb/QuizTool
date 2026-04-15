@@ -299,7 +299,7 @@ textarea:focus {
 <body>
 
 <div class="topbar">
-  <a href="#" onclick="navigateToIndex(event)" class="back-btn">← Back to Hub</a>
+  <a href="index.html" class="back-btn" id="back-btn">← Back to Hub</a>
   <div class="topbar-title">⚡ Quiz Maker</div>
   <button class="icon-btn" onclick="toggleTheme()" id="theme-toggle" title="Toggle theme">☀</button>
 </div>
@@ -470,11 +470,11 @@ function generateQuiz() {
   btn.disabled = true;
   btn.innerHTML = '⏳ Parsing...';
 
-  // Use async processing to avoid blocking UI for large files
-  setTimeout(async () => {
+  // Use requestAnimationFrame to allow UI to update before heavy processing
+  requestAnimationFrame(async () => {
     try {
       const parsedQuestions = await parseQuestionsAsync(input);
-      
+
       // Update stats
       const totalOpts = parsedQuestions.reduce((s, q) => s + q.options.length, 0);
       const avgOpts   = (totalOpts / parsedQuestions.length).toFixed(1);
@@ -492,13 +492,13 @@ function generateQuiz() {
       showToast(`✅ Parsed ${parsedQuestions.length} questions successfully!`);
 
     } catch (e) {
+      console.error('Parse error:', e);
       showToast('❌ Parse error: ' + e.message);
-      console.error(e);
     } finally {
       btn.disabled = false;
       btn.innerHTML = '🔍 Parse & Generate Quiz';
     }
-  }, 50);
+  });
 }
 
 /**
@@ -506,9 +506,11 @@ function generateQuiz() {
  */
 async function parseQuestionsAsync(input) {
   const startTime = performance.now();
+  console.log(`Starting parse, input length: ${input.length} chars`);
   
   // Step 1: Clean and normalize input
   const cleaned = cleanJSArrayInput(input);
+  console.log(`Cleaned input length: ${cleaned.length} chars`);
   
   // Step 2: Try multiple parsing strategies in order of safety
   let arr = null;
@@ -518,11 +520,12 @@ async function parseQuestionsAsync(input) {
   try {
     arr = JSON.parse(cleaned);
     if (Array.isArray(arr)) {
-      console.log(`✅ JSON.parse succeeded in ${(performance.now() - startTime).toFixed(1)}ms`);
+      console.log(`✅ JSON.parse succeeded in ${(performance.now() - startTime).toFixed(1)}ms, found ${arr.length} items`);
       return validateQuestions(arr);
     }
   } catch(e) {
     parseErrors.push(`JSON.parse: ${e.message}`);
+    console.log('JSON.parse failed:', e.message);
   }
   
   // Strategy 2: Sanitized JSON.parse (remove comments, fix common issues)
@@ -530,11 +533,12 @@ async function parseQuestionsAsync(input) {
     const sanitized = sanitizeForJSON(cleaned);
     arr = JSON.parse(sanitized);
     if (Array.isArray(arr)) {
-      console.log(`✅ Sanitized JSON.parse succeeded in ${(performance.now() - startTime).toFixed(1)}ms`);
+      console.log(`✅ Sanitized JSON.parse succeeded in ${(performance.now() - startTime).toFixed(1)}ms, found ${arr.length} items`);
       return validateQuestions(arr);
     }
   } catch(e) {
     parseErrors.push(`Sanitized JSON: ${e.message}`);
+    console.log('Sanitized JSON failed:', e.message);
   }
   
   // Strategy 3: Chunked parsing for very large files (>5MB)
@@ -542,11 +546,12 @@ async function parseQuestionsAsync(input) {
     try {
       arr = await parseLargeArrayChunked(cleaned);
       if (Array.isArray(arr)) {
-        console.log(`✅ Chunked parsing succeeded in ${(performance.now() - startTime).toFixed(1)}ms`);
+        console.log(`✅ Chunked parsing succeeded in ${(performance.now() - startTime).toFixed(1)}ms, found ${arr.length} items`);
         return validateQuestions(arr);
       }
     } catch(e) {
       parseErrors.push(`Chunked parser: ${e.message}`);
+      console.log('Chunked parser failed:', e.message);
     }
   }
   
@@ -556,14 +561,16 @@ async function parseQuestionsAsync(input) {
     const sanitized = sanitizeJSForEval(cleaned);
     arr = new Function('return ' + sanitized)();
     if (Array.isArray(arr)) {
-      console.log(`✅ Function parser succeeded in ${(performance.now() - startTime).toFixed(1)}ms`);
+      console.log(`✅ Function parser succeeded in ${(performance.now() - startTime).toFixed(1)}ms, found ${arr.length} items`);
       return validateQuestions(arr);
     }
   } catch(e) {
     parseErrors.push(`Function parser: ${e.message}`);
+    console.log('Function parser failed:', e.message);
   }
   
   // All strategies failed
+  console.error('All parsing strategies failed:', parseErrors);
   throw new Error(`All parsing strategies failed:\n${parseErrors.map(e => '  • ' + e).join('\n')}`);
 }
 
@@ -876,13 +883,18 @@ function showToast(msg) {
   }, 2200);
 }
 
-/* ── NAVIGATE BACK TO HUB ──────────────────────────────────── */
-function navigateToIndex(event) {
-  event.preventDefault();
-  window.location.href = 'index.html';
-}
-
 init();
+
+// Global error handler to catch any uncaught errors
+window.addEventListener('error', function(e) {
+  console.error('Global error:', e.error);
+  showToast('❌ Error: ' + (e.error?.message || 'Unknown error'));
+});
+
+window.addEventListener('unhandledrejection', function(e) {
+  console.error('Unhandled promise rejection:', e.reason);
+  showToast('❌ Error: ' + (e.reason?.message || 'Unknown error'));
+});
 </script>
 </body>
 </html>
