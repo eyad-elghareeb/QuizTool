@@ -420,15 +420,15 @@ async function parseAndPreview() {
 async function parseQuestionsAsync(input) {
   const startTime = performance.now();
   console.log(`Starting parse, input length: ${input.length} chars`);
-  
+
   // Step 1: Clean and normalize input
   const cleaned = cleanJSArrayInput(input);
   console.log(`Cleaned input length: ${cleaned.length} chars`);
-  
+
   // Step 2: Try multiple parsing strategies in order of safety
   let arr = null;
   const parseErrors = [];
-  
+
   // Strategy 1: Direct JSON.parse (fastest, safest)
   try {
     arr = JSON.parse(cleaned);
@@ -439,8 +439,9 @@ async function parseQuestionsAsync(input) {
   } catch(e) {
     parseErrors.push(`JSON.parse: ${e.message}`);
     console.log('JSON.parse failed:', e.message);
+    showParseErrorContext(cleaned, e);
   }
-  
+
   // Strategy 2: Sanitized JSON.parse (remove comments, fix common issues)
   try {
     const sanitized = sanitizeForJSON(cleaned);
@@ -452,8 +453,10 @@ async function parseQuestionsAsync(input) {
   } catch(e) {
     parseErrors.push(`Sanitized JSON: ${e.message}`);
     console.log('Sanitized JSON failed:', e.message);
+    const sanitized = sanitizeForJSON(cleaned);
+    showParseErrorContext(sanitized, e);
   }
-  
+
   // Strategy 3: Chunked parsing for very large files (>5MB)
   if (cleaned.length > 5_000_000) {
     try {
@@ -467,10 +470,9 @@ async function parseQuestionsAsync(input) {
       console.log('Chunked parser failed:', e.message);
     }
   }
-  
+
   // Strategy 4: Function constructor (handles unquoted keys, single quotes, etc.)
   try {
-    // Sanitize to prevent code injection
     const sanitized = sanitizeJSForEval(cleaned);
     arr = new Function('return ' + sanitized)();
     if (Array.isArray(arr)) {
@@ -481,10 +483,41 @@ async function parseQuestionsAsync(input) {
     parseErrors.push(`Function parser: ${e.message}`);
     console.log('Function parser failed:', e.message);
   }
-  
-  // All strategies failed
+
   console.error('All parsing strategies failed:', parseErrors);
   throw new Error(`All parsing strategies failed:\n${parseErrors.map(e => '  • ' + e).join('\n')}`);
+}
+
+/**
+ * Show context around a JSON parse error to help debugging
+ */
+function showParseErrorContext(text, error) {
+  let pos = -1;
+  const posMatch = error.message.match(/position\s+(\d+)/i);
+  if (posMatch) {
+    pos = parseInt(posMatch[1]);
+  }
+  if (pos < 0) {
+    const lineMatch = error.message.match(/line\s+(\d+)\s+column\s+(\d+)/i);
+    if (lineMatch) {
+      const line = parseInt(lineMatch[1]);
+      const col = parseInt(lineMatch[2]);
+      const lines = text.split('\n');
+      if (line <= lines.length) {
+        let charPos = 0;
+        for (let i = 0; i < line - 1; i++) {
+          charPos += lines[i].length + 1;
+        }
+        pos = charPos + col - 1;
+      }
+    }
+  }
+  if (pos >= 0 && pos < text.length) {
+    const before = text.substring(Math.max(0, pos - 100), pos);
+    const after = text.substring(pos, Math.min(text.length, pos + 100));
+    console.log(`\n📍 Error context (char ${pos}):`);
+    console.log('  ...' + before.replace(/\n/g, '\\n') + ' <<HERE>> ' + after.replace(/\n/g, '\\n') + '...\n');
+  }
 }
 
 /**
@@ -510,10 +543,10 @@ function cleanJSArrayInput(input) {
  */
 function sanitizeForJSON(str) {
   return str
-    // Remove single-line comments (but not inside strings)
-    .replace(/(?:"[^"]*"|'[^']*')|\/\/.*$/gm, (m) => m.startsWith('//') ? '' : m)
-    // Remove multi-line comments
+    // Remove multi-line comments first (before strings, so we don't accidentally keep comment chars)
     .replace(/\/\*[\s\S]*?\*\//g, '')
+    // Remove single-line comments (careful: skip // inside strings)
+    .replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|\/\/.*$/gm, '$1')
     // Add quotes to unquoted object keys
     .replace(/([\{,])\s*([a-zA-Z_$][a-zA-Z_$0-9]*)\s*:/g, '$1"$2":')
     // Convert single-quoted strings to double-quoted (handles escaped quotes)
