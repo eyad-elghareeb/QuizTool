@@ -378,60 +378,16 @@ function copyPrompt() {
 /* ─── PARSE & PREVIEW ────────────────────────────────────── */
 let parsedBank = null;
 
-function parseAndPreview() {
+async function parseAndPreview() {
   const input = document.getElementById('js-input').value.trim();
   if (!input) { showToast('⚠️ Please paste your questions array first!'); return; }
 
+  const btn = document.getElementById('parse-btn');
+  btn.disabled = true;
+  btn.innerHTML = '⏳ Parsing...';
+
   try {
-    // Clean up common issues: trailing commas, BOM, etc.
-    let cleaned = input
-      .replace(/^\uFEFF/, '')              // Remove BOM
-      .replace(/,\s*([\]\}])/g, '$1')     // Remove trailing commas
-      .trim();
-
-    // Ensure it starts with [ and ends with ]
-    if (!cleaned.startsWith('[')) cleaned = '[' + cleaned;
-    if (!cleaned.endsWith(']'))   cleaned = cleaned + ']';
-
-    let arr;
-    
-    // Try JSON.parse first (safest and fastest for large arrays)
-    try {
-      // JSON.parse requires double quotes, so try directly first
-      arr = JSON.parse(cleaned);
-    } catch(jsonE) {
-      // If JSON.parse fails, try Function constructor (handles single quotes, unquoted keys, etc.)
-      try {
-        // For very large inputs, use a safer parsing approach
-        if (cleaned.length > 500000) {
-          // For large inputs, try to sanitize and use Function more safely
-          arr = parseLargeJSArray(cleaned);
-        } else {
-          arr = new Function('return ' + cleaned)();
-        }
-      } catch(funcE) {
-        throw new Error('Syntax error: ' + funcE.message);
-      }
-    }
-
-    if (!Array.isArray(arr)) throw new Error('Input must be a JavaScript array');
-    if (arr.length === 0) throw new Error('Array is empty');
-
-    // Validate structure
-    const errors = [];
-    for (let i = 0; i < arr.length && errors.length < 10; i++) {
-      const q = arr[i];
-      if (!q.question) errors.push(`Question ${i+1}: missing "question" field`);
-      else if (!Array.isArray(q.options)) errors.push(`Question ${i+1}: missing "options" array`);
-      else if (q.options.length < 2) errors.push(`Question ${i+1}: needs at least 2 options`);
-      else if (q.correct === undefined) errors.push(`Question ${i+1}: missing "correct" index`);
-      else if (q.correct < 0 || q.correct >= q.options.length) errors.push(`Question ${i+1}: "correct" index out of range`);
-    }
-    
-    if (errors.length > 0) {
-      throw new Error(errors.join('\n') + (arr.length > 10 ? '\n... (showing first 10 errors)' : ''));
-    }
-
+    const arr = await parseQuestionsAsync(input);
     parsedBank = arr;
 
     // Update stats
@@ -452,32 +408,275 @@ function parseAndPreview() {
   } catch(e) {
     showToast('❌ Parse error: ' + e.message);
     console.error(e);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🔍 Parse & Preview';
   }
 }
 
 /**
- * Safer parser for large JS arrays - avoids eval-like approaches when possible
+ * Async parser that processes large files in chunks to avoid blocking UI
  */
-function parseLargeJSArray(str) {
-  // Convert JS-style array to valid JSON by:
-  // 1. Converting single quotes to double quotes (carefully)
-  // 2. Adding quotes to unquoted keys
-  // 3. Removing trailing commas
+async function parseQuestionsAsync(input) {
+  const startTime = performance.now();
   
-  let jsonStr = str
-    // Remove comments (// and /* */)
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/\/\/.*$/gm, '')
-    // Add quotes to object keys
-    .replace(/(\{|,)\s*([a-zA-Z_$][a-zA-Z_$0-9]*)\s*:/g, '$1"$2":')
-    // Convert single-quoted strings to double-quoted (simple cases)
-    // This is a simplification - won't handle escaped quotes perfectly
-    .replace(/'([^'\\]*(?:\\.[^'\\]*)*)'/g, '"$1"')
-    // Remove trailing commas in objects/arrays
-    .replace(/,\s*([\]\}])/g, '$1')
+  // Step 1: Clean and normalize input
+  const cleaned = cleanJSArrayInput(input);
+  
+  // Step 2: Try multiple parsing strategies in order of safety
+  let arr = null;
+  const parseErrors = [];
+  
+  // Strategy 1: Direct JSON.parse (fastest, safest)
+  try {
+    arr = JSON.parse(cleaned);
+    if (Array.isArray(arr)) {
+      console.log(`✅ JSON.parse succeeded in ${(performance.now() - startTime).toFixed(1)}ms`);
+      return validateQuestions(arr);
+    }
+  } catch(e) {
+    parseErrors.push(`JSON.parse: ${e.message}`);
+  }
+  
+  // Strategy 2: Sanitized JSON.parse (remove comments, fix common issues)
+  try {
+    const sanitized = sanitizeForJSON(cleaned);
+    arr = JSON.parse(sanitized);
+    if (Array.isArray(arr)) {
+      console.log(`✅ Sanitized JSON.parse succeeded in ${(performance.now() - startTime).toFixed(1)}ms`);
+      return validateQuestions(arr);
+    }
+  } catch(e) {
+    parseErrors.push(`Sanitized JSON: ${e.message}`);
+  }
+  
+  // Strategy 3: Chunked parsing for very large files (>5MB)
+  if (cleaned.length > 5_000_000) {
+    try {
+      arr = await parseLargeArrayChunked(cleaned);
+      if (Array.isArray(arr)) {
+        console.log(`✅ Chunked parsing succeeded in ${(performance.now() - startTime).toFixed(1)}ms`);
+        return validateQuestions(arr);
+      }
+    } catch(e) {
+      parseErrors.push(`Chunked parser: ${e.message}`);
+    }
+  }
+  
+  // Strategy 4: Function constructor (handles unquoted keys, single quotes, etc.)
+  try {
+    // Sanitize to prevent code injection
+    const sanitized = sanitizeJSForEval(cleaned);
+    arr = new Function('return ' + sanitized)();
+    if (Array.isArray(arr)) {
+      console.log(`✅ Function parser succeeded in ${(performance.now() - startTime).toFixed(1)}ms`);
+      return validateQuestions(arr);
+    }
+  } catch(e) {
+    parseErrors.push(`Function parser: ${e.message}`);
+  }
+  
+  // All strategies failed
+  throw new Error(`All parsing strategies failed:\n${parseErrors.map(e => '  • ' + e).join('\n')}`);
+}
+
+/**
+ * Clean common issues in JS array input
+ */
+function cleanJSArrayInput(input) {
+  let cleaned = input
+    .replace(/^\uFEFF/, '')                    // Remove BOM
+    .replace(/^\s*```(?:json|js|javascript)?\s*/i, '')  // Remove opening code fence
+    .replace(/\s*```\s*$/i, '')                // Remove closing code fence
+    .replace(/,\s*([\]\}])/g, '$1')           // Remove trailing commas
     .trim();
+
+  // Ensure it starts with [ and ends with ]
+  if (!cleaned.startsWith('[')) cleaned = '[' + cleaned;
+  if (!cleaned.endsWith(']'))   cleaned = cleaned + ']';
   
-  return JSON.parse(jsonStr);
+  return cleaned;
+}
+
+/**
+ * Sanitize JS input for JSON.parse by fixing common issues
+ */
+function sanitizeForJSON(str) {
+  return str
+    // Remove single-line comments (but not inside strings)
+    .replace(/(?:"[^"]*"|'[^']*')|\/\/.*$/gm, (m) => m.startsWith('//') ? '' : m)
+    // Remove multi-line comments
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    // Add quotes to unquoted object keys
+    .replace(/([\{,])\s*([a-zA-Z_$][a-zA-Z_$0-9]*)\s*:/g, '$1"$2":')
+    // Convert single-quoted strings to double-quoted (handles escaped quotes)
+    .replace(/'((?:[^'\\]|\\.)*)'/g, '"$1"')
+    // Handle template literals (convert to strings)
+    .replace(/`((?:[^`\\]|\\.)*)`/g, '"$1"')
+    // Remove trailing commas in arrays/objects
+    .replace(/,\s*([\]\}])/g, '$1')
+    // Remove semicolons at end
+    .replace(/;\s*$/, '')
+    .trim();
+}
+
+/**
+ * Sanitize JS input before using Function constructor (prevent code injection)
+ */
+function sanitizeJSForEval(str) {
+  return str
+    // Remove potentially dangerous patterns
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/javascript\s*:/gi, '')
+    .replace(/eval\s*\(/gi, 'invalid(')
+    .replace(/Function\s*\(/gi, 'invalid(')
+    .replace(/require\s*\(/gi, 'invalid(')
+    .replace(/import\s+/gi, 'invalid ')
+    .replace(/process\s*\./gi, 'invalid.')
+    .replace(/global\s*\./gi, 'invalid.')
+    .replace(/window\s*\./gi, 'invalid.')
+    .replace(/document\s*\./gi, 'invalid.');
+}
+
+/**
+ * Parse large JS arrays by processing in chunks to avoid memory issues
+ */
+async function parseLargeArrayChunked(str) {
+  const results = [];
+  let depth = 0;
+  let chunkStart = 0;
+  let inString = false;
+  let stringChar = '';
+  let escapeNext = false;
+  
+  // Skip the opening bracket
+  for (let i = 1; i < str.length; i++) {
+    const char = str[i];
+    
+    if (escapeNext) {
+      escapeNext = false;
+      continue;
+    }
+    
+    if (char === '\\') {
+      escapeNext = true;
+      continue;
+    }
+    
+    if (!inString && (char === '"' || char === "'")) {
+      inString = true;
+      stringChar = char;
+      continue;
+    }
+    
+    if (inString && char === stringChar) {
+      inString = false;
+      continue;
+    }
+    
+    if (inString) continue;
+    
+    if (char === '{') depth++;
+    if (char === '}') depth--;
+    
+    // When we're at depth 0 and hit a comma or closing bracket, we have a complete object
+    if (depth === 0 && (char === ',' || char === ']')) {
+      const chunk = str.substring(chunkStart, i + 1);
+      if (chunk.trim().length > 2) { // Skip empty chunks
+        try {
+          // Parse individual object
+          let objStr = chunk.trim();
+          if (!objStr.startsWith('{')) objStr = '{' + objStr;
+          if (!objStr.endsWith('}')) objStr = objStr + '}';
+          
+          const sanitized = sanitizeForJSON(objStr);
+          const obj = JSON.parse(sanitized);
+          results.push(obj);
+        } catch(e) {
+          // Try Function parser for this chunk
+          try {
+            const sanitized = sanitizeJSForEval(chunk);
+            const obj = new Function('return ' + sanitized)();
+            if (obj && typeof obj === 'object') results.push(obj);
+          } catch(e2) {
+            console.warn(`Skipping malformed chunk at position ${i}: ${e2.message}`);
+          }
+        }
+      }
+      chunkStart = i + 1;
+      
+      // Yield to UI every chunk to prevent freezing
+      if (results.length % 100 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+    }
+  }
+  
+  if (results.length === 0) {
+    throw new Error('No valid questions found in chunked parsing');
+  }
+  
+  return results;
+}
+
+/**
+ * Validate parsed questions array
+ */
+function validateQuestions(arr) {
+  if (!Array.isArray(arr)) {
+    throw new Error('Input is not an array');
+  }
+  
+  if (arr.length === 0) {
+    throw new Error('Array is empty');
+  }
+  
+  // Batch validation for performance with large arrays
+  const errors = [];
+  const batchSize = 1000;
+  
+  for (let batch = 0; batch < arr.length; batch += batchSize) {
+    const end = Math.min(batch + batchSize, arr.length);
+    
+    for (let i = batch; i < end; i++) {
+      const q = arr[i];
+      
+      if (!q || typeof q !== 'object') {
+        errors.push(`Question ${i+1}: not a valid object`);
+        continue;
+      }
+      
+      if (!q.question || typeof q.question !== 'string') {
+        errors.push(`Question ${i+1}: missing or invalid "question" field`);
+      }
+      
+      if (!Array.isArray(q.options)) {
+        errors.push(`Question ${i+1}: missing "options" array`);
+      } else if (q.options.length < 2) {
+        errors.push(`Question ${i+1}: needs at least 2 options`);
+      }
+      
+      if (q.correct === undefined || q.correct === null) {
+        errors.push(`Question ${i+1}: missing "correct" index`);
+      } else if (!Array.isArray(q.options) || q.correct < 0 || q.correct >= q.options.length) {
+        if (Array.isArray(q.options)) {
+          errors.push(`Question ${i+1}: "correct" index (${q.correct}) out of range (0-${q.options.length - 1})`);
+        }
+      }
+    }
+    
+    // Stop early if too many errors
+    if (errors.length >= 20) {
+      errors.push('... (stopping after 20 errors)');
+      break;
+    }
+  }
+  
+  if (errors.length > 0) {
+    throw new Error(errors.join('\n'));
+  }
+  
+  return arr;
 }
 
 /* ─── DOWNLOAD BANK ──────────────────────────────────────── */
