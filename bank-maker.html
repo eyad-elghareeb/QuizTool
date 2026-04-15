@@ -252,29 +252,42 @@ textarea:focus { outline: none; border-color: var(--accent); }
     <p style="color:var(--text-muted);font-size:0.85rem;margin-top:0.75rem;margin-bottom:0.5rem;">
       Use this prompt with any AI assistant to generate a properly formatted questions array:
     </p>
-    <textarea id="prompt-template" class="prompt-textarea" readonly>Generate a large question bank array in JavaScript format for the topic: [YOUR TOPIC].
+    <textarea id="prompt-template" class="prompt-textarea" readonly>Extract ALL questions from the provided material and format them into a JSON array. Create comprehensive questions that cover every key concept, fact, and detail from the source material.
 
-Format each question exactly like this:
+Format each question EXACTLY like this (use double quotes for all strings):
 
 [
   {
-    question: "Your question text here?",
-    options: ["Option A", "Option B", "Option C", "Option D"],
-    correct: 0,
-    explanation: "Brief explanation of why this answer is correct."
-  },
-  // more questions...
+    "question": "What is a long-term complication of FGM Type 3?",
+    "options": ["Increased fertility", "Need for de-infibulation", "Weight gain", "Improved sexual satisfaction"],
+    "correct": 1,
+    "explanation": "De-infibulation is the surgical procedure required to reopen the vaginal introitus in women with Type 3 FGM to allow for intercourse or safe childbirth."
+  }
 ]
 
-Requirements:
-- Each question must have: question (string), options (array of 4-5 strings), correct (zero-based index), explanation (string)
-- Make questions varied in difficulty: easy, medium, hard
-- Ensure distractors are plausible but clearly wrong
-- Include helpful, educational explanations
-- Generate [NUMBER] questions total (aim for 50-100 for a good bank)
-- Topic: [YOUR TOPIC HERE]
+CRITICAL REQUIREMENTS:
+- Extract EVERY question from the material — do not skip any content
+- Cover all topics, sections, and concepts mentioned in the source
+- Each question MUST have exactly these 4 fields: "question", "options", "correct", "explanation"
+- "question": A clear question string (use double quotes)
+- "options": An array of exactly 4 answer choices (use double quotes)
+- "correct": Zero-based index of the correct answer (0, 1, 2, or 3)
+- "explanation": A detailed explanation of WHY the answer is correct and why other options are wrong
 
-Output ONLY the JavaScript array — no extra text, no markdown code fences.</textarea>
+QUESTION QUALITY:
+- Make distractors (wrong options) plausible but clearly incorrect
+- Vary difficulty: mix easy, medium, and hard questions
+- Ensure explanations are educational and help learning
+- Use clear, unambiguous language
+- Test understanding, not just memorization
+
+COVERAGE:
+- Extract questions from EVERY section/topic in the material
+- Don't skip any concepts — aim for comprehensive coverage
+- Include definitions, mechanisms, complications, treatments, etc.
+- Create multiple questions per major concept if applicable
+
+Output ONLY the JSON array — no markdown, no explanation text, no code fences. Just valid JSON starting with [ and ending with ].</textarea>
     <button class="btn-primary" style="width:auto;padding:0.6rem 1.25rem;margin-bottom:0;" onclick="copyPrompt()">
       📋 Copy Prompt
     </button>
