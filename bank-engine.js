@@ -969,6 +969,7 @@ input[type=radio]:checked + .option-label .option-key { background: var(--accent
   .dash-stat { padding: 0.6rem; }
   .dash-stat .ds-val { font-size: 1.2rem; }
   .dash-body { padding: 0.75rem 1rem; }
+  .bank-stats-row { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 640px) {
@@ -1244,6 +1245,18 @@ input[type=radio]:checked + .option-label .option-key { background: var(--accent
   </div>
 </div>
 
+<!-- Reset Confirm Modal -->
+<div class="modal-overlay" id="reset-modal">
+  <div class="modal">
+    <h3>Reset Progress?</h3>
+    <p>Are you sure you want to reset your progress? This cannot be undone.</p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeResetModal()">Go Back</button>
+      <button class="btn-confirm danger" onclick="confirmResetAction()">Reset Now</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- ════════════════════════════════════════════════════════════════
@@ -1300,6 +1313,7 @@ const STORAGE_KEY = `quiz_progress_${STORAGE_VERSION}_${(BANK_CONFIG.uid || wind
 let pendingRestoreData = null;
 let restoreToastTimeout = null;
 let restoreScreenTimeout = null;  // tracks the setTimeout inside doRestoreProgress
+let pendingTransitionTimeout = null;  // tracks screen transition timeouts to prevent race conditions
 
 /**
  * Safely save quiz progress to localStorage
@@ -1512,7 +1526,9 @@ function doRestoreProgress(data) {
   state.answers = data.answers;
   state.flagged = data.flagged || {};
   state.elapsed = data.elapsed || 0;
-  state.timerSecs = data.timerSecs || 0;
+  // In learning mode, timerSecs is irrelevant (count-up uses elapsed only)
+  // Only restore timerSecs for exam mode to avoid confusion
+  state.timerSecs = (data.mode === 'learning') ? 0 : (data.timerSecs || 0);
   state.mode = data.mode;
   state.submitted = false;
 
@@ -1752,8 +1768,10 @@ function initUI() {
 
   const bankSize = QUESTION_BANK.length;
   const capCount = document.getElementById('q-count-input');
+  
+  // Set max to total bank size
   capCount.max = bankSize;
-
+  
   // Default count
   const defaultCount = Math.min(20, bankSize);
   adjustCount(0); // Initialize with default value
@@ -2057,6 +2075,11 @@ function confirmSubmit() {
   // Guard against double submission (race condition: timer expiry + user click)
   if (state.submitted) return;
   state.submitted = true;  // Set flag FIRST to close the re-entry window immediately
+  clearInterval(saveIntervalId);
+  if (pendingTransitionTimeout) {
+    clearTimeout(pendingTransitionTimeout);
+    pendingTransitionTimeout = null;
+  }
   closeModal();
   stopTimer();
   saveTrackerData();
@@ -2168,7 +2191,15 @@ function filterResults(filter, btn) {
 
 /* ─── CONFIRM RESET (mid-quiz) ───────────────────────────────── */
 function confirmResetProgress() {
-  if (!confirm('End this session and go back to start?')) return;
+  document.getElementById('reset-modal').classList.add('open');
+}
+
+function closeResetModal() {
+  document.getElementById('reset-modal').classList.remove('open');
+}
+
+function confirmResetAction() {
+  clearInterval(saveIntervalId);
   stopTimer();
   state.submitted = false;
   state.current = 0;
@@ -2190,6 +2221,7 @@ function confirmResetProgress() {
     restoreScreenTimeout = null;
   }
 
+  closeResetModal();
   showScreen('start-screen');
 }
 
@@ -2220,13 +2252,9 @@ function updateThemeIcon() {
 /* ─── NAVIGATE ───────────────────────────────────────────────── */
 function navigateToIndex(event) {
   event.preventDefault();
-  // If we arrived from another page on this site, go back; otherwise fall
-  // back to the sibling index.html (correct for any subfolder depth).
-  if (document.referrer && new URL(document.referrer).origin === location.origin) {
-    history.back();
-  } else {
-    window.location.href = 'index.html';
-  }
+  // Always navigate to index.html to prevent history.back() loops
+  // within the quiz flow (start → quiz → results → back would bounce)
+  window.location.href = 'index.html';
 }
 
 /* ─── TOAST ──────────────────────────────────────────────────── */
@@ -2297,7 +2325,7 @@ function showToast(msg, actions = []) {
 }
 
 // Auto-save every 5 seconds
-setInterval(saveProgress, 5000);
+let saveIntervalId = setInterval(saveProgress, 5000);
 
 // Save progress before page unload (tab close, refresh, navigation)
 window.addEventListener('beforeunload', function() {
@@ -2690,44 +2718,13 @@ checkSavedProgress();
   };
 
   /* ══════════════════════════════════════════
-     CLEANUP — remove tracker entries older than 30 days
+     CLEANUP — disabled (keep all tracker data indefinitely)
      ══════════════════════════════════════════ */
-  var TRACKER_MAX_AGE = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
+  // 30-day cleanup has been removed - all tracker data is kept indefinitely
 
   function cleanExpiredTrackerData() {
-    try {
-      var now = Date.now();
-      var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
-      var changed = false;
-      var remainingKeys = [];
-
-      keys.forEach(function(uid) {
-        var raw = localStorage.getItem(getStorageKey(uid));
-        if (raw) {
-          try {
-            var data = JSON.parse(raw);
-            if (data.timestamp && (now - data.timestamp) > TRACKER_MAX_AGE) {
-              // Entry is older than 30 days — remove it
-              localStorage.removeItem(getStorageKey(uid));
-              changed = true;
-            } else {
-              remainingKeys.push(uid);
-            }
-          } catch (e) {
-            // Invalid JSON — remove it
-            localStorage.removeItem(getStorageKey(uid));
-            changed = true;
-          }
-        } else {
-          // Key listed but data missing — clean up the reference
-          changed = true;
-        }
-      });
-
-      if (changed) {
-        localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(remainingKeys));
-      }
-    } catch (e) { /* silent */ }
+    // Cleanup disabled - keeping all data for long-term tracking
+    return;
   }
 
   /* ══════════════════════════════════════════
@@ -3310,7 +3307,7 @@ checkSavedProgress();
       var keyIndex = answerKeys.indexOf(e.key.toLowerCase());
       if (typeof state !== 'undefined' && keyIndex < SESSION_QUESTIONS[state.current].options.length) {
         state.answers[state.current] = keyIndex;
-        var radio = document.getElementById('opt-' + state.current + '-' + keyIndex);
+        var radio = document.getElementById('opt_' + keyIndex);
         if (radio) {
           radio.checked = true;
           // In learning mode, show feedback immediately
