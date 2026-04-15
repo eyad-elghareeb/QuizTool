@@ -1401,6 +1401,18 @@ input[type=radio]:checked + .option-label .option-key {
   </div>
 </div>
 
+<!-- ═══════════════ RESET CONFIRM MODAL ════════════════ -->
+<div class="modal-overlay" id="reset-modal">
+  <div class="modal">
+    <h3>Reset Progress?</h3>
+    <p>Are you sure you want to reset your progress? This cannot be undone.</p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeResetModal()">Go Back</button>
+      <button class="btn-confirm danger" onclick="confirmResetAction()">Reset Now</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════════ TOAST ════════════════ -->
 <div class="toast" id="toast"></div>
 
@@ -1814,6 +1826,11 @@ function confirmSubmit() {
   // Guard against double submission (race condition: timer expiry + user click)
   if (state.submitted) return;
   state.submitted = true;  // Set flag FIRST to close the re-entry window immediately
+  clearInterval(saveIntervalId);
+  if (pendingTransitionTimeout) {
+    clearTimeout(pendingTransitionTimeout);
+    pendingTransitionTimeout = null;
+  }
   closeModal();
   stopTimer();
   saveTrackerData();
@@ -1935,6 +1952,11 @@ function filterResults(filter, btn) {
 
 /* ── RESTART ─────────────────────────────────────────────── */
 function restartQuiz() {
+  clearInterval(saveIntervalId);
+  if (pendingTransitionTimeout) {
+    clearTimeout(pendingTransitionTimeout);
+    pendingTransitionTimeout = null;
+  }
   stopTimer();  // ← kill the running interval first
   clearProgress();
 
@@ -1978,13 +2000,9 @@ function toggleTheme() {
 /* ── NAVIGATE BACK TO HUB ──────────────────────────────────── */
 function navigateToIndex(event) {
   event.preventDefault();
-  // If we arrived from another page on this site, go back; otherwise fall
-  // back to the sibling index.html (correct for any subfolder depth).
-  if (document.referrer && new URL(document.referrer).origin === location.origin) {
-    history.back();
-  } else {
-    window.location.href = 'index.html';
-  }
+  // Always navigate to index.html to prevent history.back() loops
+  // within the quiz flow (start → quiz → results → back would bounce)
+  window.location.href = 'index.html';
 }
 function updateThemeIcon() {
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -2161,51 +2179,7 @@ function clearOldSaves() {
 }
 
 /** @deprecated Use checkSavedProgress() — kept only so old bookmarks don't crash. */
-function restoreProgress() {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (!saved) return false;
-
-  try {
-    const data = JSON.parse(saved);
-
-    // Check if data is from a compatible version
-    if (data.version !== STORAGE_VERSION) {
-      console.log('Incompatible save version, starting fresh');
-      localStorage.removeItem(STORAGE_KEY);
-      return false;
-    }
-
-    // Verify this save is for the same quiz
-    if (data.quizTitle !== QUIZ_CONFIG.title) {
-      console.log('Save is for a different quiz, starting fresh');
-      localStorage.removeItem(STORAGE_KEY);
-      return false;
-    }
-
-    // Verify question count hasn't changed
-    if (data.totalQuestions !== QUESTIONS.length) {
-      console.log('Quiz structure has changed, starting fresh');
-      localStorage.removeItem(STORAGE_KEY);
-      return false;
-    }
-
-    // Only restore if less than 7 days old
-    const maxAge = 7 * 24 * 60 * 60 * 1000;
-    if (Date.now() - data.timestamp > maxAge) {
-      console.log('Save is too old, starting fresh');
-      localStorage.removeItem(STORAGE_KEY);
-      return false;
-    }
-
-    // Do the actual restore
-    doRestoreProgress(data);
-    return true;
-  } catch(e) {
-    console.error('Error restoring progress:', e);
-    localStorage.removeItem(STORAGE_KEY);
-    return false;
-  }
-}
+// Function removed: restoreProgress() is dead code. All restore logic is now handled by checkSavedProgress() + doRestoreProgress().
 
 function clearProgress() {
   localStorage.removeItem(STORAGE_KEY);
@@ -2215,32 +2189,39 @@ function clearProgress() {
  * Confirm and reset quiz progress
  */
 function confirmResetProgress() {
-  if (confirm('Are you sure you want to reset your progress? This cannot be undone.')) {
-    stopTimer();  // ← kill the running interval + submit timeout
-    clearProgress();
-    // Reset state
-    state.current = 0;
-    state.answers = {};
-    state.flagged = {};
-    state.elapsed = 0;
-    state.timerSecs = (parseInt(document.getElementById('time-input').value) || 30) * 60;
-    state.submitted = false;
-    state.mode = 'exam';
+  document.getElementById('reset-modal').classList.add('open');
+}
 
-    // Clear all pending async actions that could steal the screen
-    pendingRestoreData = null;
-    if (restoreToastTimeout) {
-      clearTimeout(restoreToastTimeout);
-      restoreToastTimeout = null;
-    }
-    if (restoreScreenTimeout) {
-      clearTimeout(restoreScreenTimeout);
-      restoreScreenTimeout = null;
-    }
+function closeResetModal() {
+  document.getElementById('reset-modal').classList.remove('open');
+}
 
-    showScreen('start-screen');
-    showToast('🔄 Progress reset! Starting fresh...');
+function confirmResetAction() {
+  stopTimer();
+  clearProgress();
+  // Reset state
+  state.current = 0;
+  state.answers = {};
+  state.flagged = {};
+  state.elapsed = 0;
+  state.timerSecs = (parseInt(document.getElementById('time-input').value) || 30) * 60;
+  state.submitted = false;
+  state.mode = 'exam';
+
+  // Clear all pending async actions that could steal the screen
+  pendingRestoreData = null;
+  if (restoreToastTimeout) {
+    clearTimeout(restoreToastTimeout);
+    restoreToastTimeout = null;
   }
+  if (restoreScreenTimeout) {
+    clearTimeout(restoreScreenTimeout);
+    restoreScreenTimeout = null;
+  }
+
+  closeResetModal();
+  showScreen('start-screen');
+  showToast('🔄 Progress reset! Starting fresh...');
 }
 
 // Pause timer when user leaves the page/tab, resume when they come back
@@ -2255,7 +2236,7 @@ window.addEventListener('visibilitychange', function() {
 });
 
 // Auto-save every 5 seconds
-setInterval(saveProgress, 5000);
+let saveIntervalId = setInterval(saveProgress, 5000);
 
 // Save progress before page unload (tab close, refresh, navigation)
 window.addEventListener('beforeunload', function() {
@@ -2267,6 +2248,7 @@ window.addEventListener('beforeunload', function() {
 // Check for saved progress on init
 let restoreToastTimeout = null;
 let restoreScreenTimeout = null;  // tracks the setTimeout inside doRestoreProgress
+let pendingTransitionTimeout = null;  // tracks screen transition timeouts to prevent race conditions
 
 function checkSavedProgress() {
   const saved = localStorage.getItem(STORAGE_KEY);
@@ -2372,7 +2354,9 @@ function doRestoreProgress(data) {
 
   // Restore timer values exactly as saved (time doesn't count while page is closed)
   state.elapsed = data.elapsed || 0;
-  state.timerSecs = data.timerSecs || 0;
+  // In learning mode, timerSecs is irrelevant (count-up uses elapsed only)
+  // Only restore timerSecs for exam mode to avoid confusion
+  state.timerSecs = (data.mode === 'learning') ? 0 : (data.timerSecs || 0);
 
   state.mode = data.mode;
   state.submitted = false;
@@ -3133,7 +3117,6 @@ checkSavedProgress();
   };
 
   /* ── Init badge on load ── */
-  cleanExpiredTrackerData();
   updateDashboardBadge();
 
   /* ═══════════════════════════════════════════════════════════
@@ -3366,7 +3349,7 @@ checkSavedProgress();
       var keyIndex = answerKeys.indexOf(e.key.toLowerCase());
       if (typeof state !== 'undefined' && keyIndex < QUESTIONS[state.current].options.length) {
         state.answers[state.current] = keyIndex;
-        var radio = document.getElementById('opt-' + state.current + '-' + keyIndex);
+        var radio = document.getElementById('opt_' + keyIndex);
         if (radio) {
           radio.checked = true;
           // In learning mode, show feedback immediately
@@ -3437,6 +3420,11 @@ checkSavedProgress();
     var _origShowScreen = window.showScreen;
     if (_origShowScreen) {
       window.showScreen = function (id) {
+        // Clear any pending transition to prevent race conditions
+        if (pendingTransitionTimeout) {
+          clearTimeout(pendingTransitionTimeout);
+          pendingTransitionTimeout = null;
+        }
         var current = document.querySelector('.screen.active');
         var target = document.getElementById(id);
         // Don't animate if already on the same screen or no current screen
@@ -3445,7 +3433,8 @@ checkSavedProgress();
           return;
         }
         current.style.opacity = '0';
-        setTimeout(function () {
+        pendingTransitionTimeout = setTimeout(function () {
+          pendingTransitionTimeout = null;
           current.classList.remove('active');
           current.style.opacity = ''; // clean up so returning later works
           _origShowScreen(id);
