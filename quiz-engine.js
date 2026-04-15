@@ -1790,6 +1790,9 @@ function updateNavStats() {
 
 /* ── SUBMIT ──────────────────────────────────────────────── */
 function attemptSubmit() {
+  // Cancel any pending auto-submit from timer expiry to prevent double submission
+  if (submitTimeout) { clearTimeout(submitTimeout); submitTimeout = null; }
+
   // Skip confirm modal in learning mode
   if(state.mode === 'learning') {
     confirmSubmit();
@@ -1808,9 +1811,11 @@ function closeModal() {
   document.getElementById('submit-modal').classList.remove('open');
 }
 function confirmSubmit() {
+  // Guard against double submission (race condition: timer expiry + user click)
+  if (state.submitted) return;
+  state.submitted = true;  // Set flag FIRST to close the re-entry window immediately
   closeModal();
   stopTimer();
-  state.submitted = true;
   saveTrackerData();
   clearProgress(); // Clear saved progress after successful submission
   buildResults();
@@ -1953,6 +1958,16 @@ function toggleTheme() {
   const isDark = html.getAttribute('data-theme') === 'dark';
   const newTheme = isDark ? 'light' : 'dark';
   html.setAttribute('data-theme', newTheme);
+
+  // Remove FOUC-prevention inline styles so the CSS-variable rules on body take over.
+  // Without this, body.style.background/color set during init would permanently
+  // override the stylesheet regardless of the data-theme attribute changing.
+  document.body.style.background = '';
+  document.body.style.color = '';
+
+  // Keep the browser chrome (address bar / status bar) in sync.
+  const themeMeta = document.querySelector('meta[name="theme-color"]');
+  if (themeMeta) themeMeta.content = newTheme === 'light' ? '#f3f0eb' : '#0d1117';
 
   // Save preference to localStorage so it persists when returning to index.html
   localStorage.setItem('quiz-theme', newTheme);
@@ -2731,6 +2746,47 @@ checkSavedProgress();
   };
 
   /* ══════════════════════════════════════════
+     CLEANUP — remove tracker entries older than 30 days
+     ══════════════════════════════════════════ */
+  var TRACKER_MAX_AGE = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
+
+  function cleanExpiredTrackerData() {
+    try {
+      var now = Date.now();
+      var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
+      var changed = false;
+      var remainingKeys = [];
+
+      keys.forEach(function(uid) {
+        var raw = localStorage.getItem(getStorageKey(uid));
+        if (raw) {
+          try {
+            var data = JSON.parse(raw);
+            if (data.timestamp && (now - data.timestamp) > TRACKER_MAX_AGE) {
+              // Entry is older than 30 days — remove it
+              localStorage.removeItem(getStorageKey(uid));
+              changed = true;
+            } else {
+              remainingKeys.push(uid);
+            }
+          } catch (e) {
+            // Invalid JSON — remove it
+            localStorage.removeItem(getStorageKey(uid));
+            changed = true;
+          }
+        } else {
+          // Key listed but data missing — clean up the reference
+          changed = true;
+        }
+      });
+
+      if (changed) {
+        localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(remainingKeys));
+      }
+    } catch (e) { /* silent */ }
+  }
+
+  /* ══════════════════════════════════════════
      READ — fetch tracker entries
      ══════════════════════════════════════════ */
   function getAllTrackerData() {
@@ -3077,6 +3133,7 @@ checkSavedProgress();
   };
 
   /* ── Init badge on load ── */
+  cleanExpiredTrackerData();
   updateDashboardBadge();
 
   /* ═══════════════════════════════════════════════════════════

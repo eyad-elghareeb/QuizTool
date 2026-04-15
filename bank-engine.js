@@ -1588,22 +1588,35 @@ function selectSessionQuestions(count, order = 'sequential') {
   const allIndices = Array.from({ length: bankSize }, (_, i) => i);
   let unshown = allIndices.filter(i => !progress.shownIndices.includes(i));
 
-  // If we've exhausted the bank (or nearly so), reset cycle
-  if (unshown.length < n) {
-    progress.shownIndices = [];
+  let picked;
+
+  if (unshown.length === 0) {
+    // All questions have been shown — start a new coverage cycle
     progress.cycleCount++;
+    progress.shownIndices = [];
     unshown = [...allIndices];
     saveBankProgress(progress);
     showToast(`🎉 Full cycle complete! Starting fresh — cycle ${progress.cycleCount + 1}`);
+    picked = order === 'sequential'
+      ? unshown.sort((a, b) => a - b).slice(0, n)
+      : shuffle(unshown).slice(0, n);
+  } else if (unshown.length < n) {
+    // Partial exhaustion: not enough unshown questions for a full session.
+    // Only use the remaining unshown questions — do NOT erase history or fill with seen questions.
+    // This preserves the user's full coverage progress.
+    showToast(`Only ${unshown.length} unseen question${unshown.length > 1 ? 's' : ''} left — showing remaining question${unshown.length > 1 ? 's' : ''}`);
+    picked = order === 'sequential'
+      ? unshown.sort((a, b) => a - b).slice(0, unshown.length)
+      : shuffle(unshown).slice(0, unshown.length);
+  } else {
+    // Sequential: pick next N questions in original bank order (no shuffle)
+    // Random: shuffle then pick N for fair random coverage
+    picked = order === 'sequential'
+      ? unshown.sort((a, b) => a - b).slice(0, n)
+      : shuffle(unshown).slice(0, n);
   }
 
-  // Sequential: pick next N questions in original bank order (no shuffle)
-  // Random: shuffle then pick N for fair random coverage
-  const picked = order === 'sequential'
-    ? unshown.sort((a, b) => a - b).slice(0, n)
-    : shuffle(unshown).slice(0, n);
-
-  // Update shown indices
+  // Update shown indices — use Set for dedup to handle edge cases
   progress.shownIndices = [...new Set([...progress.shownIndices, ...picked])];
   progress.totalSessions++;
   saveBankProgress(progress);
@@ -2027,6 +2040,9 @@ function updateNavStats() {
 
 /* ─── SUBMIT ─────────────────────────────────────────────────── */
 function attemptSubmit() {
+  // Cancel any pending auto-submit from timer expiry to prevent double submission
+  if (submitTimeout) { clearTimeout(submitTimeout); submitTimeout = null; }
+
   if (state.mode === 'learning') { confirmSubmit(); return; }
   const unanswered = SESSION_QUESTIONS.length - Object.keys(state.answers).length;
   if (unanswered > 0) {
@@ -2038,14 +2054,16 @@ function attemptSubmit() {
 }
 function closeModal() { document.getElementById('submit-modal').classList.remove('open'); }
 function confirmSubmit() {
+  // Guard against double submission (race condition: timer expiry + user click)
+  if (state.submitted) return;
+  state.submitted = true;  // Set flag FIRST to close the re-entry window immediately
   closeModal();
   stopTimer();
-  state.submitted = true;
   saveTrackerData();
-  
+
   // Clear saved progress — session is done, no restore needed
   clearProgress();
-  
+
   buildResults();
   showScreen('result-screen');
 }
@@ -2180,6 +2198,15 @@ function toggleTheme() {
   const html = document.documentElement;
   const newTheme = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
   html.setAttribute('data-theme', newTheme);
+
+  // Remove FOUC-prevention inline styles so the CSS-variable rules on body take over.
+  document.body.style.background = '';
+  document.body.style.color = '';
+
+  // Keep the browser chrome (address bar / status bar) in sync.
+  const themeMeta = document.querySelector('meta[name="theme-color"]');
+  if (themeMeta) themeMeta.content = newTheme === 'light' ? '#f3f0eb' : '#0d1117';
+
   localStorage.setItem('quiz-theme', newTheme);
   updateThemeIcon();
 }
@@ -2663,6 +2690,47 @@ checkSavedProgress();
   };
 
   /* ══════════════════════════════════════════
+     CLEANUP — remove tracker entries older than 30 days
+     ══════════════════════════════════════════ */
+  var TRACKER_MAX_AGE = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
+
+  function cleanExpiredTrackerData() {
+    try {
+      var now = Date.now();
+      var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
+      var changed = false;
+      var remainingKeys = [];
+
+      keys.forEach(function(uid) {
+        var raw = localStorage.getItem(getStorageKey(uid));
+        if (raw) {
+          try {
+            var data = JSON.parse(raw);
+            if (data.timestamp && (now - data.timestamp) > TRACKER_MAX_AGE) {
+              // Entry is older than 30 days — remove it
+              localStorage.removeItem(getStorageKey(uid));
+              changed = true;
+            } else {
+              remainingKeys.push(uid);
+            }
+          } catch (e) {
+            // Invalid JSON — remove it
+            localStorage.removeItem(getStorageKey(uid));
+            changed = true;
+          }
+        } else {
+          // Key listed but data missing — clean up the reference
+          changed = true;
+        }
+      });
+
+      if (changed) {
+        localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(remainingKeys));
+      }
+    } catch (e) { /* silent */ }
+  }
+
+  /* ══════════════════════════════════════════
      READ — fetch tracker entries
      ══════════════════════════════════════════ */
   function getAllTrackerData() {
@@ -3009,6 +3077,7 @@ checkSavedProgress();
   };
 
   /* ── Init badge on load ── */
+  cleanExpiredTrackerData();
   updateDashboardBadge();
 
   /* ═══════════════════════════════════════════════════════════
