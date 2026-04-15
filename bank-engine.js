@@ -969,7 +969,6 @@ input[type=radio]:checked + .option-label .option-key { background: var(--accent
   .dash-stat { padding: 0.6rem; }
   .dash-stat .ds-val { font-size: 1.2rem; }
   .dash-body { padding: 0.75rem 1rem; }
-  .bank-stats-row { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 640px) {
@@ -1647,47 +1646,105 @@ function updateStartScreenStats() {
   const bankSize = QUESTION_BANK.length;
   const covered  = progress.shownIndices.length;
   const pct      = bankSize > 0 ? Math.round(covered / bankSize * 100) : 0;
+  const remaining = bankSize - covered;
 
   document.getElementById('stat-covered').textContent  = covered;
   document.getElementById('stat-total').textContent    = bankSize;
   document.getElementById('stat-sessions').textContent = progress.totalSessions;
   document.getElementById('coverage-fill').style.width = pct + '%';
   document.getElementById('coverage-pct').textContent  = pct + '%';
+
+  // Cap the question count input to remaining questions
+  const inp = document.getElementById('q-count-input');
+  const currentVal = parseInt(inp.value) || selectedCount || 20;
+  const maxAllowed = Math.max(1, remaining > 0 ? remaining : bankSize);
+  inp.max = maxAllowed;
+  inp.placeholder = maxAllowed;
+  
+  // If current value exceeds remaining, cap it
+  if (currentVal > maxAllowed) {
+    inp.value = maxAllowed;
+    selectedCount = maxAllowed;
+  }
+  
+  // Update the +5 button behavior when at max
+  const plusBtn = inp.parentElement.querySelector('.time-adj-btn:last-child');
+  if (plusBtn) {
+    plusBtn.textContent = currentVal >= maxAllowed ? 'max' : '+5';
+    plusBtn.disabled = currentVal >= maxAllowed;
+    plusBtn.style.opacity = currentVal >= maxAllowed ? '0.4' : '';
+  }
 }
 
 function adjustCount(delta) {
   const inp = document.getElementById('q-count-input');
   const bankSize = QUESTION_BANK.length;
+  const progress = getBankProgress();
+  const remaining = Math.max(1, bankSize - progress.shownIndices.length);
   const cur = parseInt(inp.value) || selectedCount || 20;
-  const newVal = Math.max(1, Math.min(bankSize, cur + delta));
+  const newVal = Math.max(1, Math.min(remaining, cur + delta));
   inp.value = newVal;
   selectedCount = newVal;
   autoSetTime(newVal);
-  
+
+  // Update +5 button state
+  const plusBtn = inp.parentElement.querySelector('.time-adj-btn:last-child');
+  if (plusBtn) {
+    plusBtn.textContent = newVal >= remaining ? 'max' : '+5';
+    plusBtn.disabled = newVal >= remaining;
+    plusBtn.style.opacity = newVal >= remaining ? '0.4' : '';
+  }
+
   // Only clear saved progress when user actively changes the count (not during init)
   if (uiReady) clearProgress();
 }
 
 function setCount(n) {
   const bankSize = QUESTION_BANK.length;
-  if (n === -1) n = bankSize; // "All"
-  n = Math.max(1, Math.min(n, bankSize));
+  const progress = getBankProgress();
+  const remaining = Math.max(1, bankSize - progress.shownIndices.length);
+  
+  if (n === -1) n = remaining; // "All" = all remaining
+  n = Math.max(1, Math.min(n, remaining));
   selectedCount = n;
 
   document.getElementById('q-count-input').value = n;
   autoSetTime(n);
-  
+
+  // Update +5 button state
+  const inp = document.getElementById('q-count-input');
+  const plusBtn = inp.parentElement.querySelector('.time-adj-btn:last-child');
+  if (plusBtn) {
+    plusBtn.textContent = n >= remaining ? 'max' : '+5';
+    plusBtn.disabled = n >= remaining;
+    plusBtn.style.opacity = n >= remaining ? '0.4' : '';
+  }
+
   // Only clear saved progress when user actively changes the count (not during init)
   if (uiReady) clearProgress();
 }
 
 function onCustomCount(val) {
   const bankSize = QUESTION_BANK.length;
-  let n = parseInt(val) || 1;
-  n = Math.max(1, Math.min(n, bankSize));
-  selectedCount = n;
-  autoSetTime(n);
+  const progress = getBankProgress();
+  const remaining = Math.max(1, bankSize - progress.shownIndices.length);
   
+  let n = parseInt(val) || 1;
+  n = Math.max(1, Math.min(n, remaining));
+  selectedCount = n;
+  
+  const inp = document.getElementById('q-count-input');
+  inp.value = n;
+  autoSetTime(n);
+
+  // Update +5 button state
+  const plusBtn = inp.parentElement.querySelector('.time-adj-btn:last-child');
+  if (plusBtn) {
+    plusBtn.textContent = n >= remaining ? 'max' : '+5';
+    plusBtn.disabled = n >= remaining;
+    plusBtn.style.opacity = n >= remaining ? '0.4' : '';
+  }
+
   // Only clear saved progress when user actively changes the count (not during init)
   if (uiReady) clearProgress();
 }
@@ -1767,13 +1824,16 @@ function initUI() {
   }
 
   const bankSize = QUESTION_BANK.length;
+  const progress = getBankProgress();
+  const remaining = Math.max(1, bankSize - progress.shownIndices.length);
   const capCount = document.getElementById('q-count-input');
-  
-  // Set max to total bank size
-  capCount.max = bankSize;
-  
+
+  // Set max to remaining questions (or bank size if all covered)
+  capCount.max = remaining;
+  capCount.placeholder = remaining;
+
   // Default count
-  const defaultCount = Math.min(20, bankSize);
+  const defaultCount = Math.min(20, remaining);
   adjustCount(0); // Initialize with default value
 
   updateStartScreenStats();
@@ -1792,7 +1852,18 @@ function startQuiz() {
   const mode = document.querySelector('input[name="quiz-mode"]:checked').value;
   const order = document.querySelector('input[name="quiz-order"]:checked').value;
   const timeMins = parseInt(document.getElementById('time-input').value) || 30;
-  const count = selectedCount;
+  let count = selectedCount;
+
+  // Validate count against remaining questions
+  const bankSize = QUESTION_BANK.length;
+  const progress = getBankProgress();
+  const remaining = Math.max(1, bankSize - progress.shownIndices.length);
+  
+  if (count > remaining) {
+    count = remaining;
+    selectedCount = remaining;
+    showToast(`Limited to ${remaining} remaining question${remaining > 1 ? 's' : ''}`);
+  }
 
   // Clear any existing saved progress before starting a new session
   clearProgress();
