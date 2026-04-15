@@ -47,6 +47,217 @@ FAVICON_SVG = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <rect x="32" y="44" width="36" height="12" rx="2" fill="#f0a500"/>
 </svg>'''
 
+def generate_sw_js(project_name, all_file_paths):
+    """
+    Generate a fully functional service worker with comprehensive precaching.
+    
+    Args:
+        project_name: Name of the project for cache naming
+        all_file_paths: List of all relative file paths to precache
+    """
+    # Generate cache version hash from project name
+    import hashlib
+    cache_hash = hashlib.md5(project_name.encode()).hexdigest()[:10]
+    cache_name_prefix = project_name.lower().replace(' ', '-')
+    
+    # Build the precache paths array
+    paths_json = json.dumps(all_file_paths, indent=2)
+    
+    sw_content = '''/* {name} — generated precache manifest for all quiz and hub pages.
+   CACHE_VERSION is content-hashed so new files activate automatically. */
+const CACHE_VERSION = '{hash}';
+const CACHE_NAME = '{prefix}-cache-' + CACHE_VERSION;
+
+const GOOGLE_FONT_CSS =
+  'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap';
+
+const HTML2PDF_CDN =
+  'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+
+var PRECACHE_REL_PATHS = {paths};
+'''.format(name=project_name, hash=cache_hash, prefix=cache_name_prefix, paths=paths_json)
+    
+    sw_content += r'''
+/* ── Build a full URL from scope + relative path ── */
+function hrefFromScope(scope, relPath) {
+  return new URL(relPath, scope).href;
+}
+
+function shouldStore(res) {
+  return res && (res.ok || res.type === 'opaque');
+}
+
+/* ── Precache Google Fonts (CSS + @font-face files) ── */
+function precacheGoogleFonts(cache) {
+  return fetch(GOOGLE_FONT_CSS, { mode: 'cors', credentials: 'omit' })
+    .then(function (res) {
+      if (!res.ok) return;
+      return cache.put(GOOGLE_FONT_CSS, res.clone()).then(function () {
+        return res.text();
+      });
+    })
+    .then(function (txt) {
+      if (!txt) return;
+      var re = /url\s*\(\s*([^)]+)\s*\)/g;
+      var m;
+      var jobs = [];
+      while ((m = re.exec(txt)) !== null) {
+        var raw = m[1].replace(/["']/g, '').trim();
+        if (!raw || raw.indexOf('data:') === 0) continue;
+        var fontUrl = new URL(raw, GOOGLE_FONT_CSS).href;
+        (function (u) {
+          jobs.push(
+            fetch(u, { mode: 'cors', credentials: 'omit' }).then(function (r) {
+              if (r.ok) return cache.put(u, r);
+            })
+          );
+        })(fontUrl);
+      }
+      return Promise.all(
+        jobs.map(function (j) {
+          return j.catch(function () {});
+        })
+      );
+    })
+    .catch(function () {});
+}
+
+/* ── Precache html2pdf.js CDN bundle for offline PDF export ── */
+function precacheHtml2Pdf(cache) {
+  return fetch(HTML2PDF_CDN, { mode: 'cors', credentials: 'omit' })
+    .then(function (res) {
+      if (res.ok) return cache.put(HTML2PDF_CDN, res);
+    })
+    .catch(function () {});
+}
+
+/* ══════════════════════════════════════════════════════════════
+   INSTALL — precache everything
+   ══════════════════════════════════════════════════════════════ */
+self.addEventListener('install', function (event) {
+  event.waitUntil(
+    (async function () {
+      var scope = self.registration.scope;
+      var cache = await caches.open(CACHE_NAME);
+
+      /* All HTML + JS files, icons, manifest, and favicon */
+      await Promise.all(
+        PRECACHE_REL_PATHS.map(function (rel) {
+          var u = hrefFromScope(scope, rel);
+          return cache.add(u).catch(function () {});
+        })
+      );
+
+      /* Cross-origin CDN resources */
+      await precacheGoogleFonts(cache);
+      await precacheHtml2Pdf(cache);
+
+      await self.skipWaiting();
+    })()
+  );
+});
+
+/* ══════════════════════════════════════════════════════════════
+   ACTIVATE — clean old caches, claim clients immediately
+   ══════════════════════════════════════════════════════════════ */
+self.addEventListener('activate', function (event) {
+  event.waitUntil(
+    (async function () {
+      var keys = await caches.keys();
+      await Promise.all(
+        keys.map(function (k) {
+          return k !== CACHE_NAME ? caches.delete(k) : Promise.resolve();
+        })
+      );
+      await self.clients.claim();
+    })()
+  );
+});
+
+/* ══════════════════════════════════════════════════════════════
+   FETCH — routing strategy
+   ══════════════════════════════════════════════════════════════ */
+
+/** Navigation requests (HTML pages): network-first with cache fallback + hub fallback. */
+function handleNavigate(event, request) {
+  return (async function () {
+    var cache = await caches.open(CACHE_NAME);
+    try {
+      var res = await fetch(request);
+      if (res && res.ok) {
+        try {
+          await cache.put(request, res.clone());
+        } catch (_) {}
+      }
+      return res;
+    } catch (err) {
+      /* Offline: try exact match first */
+      var cached = await cache.match(request);
+      if (cached) return cached;
+
+      /* Try matching without query/hash (some browsers append them) */
+      var cleanUrl = request.url.split('?')[0].split('#')[0];
+      cached = await cache.match(cleanUrl);
+      if (cached) return cached;
+
+      /* Last resort: serve the main hub page */
+      var fb = await cache.match(hrefFromScope(self.registration.scope, 'index.html'));
+      if (fb) return fb;
+      throw err;
+    }
+  })();
+}
+
+/** Assets & cross-origin: cache-first, then network (populates cache on miss). */
+function handleAsset(event, request) {
+  return (async function () {
+    var cache = await caches.open(CACHE_NAME);
+    var cached = await cache.match(request);
+    if (cached) return cached;
+    try {
+      var res = await fetch(request);
+      if (shouldStore(res)) {
+        try {
+          await cache.put(request, res.clone());
+        } catch (_) {}
+      }
+      return res;
+    } catch (err) {
+      /* Offline miss for asset — try matching without query string */
+      var cleanUrl = request.url.split('?')[0].split('#')[0];
+      var cachedClean = await cache.match(cleanUrl);
+      if (cachedClean) return cachedClean;
+      throw err;
+    }
+  })();
+}
+
+/** Decide whether to use network-first (HTML) or cache-first (everything else). */
+function shouldNetworkFirst(req) {
+  if (req.mode === 'navigate') return true;
+  try {
+    var u = new URL(req.url);
+    if (u.origin !== self.location.origin) return false;
+    var p = u.pathname;
+    return p.endsWith('manifest.webmanifest') || p.endsWith('favicon.svg');
+  } catch (e) {
+    return false;
+  }
+}
+
+self.addEventListener('fetch', function (event) {
+  if (event.request.method !== 'GET') return;
+  var req = event.request;
+  if (shouldNetworkFirst(req)) {
+    event.respondWith(handleNavigate(event, req));
+    return;
+  }
+  event.respondWith(handleAsset(event, req));
+});
+'''
+    
+    return sw_content
+
 SW_JS = read_file('sw.js')
 INDEX_ENGINE_JS = read_file('index-engine.js')
 QUIZ_ENGINE_JS = read_file('quiz-engine.js')
@@ -559,6 +770,89 @@ def build_project_zip(config):
     """
     buf = io.BytesIO()
     project_name = config.get('project_name', 'MyQuiz')
+    
+    # Collect all file paths for service worker precaching
+    all_file_paths = [
+        'index-engine.js',
+        'quiz-engine.js',
+        'bank-engine.js',
+        'favicon.svg',
+        'manifest.webmanifest'
+    ]
+    
+    # Add icon files
+    all_file_paths.extend([
+        'icon-48.png', 'icon-72.png', 'icon-96.png',
+        'icon-144.png', 'icon-192.png', 'icon-512.png'
+    ])
+    
+    # Add quiz-engine-test.html if it exists
+    if QUIZ_ENGINE_TEST_HTML:
+        all_file_paths.append('quiz-engine-test.html')
+    
+    # Track all folder paths for root index
+    all_folder_paths = []
+
+    def process_folders_for_paths(folders, current_path=''):
+        """Collect all file paths from folder structure."""
+        for folder in folders:
+            folder_name = folder['name']
+            folder_path = f"{current_path}/{folder_name}" if current_path else folder_name
+            all_folder_paths.append({
+                'path': folder_path,
+                'folder': folder
+            })
+            
+            # Add folder index.html
+            all_file_paths.append(f"{folder_path}/index.html")
+            
+            # Add quiz files from this folder
+            for quiz in folder.get('quizzes', []):
+                quiz_url = quiz.get('url', '')
+                if quiz_url and not quiz_url.startswith('http'):
+                    full_path = f"{folder_path}/{quiz_url}"
+                    all_file_paths.append(full_path)
+            
+            # Process subfolders recursively
+            if 'subfolders' in folder and folder['subfolders']:
+                process_folders_for_paths(folder['subfolders'], folder_path)
+
+    # Process all folders to collect paths
+    process_folders_for_paths(config.get('folders', []))
+    
+    # Add root index.html
+    all_file_paths.insert(0, 'index.html')
+    
+    # Add dropped files to paths
+    dropped_files = config.get('dropped_files', {})
+    for filename in dropped_files.keys():
+        # Check if this file belongs to any folder
+        placed = False
+        for folder_info in all_folder_paths:
+            folder = folder_info['folder']
+            folder_path = folder_info['path']
+            folder_quizzes = folder.get('quizzes', [])
+            
+            for quiz in folder_quizzes:
+                if quiz.get('url') == filename or filename in quiz.get('url', ''):
+                    full_path = f'{folder_path}/{filename}'
+                    if full_path not in all_file_paths:
+                        all_file_paths.append(full_path)
+                    placed = True
+                    break
+            if placed:
+                break
+        
+        # If not placed in any folder, it goes to root
+        if not placed:
+            if filename not in all_file_paths:
+                all_file_paths.append(filename)
+    
+    # Sort paths for consistency
+    all_file_paths.sort()
+    
+    # Generate service worker with all file paths
+    sw_js_content = generate_sw_js(project_name, all_file_paths)
 
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
 
@@ -569,7 +863,7 @@ def build_project_zip(config):
 
         # --- Static assets ---
         zf.writestr('favicon.svg', FAVICON_SVG)
-        zf.writestr('sw.js', SW_JS)
+        zf.writestr('sw.js', sw_js_content)  # Use dynamically generated sw.js
         zf.writestr('manifest.webmanifest', MANIFEST_JSON(project_name))
 
         # --- Icon files (PNG icons for PWA) ---
@@ -685,17 +979,17 @@ def build_project_zip(config):
         # --- Include dropped quiz/bank files ---
         dropped_files = config.get('dropped_files', {})
         topbar_title = config.get('topbar_title', project_name)
-        
+
         for filename, file_content in dropped_files.items():
             # Try to determine which folder this file belongs to
             # Check if file is referenced in any folder's quizzes
             placed = False
-            
+
             for folder_info in all_folder_paths:
                 folder = folder_info['folder']
                 folder_path = folder_info['path']
                 folder_quizzes = folder.get('quizzes', [])
-                
+
                 # Check if any quiz in this folder references this file
                 for quiz in folder_quizzes:
                     if quiz.get('url') == filename or filename in quiz.get('url', ''):
@@ -707,18 +1001,27 @@ def build_project_zip(config):
                             f'<title>{topbar_title} - {quiz.get("title", filename)}</title>',
                             file_content
                         )
-                        
+
                         # Place file in this folder
-                        zf.writestr(f'{folder_path}/{filename}', modified_content)
+                        full_path = f'{folder_path}/{filename}'
+                        zf.writestr(full_path, modified_content)
+                        
+                        # Add to precache paths if not already there
+                        if full_path not in all_file_paths:
+                            all_file_paths.append(full_path)
+                        
                         placed = True
                         break
-                
+
                 if placed:
                     break
-            
+
             # If not placed in any folder, put in root
             if not placed:
                 zf.writestr(filename, file_content)
+                # Add to precache paths if not already there
+                if filename not in all_file_paths:
+                    all_file_paths.append(filename)
         
         # --- Scripts folder (for asset synchronization) ---
         if SYNC_SCRIPT:
