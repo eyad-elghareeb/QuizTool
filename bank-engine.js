@@ -2278,6 +2278,18 @@ function confirmResetAction() {
   state.flagged = {};
   state.elapsed = 0;
 
+  // Decrement session counter and remove shown indices so reset doesn't count toward bank progress
+  const progress = getBankProgress();
+  if (progress.totalSessions > 0) {
+    progress.totalSessions--;
+  }
+  // Remove the current session's questions from shown indices
+  if (SESSION_QUESTION_INDICES && SESSION_QUESTION_INDICES.length > 0) {
+    const sessionSet = new Set(SESSION_QUESTION_INDICES);
+    progress.shownIndices = progress.shownIndices.filter(i => !sessionSet.has(i));
+  }
+  saveBankProgress(progress);
+
   // Clear saved progress when manually resetting
   clearProgress();
 
