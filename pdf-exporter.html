@@ -19,6 +19,8 @@
   --radius:     12px;
   --shadow:     0 4px 24px rgba(0,0,0,0.4);
   --transition: 0.2s ease;
+  --wrong:      #da3633;
+  --success:    #2ea043;
 }
 [data-theme="light"] {
   --bg:         #f3f0eb;
@@ -85,6 +87,41 @@ body {
   width: 100%;
 }
 
+/* ── Input Mode Tabs ── */
+.mode-tabs {
+  display: flex;
+  gap: 0;
+  background: var(--surface2);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--border);
+}
+.mode-tab {
+  flex: 1;
+  padding: 0.7rem 1rem;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+.mode-tab:hover { color: var(--text); }
+.mode-tab.active {
+  background: var(--accent);
+  color: #000;
+  box-shadow: 0 2px 8px rgba(240,165,0,0.3);
+}
+
+/* ── Upload Card ── */
 .upload-card {
   background: var(--surface);
   border: 2px dashed var(--border);
@@ -104,6 +141,125 @@ body {
   display: block;
 }
 
+/* ── URL Input Section ── */
+.url-section {
+  display: none;
+}
+.url-input-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: stretch;
+}
+.url-input-wrapper {
+  flex: 1;
+  position: relative;
+}
+.url-input-wrapper .url-prefix {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 1rem;
+  pointer-events: none;
+}
+.url-input {
+  width: 100%;
+  padding: 0.85rem 1rem 0.85rem 2.5rem;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.95rem;
+  transition: all var(--transition);
+  outline: none;
+}
+.url-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+.url-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+.url-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.url-examples {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--surface2);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+.url-examples summary {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-weight: 500;
+  user-select: none;
+}
+.url-examples summary:hover { color: var(--accent); }
+.url-examples ul {
+  margin-top: 0.5rem;
+  padding-left: 1rem;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+.url-examples li { margin-bottom: 0.3rem; }
+.url-examples code {
+  background: var(--surface);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: var(--accent);
+  word-break: break-all;
+}
+
+.url-status {
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: none;
+}
+.url-status.loading {
+  display: block;
+  background: var(--accent-dim);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+.url-status.success {
+  display: block;
+  background: rgba(46,160,67,0.1);
+  color: var(--success);
+  border: 1px solid var(--success);
+}
+.url-status.error {
+  display: block;
+  background: rgba(218,54,51,0.1);
+  color: var(--wrong);
+  border: 1px solid var(--wrong);
+}
+
+.cors-note {
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--surface2);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.cors-note .note-icon { font-size: 1rem; flex-shrink: 0; margin-top: 0.1rem; }
+
 .controls {
   margin: 2rem 0;
   display: flex;
@@ -121,12 +277,24 @@ body {
   transition: all var(--transition);
   cursor: pointer;
   border: 1px solid transparent;
+  font-family: 'Outfit', sans-serif;
 }
 .btn-primary {
   background: var(--accent);
   color: #000;
 }
 .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+.btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+.btn-secondary {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
 
 .toggle-wrap {
   display: flex;
@@ -394,7 +562,6 @@ body {
   #print-area:not(.textbook-layout) .quiz-header {
     page-break-after: always;
   }
-  /* Styled output print tweaks */
   #print-area.styled-output .question-item {
     box-shadow: none;
     break-inside: avoid;
@@ -440,6 +607,51 @@ body {
 }
 .status-msg.error { color: var(--wrong, #da3633); }
 
+/* ── Source Badge ── */
+.source-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+.source-badge.url-source {
+  background: rgba(46,160,67,0.12);
+  color: var(--success);
+  border: 1px solid rgba(46,160,67,0.3);
+}
+.source-badge.file-source {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border: 1px solid rgba(240,165,0,0.3);
+}
+
+/* ── Spinner animation ── */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--accent-dim);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  vertical-align: middle;
+  margin-right: 0.4rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .url-input-row { flex-direction: column; }
+  .mode-tab { font-size: 0.82rem; padding: 0.6rem 0.5rem; }
+  .controls { gap: 0.6rem; }
+}
 </style>
 </head>
 <body>
@@ -447,17 +659,63 @@ body {
   <div class="topbar no-print">
     <div class="topbar-title">PDF Exporter</div>
     <div style="display:flex; gap: 0.5rem;">
-      <a href="index.html" class="icon-btn" title="Back to Hub">🏠</a>
-      <button class="icon-btn" onclick="toggleTheme()" id="theme-toggle">☀</button>
+      <a href="index.html" class="icon-btn" title="Back to Hub">&#x1F3E0;</a>
+      <button class="icon-btn" onclick="toggleTheme()" id="theme-toggle">&#x2600;</button>
     </div>
   </div>
 
   <div class="container no-print">
-    <div class="upload-card" id="drop-zone" onclick="document.getElementById('file-input').click()">
-      <span class="upload-icon">📄</span>
-      <h2>Upload Quiz HTML</h2>
-      <p style="color: var(--text-muted); margin-top: 0.5rem;">Drag and drop your exported quiz file here, or click to browse.</p>
-      <input type="file" id="file-input" hidden accept=".html">
+    <!-- Mode Tabs: File Upload vs URL -->
+    <div class="mode-tabs">
+      <button class="mode-tab active" data-mode="file" onclick="switchMode('file')">
+        &#x1F4C4; Upload File
+      </button>
+      <button class="mode-tab" data-mode="url" onclick="switchMode('url')">
+        &#x1F517; From URL
+      </button>
+    </div>
+
+    <!-- File Upload Section -->
+    <div id="file-section">
+      <div class="upload-card" id="drop-zone" onclick="document.getElementById('file-input').click()">
+        <span class="upload-icon">&#x1F4C4;</span>
+        <h2>Upload Quiz HTML</h2>
+        <p style="color: var(--text-muted); margin-top: 0.5rem;">Drag and drop your exported quiz file here, or click to browse.</p>
+        <input type="file" id="file-input" hidden accept=".html">
+      </div>
+    </div>
+
+    <!-- URL Input Section -->
+    <div id="url-section" class="url-section">
+      <div class="url-input-row">
+        <div class="url-input-wrapper">
+          <span class="url-prefix">&#x1F517;</span>
+          <input type="url" class="url-input" id="quiz-url"
+                 placeholder="https://example.github.io/quiz/gyn/ai/l1-anatomy.html"
+                 autocomplete="off" spellcheck="false">
+        </div>
+        <button class="btn btn-primary" id="load-url-btn" onclick="loadFromUrl()">
+          Load Quiz
+        </button>
+      </div>
+
+      <details class="url-examples">
+        <summary>&#x1F4A1; Supported URL formats &amp; tips</summary>
+        <ul>
+          <li>Direct link to any quiz page: <code>https://site.github.io/repo/gyn/ai/l1-anatomy.html</code></li>
+          <li>Direct link to any question bank: <code>https://site.github.io/repo/gyn/mans/mans-mcq-bank.html</code></li>
+          <li>Works with GitHub Pages, Netlify, Vercel, or any static host</li>
+          <li>The page must contain <code>QUIZ_CONFIG</code>/<code>QUESTIONS</code> or <code>BANK_CONFIG</code>/<code>QUESTION_BANK</code> variables</li>
+          <li>For cross-origin URLs, a CORS proxy is used automatically as fallback</li>
+        </ul>
+      </details>
+
+      <div class="url-status" id="url-status"></div>
+
+      <div class="cors-note" id="cors-note" style="display: none;">
+        <span class="note-icon">&#x26A0;&#xFE0F;</span>
+        <span>Could not fetch directly due to CORS restrictions. Retrying via proxy&hellip; If this persists, download the quiz HTML file locally and use the Upload File tab instead.</span>
+      </div>
     </div>
 
     <div id="status" class="status-msg"></div>
@@ -473,9 +731,9 @@ body {
       </label>
       <label class="toggle-wrap">
         <input type="checkbox" id="styled-mode" onchange="updatePreview()">
-        <span>✨ Styled Output</span>
+        <span>&#x2728; Styled Output</span>
       </label>
-      <button class="btn btn-primary" onclick="window.print()">🖨️ Print to PDF</button>
+      <button class="btn btn-primary" onclick="window.print()">&#x1F5A8;&#xFE0F; Print to PDF</button>
     </div>
 
     <div id="preview-hint" style="text-align: center; margin-bottom: 1rem; color: var(--text-muted); display: none;">
@@ -483,7 +741,7 @@ body {
     </div>
 
     <div id="file-type-indicator" style="text-align: center; margin-bottom: 0.5rem; color: var(--accent); font-weight: 600; display: none;">
-      📄 Quiz File Detected
+      &#x1F4C4; Quiz File Detected
     </div>
   </div>
 
@@ -497,7 +755,8 @@ body {
 let quizData = {
   config: {},
   questions: [],
-  fileType: 'quiz' // 'quiz' or 'bank'
+  fileType: 'quiz', // 'quiz' or 'bank'
+  source: 'file'    // 'file' or 'url'
 };
 
 const dropZone = document.getElementById('drop-zone');
@@ -507,8 +766,37 @@ const previewControls = document.getElementById('preview-controls');
 const printArea = document.getElementById('print-area');
 const previewHint = document.getElementById('preview-hint');
 const fileTypeIndicator = document.getElementById('file-type-indicator');
+const urlInput = document.getElementById('quiz-url');
+const urlStatus = document.getElementById('url-status');
+const loadUrlBtn = document.getElementById('load-url-btn');
+const corsNote = document.getElementById('cors-note');
 
-// Drag and drop handlers
+/* ── CORS Proxies (fallback chain) ── */
+const CORS_PROXIES = [
+  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  url => `https://corsproxy.io/?${encodeURIComponent(url)}`
+];
+
+/* ════════════════════════════════════════════════════════
+   MODE SWITCHING
+   ════════════════════════════════════════════════════════ */
+function switchMode(mode) {
+  document.querySelectorAll('.mode-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.mode === mode);
+  });
+  document.getElementById('file-section').style.display = mode === 'file' ? 'block' : 'none';
+  document.getElementById('url-section').style.display = mode === 'url' ? 'block' : 'none';
+
+  // Clear status when switching
+  status.textContent = '';
+  urlStatus.style.display = 'none';
+  urlStatus.className = 'url-status';
+  corsNote.style.display = 'none';
+}
+
+/* ════════════════════════════════════════════════════════
+   FILE UPLOAD (unchanged)
+   ════════════════════════════════════════════════════════ */
 dropZone.addEventListener('dragover', (e) => {
   e.preventDefault();
   dropZone.classList.add('dragover');
@@ -538,42 +826,9 @@ function handleFile(file) {
   reader.onload = (e) => {
     try {
       const content = e.target.result;
-
-      // Try to detect bank file format first
-      const bankConfigMatch = content.match(/const BANK_CONFIG\s*=\s*({[\s\S]*?});/);
-      const questionBankMatch = content.match(/const QUESTION_BANK\s*=\s*(\[[\s\S]*?\]);/);
-      
-      // Try quiz file format
-      const quizConfigMatch = content.match(/const QUIZ_CONFIG\s*=\s*({[\s\S]*?});/);
-      const questionsMatch = content.match(/const QUESTIONS\s*=\s*(\[[\s\S]*?\]);/);
-
-      if (bankConfigMatch && questionBankMatch) {
-        // Bank file format
-        quizData.fileType = 'bank';
-        quizData.config = new Function('return ' + bankConfigMatch[1])();
-        quizData.questions = new Function('return ' + questionBankMatch[1])();
-        
-        fileTypeIndicator.textContent = '🏦 Bank File Detected';
-        fileTypeIndicator.style.display = 'block';
-        
-        showStatus(`Successfully loaded bank "${quizData.config.title}" with ${quizData.questions.length} questions.`, '');
-      } else if (quizConfigMatch && questionsMatch) {
-        // Quiz file format
-        quizData.fileType = 'quiz';
-        quizData.config = new Function('return ' + quizConfigMatch[1])();
-        quizData.questions = new Function('return ' + questionsMatch[1])();
-        
-        fileTypeIndicator.textContent = '📄 Quiz File Detected';
-        fileTypeIndicator.style.display = 'block';
-        
-        showStatus(`Successfully loaded quiz "${quizData.config.title}" with ${quizData.questions.length} questions.`, '');
-      } else {
-        throw new Error('Could not find quiz data in the uploaded file. Make sure it is a valid QuizTool quiz or bank export.');
-      }
-
-      previewControls.style.display = 'flex';
-      previewHint.style.display = 'block';
-      updatePreview();
+      parseQuizHTML(content);
+      quizData.source = 'file';
+      showLoadedState();
     } catch (err) {
       console.error(err);
       showStatus('Error: ' + err.message, 'error');
@@ -582,10 +837,170 @@ function handleFile(file) {
   reader.readAsText(file);
 }
 
+/* ════════════════════════════════════════════════════════
+   URL LOADING
+   ════════════════════════════════════════════════════════ */
+
+// Allow Enter key in URL input
+urlInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') loadFromUrl();
+});
+
+async function loadFromUrl() {
+  let url = urlInput.value.trim();
+
+  if (!url) {
+    setUrlStatus('Please enter a quiz URL.', 'error');
+    return;
+  }
+
+  // Add protocol if missing
+  if (!/^https?:\/\//i.test(url)) {
+    url = 'https://' + url;
+    urlInput.value = url;
+  }
+
+  // Basic URL validation
+  try { new URL(url); } catch {
+    setUrlStatus('Invalid URL format. Please enter a valid web address.', 'error');
+    return;
+  }
+
+  // Disable controls while loading
+  loadUrlBtn.disabled = true;
+  urlInput.disabled = true;
+  corsNote.style.display = 'none';
+
+  setUrlStatus('<span class="spinner"></span> Fetching quiz from URL...', 'loading');
+
+  try {
+    // Try direct fetch first
+    const content = await fetchWithFallback(url);
+    parseQuizHTML(content);
+    quizData.source = 'url';
+    setUrlStatus(`Successfully loaded "${quizData.config.title}" — ${quizData.questions.length} questions.`, 'success');
+    showLoadedState();
+  } catch (err) {
+    console.error('URL load error:', err);
+    let msg = err.message || 'Unknown error';
+
+    // Provide helpful error messages
+    if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('CORS')) {
+      msg = 'Could not fetch the quiz page. The site may block cross-origin requests. Try downloading the HTML file and using the Upload File tab.';
+    } else if (msg.includes('Could not find quiz data')) {
+      msg = 'The page was loaded but no quiz data was found. Make sure the URL points to a QuizTool quiz or bank page.';
+    }
+
+    setUrlStatus(msg, 'error');
+  } finally {
+    loadUrlBtn.disabled = false;
+    urlInput.disabled = false;
+  }
+}
+
+/**
+ * Fetch a URL with CORS proxy fallback.
+ * Tries direct fetch first, then falls back through proxy chain.
+ */
+async function fetchWithFallback(url) {
+  // 1. Try direct fetch
+  try {
+    const resp = await fetch(url, { mode: 'cors' });
+    if (resp.ok) return await resp.text();
+  } catch (e) {
+    console.warn('Direct fetch failed, trying CORS proxies...', e);
+  }
+
+  // Show CORS note
+  corsNote.style.display = 'flex';
+  setUrlStatus('<span class="spinner"></span> Direct fetch blocked — retrying via proxy...', 'loading');
+
+  // 2. Try each CORS proxy
+  for (let i = 0; i < CORS_PROXIES.length; i++) {
+    try {
+      const proxyUrl = CORS_PROXIES[i](url);
+      const resp = await fetch(proxyUrl);
+      if (resp.ok) {
+        const text = await resp.text();
+        // Validate that we got HTML, not an error page from the proxy
+        if (text.includes('QUIZ_CONFIG') || text.includes('BANK_CONFIG') ||
+            text.includes('QUESTIONS') || text.includes('QUESTION_BANK')) {
+          corsNote.style.display = 'none';
+          return text;
+        }
+      }
+    } catch (e) {
+      console.warn(`CORS proxy ${i + 1} failed:`, e);
+    }
+  }
+
+  throw new Error('Failed to fetch the quiz page. All methods were blocked by CORS. Please download the HTML file and use the Upload File tab.');
+}
+
+/* ════════════════════════════════════════════════════════
+   HTML PARSING (shared by file upload & URL loading)
+   ════════════════════════════════════════════════════════ */
+
+function parseQuizHTML(content) {
+  // Try to detect bank file format first
+  const bankConfigMatch = content.match(/const\s+BANK_CONFIG\s*=\s*({[\s\S]*?});/);
+  const questionBankMatch = content.match(/const\s+QUESTION_BANK\s*=\s*(\[[\s\S]*?\]);/);
+
+  // Try quiz file format
+  const quizConfigMatch = content.match(/const\s+QUIZ_CONFIG\s*=\s*({[\s\S]*?});/);
+  const questionsMatch = content.match(/const\s+QUESTIONS\s*=\s*(\[[\s\S]*?\]);/);
+
+  if (bankConfigMatch && questionBankMatch) {
+    quizData.fileType = 'bank';
+    quizData.config = new Function('return ' + bankConfigMatch[1])();
+    quizData.questions = new Function('return ' + questionBankMatch[1])();
+  } else if (quizConfigMatch && questionsMatch) {
+    quizData.fileType = 'quiz';
+    quizData.config = new Function('return ' + quizConfigMatch[1])();
+    quizData.questions = new Function('return ' + questionsMatch[1])();
+  } else {
+    throw new Error('Could not find quiz data. Make sure the page contains QUIZ_CONFIG/QUESTIONS or BANK_CONFIG/QUESTION_BANK.');
+  }
+
+  if (!quizData.questions || !quizData.questions.length) {
+    throw new Error('Quiz data was found but contains no questions.');
+  }
+}
+
+/* ════════════════════════════════════════════════════════
+   SHARED UI HELPERS
+   ════════════════════════════════════════════════════════ */
+
+function showLoadedState() {
+  const typeIcon = quizData.fileType === 'bank' ? '&#x1F3E6;' : '&#x1F4C4;';
+  const typeLabel = quizData.fileType === 'bank' ? 'Bank File' : 'Quiz File';
+  const sourceBadge = quizData.source === 'url'
+    ? '<span class="source-badge url-source">&#x1F517; URL</span>'
+    : '<span class="source-badge file-source">&#x1F4C1; File</span>';
+
+  fileTypeIndicator.innerHTML = `${typeIcon} ${typeLabel} Detected ${sourceBadge}`;
+  fileTypeIndicator.style.display = 'block';
+
+  showStatus(`Loaded "${quizData.config.title}" with ${quizData.questions.length} questions.`, '');
+
+  previewControls.style.display = 'flex';
+  previewHint.style.display = 'block';
+  updatePreview();
+}
+
 function showStatus(msg, type) {
   status.textContent = msg;
   status.className = 'status-msg ' + type;
 }
+
+function setUrlStatus(html, type) {
+  urlStatus.innerHTML = html;
+  urlStatus.className = 'url-status ' + type;
+}
+
+/* ════════════════════════════════════════════════════════
+   PREVIEW RENDERING (unchanged logic)
+   ════════════════════════════════════════════════════════ */
 
 function updatePreview() {
   const showAnswers = document.getElementById('show-answers').checked;
@@ -608,17 +1023,15 @@ function updatePreview() {
   let html = '';
 
   if (useStyled) {
-    // ── Styled Header ──
     html += `
       <div class="quiz-header">
         ${quizData.config.icon ? `<span class="header-icon">${quizData.config.icon}</span>` : ''}
         <h1>${quizData.config.title}</h1>
         <p>${quizData.config.description || ''}</p>
-        <div class="header-meta">${quizData.questions.length} Questions · ${quizData.fileType === 'bank' ? 'Question Bank' : 'Quiz'}</div>
+        <div class="header-meta">${quizData.questions.length} Questions &middot; ${quizData.fileType === 'bank' ? 'Question Bank' : 'Quiz'}</div>
       </div>
     `;
   } else {
-    // ── Plain Header ──
     html += `
       <div class="quiz-header">
         <h1>${quizData.config.title}</h1>
@@ -628,7 +1041,6 @@ function updatePreview() {
     `;
   }
 
-  // ── Questions ──
   quizData.questions.forEach((q, i) => {
     if (useStyled) {
       html += `
@@ -645,14 +1057,13 @@ function updatePreview() {
           </div>
           ${showAnswers ? `
             <div class="answer-key">
-              <strong>✓ Correct Answer: ${letters[q.correct]}. ${q.options[q.correct]}</strong>
+              <strong>&#x2713; Correct Answer: ${letters[q.correct]}. ${q.options[q.correct]}</strong>
               ${q.explanation ? `<div class="explanation-text">${q.explanation}</div>` : ''}
             </div>
           ` : ''}
         </div>
       `;
     } else {
-      // ── Plain Style ──
       html += `
         <div class="question-item">
           <div class="question-text">${i + 1}. ${q.question}</div>
@@ -677,6 +1088,10 @@ function updatePreview() {
   printArea.style.display = 'block';
 }
 
+/* ════════════════════════════════════════════════════════
+   THEME
+   ════════════════════════════════════════════════════════ */
+
 function toggleTheme() {
   const html = document.documentElement;
   const isDark = html.getAttribute('data-theme') === 'dark';
@@ -688,7 +1103,7 @@ function toggleTheme() {
 
 function updateThemeIcon() {
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-  document.getElementById('theme-toggle').textContent = isDark ? '☀' : '☾';
+  document.getElementById('theme-toggle').textContent = isDark ? '\u2600' : '\u263E';
 }
 
 // Init theme
@@ -696,6 +1111,18 @@ if (localStorage.getItem('quiz-theme')) {
   document.documentElement.setAttribute('data-theme', localStorage.getItem('quiz-theme'));
 }
 updateThemeIcon();
+
+/* ── Auto-detect URL from query parameter ── */
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const quizUrl = params.get('url') || params.get('quiz');
+  if (quizUrl) {
+    switchMode('url');
+    urlInput.value = quizUrl;
+    // Auto-load after a brief delay for the UI to settle
+    setTimeout(() => loadFromUrl(), 300);
+  }
+})();
 </script>
 </body>
 </html>
