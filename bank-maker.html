@@ -523,16 +523,18 @@ function showParseErrorContext(text, error) {
  */
 function cleanJSArrayInput(input) {
   let cleaned = input
-    .replace(/^\uFEFF/, '')                    // Remove BOM
-    .replace(/^\s*```(?:json|js|javascript)?\s*/i, '')  // Remove opening code fence
-    .replace(/\s*```\s*$/i, '')                // Remove closing code fence
-    .replace(/,\s*([\]\}])/g, '$1')           // Remove trailing commas
+    .replace(/^\uFEFF/, '')                              // Remove BOM
+    .replace(/^\s*```(?:json|js|javascript)?\s*/i, '')   // Remove opening code fence
+    .replace(/\s*```\s*$/i, '')                          // Remove closing code fence
+    .replace(/[\u201C\u201D\u00AB\u00BB]/g, '"')         // Normalise curly/angle double quotes
+    .replace(/[\u2018\u2019\u2032\u02BC]/g, "'")         // Normalise curly single quotes
+    .replace(/,(\s*[\]\}])/g, '$1')                      // Remove trailing commas
     .trim();
 
   // Ensure it starts with [ and ends with ]
   if (!cleaned.startsWith('[')) cleaned = '[' + cleaned;
   if (!cleaned.endsWith(']'))   cleaned = cleaned + ']';
-  
+
   return cleaned;
 }
 
@@ -554,10 +556,10 @@ function sanitizeForJSON(str) {
   result = result.replace(/\/\*[\s\S]*?\*\//g, '');
   
   // Remove single-line comments (but not inside strings)
-  result = result.replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|\/\/.*$/gm, '$1');
+  result = result.replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|\/\/[^\n]*/gm, (m, str) => str || '');
   
-  // Add quotes to unquoted object keys
-  result = result.replace(/([\{,])\s*([a-zA-Z_$][a-zA-Z_$0-9]*)\s*:\s*"/g, '$1"$2": "');
+  // Add quotes to unquoted object keys (works for ALL value types, not just strings)
+  result = result.replace(/([\{,]\s*)([a-zA-Z_$][a-zA-Z_$0-9]*)(\s*:)/g, '$1"$2"$3');
   
   // Convert single-quoted strings to double-quoted (including curly quotes)
   result = result.replace(/'((?:[^'\\]|\\.)*)'/g, '"$1"');
@@ -620,7 +622,7 @@ function sanitizeForJSON(str) {
   } while (result !== prevResult);
   
   // Remove trailing commas
-  result = result.replace(/,\s*([\]\}])/g, '$1');
+  result = result.replace(/,(\s*[\]\}])/g, '$1');
   
   // Remove semicolons at end
   result = result.replace(/;\s*$/, '');
@@ -629,68 +631,91 @@ function sanitizeForJSON(str) {
 }
 
 /**
- * State machine to properly escape control characters in JSON strings
- * Handles newlines, tabs, carriage returns, and other control chars
+ * State machine to properly escape control characters in JSON strings.
+ * Also handles unescaped internal double-quotes via look-ahead heuristic:
+ * a `"` that is NOT followed by a JSON structural character (, } ] : EOF)
+ * is treated as an internal unescaped quote and escaped as \".
  */
 function sanitizeStringsStateMachine(str) {
   let result = '';
   let i = 0;
   let inString = false;
-  let stringStartQuote = -1;
-  
+  let stringStartQuote = '';
+
   while (i < str.length) {
     const char = str[i];
-    
+
     if (!inString) {
-      // Outside of string - just copy
       if (char === '"' || char === "'") {
         inString = true;
         stringStartQuote = char;
-        result += '"'; // Always use double quotes in JSON
+        result += '"'; // Always use double quotes in output
       } else {
         result += char;
       }
     } else {
-      // Inside a string
       if (char === '\\') {
-        // Escape sequence
-        result += char;
+        // Escape sequence — consume the escape char and the next char together
         i++;
         if (i < str.length) {
-          result += str[i];
+          const escaped = str[i];
+          if (escaped === "'") {
+            // \' is not a valid JSON escape; emit the bare apostrophe
+            result += "'";
+          } else if (escaped === '\n' || escaped === '\r') {
+            // Escaped literal newline (line-continuation style) — drop it
+          } else {
+            result += '\\' + escaped;
+          }
         }
       } else if (char === stringStartQuote) {
-        // End of string
-        inString = false;
-        result += '"';
-        stringStartQuote = -1;
+        if (stringStartQuote === '"') {
+          // Look ahead (skipping spaces/tabs) to decide if this is a
+          // legitimate close-quote or an unescaped internal quote.
+          let j = i + 1;
+          while (j < str.length && (str[j] === ' ' || str[j] === '\t')) j++;
+          const peek = j < str.length ? str[j] : '';
+          const isClose = peek === '' ||
+                          peek === ',' || peek === '}' || peek === ']' ||
+                          peek === ':' || peek === '\n' || peek === '\r';
+          if (isClose) {
+            // Legitimate end of string
+            inString = false;
+            result += '"';
+            stringStartQuote = '';
+          } else {
+            // Unescaped internal double-quote — escape it
+            result += '\\"';
+          }
+        } else {
+          // Single-quoted string close — convert to double-quote
+          inString = false;
+          result += '"';
+          stringStartQuote = '';
+        }
+      } else if (char === '"' && stringStartQuote === "'") {
+        // Double-quote inside a single-quoted string — must escape for JSON
+        result += '\\"';
       } else if (char === '\n') {
-        // Newline - escape it
         result += '\\n';
       } else if (char === '\r') {
-        // Carriage return - escape it
         result += '\\r';
       } else if (char === '\t') {
-        // Tab - escape it
         result += '\\t';
       } else if (char === '\b') {
-        // Backspace - escape it
         result += '\\b';
       } else if (char === '\f') {
-        // Form feed - escape it
         result += '\\f';
       } else if (char.charCodeAt(0) < 0x20) {
-        // Other control characters - escape as unicode
         result += '\\u' + char.charCodeAt(0).toString(16).padStart(4, '0');
       } else {
-        // Normal character
         result += char;
       }
     }
-    
+
     i++;
   }
-  
+
   return result;
 }
 
