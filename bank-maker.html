@@ -559,25 +559,12 @@ function sanitizeForJSON(str) {
   // Add quotes to unquoted object keys
   result = result.replace(/([\{,])\s*([a-zA-Z_$][a-zA-Z_$0-9]*)\s*:\s*"/g, '$1"$2": "');
   
-  // Convert single-quoted strings to double-quoted
+  // Convert single-quoted strings to double-quoted (including curly quotes)
   result = result.replace(/'((?:[^'\\]|\\.)*)'/g, '"$1"');
-  
-  // Handle template literals
   result = result.replace(/`((?:[^`\\]|\\.)*)`/g, '"$1"');
   
-  // Escape control characters in strings (newlines, tabs, etc.)
-  // Must be done carefully to avoid double-escaping
-  result = result.replace(/"([^"\\]*(?:\\.[^"\\]*)*)"/g, function(match, content) {
-    // Only escape actual control characters, not word boundaries
-    let escaped = content
-      .replace(/\\/g, '\\\\')      // Escape backslashes first
-      .replace(/\n/g, '\\n')       // Escape newlines
-      .replace(/\r/g, '\\r')       // Escape carriage returns
-      .replace(/\t/g, '\\t');      // Escape tabs
-    // Note: Don't use /\b/g as it matches word boundaries, not backspace chars
-    // Actual backspace char is \x08, which we can handle if needed
-    return '"' + escaped + '"';
-  });
+  // Use a state machine to properly handle strings and escape control characters
+  result = sanitizeStringsStateMachine(result);
   
   // Fix unescaped double quotes - PASS 1: Merge adjacent broken strings
   let prevResult;
@@ -639,6 +626,72 @@ function sanitizeForJSON(str) {
   result = result.replace(/;\s*$/, '');
   
   return result.trim();
+}
+
+/**
+ * State machine to properly escape control characters in JSON strings
+ * Handles newlines, tabs, carriage returns, and other control chars
+ */
+function sanitizeStringsStateMachine(str) {
+  let result = '';
+  let i = 0;
+  let inString = false;
+  let stringStartQuote = -1;
+  
+  while (i < str.length) {
+    const char = str[i];
+    
+    if (!inString) {
+      // Outside of string - just copy
+      if (char === '"' || char === "'") {
+        inString = true;
+        stringStartQuote = char;
+        result += '"'; // Always use double quotes in JSON
+      } else {
+        result += char;
+      }
+    } else {
+      // Inside a string
+      if (char === '\\') {
+        // Escape sequence
+        result += char;
+        i++;
+        if (i < str.length) {
+          result += str[i];
+        }
+      } else if (char === stringStartQuote) {
+        // End of string
+        inString = false;
+        result += '"';
+        stringStartQuote = -1;
+      } else if (char === '\n') {
+        // Newline - escape it
+        result += '\\n';
+      } else if (char === '\r') {
+        // Carriage return - escape it
+        result += '\\r';
+      } else if (char === '\t') {
+        // Tab - escape it
+        result += '\\t';
+      } else if (char === '\b') {
+        // Backspace - escape it
+        result += '\\b';
+      } else if (char === '\f') {
+        // Form feed - escape it
+        result += '\\f';
+      } else if (char.charCodeAt(0) < 0x20) {
+        // Other control characters - escape as unicode
+        result += '\\u' + char.charCodeAt(0).toString(16).padStart(4, '0');
+      } else {
+        // Normal character
+        result += char;
+      }
+    }
+    
+    i++;
+  }
+  
+  return result;
 }
 
 /**
