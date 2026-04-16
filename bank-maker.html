@@ -540,81 +540,85 @@ function cleanJSArrayInput(input) {
  * Sanitize JS input for JSON.parse by fixing common issues
  */
 function sanitizeForJSON(str) {
+  // FIRST: Try to parse as-is - if it works, no sanitization needed!
+  try {
+    JSON.parse(str);
+    return str.trim();
+  } catch (e) {
+    // Continue with sanitization only if parse fails
+  }
+  
   let result = str;
   
-  // Remove multi-line comments first (before strings, so we don't accidentally keep comment chars)
+  // Remove multi-line comments first
   result = result.replace(/\/\*[\s\S]*?\*\//g, '');
   
-  // Remove single-line comments (careful: skip // inside strings)
+  // Remove single-line comments (but not inside strings)
   result = result.replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|\/\/.*$/gm, '$1');
   
   // Add quotes to unquoted object keys
-  result = result.replace(/([\{,])\s*([a-zA-Z_$][a-zA-Z_$0-9]*)\s*:/g, '$1"$2":');
+  result = result.replace(/([\{,])\s*([a-zA-Z_$][a-zA-Z_$0-9]*)\s*:\s*"/g, '$1"$2": "');
   
-  // Convert single-quoted strings to double-quoted (handles escaped quotes)
+  // Convert single-quoted strings to double-quoted
   result = result.replace(/'((?:[^'\\]|\\.)*)'/g, '"$1"');
   
-  // Handle template literals (convert to strings)
+  // Handle template literals
   result = result.replace(/`((?:[^`\\]|\\.)*)`/g, '"$1"');
   
-  // Fix unescaped double quotes by merging broken strings
-  // Pattern matches: "content1"text-between"content2" and merges to "content1text-betweencontent2"
-  // Process in a loop until no more changes
+  // Fix unescaped double quotes - PASS 1: Merge adjacent broken strings
   let prevResult;
-  let iterations = 0;
   do {
     prevResult = result;
     
-    // Pattern for value strings after colon: :"content1"text-between"content2"
-    result = result.replace(/:\s*("[^"]*"[^",:\]\}\{\[]+"[^"]*")/g, function(match, brokenStr) {
-      const firstQuote = brokenStr.indexOf('"');
-      const lastQuote = brokenStr.lastIndexOf('"');
-      
-      if (firstQuote === -1 || lastQuote === -1 || firstQuote === lastQuote) {
-        return match;
-      }
-      
-      const content = brokenStr.substring(firstQuote + 1, lastQuote);
-      const cleanContent = content.replace(/"/g, '');
-      
-      return ':"' + cleanContent + '"';
+    // For value strings after colon: :"text1"text2" -> :"text1text2"
+    result = result.replace(/(:\s*)"([^"]*)"([^",:\]\}\{\[]+)"/g, function(match, prefix, content1, content2) {
+      return prefix + '"' + content1 + content2 + '"';
     });
     
-    // Pattern for array elements after comma: ,"content1"text-between"content2", or ]
-    // Match broken string patterns within arrays
-    result = result.replace(/,\s*("[^"]*"[^",\]]+)"([^"]*)"(\s*[,\]])/g, function(match, part1, middle, end) {
-      const firstQuote = part1.indexOf('"');
-      const lastQuote = part1.lastIndexOf('"');
-      
-      if (firstQuote === -1 || lastQuote === -1 || firstQuote === lastQuote) {
-        return match;
-      }
-      
-      const content = part1.substring(firstQuote + 1, lastQuote);
-      const cleanContent = content.replace(/"/g, '');
-      
-      return ',"' + cleanContent + middle + '"' + end;
+    // For array elements after comma: ,"text1"text2" -> ,"text1text2"
+    result = result.replace(/(,\s*)"([^"]*)"([^",:\]\}\{\[]+)"/g, function(match, prefix, content1, content2) {
+      return prefix + '"' + content1 + content2 + '"';
     });
     
-    // Pattern for first array element after [: "content1"text-between"content2", or ]
-    result = result.replace(/\[\s*("[^"]*"[^",\]]+)"([^"]*)"(\s*[,\]])/g, function(match, part1, middle, end) {
-      const firstQuote = part1.indexOf('"');
-      const lastQuote = part1.lastIndexOf('"');
-      
-      if (firstQuote === -1 || lastQuote === -1 || firstQuote === lastQuote) {
-        return match;
-      }
-      
-      const content = part1.substring(firstQuote + 1, lastQuote);
-      const cleanContent = content.replace(/"/g, '');
-      
-      return '["' + cleanContent + middle + '"' + end;
+    // For first array element after [: ["text1"text2" -> ["text1text2"
+    result = result.replace(/(\[\s*)"([^"]*)"([^",:\]\}\{\[]+)"/g, function(match, prefix, content1, content2) {
+      return prefix + '"' + content1 + content2 + '"';
     });
-    
-    if (iterations++ > 20) break;
   } while (result !== prevResult);
   
-  // Remove trailing commas in arrays/objects
+  // After initial fixes, try parsing again
+  try {
+    JSON.parse(result);
+    return result.trim();
+  } catch (e) {
+    // Continue if still failing
+  }
+  
+  // PASS 2: More aggressive fix for strings with multiple internal quotes
+  // Pattern matches strings like "text1"text2"text3" and removes all interior quotes
+  do {
+    prevResult = result;
+    
+    // For value strings after colon
+    result = result.replace(/(:\s*)"([^"]*(?:"[^"]*)+)"/g, function(match, prefix, fullContent) {
+      const clean = fullContent.replace(/"/g, '');
+      return prefix + '"' + clean + '"';
+    });
+    
+    // For array elements after comma
+    result = result.replace(/(,\s*)"([^"]*(?:"[^"]*)+)"/g, function(match, prefix, fullContent) {
+      const clean = fullContent.replace(/"/g, '');
+      return prefix + '"' + clean + '"';
+    });
+    
+    // For first array element after [
+    result = result.replace(/(\[\s*)"([^"]*(?:"[^"]*)+)"/g, function(match, prefix, fullContent) {
+      const clean = fullContent.replace(/"/g, '');
+      return prefix + '"' + clean + '"';
+    });
+  } while (result !== prevResult);
+  
+  // Remove trailing commas
   result = result.replace(/,\s*([\]\}])/g, '$1');
   
   // Remove semicolons at end
