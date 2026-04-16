@@ -236,9 +236,11 @@ textarea:focus { outline: none; border-color: var(--accent); }
     <p style="color:var(--text-muted);font-size:0.85rem;margin-top:0.75rem;margin-bottom:0.5rem;">
       Use this prompt with any AI assistant to generate a properly formatted questions array:
     </p>
-    <textarea id="prompt-template" class="prompt-textarea" readonly>Extract ALL questions from the provided material and format them into a JSON array. Create comprehensive questions that cover every key concept, fact, and detail from the source material.
+    <textarea id="prompt-template" class="prompt-textarea" readonly>Extract ALL questions from the provided material and format them into a JSON array. MAKE THE EXACT QUESTIONS FROM SOURCE
 
-Format each question EXACTLY like this (use double quotes for all strings):
+ENSURE DATA INTEGRITY DON'T SKIP QUESTIONS
+
+Format each question EXACTLY like this (use double quotes; escape any internal double quotes with backslash):
 
 [
   {
@@ -253,23 +255,19 @@ CRITICAL REQUIREMENTS:
 - Extract EVERY question from the material — do not skip any content
 - Cover all topics, sections, and concepts mentioned in the source
 - Each question MUST have exactly these 4 fields: "question", "options", "correct", "explanation"
-- "question": A clear question string (use double quotes)
-- "options": An array of exactly 4 answer choices (use double quotes)
+- "question": A clear question string (use double quotes; escape any internal double quotes with backslash)
+- "options": An array of exactly 4 answer choices (use double quotes; escape any internal double quotes with backslash)
 - "correct": Zero-based index of the correct answer (0, 1, 2, or 3)
-- "explanation": A detailed explanation of WHY the answer is correct and why other options are wrong
+- "explanation": A detailed explanation of WHY the answer is correct and why other options are wrong (use double quotes; escape any internal double quotes with backslash)
 
 QUESTION QUALITY:
-- Make distractors (wrong options) plausible but clearly incorrect
-- Vary difficulty: mix easy, medium, and hard questions
 - Ensure explanations are educational and help learning
 - Use clear, unambiguous language
-- Test understanding, not just memorization
+- Do not include unescaped double quotes or backslashes that would break JSON parsing
 
 COVERAGE:
 - Extract questions from EVERY section/topic in the material
-- Don't skip any concepts — aim for comprehensive coverage
-- Include definitions, mechanisms, complications, treatments, etc.
-- Create multiple questions per major concept if applicable
+- Don't skip any MCQs — aim for comprehensive coverage
 
 Output ONLY the JSON array — no markdown, no explanation text, no code fences. Just valid JSON starting with [ and ending with ].</textarea>
     <button class="btn-primary" style="width:auto;padding:0.6rem 1.25rem;margin-bottom:0;" onclick="copyPrompt()">
