@@ -551,6 +551,17 @@ function sanitizeForJSON(str) {
     .replace(/'((?:[^'\\]|\\.)*)'/g, '"$1"')
     // Handle template literals (convert to strings)
     .replace(/`((?:[^`\\]|\\.)*)`/g, '"$1"')
+    // Fix unescaped double quotes by merging consecutive quoted strings
+    // Pattern: "text"word" becomes "text word" (for value strings after colon)
+    .replace(/:"([^"]*)"([^",:\]\}]+)"([^"]*)"/g, ':"$1$2$3"')
+    // Pattern for array elements: ["opt1","opt2" becomes ["opt1 opt2"
+    .replace(/\["([^"]*)"([^",\]]+)"([^"]*)"/g, '["$1$2$3"')
+    // Repeat fixes to handle multiple occurrences
+    .replace(/:"([^"]*)"([^",:\]\}]+)"([^"]*)"/g, ':"$1$2$3"')
+    .replace(/\["([^"]*)"([^",\]]+)"([^"]*)"/g, '["$1$2$3"')
+    // Additional pass for any remaining cases
+    .replace(/:"([^"]*)"([^",:\]\}]+)"([^"]*)"/g, ':"$1$2$3"')
+    .replace(/\["([^"]*)"([^",\]]+)"([^"]*)"/g, '["$1$2$3"')
     // Remove trailing commas in arrays/objects
     .replace(/,\s*([\]\}])/g, '$1')
     // Remove semicolons at end
