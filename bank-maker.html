@@ -566,14 +566,17 @@ function sanitizeForJSON(str) {
   result = result.replace(/`((?:[^`\\]|\\.)*)`/g, '"$1"');
   
   // Escape control characters in strings (newlines, tabs, etc.)
+  // Must be done carefully to avoid double-escaping
   result = result.replace(/"([^"\\]*(?:\\.[^"\\]*)*)"/g, function(match, content) {
-    return '"' + content
-      .replace(/\\/g, '\\\\')
-      .replace(/\n/g, '\\n')
-      .replace(/\r/g, '\\r')
-      .replace(/\t/g, '\\t')
-      .replace(/\f/g, '\\f')
-      .replace(/\b/g, '\\b') + '"';
+    // Only escape actual control characters, not word boundaries
+    let escaped = content
+      .replace(/\\/g, '\\\\')      // Escape backslashes first
+      .replace(/\n/g, '\\n')       // Escape newlines
+      .replace(/\r/g, '\\r')       // Escape carriage returns
+      .replace(/\t/g, '\\t');      // Escape tabs
+    // Note: Don't use /\b/g as it matches word boundaries, not backspace chars
+    // Actual backspace char is \x08, which we can handle if needed
+    return '"' + escaped + '"';
   });
   
   // Fix unescaped double quotes - PASS 1: Merge adjacent broken strings
