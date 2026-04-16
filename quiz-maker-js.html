@@ -551,33 +551,86 @@ function cleanJSArrayInput(input) {
  * Sanitize JS input for JSON.parse by fixing common issues
  */
 function sanitizeForJSON(str) {
-  return str
-    // Remove multi-line comments first (before strings, so we don't accidentally keep comment chars)
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    // Remove single-line comments (careful: skip // inside strings)
-    .replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|\/\/.*$/gm, '$1')
-    // Add quotes to unquoted object keys
-    .replace(/([\{,])\s*([a-zA-Z_$][a-zA-Z_$0-9]*)\s*:/g, '$1"$2":')
-    // Convert single-quoted strings to double-quoted (handles escaped quotes)
-    .replace(/'((?:[^'\\]|\\.)*)'/g, '"$1"')
-    // Handle template literals (convert to strings)
-    .replace(/`((?:[^`\\]|\\.)*)`/g, '"$1"')
-    // Fix unescaped double quotes by merging consecutive quoted strings
-    // Pattern: "text"word" becomes "text word" (for value strings after colon)
-    .replace(/:"([^"]*)"([^",:\]\}]+)"([^"]*)"/g, ':"$1$2$3"')
-    // Pattern for array elements: ["opt1","opt2" becomes ["opt1 opt2"
-    .replace(/\["([^"]*)"([^",\]]+)"([^"]*)"/g, '["$1$2$3"')
-    // Repeat fixes to handle multiple occurrences
-    .replace(/:"([^"]*)"([^",:\]\}]+)"([^"]*)"/g, ':"$1$2$3"')
-    .replace(/\["([^"]*)"([^",\]]+)"([^"]*)"/g, '["$1$2$3"')
-    // Additional pass for any remaining cases
-    .replace(/:"([^"]*)"([^",:\]\}]+)"([^"]*)"/g, ':"$1$2$3"')
-    .replace(/\["([^"]*)"([^",\]]+)"([^"]*)"/g, '["$1$2$3"')
-    // Remove trailing commas in arrays/objects
-    .replace(/,\s*([\]\}])/g, '$1')
-    // Remove semicolons at end
-    .replace(/;\s*$/, '')
-    .trim();
+  let result = str;
+  
+  // Remove multi-line comments first (before strings, so we don't accidentally keep comment chars)
+  result = result.replace(/\/\*[\s\S]*?\*\//g, '');
+  
+  // Remove single-line comments (careful: skip // inside strings)
+  result = result.replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|\/\/.*$/gm, '$1');
+  
+  // Add quotes to unquoted object keys
+  result = result.replace(/([\{,])\s*([a-zA-Z_$][a-zA-Z_$0-9]*)\s*:/g, '$1"$2":');
+  
+  // Convert single-quoted strings to double-quoted (handles escaped quotes)
+  result = result.replace(/'((?:[^'\\]|\\.)*)'/g, '"$1"');
+  
+  // Handle template literals (convert to strings)
+  result = result.replace(/`((?:[^`\\]|\\.)*)`/g, '"$1"');
+  
+  // Fix unescaped double quotes by merging broken strings
+  // Pattern matches: "content1"text-between"content2" and merges to "content1text-betweencontent2"
+  // Process in a loop until no more changes
+  let prevResult;
+  let iterations = 0;
+  do {
+    prevResult = result;
+    
+    // Pattern for value strings after colon: :"content1"text-between"content2"
+    result = result.replace(/:\s*("[^"]*"[^",:\]\}\{\[]+"[^"]*")/g, function(match, brokenStr) {
+      const firstQuote = brokenStr.indexOf('"');
+      const lastQuote = brokenStr.lastIndexOf('"');
+      
+      if (firstQuote === -1 || lastQuote === -1 || firstQuote === lastQuote) {
+        return match;
+      }
+      
+      const content = brokenStr.substring(firstQuote + 1, lastQuote);
+      const cleanContent = content.replace(/"/g, '');
+      
+      return ':"' + cleanContent + '"';
+    });
+    
+    // Pattern for array elements after comma: ,"content1"text-between"content2"
+    result = result.replace(/,\s*("[^"]*"[^",:\]\}\{\[]+"[^"]*")/g, function(match, brokenStr) {
+      const firstQuote = brokenStr.indexOf('"');
+      const lastQuote = brokenStr.lastIndexOf('"');
+      
+      if (firstQuote === -1 || lastQuote === -1 || firstQuote === lastQuote) {
+        return match;
+      }
+      
+      const content = brokenStr.substring(firstQuote + 1, lastQuote);
+      const cleanContent = content.replace(/"/g, '');
+      
+      return ',"' + cleanContent + '"';
+    });
+    
+    // Pattern for first array element after [: "content1"text-between"content2"
+    result = result.replace(/\[\s*("[^"]*"[^",:\]\}\{\[]+"[^"]*")/g, function(match, brokenStr) {
+      const firstQuote = brokenStr.indexOf('"');
+      const lastQuote = brokenStr.lastIndexOf('"');
+      
+      if (firstQuote === -1 || lastQuote === -1 || firstQuote === lastQuote) {
+        return match;
+      }
+      
+      const content = brokenStr.substring(firstQuote + 1, lastQuote);
+      const cleanContent = content.replace(/"/g, '');
+      
+      return '["' + cleanContent + '"';
+    });
+    
+    if (iterations++ > 20) break;
+  } while (result !== prevResult);
+  
+  // Remove trailing commas in arrays/objects
+  result = result.replace(/,\s*([\]\}])/g, '$1');
+  
+  // Remove semicolons at end
+  result = result.replace(/;\s*$/, '');
+  
+  return result.trim();
 }
 
 /**
