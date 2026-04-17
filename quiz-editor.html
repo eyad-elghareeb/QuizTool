@@ -378,6 +378,16 @@ let questionCounter = 0;
 let uploadedHTMLContent = ''; // Store uploaded HTML to preserve custom code
 
 /* ─────────────────────────────────────────────────────────────────
+   UTILITIES (must be defined before use)
+──────────────────────────────────────────────────────────────────*/
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+/* ─────────────────────────────────────────────────────────────────
    INITIALIZATION
 ──────────────────────────────────────────────────────────────────*/
 function init() {
@@ -1164,13 +1174,6 @@ function downloadHTML() {
 /* ─────────────────────────────────────────────────────────────────
    UTILITIES
 ──────────────────────────────────────────────────────────────────*/
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
 function showToast(message) {
   // Remove existing toast
   const existing = document.querySelector('.toast');
