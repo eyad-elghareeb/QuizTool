@@ -11,7 +11,7 @@
 
   /* ── Inject tracker dashboard extra styles ─────────────────── */
   var _trackerStyle = document.createElement('style');
-  _trackerStyle.textContent = '.dash-folder-title{font-family:"Playfair Display",serif;font-size:1.05rem;font-weight:700;color:var(--accent);padding:0.75rem 0 0.4rem;margin-bottom:0.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:0.4rem}';
+  _trackerStyle.textContent = '.dash-folder-title{font-family:"Playfair Display",serif;font-size:1.05rem;font-weight:700;color:var(--accent);padding:0.75rem 0 0.4rem;margin-bottom:0.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:0.4rem;cursor:pointer;user-select:none}.dash-folder-title:hover{opacity:0.85}.dash-folder-toggle{font-size:0.9rem;transition:transform 0.2s ease;display:inline-block}.dash-folder-toggle.collapsed{transform:rotate(-90deg)}.dash-folder-content{transition:max-height 0.3s ease,opacity 0.25s ease;overflow:visible;max-height:none;opacity:1;padding-bottom:0.5rem;flex:1}.dash-folder-content.collapsed{max-height:0;opacity:0;overflow:hidden}.dash-folder-header{display:flex;align-items:center;justify-content:space-between;gap:0.5rem}.dash-folder-select{margin-left:auto;width:18px;height:18px;cursor:pointer;accent-color:var(--accent)}';
   document.head.appendChild(_trackerStyle);
   
   /* ── Toast Notification Styles ────────────────────────────── */
@@ -159,12 +159,23 @@
   function getDataForScope(scope, scopePath) {
     var all = getAllTrackerData();
     if (scope === 'folder' && scopePath) {
+      var target = scopePath.replace(/^\/|\/$/g, ''); // normalize: remove leading/trailing slashes
       return all.filter(function (d) {
         // Check stored folderPath (ENGINE_BASE-relative) and d.path (full URL, normalized)
-        var fp = (d.folderPath || '').replace(/^\//, '');
+        var fp = (d.folderPath || '').replace(/^\/|\/$/g, '');
         var dp = _normStoredPath(d.path);
-        var target = scopePath.replace(/^\//, '');
-        return (fp && fp.indexOf(target) === 0) || (dp && dp.indexOf(target) === 0);
+        // Extract folder from full path for comparison
+        var dpFolder = '';
+        if (dp) {
+          var dpParts = dp.split('/');
+          if (dpParts.length > 1) {
+            dpFolder = dpParts.slice(0, -1).join('/').replace(/^\/|\/$/g, '');
+          }
+        }
+        // Match if the quiz's folder starts with the target folder path
+        // This ensures "gyn/dep" matches when target is "gyn", but "gyn-extra" does not
+        return (fp && (fp === target || fp.indexOf(target + '/') === 0)) 
+            || (dpFolder && (dpFolder === target || dpFolder.indexOf(target + '/') === 0));
       });
     }
     return all;
@@ -312,6 +323,9 @@
 
   /* ── Open dashboard ────────────────────────────────────────── */
   window.openTrackerDashboard = function () {
+    // Reset selection state when opening dashboard (all folders selected by default)
+    _selectedFolders = {};
+
     var segments = getFolderSegments(location.pathname);
     var scopeBar = document.getElementById('dash-scope-bar');
     if (!scopeBar) return;
@@ -355,16 +369,26 @@
 
     var buildTabs = function () {
       var tabs = [];
+
+      // Tab: Current/deepest folder (first/leftmost, only if we have at least 1 segment)
       if (segments.length >= 1) {
-        var folderKey1 = segments[segments.length - 1] + '/';
-        var label1 = _folderTitleCache[folderKey1] || decodeURIComponent(segments[segments.length - 1]);
-        tabs.push({ id: 'folder', label: label1, path: segments[segments.length - 1] });
+        var folderKey = segments[segments.length - 1] + '/';
+        var folderLabel = _folderTitleCache[folderKey] || decodeURIComponent(segments[segments.length - 1]);
+        tabs.push({ id: 'folder', label: folderLabel, path: segments[segments.length - 1], level: segments.length - 1 });
       }
+
+      // Tab: Intermediate folders (parent directories) - only if we have nested structure
+      // e.g., for gyn/dep/file.html, add "gyn" as an intermediate folder tab
       if (segments.length >= 2) {
-        var folderKey2 = segments[segments.length - 2] + '/';
-        var label2 = _folderTitleCache[folderKey2] || decodeURIComponent(segments[segments.length - 2]);
-        tabs.push({ id: 'folder', label: label2, path: segments[segments.length - 2] });
+        // Add all intermediate folders except the deepest one
+        for (var i = 0; i < segments.length - 1; i++) {
+          var folderKey = segments[i] + '/';
+          var folderLabel = _folderTitleCache[folderKey] || decodeURIComponent(segments[i]);
+          tabs.push({ id: 'folder', label: folderLabel, path: segments[i], level: i });
+        }
       }
+
+      // Tab: All quizzes from all folders
       tabs.push({ id: 'all', label: 'All Quizzes', path: '' });
 
       var scopeHTML = '';
@@ -376,8 +400,22 @@
       });
       scopeBar.innerHTML = scopeHTML;
 
-      currentScope = 'folder';
-      currentScopePath = tabs.length > 0 ? tabs[0].path : '';
+      // Set default tab to current/deepest folder (first tab)
+      if (tabs.length > 0 && tabs[0].id === 'folder') {
+        currentScope = 'folder';
+        currentScopePath = tabs[0].path;
+      } else {
+        currentScope = 'all';
+        currentScopePath = '';
+      }
+      
+      // Update active state on tabs
+      document.querySelectorAll('.dash-scope-tab').forEach(function (tab) {
+        var isActive = tab.getAttribute('data-scope') === currentScope && 
+                       tab.getAttribute('data-path') === currentScopePath;
+        tab.classList.toggle('active', isActive);
+      });
+      
       renderDashboard();
       var overlay = document.getElementById('tracker-dashboard');
       if (overlay) overlay.classList.add('open');
@@ -403,6 +441,8 @@
   };
 
   /* ── Render dashboard ──────────────────────────────────────── */
+  var _collapsedFolders = {};
+  var _selectedFolders = {};
   function renderDashboard() {
     var data = getDataForScope(currentScope, currentScopePath);
     var totalWrong = 0, totalFlagged = 0;
@@ -468,44 +508,72 @@
 
     var html = '';
     var lastTopFolder = '__none__';
+    var folderGroups = {}; // folder -> [groups]
 
+    // First pass: organize groups by folder
     groups.forEach(function (g) {
-      // Show folder heading if top-level folder changed and we have a title
-      if (g.topFolder && g.topFolder !== lastTopFolder) {
-        // Look up the best title: stored title, cache for exact folder, cache for top folder
-        var displayFolderTitle = g.folderTitle
-          || _folderTitleCache[g.topFolder]
-          || _folderTitleCache[g.folder]
-          || decodeURIComponent(g.topFolder.replace(/\/$/, ''));
-        // Don't show raw folder name if it matches the project root
-        if (displayFolderTitle && displayFolderTitle === _rootName) {
-          displayFolderTitle = '';
-        }
-        if (displayFolderTitle) {
-          html += '<div class="dash-folder-title">' + escFolderIcon(escHtml(displayFolderTitle)) + '</div>';
-        }
-        lastTopFolder = g.topFolder;
+      if (!g.folder) g.folder = '__root__';
+      if (!folderGroups[g.folder]) folderGroups[g.folder] = [];
+      folderGroups[g.folder].push(g);
+    });
+
+    // Render each folder section
+    Object.keys(folderGroups).forEach(function (folder) {
+      var fGroups = folderGroups[folder];
+      if (!fGroups.length) return;
+
+      var firstGroup = fGroups[0];
+      // Try to get the folder title from multiple sources in order of preference
+      var displayFolderTitle = firstGroup.folderTitle
+        || _folderTitleCache[firstGroup.folder]
+        || decodeURIComponent(firstGroup.folder.replace(/\/$/, ''));
+
+      // Don't show raw folder name if it matches the project root
+      if (displayFolderTitle && displayFolderTitle === _rootName) {
+        displayFolderTitle = '';
       }
 
-      var dateStr = g.timestamp
-        ? new Date(g.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-        : '';
+      var isCollapsed = _collapsedFolders[folder] || false;
+      var isSelected = _selectedFolders.hasOwnProperty(folder) ? _selectedFolders[folder] : true;
 
-      html += '<div class="dash-quiz-group">';
-      html += '<div class="dash-quiz-title">' + (g.title);
-      if (g.wrongItems.length)   html += ' <span class="quiz-badge wrong-badge">' + g.wrongItems.length + ' wrong</span>';
-      if (g.flaggedItemsAll.length) html += ' <span class="quiz-badge flag-badge">' + g.flaggedItemsAll.length + ' flagged</span>';
-      if (dateStr)             html += ' <span style="font-size:0.7rem;color:var(--text-muted);font-weight:400;margin-left:auto;">' + dateStr + '</span>';
-      html += '</div>';
+      if (displayFolderTitle) {
+        html += '<div class="dash-folder-header" style="align-items:center;">';
+        html += '<div class="dash-folder-title" onclick="toggleFolder(\'' + escHtml(folder) + '\')">';
+        html += '<span class="dash-folder-toggle' + (isCollapsed ? ' collapsed' : '') + '">\u25BC</span> ';
+        html += escFolderIcon(escHtml(displayFolderTitle));
+        html += '</div>';
+        html += '<input type="checkbox" class="dash-folder-select" ';
+        html += (isSelected ? 'checked' : '') + ' ';
+        html += 'onclick="event.stopPropagation(); toggleFolderSelection(\'' + escHtml(folder) + '\', this.checked)" ';
+        html += 'title="Select for export">';
+        html += '</div>';
+      }
 
-      g.wrongItems.forEach(function (q) {
-        var isAlsoFlagged = g.flaggedItemsAll.some(function (f) { return f.idx === q.idx; });
-        html += buildItem(g.uid, q, isAlsoFlagged ? 'Wrong + Flagged' : 'Wrong', 'wrong', '\u2717');
+      html += '<div class="dash-folder-content' + (isCollapsed ? ' collapsed' : '') + '" id="folder-content-' + escHtml(folder) + '">';
+
+      fGroups.forEach(function (g) {
+        var dateStr = g.timestamp
+          ? new Date(g.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+          : '';
+
+        html += '<div class="dash-quiz-group">';
+        html += '<div class="dash-quiz-title">' + (g.title);
+        if (g.wrongItems.length)   html += ' <span class="quiz-badge wrong-badge">' + g.wrongItems.length + ' wrong</span>';
+        if (g.flaggedItemsAll.length) html += ' <span class="quiz-badge flag-badge">' + g.flaggedItemsAll.length + ' flagged</span>';
+        if (dateStr)             html += ' <span style="font-size:0.7rem;color:var(--text-muted);font-weight:400;margin-left:auto;">' + dateStr + '</span>';
+        html += '</div>';
+
+        g.wrongItems.forEach(function (q) {
+          var isAlsoFlagged = g.flaggedItemsAll.some(function (f) { return f.idx === q.idx; });
+          html += buildItem(g.uid, q, isAlsoFlagged ? 'Wrong + Flagged' : 'Wrong', 'wrong', '\u2717');
+        });
+        g.flaggedItems.forEach(function (q) {
+          html += buildItem(g.uid, q, 'Flagged', 'flagged', '\u2691');
+        });
+        html += '</div>';
       });
-      g.flaggedItems.forEach(function (q) {
-        html += buildItem(g.uid, q, 'Flagged', 'flagged', '\u2691');
-      });
-      html += '</div>';
+
+      html += '</div>'; // close dash-folder-content
     });
 
     body.innerHTML = html || '<div class="dash-empty"><div class="dash-empty-icon">\u2705</div><p>No wrong or flagged questions tracked. Great job!</p></div>';
@@ -532,6 +600,24 @@
   window.closeTrackerDashboard = function () {
     var overlay = document.getElementById('tracker-dashboard');
     if (overlay) overlay.classList.remove('open');
+  };
+
+  /* ── Toggle folder collapse ────────────────────────────────── */
+  window.toggleFolder = function (folder) {
+    _collapsedFolders[folder] = !_collapsedFolders[folder];
+    var contentEl = document.getElementById('folder-content-' + folder);
+    var toggleEl = contentEl ? contentEl.previousElementSibling.querySelector('.dash-folder-toggle') : null;
+    if (contentEl) {
+      contentEl.classList.toggle('collapsed', _collapsedFolders[folder]);
+    }
+    if (toggleEl) {
+      toggleEl.classList.toggle('collapsed', _collapsedFolders[folder]);
+    }
+  };
+
+  /* ── Toggle folder selection ───────────────────────────────── */
+  window.toggleFolderSelection = function (folder, checked) {
+    _selectedFolders[folder] = checked;
   };
 
   /* ── Remove single item ────────────────────────────────────── */
@@ -568,7 +654,15 @@
 
   /* ── PDF Export ────────────────────────────────────────────── */
   window.exportTrackerToPDF = function () {
-    var data = getDataForScope(currentScope, currentScopePath);
+    // Get all tracker data and filter by selected folders
+    var allData = getAllTrackerData();
+    
+    // Filter data based on selected folders (default: all selected)
+    var data = allData.filter(function (d) {
+      var folder = getFolderForEntry(d) || '__root__';
+      return _selectedFolders.hasOwnProperty(folder) ? _selectedFolders[folder] : true;
+    });
+
     if (!data.length) { showToast('No tracked questions to export.'); return; }
 
     var totalWrong = 0, totalFlagged = 0;
@@ -577,7 +671,7 @@
     var scopeFolderKey = currentScopePath ? currentScopePath + '/' : '';
     var scopeLabel = currentScope === 'folder'
       ? (_folderTitleCache[scopeFolderKey] || decodeURIComponent(currentScopePath))
-      : 'All Quizzes';
+      : 'Selected Exams';
     var now = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
     var html = '<div style="font-family:Arial,sans-serif;max-width:780px;margin:0 auto;padding:20px;color:#1c1917;">'

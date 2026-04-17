@@ -1226,7 +1226,7 @@ input[type=radio]:checked + .option-label .option-key { background: var(--accent
     </div>
     <div class="result-list" id="result-list"></div>
     <div class="result-actions">
-      <button class="btn-restart" onclick="showScreen('start-screen')">↺ New Session</button>
+      <button class="btn-restart" onclick="onNewSessionClick(event)">↺ New Session</button>
       <a href="#" class="btn-restart btn-secondary" onclick="navigateToIndex(event); return false;">🏠 Return to Hub</a>
     </div>
   </div>
@@ -1597,14 +1597,17 @@ function shuffle(arr) {
 
 function selectSessionQuestions(count, order = 'sequential') {
   const bankSize = QUESTION_BANK.length;
-  const n = Math.min(count, bankSize);
   const progress = getBankProgress();
-
+  
   const allIndices = Array.from({ length: bankSize }, (_, i) => i);
   let unshown = allIndices.filter(i => !progress.shownIndices.includes(i));
-
+  
+  // Cap count to remaining questions in current cycle
+  const maxAllowed = unshown.length > 0 ? unshown.length : bankSize;
+  const n = Math.min(count, maxAllowed);
+  
   let picked;
-
+  
   if (unshown.length === 0) {
     // All questions have been shown — start a new coverage cycle
     progress.cycleCount++;
@@ -1615,14 +1618,6 @@ function selectSessionQuestions(count, order = 'sequential') {
     picked = order === 'sequential'
       ? unshown.sort((a, b) => a - b).slice(0, n)
       : shuffle(unshown).slice(0, n);
-  } else if (unshown.length < n) {
-    // Partial exhaustion: not enough unshown questions for a full session.
-    // Only use the remaining unshown questions — do NOT erase history or fill with seen questions.
-    // This preserves the user's full coverage progress.
-    showToast(`Only ${unshown.length} unseen question${unshown.length > 1 ? 's' : ''} left — showing remaining question${unshown.length > 1 ? 's' : ''}`);
-    picked = order === 'sequential'
-      ? unshown.sort((a, b) => a - b).slice(0, unshown.length)
-      : shuffle(unshown).slice(0, unshown.length);
   } else {
     // Sequential: pick next N questions in original bank order (no shuffle)
     // Random: shuffle then pick N for fair random coverage
@@ -1639,8 +1634,6 @@ function selectSessionQuestions(count, order = 'sequential') {
   SESSION_QUESTION_INDICES = picked;
   return picked.map(i => QUESTION_BANK[i]);
 }
-
-/* ─── START SCREEN LOGIC ────────────────────────────────────── */
 function updateStartScreenStats() {
   const progress = getBankProgress();
   const bankSize = QUESTION_BANK.length;
@@ -1648,26 +1641,64 @@ function updateStartScreenStats() {
   const pct      = bankSize > 0 ? Math.round(covered / bankSize * 100) : 0;
   const remaining = bankSize - covered;
 
+  // If cycle is complete (100% coverage), automatically reset for new cycle
+  if (pct === 100 && covered > 0) {
+    progress.cycleCount++;
+    progress.shownIndices = [];
+    saveBankProgress(progress);
+    showToast(`🎉 Full cycle complete! Starting fresh — cycle ${progress.cycleCount + 1}`);
+    // Refresh progress values after reset
+    const newCovered = 0;
+    const newRemaining = bankSize;
+    
+    document.getElementById('stat-covered').textContent  = newCovered;
+    document.getElementById('stat-total').textContent    = bankSize;
+    document.getElementById('stat-sessions').textContent = progress.totalSessions;
+    document.getElementById('coverage-fill').style.width = '0%';
+    document.getElementById('coverage-pct').textContent  = '0%';
+    
+    // Reset input for fresh cycle
+    const inp = document.getElementById('q-count-input');
+    selectedCount = Math.min(selectedCount || 20, bankSize);
+    inp.value = selectedCount;
+    inp.max = newRemaining;
+    inp.placeholder = newRemaining;
+    
+    // Update the +5 button
+    const plusBtn = inp.parentElement.querySelector('.time-adj-btn:last-child');
+    if (plusBtn) {
+      plusBtn.textContent = '+5';
+      plusBtn.disabled = false;
+      plusBtn.style.opacity = '';
+    }
+    return;
+  }
+
   document.getElementById('stat-covered').textContent  = covered;
   document.getElementById('stat-total').textContent    = bankSize;
   document.getElementById('stat-sessions').textContent = progress.totalSessions;
   document.getElementById('coverage-fill').style.width = pct + '%';
   document.getElementById('coverage-pct').textContent  = pct + '%';
 
-  // Cap the question count input to remaining questions
+  // Cap the question count input to remaining questions in current cycle
   const inp = document.getElementById('q-count-input');
   const currentVal = parseInt(inp.value) || selectedCount || 20;
-  const maxAllowed = Math.max(1, remaining > 0 ? remaining : bankSize);
+  // Always cap to remaining questions
+  const maxAllowed = remaining;
   inp.max = maxAllowed;
   inp.placeholder = maxAllowed;
   
-  // If current value exceeds remaining, cap it
-  if (currentVal > maxAllowed) {
+  // Reset selectedCount to maxAllowed when cycle is complete to ensure user can select any number
+  if (covered === 0) {
+    // Fresh cycle - reset to default or keep user's last preference if within range
+    selectedCount = Math.min(selectedCount || 20, bankSize);
+    inp.value = selectedCount;
+  } else if (currentVal > maxAllowed) {
     inp.value = maxAllowed;
     selectedCount = maxAllowed;
   }
   
-  // Update the +5 button behavior when at max
+  // Update the +5 button behavior based on remaining questions
   const plusBtn = inp.parentElement.querySelector('.time-adj-btn:last-child');
   if (plusBtn) {
     plusBtn.textContent = currentVal >= maxAllowed ? 'max' : '+5';
@@ -1681,18 +1712,21 @@ function adjustCount(delta) {
   const bankSize = QUESTION_BANK.length;
   const progress = getBankProgress();
   const remaining = Math.max(1, bankSize - progress.shownIndices.length);
+  // Always cap to remaining questions
+  const maxAllowed = remaining;
+  
   const cur = parseInt(inp.value) || selectedCount || 20;
-  const newVal = Math.max(1, Math.min(remaining, cur + delta));
+  const newVal = Math.max(1, Math.min(maxAllowed, cur + delta));
   inp.value = newVal;
   selectedCount = newVal;
   autoSetTime(newVal);
 
-  // Update +5 button state
+  // Update +5 button state based on remaining questions
   const plusBtn = inp.parentElement.querySelector('.time-adj-btn:last-child');
   if (plusBtn) {
-    plusBtn.textContent = newVal >= remaining ? 'max' : '+5';
-    plusBtn.disabled = newVal >= remaining;
-    plusBtn.style.opacity = newVal >= remaining ? '0.4' : '';
+    plusBtn.textContent = newVal >= maxAllowed ? 'max' : '+5';
+    plusBtn.disabled = newVal >= maxAllowed;
+    plusBtn.style.opacity = newVal >= maxAllowed ? '0.4' : '';
   }
 
   // Only clear saved progress when user actively changes the count (not during init)
@@ -1703,21 +1737,23 @@ function setCount(n) {
   const bankSize = QUESTION_BANK.length;
   const progress = getBankProgress();
   const remaining = Math.max(1, bankSize - progress.shownIndices.length);
+  // Always cap to remaining questions
+  const maxAllowed = remaining;
   
-  if (n === -1) n = remaining; // "All" = all remaining
-  n = Math.max(1, Math.min(n, remaining));
+  if (n === -1) n = maxAllowed; // "All" = all remaining questions in current cycle
+  n = Math.max(1, Math.min(n, maxAllowed));
   selectedCount = n;
 
   document.getElementById('q-count-input').value = n;
   autoSetTime(n);
 
-  // Update +5 button state
+  // Update +5 button state based on remaining questions
   const inp = document.getElementById('q-count-input');
   const plusBtn = inp.parentElement.querySelector('.time-adj-btn:last-child');
   if (plusBtn) {
-    plusBtn.textContent = n >= remaining ? 'max' : '+5';
-    plusBtn.disabled = n >= remaining;
-    plusBtn.style.opacity = n >= remaining ? '0.4' : '';
+    plusBtn.textContent = n >= maxAllowed ? 'max' : '+5';
+    plusBtn.disabled = n >= maxAllowed;
+    plusBtn.style.opacity = n >= maxAllowed ? '0.4' : '';
   }
 
   // Only clear saved progress when user actively changes the count (not during init)
@@ -1728,21 +1764,23 @@ function onCustomCount(val) {
   const bankSize = QUESTION_BANK.length;
   const progress = getBankProgress();
   const remaining = Math.max(1, bankSize - progress.shownIndices.length);
+  // Always cap to remaining questions
+  const maxAllowed = remaining;
   
   let n = parseInt(val) || 1;
-  n = Math.max(1, Math.min(n, remaining));
+  n = Math.max(1, Math.min(n, maxAllowed));
   selectedCount = n;
   
   const inp = document.getElementById('q-count-input');
   inp.value = n;
   autoSetTime(n);
 
-  // Update +5 button state
+  // Update +5 button state based on remaining questions
   const plusBtn = inp.parentElement.querySelector('.time-adj-btn:last-child');
   if (plusBtn) {
-    plusBtn.textContent = n >= remaining ? 'max' : '+5';
-    plusBtn.disabled = n >= remaining;
-    plusBtn.style.opacity = n >= remaining ? '0.4' : '';
+    plusBtn.textContent = n >= maxAllowed ? 'max' : '+5';
+    plusBtn.disabled = n >= maxAllowed;
+    plusBtn.style.opacity = n >= maxAllowed ? '0.4' : '';
   }
 
   // Only clear saved progress when user actively changes the count (not during init)
@@ -1825,6 +1863,17 @@ function initUI() {
 
   const bankSize = QUESTION_BANK.length;
   const progress = getBankProgress();
+  
+  // Check if cycle is complete (100% coverage) on initial load and auto-reset
+  const covered = progress.shownIndices.length;
+  const pct = bankSize > 0 ? Math.round(covered / bankSize * 100) : 0;
+  if (pct === 100 && covered > 0) {
+    progress.cycleCount++;
+    progress.shownIndices = [];
+    saveBankProgress(progress);
+    showToast(`🎉 Full cycle complete! Starting fresh — cycle ${progress.cycleCount + 1}`);
+  }
+  
   const remaining = Math.max(1, bankSize - progress.shownIndices.length);
   const capCount = document.getElementById('q-count-input');
 
@@ -1854,21 +1903,11 @@ function startQuiz() {
   const timeMins = parseInt(document.getElementById('time-input').value) || 30;
   let count = selectedCount;
 
-  // Validate count against remaining questions
-  const bankSize = QUESTION_BANK.length;
-  const progress = getBankProgress();
-  const remaining = Math.max(1, bankSize - progress.shownIndices.length);
-  
-  if (count > remaining) {
-    count = remaining;
-    selectedCount = remaining;
-    showToast(`Limited to ${remaining} remaining question${remaining > 1 ? 's' : ''}`);
-  }
-
   // Clear any existing saved progress before starting a new session
   clearProgress();
 
   // Select questions from bank — sequential picks next N in bank order, random shuffles
+  // This function automatically starts a new cycle if all questions have been shown
   SESSION_QUESTIONS = selectSessionQuestions(count, order);
 
   state.current   = 0;
@@ -2160,6 +2199,32 @@ function confirmSubmit() {
 
   buildResults();
   showScreen('result-screen');
+}
+
+/* ─── NEW SESSION BUTTON ─────────────────────────────────────── */
+function onNewSessionClick(event) {
+  event.preventDefault();
+  
+  // Check if bank coverage is 100% (cycle complete)
+  const progress = getBankProgress();
+  const bankSize = QUESTION_BANK.length;
+  const covered = progress.shownIndices.length;
+  const pct = bankSize > 0 ? Math.round(covered / bankSize * 100) : 0;
+  
+  // If cycle is complete (100% coverage), show the completed cycle toast
+  if (pct === 100) {
+    // Reset to start a fresh cycle
+    progress.cycleCount++;
+    progress.shownIndices = [];
+    saveBankProgress(progress);
+    showToast(`🎉 Full cycle complete! Starting fresh — cycle ${progress.cycleCount + 1}`);
+    // Navigate to start screen where user can choose any number of questions
+    showScreen('start-screen');
+    return;
+  }
+  
+  // For incomplete cycles, just navigate to start screen
+  showScreen('start-screen');
 }
 
 /* ─── BUILD RESULTS ──────────────────────────────────────────── */
@@ -2834,12 +2899,23 @@ checkSavedProgress();
     }
 
     if (scope === 'folder' && scopePath) {
+      var target = scopePath.replace(/^\/|\/$/g, ''); // normalize: remove leading/trailing slashes
       return all.filter(function(d) {
         // Check stored folderPath (ENGINE_BASE-relative) and d.path (full URL, normalized)
-        var fp = (d.folderPath || '').replace(/^\//, '');
+        var fp = (d.folderPath || '').replace(/^\/|\/$/g, '');
         var dp = _normStoredPath(d.path);
-        var target = scopePath.replace(/^\//, '');
-        return (fp && fp.indexOf(target) === 0) || (dp && dp.indexOf(target) === 0);
+        // Extract folder from full path for comparison
+        var dpFolder = '';
+        if (dp) {
+          var dpParts = dp.split('/');
+          if (dpParts.length > 1) {
+            dpFolder = dpParts.slice(0, -1).join('/').replace(/^\/|\/$/g, '');
+          }
+        }
+        // Match if the quiz's folder starts with the target folder path
+        // This ensures "gyn/dep" matches when target is "gyn", but "gyn-extra" does not
+        return (fp && (fp === target || fp.indexOf(target + '/') === 0)) 
+            || (dpFolder && (dpFolder === target || dpFolder.indexOf(target + '/') === 0));
       });
     }
 
@@ -2896,15 +2972,26 @@ checkSavedProgress();
     // Tab: This Quiz
     tabs.push({ id: 'quiz', label: 'This Quiz' });
 
-    // Tab: nearest meaningful folder (skip the root project dir if only 1 segment)
+    // Tab: All quizzes from all folders
+    tabs.push({ id: 'all', label: 'All Quizzes' });
+
+    // Tab: Intermediate folders (parent directories) - only if we have nested structure
+    // e.g., for gyn/dep/file.html, add "gyn" as an intermediate folder tab
+    if (segments.length >= 3) {
+      // Add all intermediate folders except the deepest one
+      for (var i = 0; i < segments.length - 1; i++) {
+        var folderKey = segments[i] + '/';
+        var folderLabel = _folderTitleCache[folderKey] || decodeURIComponent(segments[i]);
+        tabs.push({ id: 'folder', label: folderLabel, path: segments[i], level: i });
+      }
+    }
+
+    // Tab: Current/deepest folder (only if we have at least 2 segments)
     if (segments.length >= 2) {
       var folderKey = segments[segments.length - 1] + '/';
       var folderLabel = _folderTitleCache[folderKey] || decodeURIComponent(segments[segments.length - 1]);
-      tabs.push({ id: 'folder', label: folderLabel, path: segments[segments.length - 1] });
+      tabs.push({ id: 'folder', label: folderLabel, path: segments[segments.length - 1], level: segments.length - 1 });
     }
-
-    // Tab: All
-    tabs.push({ id: 'all', label: 'All' });
 
     var scopeHTML = '';
     tabs.forEach(function(t) {
