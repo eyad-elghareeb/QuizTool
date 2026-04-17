@@ -317,6 +317,12 @@ textarea { resize: vertical; min-height: 80px; }
     </div>
 
     <div class="form-group" style="margin-top: 1.5rem;">
+      <label for="bank-file-input">📚 Load Question Bank File (JSON)</label>
+      <input type="file" id="bank-file-input" accept=".json" onchange="loadBankFile(event)" style="margin-top: 0.5rem;">
+      <div class="hint">Upload a JSON file containing questions to merge with current questions (works after loading HTML)</div>
+    </div>
+
+    <div class="form-group" style="margin-top: 1.5rem;">
       <label for="import-text">Or paste your JSON configuration below</label>
       <textarea id="import-text" rows="8" placeholder='{"uid": "my-quiz", "title": "My Quiz", "description": "...", "questions": [...]}'></textarea>
       <button class="btn-secondary" style="margin-top: 0.75rem;" onclick="importFromText()">📥 Import from JSON</button>
@@ -333,15 +339,9 @@ textarea { resize: vertical; min-height: 80px; }
     </div>
     
     <div class="form-group" style="margin-bottom: 1.5rem;">
-      <label for="engine-source">Engine Source (for standalone export)</label>
+      <label for="engine-source">Engine Source (for template export)</label>
       <input type="text" id="engine-source" placeholder="../quiz-engine.js" value="../quiz-engine.js">
-      <div class="hint">Path to quiz engine JS file for template mode, or leave empty for standalone</div>
-    </div>
-    
-    <div class="form-group" style="margin-bottom: 1.5rem;">
-      <label for="bank-file-input">📚 Load Question Bank File (JSON)</label>
-      <input type="file" id="bank-file-input" accept=".json" onchange="loadBankFile(event)" style="margin-top: 0.5rem;">
-      <div class="hint">Upload a JSON file containing questions array to merge or replace current questions</div>
+      <div class="hint">Path to quiz engine JS file for template mode (standalone embeds engine directly)</div>
     </div>
     
     <div class="preview-panel">
@@ -697,7 +697,7 @@ function importFromHTML(content) {
           questionsStr = sanitizeJavaScriptObject(questionsStr);
           const parsedQuestions = JSON.parse(questionsStr);
           
-          // Clear existing questions
+          // Clear existing questions and add from HTML
           questions = [];
           questionCounter = 0;
           document.getElementById('question-entries-container').innerHTML = '';
@@ -707,7 +707,7 @@ function importFromHTML(content) {
             addQuestionEntry({
               question: q.question || '',
               options: q.options || ['', '', '', ''],
-              correct: q.correct || 0,
+              correct: q.correct !== undefined ? q.correct : 0,
               explanation: q.explanation || ''
             });
           });
@@ -726,7 +726,7 @@ function importFromHTML(content) {
   if (!configMatch && !questionsMatch) {
     showToast('❌ No quiz configuration found in HTML file');
   } else if (configMatch && !questionsMatch) {
-    showToast('✅ Config imported, no questions found');
+    showToast('✅ Config imported, no questions found. You can now load a bank file to add questions.');
   }
 }
 
@@ -800,7 +800,7 @@ function importFromText() {
   }
 }
 
-// Load bank file (JSON with questions array)
+// Load bank file (JSON with questions array) - works after loading HTML or standalone
 function loadBankFile(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -828,7 +828,7 @@ function loadBankFile(event) {
         return;
       }
       
-      // Add each question from bank
+      // Add each question from bank to current questions
       questionsToAdd.forEach(q => {
         addQuestionEntry({
           question: q.question || '',
@@ -838,14 +838,43 @@ function loadBankFile(event) {
         });
       });
       
-      showToast(`✅ Loaded ${questionsToAdd.length} questions from bank file!`);
+      const totalQuestions = document.querySelectorAll('.question-entry').length;
+      showToast(`✅ Loaded ${questionsToAdd.length} questions from bank! Total: ${totalQuestions}`);
       document.getElementById('bank-file-input').value = '';
+      
+      // Switch to Questions tab to show loaded questions
+      switchTabByName('questions');
       
     } catch (err) {
       showToast('❌ Invalid bank file: ' + err.message);
     }
   };
   reader.readAsText(file);
+}
+
+// Helper to switch tabs programmatically
+function switchTabByName(tabName) {
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+  
+  // Find and activate the correct tab button
+  const tabButtons = document.querySelectorAll('.tab-btn');
+  for (let btn of tabButtons) {
+    if (btn.textContent.toLowerCase().includes(tabName.toLowerCase()) || 
+        (tabName === 'questions' && btn.textContent.includes('📝')) ||
+        (tabName === 'config' && btn.textContent.includes('⚙️')) ||
+        (tabName === 'import' && btn.textContent.includes('📥')) ||
+        (tabName === 'export' && btn.textContent.includes('💾'))) {
+      btn.classList.add('active');
+      break;
+    }
+  }
+  
+  document.getElementById('tab-' + tabName).classList.add('active');
+  
+  if (tabName === 'export') {
+    updateExportPreview();
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────────
