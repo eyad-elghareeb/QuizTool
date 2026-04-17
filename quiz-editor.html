@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz Editor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   CSS VARIABLES & THEME
+═══════════════════════════════════════════ */
+:root {
+  --bg:         #0d1117;
+  --surface:    #161b22;
+  --surface2:   #1c2330;
+  --border:     #30363d;
+  --text:       #e6edf3;
+  --text-muted: #8b949e;
+  --accent:     #f0a500;
+  --accent-dim: rgba(240,165,0,0.12);
+  --correct:    #2ea043;
+  --correct-bg: rgba(46,160,67,0.12);
+  --wrong:      #da3633;
+  --wrong-bg:   rgba(218,54,51,0.12);
+  --radius:     12px;
+  --shadow:     0 4px 24px rgba(0,0,0,0.4);
+  --transition: 0.2s ease;
+}
+[data-theme="light"] {
+  --bg:         #f3f0eb;
+  --surface:    #ffffff;
+  --surface2:   #f8f6f1;
+  --border:     #d0ccc5;
+  --text:       #1c1917;
+  --text-muted: #78716c;
+  --accent:     #c27803;
+  --accent-dim: rgba(194,120,3,0.10);
+  --correct:    #16a34a;
+  --correct-bg: rgba(22,163,74,0.10);
+  --wrong:      #dc2626;
+  --wrong-bg:   rgba(220,38,38,0.10);
+  --shadow:     0 4px 24px rgba(0,0,0,0.10);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  transition: background var(--transition), color var(--transition);
+}
+
+.container { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+/* TOPBAR */
+.topbar {
+  display: flex; align-items: center; padding: 0.75rem 1.5rem;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+}
+.topbar-title {
+  font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; flex: 1;
+}
+.back-btn {
+  display: flex; align-items: center; gap: 0.5rem; color: var(--text-muted);
+  text-decoration: none; font-weight: 600; transition: color var(--transition);
+}
+.back-btn:hover { color: var(--text); }
+.icon-btn {
+  width: 36px; height: 36px; border-radius: 8px; background: var(--surface2);
+  border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted); transition: all var(--transition); font-size: 1rem; cursor: pointer;
+}
+.icon-btn:hover { color: var(--text); border-color: var(--accent); }
+
+/* HEADER */
+.header { text-align: center; margin-bottom: 2.5rem; }
+.header h1 { font-family: 'Playfair Display', serif; font-size: clamp(1.8rem, 4vw, 2.5rem); margin-bottom: 0.5rem; }
+.header h1 span { color: var(--accent); }
+.header p { color: var(--text-muted); font-size: 1rem; }
+
+/* TABS */
+.tabs { display: flex; gap: 0.5rem; margin-bottom: 2rem; flex-wrap: wrap; }
+.tab-btn {
+  padding: 0.6rem 1.2rem; border-radius: var(--radius); background: var(--surface);
+  border: 1.5px solid var(--border); color: var(--text-muted); font-size: 0.9rem;
+  font-weight: 500; transition: all var(--transition);
+}
+.tab-btn:hover { border-color: var(--accent); color: var(--accent); }
+.tab-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+/* SECTIONS */
+.section { display: none; }
+.section.active { display: block; }
+
+/* FORM STYLES */
+.form-group { margin-bottom: 1.5rem; }
+label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--text); }
+input, textarea, select {
+  width: 100%; padding: 0.85rem 1rem; border-radius: var(--radius);
+  border: 1.5px solid var(--border); background: var(--surface); color: var(--text);
+  font-family: inherit; font-size: 1rem; transition: all var(--transition);
+}
+input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+textarea { resize: vertical; min-height: 80px; }
+.hint { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.4rem; }
+
+/* QUESTION EDITOR */
+.question-entry {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 1.5rem; margin-bottom: 1.5rem; position: relative;
+}
+.question-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;
+}
+.question-number {
+  position: absolute; top: -12px; left: 1rem; background: var(--accent); color: #000;
+  font-weight: 700; padding: 0.2rem 0.75rem; border-radius: 6px; font-size: 0.8rem;
+}
+.delete-btn {
+  background: var(--wrong-bg); border: 1px solid var(--wrong); color: var(--wrong);
+  padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.8rem;
+}
+.delete-btn:hover { background: var(--wrong); color: #fff; }
+
+/* OPTIONS */
+.options-container { margin-top: 1rem; }
+.option-row {
+  display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;
+}
+.option-radio {
+  width: 20px; height: 20px; cursor: pointer; accent-color: var(--correct);
+}
+.option-input { flex: 1; }
+.move-btn {
+  width: 32px; height: 32px; border-radius: 6px; background: var(--surface2);
+  border: 1px solid var(--border); color: var(--text-muted); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 0.9rem;
+}
+.move-btn:hover { border-color: var(--accent); color: var(--accent); }
+.move-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* BUTTONS */
+.btn-add {
+  width: 100%; padding: 1rem; border: 2px dashed var(--border); background: transparent;
+  color: var(--text-muted); border-radius: var(--radius); cursor: pointer; font-weight: 600;
+  font-size: 1rem; transition: all var(--transition); margin-bottom: 1.5rem;
+}
+.btn-add:hover { border-color: var(--accent); color: var(--accent); }
+
+.btn-primary {
+  width: 100%; padding: 1rem; border-radius: var(--radius); background: var(--accent);
+  color: #000; font-weight: 700; font-size: 1rem; border: none; cursor: pointer;
+  transition: opacity var(--transition);
+}
+.btn-primary:hover { opacity: 0.88; }
+
+.btn-secondary {
+  padding: 0.85rem 1.5rem; border-radius: var(--radius); background: var(--surface);
+  border: 1.5px solid var(--border); color: var(--text); font-weight: 600;
+  font-size: 0.95rem; cursor: pointer; transition: all var(--transition);
+}
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+/* PREVIEW PANEL */
+.preview-panel {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 1.5rem; margin-top: 2rem;
+}
+.preview-panel h3 { margin-bottom: 1rem; font-family: 'Playfair Display', serif; }
+.preview-panel pre {
+  max-height: 400px; overflow: auto; padding: 1rem; background: var(--surface2);
+  border-radius: 8px; font-family: monospace; font-size: 0.85rem; white-space: pre-wrap;
+}
+.preview-actions { display: flex; gap: 1rem; margin-top: 1rem; flex-wrap: wrap; }
+
+/* IMPORT SECTION */
+.import-dropzone {
+  border: 2px dashed var(--border); border-radius: var(--radius); padding: 3rem 2rem;
+  text-align: center; color: var(--text-muted); transition: all var(--transition);
+  cursor: pointer;
+}
+.import-dropzone:hover, .import-dropzone.dragover { border-color: var(--accent); background: var(--accent-dim); }
+.import-dropzone svg { width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.5; }
+.import-dropzone code {
+  background: var(--surface2);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: var(--accent);
+}
+
+.url-import-section {
+  margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);
+}
+
+/* STATS */
+.stats-bar {
+  display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem;
+}
+.stat-item {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 0.75rem 1.25rem; text-align: center; flex: 1; min-width: 120px;
+}
+.stat-item .sv { font-size: 1.5rem; font-weight: 700; color: var(--accent); display: block; }
+.stat-item .sl { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* TOAST */
+.toast {
+  position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(80px);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 0.75rem 1.5rem; font-size: 0.95rem; font-weight: 500; box-shadow: var(--shadow);
+  z-index: 9999; transition: transform 0.3s ease, opacity 0.3s ease; white-space: nowrap;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .container { padding: 1.5rem 1rem; }
+  .preview-actions { flex-direction: column; }
+  .preview-actions .btn-secondary { width: 100%; text-align: center; }
+  .option-row { flex-wrap: wrap; }
+  .move-btn { order: 3; }
+}
+</style>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="apple-touch-icon" href="favicon.svg">
+</head>
+<body>
+
+<div class="topbar">
+  <a href="#" onclick="navigateBack(event)" class="back-btn">← Back</a>
+  <div class="topbar-title">✏️ Quiz Editor</div>
+  <button class="icon-btn" onclick="toggleTheme()" id="theme-toggle" title="Toggle theme">☀</button>
+</div>
+
+<div class="container">
+  <header class="header">
+    <h1>Edit Your <span>Quiz</span></h1>
+    <p>Upload an HTML quiz file or start from scratch, then edit title and questions</p>
+  </header>
+
+  <!-- STATS -->
+  <div class="stats-bar">
+    <div class="stat-item">
+      <span class="sv" id="stat-questions">0</span>
+      <span class="sl">Questions</span>
+    </div>
+    <div class="stat-item">
+      <span class="sv" id="stat-title">Untitled</span>
+      <span class="sl">Title</span>
+    </div>
+    <div class="stat-item">
+      <span class="sv" id="stat-theme">Dark</span>
+      <span class="sl">Theme</span>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('config')">⚙️ Configuration</button>
+    <button class="tab-btn" onclick="switchTab('questions')">📝 Questions</button>
+    <button class="tab-btn" onclick="switchTab('import')">📥 Import</button>
+    <button class="tab-btn" onclick="switchTab('export')">💾 Export</button>
+  </div>
+
+  <!-- CONFIG TAB -->
+  <div class="section active" id="tab-config">
+    <div class="form-group">
+      <label for="cfg-uid">Quiz UID (optional)</label>
+      <input type="text" id="cfg-uid" placeholder="e.g., gk-quiz-001" oninput="updateConfig()">
+      <div class="hint">Unique identifier for your quiz</div>
+    </div>
+    <div class="form-group">
+      <label for="cfg-title">Quiz Title</label>
+      <input type="text" id="cfg-title" value="General Knowledge Quiz" oninput="updateConfig()">
+    </div>
+    <div class="form-group">
+      <label for="cfg-description">Description</label>
+      <textarea id="cfg-description" rows="3" oninput="updateConfig()">Test your knowledge across science, history, geography, and more.</textarea>
+    </div>
+  </div>
+
+  <!-- QUESTIONS TAB -->
+  <div class="section" id="tab-questions">
+    <div id="question-entries-container"></div>
+    <button class="btn-add" onclick="addQuestionEntry()">+ Add Question</button>
+  </div>
+
+  <!-- IMPORT TAB -->
+  <div class="section" id="tab-import">
+    <div class="import-dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="17 8 12 3 7 8"></polyline>
+        <line x1="12" y1="3" x2="12" y2="15"></line>
+      </svg>
+      <h3>Upload HTML Quiz File</h3>
+      <p>Drag & drop or click to browse</p>
+      <div style="margin-top: 1rem; font-size: 0.85rem; color: var(--text-muted);">
+        <strong>Supported format:</strong><br>
+        • HTML files with <code>const QUIZ_CONFIG = {...}</code> and <code>const QUESTIONS = [...]</code> (.html, .htm)
+      </div>
+      <input type="file" id="file-input" accept=".html,.htm" style="display: none;" onchange="handleFileUpload(event)">
+    </div>
+
+    <div class="url-import-section">
+      <div class="form-group">
+        <label for="url-input">Or load from URL</label>
+        <input type="url" id="url-input" placeholder="https://example.com/quiz.html">
+        <div class="hint">Enter the URL of a hosted HTML quiz file</div>
+      </div>
+      <button class="btn-secondary" onclick="loadFromURL()">🌐 Load from URL</button>
+    </div>
+
+    <div class="form-group" style="margin-top: 1.5rem;">
+      <label for="import-text">Or paste your JSON configuration below</label>
+      <textarea id="import-text" rows="8" placeholder='{"uid": "my-quiz", "title": "My Quiz", "description": "...", "questions": [...]}'></textarea>
+      <button class="btn-secondary" style="margin-top: 0.75rem;" onclick="importFromText()">📥 Import from JSON</button>
+    </div>
+  </div>
+
+  <!-- EXPORT TAB -->
+  <div class="section" id="tab-export">
+    <div id="upload-status" style="display: none; margin-bottom: 1rem; padding: 0.75rem 1rem; background: var(--correct-bg); border: 1px solid var(--correct); border-radius: var(--radius);">
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <span style="color: var(--correct); font-weight: 500;">✓ Using uploaded HTML (custom code preserved)</span>
+        <button class="btn-secondary" onclick="clearUploadedHTML()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Use Default Template</button>
+      </div>
+    </div>
+    <div class="preview-panel">
+      <h3>📄 Generated Configuration</h3>
+      <pre id="export-preview"></pre>
+      <div class="preview-actions">
+        <button class="btn-secondary" onclick="exportJSON()">📋 Copy JSON</button>
+        <button class="btn-secondary" onclick="downloadJSON()">💾 Download JSON</button>
+        <button class="btn-secondary" onclick="generateHTML()">🌐 Generate Full HTML</button>
+      </div>
+    </div>
+    <div class="preview-panel" id="html-output" style="display: none; margin-top: 1.5rem;">
+      <h3>✅ Generated HTML</h3>
+      <pre id="html-code"></pre>
+      <div class="preview-actions">
+        <button class="btn-secondary" onclick="downloadHTML()">💾 Download HTML File</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ─────────────────────────────────────────────────────────────────
+   STATE
+──────────────────────────────────────────────────────────────────*/
+let quizConfig = {
+  uid: "",
+  title: "General Knowledge Quiz",
+  description: "Test your knowledge across science, history, geography, and more.",
+};
+let questions = [];
+let questionCounter = 0;
+let uploadedHTMLContent = ''; // Store uploaded HTML to preserve custom code
+
+/* ─────────────────────────────────────────────────────────────────
+   INITIALIZATION
+──────────────────────────────────────────────────────────────────*/
+function init() {
+  loadTheme();
+  updateStats();
+  updateExportPreview();
+  if (questions.length === 0) addQuestionEntry();
+}
+
+function loadTheme() {
+  const saved = localStorage.getItem('quiz-theme');
+  if (saved) document.documentElement.setAttribute('data-theme', saved);
+  updateThemeIcon();
+}
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  const newTheme = isDark ? 'light' : 'dark';
+  html.setAttribute('data-theme', newTheme);
+  localStorage.setItem('quiz-theme', newTheme);
+  updateThemeIcon();
+  updateStats();
+}
+
+function updateThemeIcon() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const btn = document.getElementById('theme-toggle');
+  if (btn) btn.textContent = isDark ? '☀' : '☾';
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   TABS
+──────────────────────────────────────────────────────────────────*/
+function switchTab(tabName) {
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+  
+  event.target.classList.add('active');
+  document.getElementById('tab-' + tabName).classList.add('active');
+  
+  if (tabName === 'export') {
+    updateExportPreview();
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   CONFIG MANAGEMENT
+──────────────────────────────────────────────────────────────────*/
+function updateConfig() {
+  quizConfig.uid = document.getElementById('cfg-uid').value.trim();
+  quizConfig.title = document.getElementById('cfg-title').value.trim();
+  quizConfig.description = document.getElementById('cfg-description').value.trim();
+  updateStats();
+  updateExportPreview();
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   QUESTION MANAGEMENT
+──────────────────────────────────────────────────────────────────*/
+function addQuestionEntry(data = null) {
+  const container = document.getElementById('question-entries-container');
+  const qNum = ++questionCounter;
+  
+  const questionData = data || {
+    question: "",
+    options: ["", "", "", ""],
+    correct: 0,
+    explanation: ""
+  };
+  
+  const div = document.createElement('div');
+  div.className = 'question-entry';
+  div.dataset.index = questions.length;
+  div.innerHTML = `
+    <span class="question-number">Question ${qNum}</span>
+    <div class="question-header">
+      <strong>Question Details</strong>
+      <button class="delete-btn" onclick="deleteQuestion(this)">🗑 Delete</button>
+    </div>
+    <div class="form-group">
+      <label>Question Text</label>
+      <textarea class="q-text" rows="2" placeholder="Enter your question..." oninput="updateQuestionData()">${escapeHtml(questionData.question)}</textarea>
+    </div>
+    <div class="options-container">
+      <label style="margin-bottom: 0.75rem; display: block;">Options (select the correct answer)</label>
+      ${questionData.options.map((opt, i) => `
+        <div class="option-row">
+          <input type="radio" name="correct-${div.dataset.index}" class="option-radio" ${i === questionData.correct ? 'checked' : ''} onchange="updateCorrectOption(${div.dataset.index}, ${i})">
+          <input type="text" class="option-input" placeholder="Option ${String.fromCharCode(65+i)}" value="${escapeHtml(opt)}" oninput="updateQuestionData()">
+          <button class="move-btn" onclick="moveOptionUp(this)" ${i === 0 ? 'disabled' : ''}>↑</button>
+          <button class="move-btn" onclick="moveOptionDown(this)" ${i === 3 ? 'disabled' : ''}>↓</button>
+        </div>
+      `).join('')}
+    </div>
+    <div class="form-group" style="margin-top: 1rem;">
+      <label>Explanation (optional)</label>
+      <textarea class="q-explanation" rows="2" placeholder="Explain why this answer is correct..." oninput="updateQuestionData()">${escapeHtml(questionData.explanation)}</textarea>
+    </div>
+  `;
+  
+  container.appendChild(div);
+  questions.push(questionData);
+  updateStats();
+  updateExportPreview();
+}
+
+function deleteQuestion(btn) {
+  const entry = btn.closest('.question-entry');
+  const index = parseInt(entry.dataset.index);
+  entry.remove();
+  questions.splice(index, 1);
+  renumberQuestions();
+  updateStats();
+  updateExportPreview();
+}
+
+function renumberQuestions() {
+  const entries = document.querySelectorAll('.question-entry');
+  questionCounter = 0;
+  entries.forEach((entry, i) => {
+    entry.dataset.index = i;
+    const numSpan = entry.querySelector('.question-number');
+    numSpan.textContent = `Question ${++questionCounter}`;
+    
+    // Update radio button names
+    const radios = entry.querySelectorAll('.option-radio');
+    radios.forEach((r, j) => {
+      r.name = `correct-${i}`;
+    });
+    
+    // Update move button states
+    const moveBtns = entry.querySelectorAll('.move-btn');
+    moveBtns.forEach((btn, k) => {
+      if (k % 2 === 0) { // Up buttons
+        btn.disabled = Math.floor(k / 2) === 0;
+      } else { // Down buttons
+        btn.disabled = Math.floor(k / 2) === 3;
+      }
+    });
+  });
+}
+
+function updateQuestionData() {
+  const entries = document.querySelectorAll('.question-entry');
+  entries.forEach((entry, i) => {
+    questions[i] = {
+      question: entry.querySelector('.q-text').value.trim(),
+      options: Array.from(entry.querySelectorAll('.option-input')).map(inp => inp.value.trim()),
+      correct: Array.from(entry.querySelectorAll('.option-radio')).findIndex(r => r.checked),
+      explanation: entry.querySelector('.q-explanation').value.trim()
+    };
+  });
+  updateStats();
+  updateExportPreview();
+}
+
+function updateCorrectOption(index, optionIndex) {
+  questions[index].correct = optionIndex;
+  updateExportPreview();
+}
+
+function moveOptionUp(btn) {
+  const row = btn.closest('.option-row');
+  const prev = row.previousElementSibling;
+  if (prev) {
+    swapOptions(row, prev);
+    updateQuestionData();
+    renumberOptions(row.closest('.question-entry'));
+  }
+}
+
+function moveOptionDown(btn) {
+  const row = btn.closest('.option-row');
+  const next = row.nextElementSibling;
+  if (next && !next.classList.contains('form-group')) {
+    swapOptions(row, next);
+    updateQuestionData();
+    renumberOptions(row.closest('.question-entry'));
+  }
+}
+
+function swapOptions(row1, row2) {
+  const parent = row1.parentElement;
+  const radio1 = row1.querySelector('.option-radio');
+  const radio2 = row2.querySelector('.option-radio');
+  const checked1 = radio1.checked;
+  const checked2 = radio2.checked;
+  
+  parent.insertBefore(row1, row2.nextSibling);
+  
+  if (checked1) radio2.checked = true;
+  if (checked2) radio1.checked = true;
+}
+
+function renumberOptions(entry) {
+  const rows = entry.querySelectorAll('.option-row');
+  rows.forEach((row, i) => {
+    const input = row.querySelector('.option-input');
+    input.placeholder = `Option ${String.fromCharCode(65+i)}`;
+    
+    const upBtn = row.querySelector('.move-btn:first-of-type');
+    const downBtn = row.querySelector('.move-btn:last-of-type');
+    upBtn.disabled = i === 0;
+    downBtn.disabled = i === 3;
+  });
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   STATS
+──────────────────────────────────────────────────────────────────*/
+function updateStats() {
+  document.getElementById('stat-questions').textContent = questions.length;
+  document.getElementById('stat-title').textContent = quizConfig.title.substring(0, 15) + (quizConfig.title.length > 15 ? '...' : '');
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.getElementById('stat-theme').textContent = isDark ? 'Dark' : 'Light';
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   IMPORT FUNCTIONS
+──────────────────────────────────────────────────────────────────*/
+// Drag and drop
+const dropzone = document.getElementById('dropzone');
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+  dropzone.addEventListener(eventName, preventDefaults, false);
+});
+
+function preventDefaults(e) {
+  e.preventDefault();
+  e.stopPropagation();
+}
+
+['dragenter', 'dragover'].forEach(eventName => {
+  dropzone.addEventListener(eventName, () => dropzone.classList.add('dragover'), false);
+});
+
+['dragleave', 'drop'].forEach(eventName => {
+  dropzone.addEventListener(eventName, () => dropzone.classList.remove('dragover'), false);
+});
+
+dropzone.addEventListener('drop', (e) => {
+  const dt = e.dataTransfer;
+  const file = dt.files[0];
+  if (file) processFile(file);
+});
+
+function handleFileUpload(event) {
+  const file = event.target.files[0];
+  if (file) processFile(file);
+}
+
+function processFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const content = e.target.result;
+    if (file.name.endsWith('.html') || file.name.endsWith('.htm')) {
+      importFromHTML(content);
+    } else {
+      showToast('❌ Please upload an HTML file');
+    }
+  };
+  reader.readAsText(file);
+}
+
+async function loadFromURL() {
+  const url = document.getElementById('url-input').value.trim();
+  if (!url) {
+    showToast('❌ Please enter a URL');
+    return;
+  }
+  
+  try {
+    showToast('⏳ Loading from URL...');
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const content = await response.text();
+    importFromHTML(content);
+    showToast('✅ Successfully loaded from URL!');
+  } catch (err) {
+    console.error('URL load error:', err);
+    showToast('❌ Failed to load from URL: ' + err.message);
+  }
+}
+
+function importFromHTML(content) {
+  // Store the uploaded HTML to preserve custom code
+  uploadedHTMLContent = content;
+  updateUploadStatus();
+  
+  // Try to extract QUIZ_CONFIG
+  const configMatch = content.match(/const\s+QUIZ_CONFIG\s*=\s*(\{[\s\S]*?\});/);
+  if (configMatch) {
+    try {
+      let configStr = configMatch[1];
+      configStr = sanitizeJavaScriptObject(configStr);
+      const config = JSON.parse(configStr);
+      
+      if (config.uid) document.getElementById('cfg-uid').value = config.uid;
+      if (config.title) document.getElementById('cfg-title').value = config.title;
+      if (config.description) document.getElementById('cfg-description').value = config.description;
+      
+      updateConfig();
+    } catch (err) {
+      console.warn('QUIZ_CONFIG parse failed:', err);
+    }
+  }
+  
+  // Try to extract QUESTIONS array
+  const questionsMatch = content.match(/const\s+QUESTIONS\s*=\s*\[/);
+  if (questionsMatch) {
+    try {
+      const openPos = content.indexOf('[', content.indexOf('QUESTIONS'));
+      if (openPos !== -1) {
+        const closePos = findMatchingBracket(content, openPos, '[', ']');
+        if (closePos !== -1) {
+          let questionsStr = content.substring(openPos, closePos + 1);
+          questionsStr = sanitizeJavaScriptObject(questionsStr);
+          const parsedQuestions = JSON.parse(questionsStr);
+          
+          // Clear existing questions
+          questions = [];
+          questionCounter = 0;
+          document.getElementById('question-entries-container').innerHTML = '';
+          
+          // Add each question
+          parsedQuestions.forEach(q => {
+            addQuestionEntry({
+              question: q.question || '',
+              options: q.options || ['', '', '', ''],
+              correct: q.correct || 0,
+              explanation: q.explanation || ''
+            });
+          });
+          
+          showToast(`✅ Successfully imported ${parsedQuestions.length} questions from HTML!`);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('QUESTIONS parse failed:', err);
+      showToast('⚠️ Config imported but questions parse failed: ' + err.message);
+      return;
+    }
+  }
+  
+  if (!configMatch && !questionsMatch) {
+    showToast('❌ No quiz configuration found in HTML file');
+  } else if (configMatch && !questionsMatch) {
+    showToast('✅ Config imported, no questions found');
+  }
+}
+
+function clearUploadedHTML() {
+  uploadedHTMLContent = '';
+  updateUploadStatus();
+  showToast('✓ Now using default template');
+}
+
+function updateUploadStatus() {
+  const statusEl = document.getElementById('upload-status');
+  if (statusEl) {
+    statusEl.style.display = uploadedHTMLContent ? 'block' : 'none';
+  }
+}
+
+function findMatchingBracket(content, openPos, openChar, closeChar) {
+  let count = 0;
+  for (let i = openPos; i < content.length; i++) {
+    if (content[i] === openChar) count++;
+    else if (content[i] === closeChar) {
+      count--;
+      if (count === 0) return i;
+    }
+  }
+  return -1;
+}
+
+function sanitizeJavaScriptObject(str) {
+  // Remove single-line comments (but not URLs with //)
+  str = str.replace(/^\s*\/\/.*$/gm, '');
+  // Remove trailing commas before closing brackets/braces
+  str = str.replace(/,\s*([}\]])/g, '$1');
+  // Quote unquoted object keys
+  str = str.replace(/(\{|,)\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":');
+  // Handle first key without comma
+  str = str.replace(/^\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/gm, '"$1":');
+  // Replace single quotes with double quotes (carefully)
+  str = str.trim();
+  return str;
+}
+
+function importFromText() {
+  const text = document.getElementById('import-text').value.trim();
+  if (!text) return showToast('❌ Paste JSON first');
+  try {
+    const json = JSON.parse(text);
+    if (json.uid) document.getElementById('cfg-uid').value = json.uid;
+    if (json.title) document.getElementById('cfg-title').value = json.title;
+    if (json.description) document.getElementById('cfg-description').value = json.description;
+    updateConfig();
+    
+    if (json.questions && Array.isArray(json.questions)) {
+      questions = [];
+      questionCounter = 0;
+      document.getElementById('question-entries-container').innerHTML = '';
+      json.questions.forEach(q => {
+        addQuestionEntry({
+          question: q.question || '',
+          options: q.options || ['', '', '', ''],
+          correct: q.correct || 0,
+          explanation: q.explanation || ''
+        });
+      });
+    }
+    
+    showToast('✅ JSON imported!');
+    document.getElementById('import-text').value = '';
+  } catch (err) {
+    showToast('❌ Invalid JSON: ' + err.message);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   EXPORT FUNCTIONS
+──────────────────────────────────────────────────────────────────*/
+function updateExportPreview() {
+  const preview = {
+    uid: quizConfig.uid,
+    title: quizConfig.title,
+    description: quizConfig.description,
+    questions: questions.map(q => ({
+      question: q.question,
+      options: q.options,
+      correct: q.correct,
+      explanation: q.explanation
+    }))
+  };
+  document.getElementById('export-preview').textContent = JSON.stringify(preview, null, 2);
+}
+
+function exportJSON() {
+  updateExportPreview();
+  const text = document.getElementById('export-preview').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('✅ Copied to clipboard!');
+  }).catch(() => {
+    showToast('❌ Failed to copy');
+  });
+}
+
+function downloadJSON() {
+  updateExportPreview();
+  const data = document.getElementById('export-preview').textContent;
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (quizConfig.uid || 'quiz') + '-config.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 100);
+  showToast('✅ JSON downloaded!');
+}
+
+function generateHTML() {
+  updateQuestionData();
+  
+  const configJSON = JSON.stringify(quizConfig, null, 2);
+  const questionsJSON = JSON.stringify(questions, null, 2);
+  
+  let htmlContent;
+  
+  if (uploadedHTMLContent) {
+    // Use uploaded HTML as template, replace QUIZ_CONFIG and QUESTIONS
+    htmlContent = uploadedHTMLContent;
+    
+    // Replace QUIZ_CONFIG
+    const configStart = htmlContent.indexOf('/* [QUIZ_CONFIG_START] */');
+    const configEnd = htmlContent.indexOf('/* [QUIZ_CONFIG_END] */');
+    if (configStart !== -1 && configEnd !== -1) {
+      const beforeConfig = htmlContent.substring(0, configStart + 28);
+      const afterConfig = htmlContent.substring(configEnd);
+      htmlContent = beforeConfig + '\nconst QUIZ_CONFIG = ' + configJSON + ';\n' + afterConfig;
+    }
+    
+    // Replace QUESTIONS
+    const questionsStart = htmlContent.indexOf('/* [QUESTIONS_START] */');
+    const questionsEnd = htmlContent.indexOf('/* [QUESTIONS_END] */');
+    if (questionsStart !== -1 && questionsEnd !== -1) {
+      const beforeQuestions = htmlContent.substring(0, questionsStart + 26);
+      const afterQuestions = htmlContent.substring(questionsEnd);
+      htmlContent = beforeQuestions + '\nconst QUESTIONS = ' + questionsJSON + ';\n' + afterQuestions;
+    }
+  } else {
+    // Use default template
+    htmlContent = `<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+(function(){var t=localStorage.getItem('quiz-theme')||'dark';var s=document.createElement('style');s.textContent='html,body{background:'+(t==='light'?'#f3f0eb':'#0d1117')+';color:'+(t==='light'?'#1c1917':'#e6edf3')+';margin:0;padding:0;overflow:hidden;height:100%}';document.head.appendChild(s)})();
+</script>
+<title>${escapeHtml(quizConfig.title)}</title>
+</head>
+<body>
+<script>
+/* ────────────────────────────────────────────────────────────────
+   QUIZ DATA  — only edit below this line
+──────────────────────────────────────────────────────────────────*/
+
+/* [QUIZ_CONFIG_START] */
+const QUIZ_CONFIG = ${configJSON};
+/* [QUIZ_CONFIG_END] */
+
+/* ─────────────────────────────────────────────────────────────────
+   QUESTIONS ARRAY
+   Format for each question:
+   {
+     question:    "Your question text",
+     options: ["Option A", "Option B", "Option C", "Option D"],
+     correct:     0,   // index of the correct option (0-based)
+     explanation: "Why this answer is correct.",
+   }
+──────────────────────────────────────────────────────────────────*/
+/* [QUESTIONS_START] */
+const QUESTIONS = ${questionsJSON};
+/* [QUESTIONS_END] */
+</script>
+<script>
+/* Engine loader — computes correct relative path for any folder depth */
+(function () {
+  window.__QUIZ_ENGINE_BASE = '../'.repeat(
+    Math.max(0, location.pathname.split('/').filter(Boolean).length - 2)
+  );
+  document.write('<scr' + 'ipt src="' + window.__QUIZ_ENGINE_BASE + 'quiz-engine.js"><\\/scr' + 'ipt>');
+})();
+</script>
+</body>
+</html>`;
+  }
+  
+  document.getElementById('html-code').textContent = htmlContent;
+  document.getElementById('html-output').style.display = 'block';
+  document.getElementById('html-output').scrollIntoView({ behavior: 'smooth' });
+  showToast('✅ HTML generated!');
+}
+
+function downloadHTML() {
+  const htmlContent = document.getElementById('html-code').textContent;
+  const blob = new Blob([htmlContent], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (quizConfig.uid || quizConfig.title.toLowerCase().replace(/\s+/g, '-') || 'quiz') + '.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 100);
+  showToast('✅ HTML downloaded!');
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   UTILITIES
+──────────────────────────────────────────────────────────────────*/
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function showToast(message) {
+  // Remove existing toast
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  
+  setTimeout(() => toast.classList.add('show'), 10);
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, 2500);
+}
+
+function navigateBack(event) {
+  event.preventDefault();
+  // Try to go back in history, or redirect to index.html
+  if (window.history.length > 1) {
+    window.history.back();
+  } else {
+    window.location.href = 'index.html';
+  }
+}
+
+// Initialize on load
+init();
+</script>
+
+</body>
+</html>
