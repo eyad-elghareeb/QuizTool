@@ -1154,7 +1154,11 @@ function getQuizEngineCode() {
   
   init();
 })();
-` + '</scr' + 'ipt>';
+`;
+}
+
+function getQuizEngineScriptTag() {
+  return '<scr' + 'ipt>' + getQuizEngineCode() + '</scr' + 'ipt>';
 }
 
 function downloadHTML() {
