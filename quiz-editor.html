@@ -963,20 +963,20 @@ function generateHTML(mode = 'template') {
   } else {
     // Use default template
     const engineScript = mode === 'standalone' ? getQuizEngineCode() : 
-      `<script>\n/* Engine loader — computes correct relative path for any folder depth */\n(function () {\n  window.__QUIZ_ENGINE_BASE = '../'.repeat(\n    Math.max(0, location.pathname.split('/').filter(Boolean).length - 2)\n  );\n  document.write('<scr' + 'ipt src=\"' + window.__QUIZ_ENGINE_BASE + escapeHtml(engineSource) + '\"></scr' + 'ipt>');\n})();\n</script>`;
+      `<scr` + `ipt>` + `\n/* Engine loader — computes correct relative path for any folder depth */\n(function () {\n  window.__QUIZ_ENGINE_BASE = '../'.repeat(\n    Math.max(0, location.pathname.split('/').filter(Boolean).length - 2)\n  );\n  document.write('<scr' + 'ipt src=\"' + window.__QUIZ_ENGINE_BASE + escapeHtml(engineSource) + '\"></scr' + 'ipt>');\n})();\n` + '</scr' + 'ipt>';
     
     htmlContent = `<!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script>
+<scr` + `ipt>` + `
 (function(){var t=localStorage.getItem('quiz-theme')||'dark';var s=document.createElement('style');s.textContent='html,body{background:'+(t==='light'?'#f3f0eb':'#0d1117')+';color:'+(t==='light'?'#1c1917':'#e6edf3')+';margin:0;padding:0;overflow:hidden;height:100%}';document.head.appendChild(s)})();
-</script>
+` + '</scr' + 'ipt>';
 <title>${escapeHtml(quizConfig.title)}</title>
 </head>
 <body>
-<script>
+<scr` + `ipt>` + `
 /* ────────────────────────────────────────────────────────────────
    QUIZ DATA  — only edit below this line
 ──────────────────────────────────────────────────────────────────*/
@@ -998,7 +998,7 @@ const QUIZ_CONFIG = ${configJSON};
 /* [QUESTIONS_START] */
 const QUESTIONS = ${questionsJSON};
 /* [QUESTIONS_END] */
-</script>
+` + '</scr' + 'ipt>';
 ${engineScript}
 </body>
 </html>`;
@@ -1012,7 +1012,7 @@ ${engineScript}
 
 // Minimal quiz engine code for standalone export
 function getQuizEngineCode() {
-  return `<script>
+  return `<scr` + `ipt>` + `
 /* ═══════════════════════════════════════════
    QUIZ ENGINE (Embedded)
 ═══════════════════════════════════════════ */
@@ -1154,7 +1154,7 @@ function getQuizEngineCode() {
   
   init();
 })();
-</script>`;
+` + '</scr' + 'ipt>';
 }
 
 function downloadHTML() {
@@ -1203,7 +1203,7 @@ function navigateBack(event) {
 
 // Initialize on load
 init();
-</script>
+</scr` + `ipt>
 
 </body>
 </html>
