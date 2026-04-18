@@ -963,7 +963,7 @@ function generateHTML(mode = 'template') {
   } else {
     // Use default template
     const engineScript = mode === 'standalone' ? getQuizEngineCode() : 
-      `<script>\n/* Engine loader — computes correct relative path for any folder depth */\n(function () {\n  window.__QUIZ_ENGINE_BASE = '../'.repeat(\n    Math.max(0, location.pathname.split('/').filter(Boolean).length - 2)\n  );\n  document.write('<scr' + 'ipt src=\"' + window.__QUIZ_ENGINE_BASE + escapeHtml(engineSource) + '\"><\\\\/scr' + 'ipt>');\n})();\n</script>`;
+      `<script>\n/* Engine loader — computes correct relative path for any folder depth */\n(function () {\n  window.__QUIZ_ENGINE_BASE = '../'.repeat(\n    Math.max(0, location.pathname.split('/').filter(Boolean).length - 2)\n  );\n  document.write('<scr' + 'ipt src=\"' + window.__QUIZ_ENGINE_BASE + escapeHtml(engineSource) + '\"></scr' + 'ipt>');\n})();\n</script>`;
     
     htmlContent = `<!DOCTYPE html>
 <html lang="en" data-theme="dark">
@@ -1068,7 +1068,7 @@ function getQuizEngineCode() {
       <div class="question-number">Question \${current+1} of \${T.length}</div>
       <div class="question-text">\${escapeHtml(q.question)}</div>
       <div class="options">\${q.options.map((o,i)=>\`<button class="option-btn" data-i="\${i}">\${escapeHtml(o)}</button>\`).join('')}</div>
-      \${q.explanation?\<div class="explanation" id="explanation" style="display:none">\${escapeHtml(q.explanation)}</div>\`:''}
+      \${q.explanation?\`<div class="explanation" id="explanation" style="display:none">\${escapeHtml(q.explanation)}</div>\`:''}
     \`;
     $$('.option-btn').forEach(b=>b.onclick=selectOption);
     $('#controls').innerHTML=\`<button class="btn-primary" id="next-btn" onclick="nextQuestion()" disabled>Next →</button>\`;
