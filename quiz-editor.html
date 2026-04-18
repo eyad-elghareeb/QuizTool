@@ -1035,20 +1035,20 @@ function getQuizEngineCode() {
   function createUI(){
     const c=document.createElement('div');
     c.className='container';
-    c.innerHTML=\`
+    c.innerHTML=`
       <div class="topbar">
-        <div class="topbar-title">\${escapeHtml(Q.title||'Quiz')}</div>
+        <div class="topbar-title">${escapeHtml(Q.title||'Quiz')}</div>
         <button class="icon-btn" id="theme-toggle">☀</button>
       </div>
       <div class="header">
-        <h1>\${escapeHtml(Q.title||'Quiz')}</h1>
-        <p>\${escapeHtml(Q.description||'')}</p>
+        <h1>${escapeHtml(Q.title||'Quiz')}</h1>
+        <p>${escapeHtml(Q.description||'')}</p>
       </div>
       <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
       <div class="quiz-card" id="quiz-card"></div>
       <div class="controls" id="controls"></div>
       <div class="results" id="results" style="display:none"></div>
-    \`;
+    `;
     c.querySelector('#theme-toggle').onclick=toggleTheme;
     return c;
   }
@@ -1064,14 +1064,14 @@ function getQuizEngineCode() {
     answered=false;
     const q=T[current];
     const card=$('#quiz-card');
-    card.innerHTML=\`
-      <div class="question-number">Question \${current+1} of \${T.length}</div>
-      <div class="question-text">\${escapeHtml(q.question)}</div>
-      <div class="options">\${q.options.map((o,i)=>\`<button class="option-btn" data-i="\${i}">\${escapeHtml(o)}</button>\`).join('')}</div>
-      \${q.explanation?\`<div class="explanation" id="explanation" style="display:none">\${escapeHtml(q.explanation)}</div>\`:''}
-    \`;
+    card.innerHTML=`
+      <div class="question-number">Question ${current+1} of ${T.length}</div>
+      <div class="question-text">${escapeHtml(q.question)}</div>
+      <div class="options">${q.options.map((o,i)=>`<button class="option-btn" data-i="${i}">${escapeHtml(o)}</button>`).join('')}</div>
+      ${q.explanation?`<div class="explanation" id="explanation" style="display:none">${escapeHtml(q.explanation)}</div>`:''}
+    `;
     $$('.option-btn').forEach(b=>b.onclick=selectOption);
-    $('#controls').innerHTML=\`<button class="btn-primary" id="next-btn" onclick="nextQuestion()" disabled>Next →</button>\`;
+    $('#controls').innerHTML=`<button class="btn-primary" id="next-btn" onclick="nextQuestion()" disabled>Next →</button>`;
   }
   
   function selectOption(e){
@@ -1107,20 +1107,20 @@ function getQuizEngineCode() {
     $('#controls').style.display='none';
     const r=$('#results');
     r.style.display='block';
-    r.innerHTML=\`
+    r.innerHTML=`
       <h2>Quiz Complete!</h2>
-      <div class="score-circle">\${score}/\${T.length}</div>
-      <p class="score-percent">\${Math.round(score/T.length*100)}%</p>
+      <div class="score-circle">${score}/${T.length}</div>
+      <p class="score-percent">${Math.round(score/T.length*100)}%</p>
       <button class="btn-primary" onclick="location.reload()">Restart Quiz</button>
-    \`;
+    `;
   }
   
   function escapeHtml(t){if(!t)return'';const d=document.createElement('div');d.textContent=t;return d.innerHTML}
   
   // Add styles
   const s=document.createElement('style');
-  s.textContent=\`
-    :root{--bg:\${theme==='dark'?'#0d1117':'#f3f0eb'};--surface:\${theme==='dark'?'#161b22':'#ffffff'};--text:\${theme==='dark'?'#e6edf3':'#1c1917'};--accent:#f0a500;--correct:#2ea043;--wrong:#da3633}
+  s.textContent=`
+    :root{--bg:${theme==='dark'?'#0d1117':'#f3f0eb'};--surface:${theme==='dark'?'#161b22':'#ffffff'};--text:${theme==='dark'?'#e6edf3':'#1c1917'};--accent:#f0a500;--correct:#2ea043;--wrong:#da3633}
     [data-theme="light"]{--bg:#f3f0eb;--surface:#ffffff;--text:#1c1917}
     body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);margin:0;padding:0;line-height:1.6}
     .container{max-width:800px;margin:0 auto;padding:2rem 1.5rem}
@@ -1149,7 +1149,7 @@ function getQuizEngineCode() {
     .results h2{font-size:2rem;margin-bottom:1rem}
     .score-circle{font-size:4rem;font-weight:700;color:var(--accent);margin:1rem 0}
     .score-percent{font-size:1.5rem;color:#8b949e;margin-bottom:2rem}
-  \`;
+  `;
   document.head.appendChild(s);
   
   init();
@@ -1203,7 +1203,7 @@ function navigateBack(event) {
 
 // Initialize on load
 init();
-</scr` + `ipt>
+</script>
 
 </body>
 </html>
