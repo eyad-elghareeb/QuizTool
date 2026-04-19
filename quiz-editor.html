@@ -754,18 +754,22 @@ function importFromHTML(content) {
   updateUploadStatus();
   
   // Try to extract QUIZ_CONFIG
-  const configMatch = content.match(/const\s+QUIZ_CONFIG\s*=\s*(\{[\s\S]*?\});/);
+  const configMatch = content.match(/const\s+QUIZ_CONFIG\s*=\s*\{/);
   if (configMatch) {
     try {
-      let configStr = configMatch[1];
-      configStr = sanitizeJavaScriptObject(configStr);
-      const config = JSON.parse(configStr);
-      
-      if (config.uid) document.getElementById('cfg-uid').value = config.uid;
-      if (config.title) document.getElementById('cfg-title').value = config.title;
-      if (config.description) document.getElementById('cfg-description').value = config.description;
-      
-      updateConfig();
+      const openPos = configMatch.index + configMatch[0].length - 1;
+      const closePos = findMatchingBracket(content, openPos, '{', '}');
+      if (openPos !== -1 && closePos !== -1) {
+        let configStr = content.substring(openPos, closePos + 1);
+        configStr = sanitizeJavaScriptObject(configStr);
+        const config = JSON.parse(configStr);
+        
+        if (config.uid) document.getElementById('cfg-uid').value = config.uid;
+        if (config.title) document.getElementById('cfg-title').value = config.title;
+        if (config.description) document.getElementById('cfg-description').value = config.description;
+        
+        updateConfig();
+      }
     } catch (err) {
       console.warn('QUIZ_CONFIG parse failed:', err);
     }
@@ -775,7 +779,7 @@ function importFromHTML(content) {
   const questionsMatch = content.match(/const\s+QUESTIONS\s*=\s*\[/);
   if (questionsMatch) {
     try {
-      const openPos = content.indexOf('[', content.indexOf('QUESTIONS'));
+      const openPos = questionsMatch.index + questionsMatch[0].length - 1;
       if (openPos !== -1) {
         const closePos = findMatchingBracket(content, openPos, '[', ']');
         if (closePos !== -1) {
