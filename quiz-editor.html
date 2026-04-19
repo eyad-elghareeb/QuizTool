@@ -426,7 +426,22 @@ function switchTab(tabName) {
   document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
   document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
   
-  event.target.classList.add('active');
+  // Find the button directly or just use event if explicitly passed
+  let targetBtn;
+  if (window.event && window.event.target && window.event.target.classList.contains('tab-btn')) {
+    targetBtn = window.event.target;
+  } else {
+    // fallback if event not available
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    for (const btn of tabButtons) {
+      if (btn.getAttribute('onclick').includes(tabName)) {
+        targetBtn = btn;
+        break;
+      }
+    }
+  }
+  
+  if (targetBtn) targetBtn.classList.add('active');
   document.getElementById('tab-' + tabName).classList.add('active');
   
   if (tabName === 'export') {
@@ -474,14 +489,20 @@ function addQuestionEntry(data = null) {
     </div>
     <div class="options-container">
       <label style="margin-bottom: 0.75rem; display: block;">Options (select the correct answer)</label>
+      <div class="options-list">
       ${questionData.options.map((opt, i) => `
         <div class="option-row">
           <input type="radio" name="correct-${div.dataset.index}" class="option-radio" ${i === questionData.correct ? 'checked' : ''} onchange="updateCorrectOption(${div.dataset.index}, ${i})">
           <input type="text" class="option-input" placeholder="Option ${String.fromCharCode(65+i)}" value="${escapeHtml(opt)}" oninput="updateQuestionData()">
-          <button class="move-btn" onclick="moveOptionUp(this)" ${i === 0 ? 'disabled' : ''}>↑</button>
-          <button class="move-btn" onclick="moveOptionDown(this)" ${i === 3 ? 'disabled' : ''}>↓</button>
+          <button class="move-btn up-btn" onclick="moveOptionUp(this)" ${i === 0 ? 'disabled' : ''}>↑</button>
+          <button class="move-btn down-btn" onclick="moveOptionDown(this)" ${i === questionData.options.length - 1 ? 'disabled' : ''}>↓</button>
+          <button class="move-btn remove-btn" onclick="removeOption(this)" style="color:var(--wrong);" ${questionData.options.length <= 2 ? 'disabled' : ''} title="Remove Option">✖</button>
         </div>
       `).join('')}
+      </div>
+      <div style="margin-top: 0.75rem; text-align: right;">
+        <button class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; border-style: dashed;" onclick="addOptionToQuestion(this)">+ Add Option</button>
+      </div>
     </div>
     <div class="form-group" style="margin-top: 1rem;">
       <label>Explanation (optional)</label>
@@ -515,19 +536,12 @@ function renumberQuestions() {
     
     // Update radio button names
     const radios = entry.querySelectorAll('.option-radio');
-    radios.forEach((r, j) => {
+    radios.forEach((r) => {
       r.name = `correct-${i}`;
+      r.setAttribute('onchange', `updateCorrectOption(${i}, Array.from(this.closest('.options-list').querySelectorAll('.option-radio')).indexOf(this))`);
     });
     
-    // Update move button states
-    const moveBtns = entry.querySelectorAll('.move-btn');
-    moveBtns.forEach((btn, k) => {
-      if (k % 2 === 0) { // Up buttons
-        btn.disabled = Math.floor(k / 2) === 0;
-      } else { // Down buttons
-        btn.disabled = Math.floor(k / 2) === 3;
-      }
-    });
+    renumberOptions(entry);
   });
 }
 
@@ -540,6 +554,13 @@ function updateQuestionData() {
       correct: Array.from(entry.querySelectorAll('.option-radio')).findIndex(r => r.checked),
       explanation: entry.querySelector('.q-explanation').value.trim()
     };
+    
+    // Fix correct value if none chosen
+    if(questions[i].correct === -1) {
+       questions[i].correct = 0;
+       const firstRadio = entry.querySelector('.option-radio');
+       if(firstRadio) firstRadio.checked = true;
+    }
   });
   updateStats();
   updateExportPreview();
@@ -563,7 +584,7 @@ function moveOptionUp(btn) {
 function moveOptionDown(btn) {
   const row = btn.closest('.option-row');
   const next = row.nextElementSibling;
-  if (next && !next.classList.contains('form-group')) {
+  if (next) {
     swapOptions(row, next);
     updateQuestionData();
     renumberOptions(row.closest('.question-entry'));
@@ -585,15 +606,70 @@ function swapOptions(row1, row2) {
 
 function renumberOptions(entry) {
   const rows = entry.querySelectorAll('.option-row');
+  const len = rows.length;
   rows.forEach((row, i) => {
     const input = row.querySelector('.option-input');
     input.placeholder = `Option ${String.fromCharCode(65+i)}`;
     
-    const upBtn = row.querySelector('.move-btn:first-of-type');
-    const downBtn = row.querySelector('.move-btn:last-of-type');
-    upBtn.disabled = i === 0;
-    downBtn.disabled = i === 3;
+    const upBtn = row.querySelector('.up-btn');
+    const downBtn = row.querySelector('.down-btn');
+    const rmBtn = row.querySelector('.remove-btn');
+    if(upBtn) upBtn.disabled = i === 0;
+    if(downBtn) downBtn.disabled = i === len - 1;
+    if(rmBtn) rmBtn.disabled = len <= 2;
+    
+    // Update onchange event for radio
+    const radio = row.querySelector('.option-radio');
+    const qIndex = entry.dataset.index;
+    radio.setAttribute('onchange', `updateCorrectOption(${qIndex}, ${i})`);
   });
+  
+  const addBtn = entry.querySelector('button[onclick="addOptionToQuestion(this)"]');
+  if(addBtn) {
+    addBtn.disabled = len >= 12;
+  }
+}
+
+function addOptionToQuestion(btn) {
+  const entry = btn.closest('.question-entry');
+  const list = entry.querySelector('.options-list');
+  const index = entry.dataset.index;
+  const rows = list.querySelectorAll('.option-row');
+  const i = rows.length;
+  if(i >= 12) return;
+  
+  const div = document.createElement('div');
+  div.className = 'option-row';
+  div.innerHTML = `
+    <input type="radio" name="correct-${index}" class="option-radio" onchange="updateCorrectOption(${index}, ${i})">
+    <input type="text" class="option-input" placeholder="Option ${String.fromCharCode(65+i)}" oninput="updateQuestionData()">
+    <button class="move-btn up-btn" onclick="moveOptionUp(this)">↑</button>
+    <button class="move-btn down-btn" onclick="moveOptionDown(this)">↓</button>
+    <button class="move-btn remove-btn" onclick="removeOption(this)" style="color:var(--wrong);" title="Remove Option">✖</button>
+  `;
+  list.appendChild(div);
+  
+  renumberOptions(entry);
+  updateQuestionData();
+}
+
+function removeOption(btn) {
+  const row = btn.closest('.option-row');
+  const entry = btn.closest('.question-entry');
+  const list = entry.querySelector('.options-list');
+  if (list.querySelectorAll('.option-row').length <= 2) return;
+  
+  const radio = row.querySelector('.option-radio');
+  const wasChecked = radio.checked;
+  row.remove();
+  
+  if (wasChecked) {
+     const firstRadio = list.querySelector('.option-radio');
+     if (firstRadio) firstRadio.checked = true;
+  }
+  
+  renumberOptions(entry);
+  updateQuestionData();
 }
 
 /* ─────────────────────────────────────────────────────────────────
@@ -1012,151 +1088,146 @@ ${engineScript}
 
 // Minimal quiz engine code for standalone export
 function getQuizEngineCode() {
-  return `<scr` + `ipt>` + `
-/* ═══════════════════════════════════════════
-   QUIZ ENGINE (Embedded)
-═══════════════════════════════════════════ */
-(function(){
-  'use strict';
-  const Q=QUIZ_CONFIG||{},T=QUESTIONS||[];
-  let current=0,score=0,answered=false,theme=localStorage.getItem('quiz-theme')||'dark';
-  
-  function $(s){return document.querySelector(s)}
-  function $$(s){return document.querySelectorAll(s)}
-  
-  function init(){
-    document.documentElement.setAttribute('data-theme',theme);
-    $('body').innerHTML='';
-    $('body').appendChild(createUI());
-    renderQuestion();
-    updateProgress();
-  }
-  
-  function createUI(){
-    const c=document.createElement('div');
-    c.className='container';
-    c.innerHTML=`
-      <div class="topbar">
-        <div class="topbar-title">${escapeHtml(Q.title||'Quiz')}</div>
-        <button class="icon-btn" id="theme-toggle">☀</button>
-      </div>
-      <div class="header">
-        <h1>${escapeHtml(Q.title||'Quiz')}</h1>
-        <p>${escapeHtml(Q.description||'')}</p>
-      </div>
-      <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
-      <div class="quiz-card" id="quiz-card"></div>
-      <div class="controls" id="controls"></div>
-      <div class="results" id="results" style="display:none"></div>
-    `;
-    c.querySelector('#theme-toggle').onclick=toggleTheme;
-    return c;
-  }
-  
-  function toggleTheme(){
-    theme=theme==='dark'?'light':'dark';
-    localStorage.setItem('quiz-theme',theme);
-    document.documentElement.setAttribute('data-theme',theme);
-    $('#theme-toggle').textContent=theme==='dark'?'☀':'☾';
-  }
-  
-  function renderQuestion(){
-    answered=false;
-    const q=T[current];
-    const card=$('#quiz-card');
-    card.innerHTML=`
-      <div class="question-number">Question ${current+1} of ${T.length}</div>
-      <div class="question-text">${escapeHtml(q.question)}</div>
-      <div class="options">${q.options.map((o,i)=>`<button class="option-btn" data-i="${i}">${escapeHtml(o)}</button>`).join('')}</div>
-      ${q.explanation?`<div class="explanation" id="explanation" style="display:none">${escapeHtml(q.explanation)}</div>`:''}
-    `;
-    $$('.option-btn').forEach(b=>b.onclick=selectOption);
-    $('#controls').innerHTML=`<button class="btn-primary" id="next-btn" onclick="nextQuestion()" disabled>Next →</button>`;
-  }
-  
-  function selectOption(e){
-    if(answered)return;
-    answered=true;
-    const i=+e.target.dataset.i;
-    const correct=i===T[current].correct;
-    if(correct)score++;
-    e.target.classList.add(correct?'correct':'wrong');
-    $$('.option-btn').forEach((b,j)=>{
-      if(j===T[current].correct)b.classList.add('correct');
-      else if(j!==i)b.classList.add('disabled');
-      b.disabled=true;
-    });
-    if($('#explanation'))$('#explanation').style.display='block';
-    $('#next-btn').disabled=false;
-    $('#next-btn').textContent=current===T.length-1?'Show Results':'Next →';
-    updateProgress();
-  }
-  
-  function nextQuestion(){
-    if(current<T.length-1){current++;renderQuestion();updateProgress();}
-    else showResults();
-  }
-  
-  function updateProgress(){
-    const p=((current+(answered?1:0))/T.length)*100;
-    $('#progress').style.width=p+'%';
-  }
-  
-  function showResults(){
-    $('#quiz-card').style.display='none';
-    $('#controls').style.display='none';
-    const r=$('#results');
-    r.style.display='block';
-    r.innerHTML=`
-      <h2>Quiz Complete!</h2>
-      <div class="score-circle">${score}/${T.length}</div>
-      <p class="score-percent">${Math.round(score/T.length*100)}%</p>
-      <button class="btn-primary" onclick="location.reload()">Restart Quiz</button>
-    `;
-  }
-  
-  function escapeHtml(t){if(!t)return'';const d=document.createElement('div');d.textContent=t;return d.innerHTML}
-  
-  // Add styles
-  const s=document.createElement('style');
-  s.textContent=`
-    :root{--bg:${theme==='dark'?'#0d1117':'#f3f0eb'};--surface:${theme==='dark'?'#161b22':'#ffffff'};--text:${theme==='dark'?'#e6edf3':'#1c1917'};--accent:#f0a500;--correct:#2ea043;--wrong:#da3633}
-    [data-theme="light"]{--bg:#f3f0eb;--surface:#ffffff;--text:#1c1917}
-    body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);margin:0;padding:0;line-height:1.6}
-    .container{max-width:800px;margin:0 auto;padding:2rem 1.5rem}
-    .topbar{display:flex;align-items:center;padding:0.75rem 1.5rem;background:var(--surface);border-bottom:1px solid #30363d}
-    .topbar-title{font-weight:700;flex:1}
-    .icon-btn{width:36px;height:36px;border-radius:8px;background:#1c2330;border:1px solid #30363d;color:#8b949e;cursor:pointer}
-    .header{text-align:center;margin-bottom:2rem}
-    .header h1{font-size:2rem;margin-bottom:0.5rem}
-    .header p{color:#8b949e}
-    .progress-bar{height:6px;background:#30363d;border-radius:3px;overflow:hidden;margin-bottom:2rem}
-    .progress-fill{height:100%;background:var(--accent);width:0;transition:width 0.3s}
-    .quiz-card{background:var(--surface);padding:2rem;border-radius:12px;border:1px solid #30363d}
-    .question-number{display:inline-block;background:var(--accent);color:#000;padding:0.2rem 0.75rem;border-radius:6px;font-weight:700;font-size:0.8rem;margin-bottom:1rem}
-    .question-text{font-size:1.2rem;font-weight:600;margin-bottom:1.5rem}
-    .options{display:flex;flex-direction:column;gap:0.75rem}
-    .option-btn{padding:1rem;text-align:left;background:#1c2330;border:1.5px solid #30363d;border-radius:8px;color:var(--text);cursor:pointer;font-size:1rem;transition:all 0.2s}
-    .option-btn:hover:not(:disabled){border-color:var(--accent)}
-    .option-btn.correct{background:rgba(46,160,67,0.2);border-color:var(--correct)}
-    .option-btn.wrong{background:rgba(218,54,51,0.2);border-color:var(--wrong)}
-    .option-btn.disabled{opacity:0.5;cursor:not-allowed}
-    .explanation{margin-top:1.5rem;padding:1rem;background:#1c2330;border-left:3px solid var(--accent);border-radius:6px}
-    .controls{margin-top:1.5rem;text-align:right}
-    .btn-primary{padding:1rem 2rem;background:var(--accent);color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:1rem}
-    .btn-primary:disabled{opacity:0.5;cursor:not-allowed}
-    .results{text-align:center;padding:3rem 1rem}
-    .results h2{font-size:2rem;margin-bottom:1rem}
-    .score-circle{font-size:4rem;font-weight:700;color:var(--accent);margin:1rem 0}
-    .score-percent{font-size:1.5rem;color:#8b949e;margin-bottom:2rem}
-  `;
-  document.head.appendChild(s);
-  
-  init();
-})();
-`;
+  return '<scr' + 'ipt>\n' + 
+    '/* ═══════════════════════════════════════════\n' +
+    '   QUIZ ENGINE (Embedded)\n' +
+    '═══════════════════════════════════════════ */\n' +
+    '(function(){\n' +
+    '  "use strict";\n' +
+    '  const Q=QUIZ_CONFIG||{},T=QUESTIONS||[];\n' +
+    '  let current=0,score=0,answered=false,theme=localStorage.getItem("quiz-theme")||"dark";\n' +
+    '  \n' +
+    '  function $(s){return document.querySelector(s)}\n' +
+    '  function $$(s){return document.querySelectorAll(s)}\n' +
+    '  \n' +
+    '  function init(){\n' +
+    '    document.documentElement.setAttribute("data-theme",theme);\n' +
+    '    $("body").innerHTML="";\n' +
+    '    $("body").appendChild(createUI());\n' +
+    '    renderQuestion();\n' +
+    '    updateProgress();\n' +
+    '  }\n' +
+    '  \n' +
+    '  function createUI(){\n' +
+    '    const c=document.createElement("div");\n' +
+    '    c.className="container";\n' +
+    '    c.innerHTML=\n' +
+    '      \'<div class="topbar">\' +\n' +
+    '        \'<div class="topbar-title">\' + escapeHtml(Q.title||"Quiz") + \'</div>\' +\n' +
+    '        \'<button class="icon-btn" id="theme-toggle">☀</button>\' +\n' +
+    '      \'</div>\' +\n' +
+    '      \'<div class="header">\' +\n' +
+    '        \'<h1>\' + escapeHtml(Q.title||"Quiz") + \'</h1>\' +\n' +
+    '        \'<p>\' + escapeHtml(Q.description||"") + \'</p>\' +\n' +
+    '      \'</div>\' +\n' +
+    '      \'<div class="progress-bar"><div class="progress-fill" id="progress"></div></div>\' +\n' +
+    '      \'<div class="quiz-card" id="quiz-card"></div>\' +\n' +
+    '      \'<div class="controls" id="controls"></div>\' +\n' +
+    '      \'<div class="results" id="results" style="display:none"></div>\';\n' +
+    '    c.querySelector("#theme-toggle").onclick=toggleTheme;\n' +
+    '    return c;\n' +
+    '  }\n' +
+    '  \n' +
+    '  function toggleTheme(){\n' +
+    '    theme=theme==="dark"?"light":"dark";\n' +
+    '    localStorage.setItem("quiz-theme",theme);\n' +
+    '    document.documentElement.setAttribute("data-theme",theme);\n' +
+    '    $("#theme-toggle").textContent=theme==="dark"?"☀":"☾";\n' +
+    '  }\n' +
+    '  \n' +
+    '  function renderQuestion(){\n' +
+    '    answered=false;\n' +
+    '    const q=T[current];\n' +
+    '    const card=$("#quiz-card");\n' +
+    '    card.innerHTML=\n' +
+    '      \'<div class="question-number">Question \' + (current+1) + \' of \' + T.length + \'</div>\' +\n' +
+    '      \'<div class="question-text">\' + escapeHtml(q.question) + \'</div>\' +\n' +
+    '      \'<div class="options">\' + q.options.map((o,i)=>\'<button class="option-btn" data-i="\' + i + \'">\' + escapeHtml(o) + \'</button>\').join("") + \'</div>\' +\n' +
+    '      (q.explanation ? \'<div class="explanation" id="explanation" style="display:none">\' + escapeHtml(q.explanation) + \'</div>\' : "");\n' +
+    '    $$(".option-btn").forEach(b=>b.onclick=selectOption);\n' +
+    '    $("#controls").innerHTML=\'<button class="btn-primary" id="next-btn" onclick="nextQuestion()" disabled>Next →</button>\';\n' +
+    '  }\n' +
+    '  \n' +
+    '  function selectOption(e){\n' +
+    '    if(answered)return;\n' +
+    '    answered=true;\n' +
+    '    const i=+e.target.dataset.i;\n' +
+    '    const correct=i===T[current].correct;\n' +
+    '    if(correct)score++;\n' +
+    '    e.target.classList.add(correct?"correct":"wrong");\n' +
+    '    $$(".option-btn").forEach((b,j)=>{\n' +
+    '      if(j===T[current].correct)b.classList.add("correct");\n' +
+    '      else if(j!==i)b.classList.add("disabled");\n' +
+    '      b.disabled=true;\n' +
+    '    });\n' +
+    '    if($("#explanation"))$("#explanation").style.display="block";\n' +
+    '    $("#next-btn").disabled=false;\n' +
+    '    $("#next-btn").textContent=current===T.length-1?"Show Results":"Next →";\n' +
+    '    updateProgress();\n' +
+    '  }\n' +
+    '  \n' +
+    '  function nextQuestion(){\n' +
+    '    if(current<T.length-1){current++;renderQuestion();updateProgress();}\n' +
+    '    else showResults();\n' +
+    '  }\n' +
+    '  \n' +
+    '  function updateProgress(){\n' +
+    '    const p=((current+(answered?1:0))/T.length)*100;\n' +
+    '    $("#progress").style.width=p+"%";\n' +
+    '  }\n' +
+    '  \n' +
+    '  function showResults(){\n' +
+    '    $("#quiz-card").style.display="none";\n' +
+    '    $("#controls").style.display="none";\n' +
+    '    const r=$("#results");\n' +
+    '    r.style.display="block";\n' +
+    '    r.innerHTML=\n' +
+    '      "<h2>Quiz Complete!</h2>" +\n' +
+    '      "<div class=\\"score-circle\\">" + score + "/" + T.length + "</div>" +\n' +
+    '      "<p class=\\"score-percent\\">" + Math.round(score/T.length*100) + "%</p>" +\n' +
+    '      "<button class=\\"btn-primary\\" onclick=\\"location.reload()\\">Restart Quiz</button>";\n' +
+    '  }\n' +
+    '  \n' +
+    '  function escapeHtml(t){if(!t)return"";const d=document.createElement("div");d.textContent=t;return d.innerHTML}\n' +
+    '  \n' +
+    '  // Add styles\n' +
+    '  const s=document.createElement("style");\n' +
+    '  s.textContent=\n' +
+    '    ":root{--bg:" + (theme==="dark"?"#0d1117":"#f3f0eb") + ";--surface:" + (theme==="dark"?"#161b22":"#ffffff") + ";--text:" + (theme==="dark"?"#e6edf3":"#1c1917") + ";--accent:#f0a500;--correct:#2ea043;--wrong:#da3633}\\n" +\n' +
+    '    "[data-theme=\\"light\\"]{--bg:#f3f0eb;--surface:#ffffff;--text:#1c1917}\\n" +\n' +
+    '    "body{font-family:\'Outfit\',sans-serif;background:var(--bg);color:var(--text);margin:0;padding:0;line-height:1.6}\\n" +\n' +
+    '    ".container{max-width:800px;margin:0 auto;padding:2rem 1.5rem}\\n" +\n' +
+    '    ".topbar{display:flex;align-items:center;padding:0.75rem 1.5rem;background:var(--surface);border-bottom:1px solid #30363d}\\n" +\n' +
+    '    ".topbar-title{font-weight:700;flex:1}\\n" +\n' +
+    '    ".icon-btn{width:36px;height:36px;border-radius:8px;background:#1c2330;border:1px solid #30363d;color:#8b949e;cursor:pointer}\\n" +\n' +
+    '    ".header{text-align:center;margin-bottom:2rem}\\n" +\n' +
+    '    ".header h1{font-size:2rem;margin-bottom:0.5rem}\\n" +\n' +
+    '    ".header p{color:#8b949e}\\n" +\n' +
+    '    ".progress-bar{height:6px;background:#30363d;border-radius:3px;overflow:hidden;margin-bottom:2rem}\\n" +\n' +
+    '    ".progress-fill{height:100%;background:var(--accent);width:0;transition:width 0.3s}\\n" +\n' +
+    '    ".quiz-card{background:var(--surface);padding:2rem;border-radius:12px;border:1px solid #30363d}\\n" +\n' +
+    '    ".question-number{display:inline-block;background:var(--accent);color:#000;padding:0.2rem 0.75rem;border-radius:6px;font-weight:700;font-size:0.8rem;margin-bottom:1rem}\\n" +\n' +
+    '    ".question-text{font-size:1.2rem;font-weight:600;margin-bottom:1.5rem}\\n" +\n' +
+    '    ".options{display:flex;flex-direction:column;gap:0.75rem}\\n" +\n' +
+    '    ".option-btn{padding:1rem;text-align:left;background:#1c2330;border:1.5px solid #30363d;border-radius:8px;color:var(--text);cursor:pointer;font-size:1rem;transition:all 0.2s}\\n" +\n' +
+    '    ".option-btn:hover:not(:disabled){border-color:var(--accent)}\\n" +\n' +
+    '    ".option-btn.correct{background:rgba(46,160,67,0.2);border-color:var(--correct)}\\n" +\n' +
+    '    ".option-btn.wrong{background:rgba(218,54,51,0.2);border-color:var(--wrong)}\\n" +\n' +
+    '    ".option-btn.disabled{opacity:0.5;cursor:not-allowed}\\n" +\n' +
+    '    ".explanation{margin-top:1.5rem;padding:1rem;background:#1c2330;border-left:3px solid var(--accent);border-radius:6px}\\n" +\n' +
+    '    ".controls{margin-top:1.5rem;text-align:right}\\n" +\n' +
+    '    ".btn-primary{padding:1rem 2rem;background:var(--accent);color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:1rem}\\n" +\n' +
+    '    ".btn-primary:disabled{opacity:0.5;cursor:not-allowed}\\n" +\n' +
+    '    ".results{text-align:center;padding:3rem 1rem}\\n" +\n' +
+    '    ".results h2{font-size:2rem;margin-bottom:1rem}\\n" +\n' +
+    '    ".score-circle{font-size:4rem;font-weight:700;color:var(--accent);margin:1rem 0}\\n" +\n' +
+    '    ".score-percent{font-size:1.5rem;color:#8b949e;margin-bottom:2rem}";\n' +
+    '  document.head.appendChild(s);\n' +
+    '  \n' +
+    '  init();\n' +
+    '})();\n' +
+    '</scr' + 'ipt>';
 }
-
 function getQuizEngineScriptTag() {
   return '<scr' + 'ipt>' + getQuizEngineCode() + '</scr' + 'ipt>';
 }
