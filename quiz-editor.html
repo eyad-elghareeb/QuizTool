@@ -7,9 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 <style>
-/* ═══════════════════════════════════════════
-   CSS VARIABLES & THEME
-═══════════════════════════════════════════ */
 :root {
   --bg:         #0d1117;
   --surface:    #161b22;
@@ -42,37 +39,17 @@
   --wrong-bg:   rgba(220,38,38,0.10);
   --shadow:     0 4px 24px rgba(0,0,0,0.10);
 }
-
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; }
-body {
-  font-family: 'Outfit', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  line-height: 1.6;
-  transition: background var(--transition), color var(--transition);
-}
-
+body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; transition: background var(--transition), color var(--transition); }
 .container { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
 
 /* TOPBAR */
-.topbar {
-  display: flex; align-items: center; padding: 0.75rem 1.5rem;
-  background: var(--surface); border-bottom: 1px solid var(--border);
-}
-.topbar-title {
-  font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; flex: 1;
-}
-.back-btn {
-  display: flex; align-items: center; gap: 0.5rem; color: var(--text-muted);
-  text-decoration: none; font-weight: 600; transition: color var(--transition);
-}
+.topbar { display: flex; align-items: center; padding: 0.75rem 1.5rem; background: var(--surface); border-bottom: 1px solid var(--border); }
+.topbar-title { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; flex: 1; }
+.back-btn { display: flex; align-items: center; gap: 0.5rem; color: var(--text-muted); text-decoration: none; font-weight: 600; transition: color var(--transition); }
 .back-btn:hover { color: var(--text); }
-.icon-btn {
-  width: 36px; height: 36px; border-radius: 8px; background: var(--surface2);
-  border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;
-  color: var(--text-muted); transition: all var(--transition); font-size: 1rem; cursor: pointer;
-}
+.icon-btn { width: 36px; height: 36px; border-radius: 8px; background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--text-muted); transition: all var(--transition); font-size: 1rem; cursor: pointer; }
 .icon-btn:hover { color: var(--text); border-color: var(--accent); }
 
 /* HEADER */
@@ -83,11 +60,7 @@ body {
 
 /* TABS */
 .tabs { display: flex; gap: 0.5rem; margin-bottom: 2rem; flex-wrap: wrap; }
-.tab-btn {
-  padding: 0.6rem 1.2rem; border-radius: var(--radius); background: var(--surface);
-  border: 1.5px solid var(--border); color: var(--text-muted); font-size: 0.9rem;
-  font-weight: 500; transition: all var(--transition);
-}
+.tab-btn { padding: 0.6rem 1.2rem; border-radius: var(--radius); background: var(--surface); border: 1.5px solid var(--border); color: var(--text-muted); font-size: 0.9rem; font-weight: 500; transition: all var(--transition); cursor: pointer; }
 .tab-btn:hover { border-color: var(--accent); color: var(--accent); }
 .tab-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
 
@@ -95,135 +68,79 @@ body {
 .section { display: none; }
 .section.active { display: block; }
 
-/* FORM STYLES */
+/* FORM */
 .form-group { margin-bottom: 1.5rem; }
 label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--text); }
-input, textarea, select {
-  width: 100%; padding: 0.85rem 1rem; border-radius: var(--radius);
-  border: 1.5px solid var(--border); background: var(--surface); color: var(--text);
-  font-family: inherit; font-size: 1rem; transition: all var(--transition);
-}
+input, textarea, select { width: 100%; padding: 0.85rem 1rem; border-radius: var(--radius); border: 1.5px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 1rem; transition: all var(--transition); }
 input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
 textarea { resize: vertical; min-height: 80px; }
 .hint { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.4rem; }
 
 /* QUESTION EDITOR */
-.question-entry {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 1.5rem; margin-bottom: 1.5rem; position: relative;
-}
-.question-header {
-  display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;
-}
-.question-number {
-  position: absolute; top: -12px; left: 1rem; background: var(--accent); color: #000;
-  font-weight: 700; padding: 0.2rem 0.75rem; border-radius: 6px; font-size: 0.8rem;
-}
-.delete-btn {
-  background: var(--wrong-bg); border: 1px solid var(--wrong); color: var(--wrong);
-  padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.8rem;
-}
+.question-entry { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.5rem; position: relative; }
+.question-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.question-number { position: absolute; top: -12px; left: 1rem; background: var(--accent); color: #000; font-weight: 700; padding: 0.2rem 0.75rem; border-radius: 6px; font-size: 0.8rem; }
+.delete-btn { background: var(--wrong-bg); border: 1px solid var(--wrong); color: var(--wrong); padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.8rem; }
 .delete-btn:hover { background: var(--wrong); color: #fff; }
 
 /* OPTIONS */
 .options-container { margin-top: 1rem; }
-.option-row {
-  display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;
-}
-.option-radio {
-  width: 20px; height: 20px; cursor: pointer; accent-color: var(--correct);
-}
+.option-row { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }
+.option-radio { width: 20px; height: 20px; cursor: pointer; accent-color: var(--correct); }
 .option-input { flex: 1; }
-.move-btn {
-  width: 32px; height: 32px; border-radius: 6px; background: var(--surface2);
-  border: 1px solid var(--border); color: var(--text-muted); cursor: pointer;
-  display: flex; align-items: center; justify-content: center; font-size: 0.9rem;
-}
+.move-btn { width: 32px; height: 32px; border-radius: 6px; background: var(--surface2); border: 1px solid var(--border); color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
 .move-btn:hover { border-color: var(--accent); color: var(--accent); }
 .move-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
 /* BUTTONS */
-.btn-add {
-  width: 100%; padding: 1rem; border: 2px dashed var(--border); background: transparent;
-  color: var(--text-muted); border-radius: var(--radius); cursor: pointer; font-weight: 600;
-  font-size: 1rem; transition: all var(--transition); margin-bottom: 1.5rem;
-}
+.btn-add { width: 100%; padding: 1rem; border: 2px dashed var(--border); background: transparent; color: var(--text-muted); border-radius: var(--radius); cursor: pointer; font-weight: 600; font-size: 1rem; transition: all var(--transition); margin-bottom: 1.5rem; }
 .btn-add:hover { border-color: var(--accent); color: var(--accent); }
-
-.btn-primary {
-  width: 100%; padding: 1rem; border-radius: var(--radius); background: var(--accent);
-  color: #000; font-weight: 700; font-size: 1rem; border: none; cursor: pointer;
-  transition: opacity var(--transition);
-}
+.btn-primary { width: 100%; padding: 1rem; border-radius: var(--radius); background: var(--accent); color: #000; font-weight: 700; font-size: 1rem; border: none; cursor: pointer; transition: opacity var(--transition); }
 .btn-primary:hover { opacity: 0.88; }
-
-.btn-secondary {
-  padding: 0.85rem 1.5rem; border-radius: var(--radius); background: var(--surface);
-  border: 1.5px solid var(--border); color: var(--text); font-weight: 600;
-  font-size: 0.95rem; cursor: pointer; transition: all var(--transition);
-}
+.btn-secondary { padding: 0.85rem 1.5rem; border-radius: var(--radius); background: var(--surface); border: 1.5px solid var(--border); color: var(--text); font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: all var(--transition); }
 .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
 
-/* PREVIEW PANEL */
-.preview-panel {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 1.5rem; margin-top: 2rem;
-}
+/* PREVIEW */
+.preview-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-top: 1.5rem; }
 .preview-panel h3 { margin-bottom: 1rem; font-family: 'Playfair Display', serif; }
-.preview-panel pre {
-  max-height: 400px; overflow: auto; padding: 1rem; background: var(--surface2);
-  border-radius: 8px; font-family: monospace; font-size: 0.85rem; white-space: pre-wrap;
-}
+.preview-panel pre { max-height: 400px; overflow: auto; padding: 1rem; background: var(--surface2); border-radius: 8px; font-family: monospace; font-size: 0.85rem; white-space: pre-wrap; }
 .preview-actions { display: flex; gap: 1rem; margin-top: 1rem; flex-wrap: wrap; }
 
-/* IMPORT SECTION */
-.import-dropzone {
-  border: 2px dashed var(--border); border-radius: var(--radius); padding: 3rem 2rem;
-  text-align: center; color: var(--text-muted); transition: all var(--transition);
-  cursor: pointer;
-}
+/* IMPORT */
+.import-dropzone { border: 2px dashed var(--border); border-radius: var(--radius); padding: 3rem 2rem; text-align: center; color: var(--text-muted); transition: all var(--transition); cursor: pointer; }
 .import-dropzone:hover, .import-dropzone.dragover { border-color: var(--accent); background: var(--accent-dim); }
 .import-dropzone svg { width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.5; }
-.import-dropzone code {
-  background: var(--surface2);
-  padding: 0.15rem 0.4rem;
-  border-radius: 4px;
-  font-family: monospace;
-  font-size: 0.8rem;
-  color: var(--accent);
-}
-
-.url-import-section {
-  margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);
-}
+.import-dropzone code { background: var(--surface2); padding: 0.15rem 0.4rem; border-radius: 4px; font-family: monospace; font-size: 0.8rem; color: var(--accent); }
+.url-import-section { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
 
 /* STATS */
-.stats-bar {
-  display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem;
-}
-.stat-item {
-  background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 0.75rem 1.25rem; text-align: center; flex: 1; min-width: 120px;
-}
+.stats-bar { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+.stat-item { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.75rem 1.25rem; text-align: center; flex: 1; min-width: 120px; }
 .stat-item .sv { font-size: 1.5rem; font-weight: 700; color: var(--accent); display: block; }
 .stat-item .sl { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
 
+/* ENGINE STATUS */
+.engine-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1.5rem; }
+.engine-panel-title { font-weight: 600; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; }
+.engine-panel-title small { font-weight: 400; color: var(--text-muted); font-size: 0.8rem; }
+.engine-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.65rem; }
+.engine-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 0.3rem; }
+.engine-item .en { font-family: monospace; font-size: 0.85rem; font-weight: 600; color: var(--text); }
+.engine-item .es { font-size: 0.8rem; font-weight: 600; }
+.engine-item .el { font-size: 0.75rem; color: var(--accent); cursor: pointer; text-decoration: underline; width: fit-content; }
+.engine-item .el:hover { opacity: 0.75; }
+
 /* TOAST */
-.toast {
-  position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(80px);
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 0.75rem 1.5rem; font-size: 0.95rem; font-weight: 500; box-shadow: var(--shadow);
-  z-index: 9999; transition: transform 0.3s ease, opacity 0.3s ease; white-space: nowrap;
-}
+.toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.75rem 1.5rem; font-size: 0.95rem; font-weight: 500; box-shadow: var(--shadow); z-index: 9999; transition: transform 0.3s ease; white-space: nowrap; }
 .toast.show { transform: translateX(-50%) translateY(0); }
 
-/* RESPONSIVE */
 @media (max-width: 768px) {
   .container { padding: 1.5rem 1rem; }
   .preview-actions { flex-direction: column; }
   .preview-actions .btn-secondary { width: 100%; text-align: center; }
   .option-row { flex-wrap: wrap; }
   .move-btn { order: 3; }
+  .engine-grid { grid-template-columns: 1fr; }
 }
 </style>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
@@ -239,8 +156,8 @@ textarea { resize: vertical; min-height: 80px; }
 
 <div class="container">
   <header class="header">
-    <h1>Edit Your <span>Quiz</span></h1>
-    <p>Upload an HTML quiz file or start from scratch, then edit title and questions</p>
+    <h1>Edit Your <span id="header-filetype">Quiz</span></h1>
+    <p>Upload an HTML quiz or bank file, edit content, then export</p>
   </header>
 
   <!-- STATS -->
@@ -257,6 +174,10 @@ textarea { resize: vertical; min-height: 80px; }
       <span class="sv" id="stat-theme">Dark</span>
       <span class="sl">Theme</span>
     </div>
+    <div class="stat-item">
+      <span class="sv" id="stat-type">📝 Quiz</span>
+      <span class="sl">Type</span>
+    </div>
   </div>
 
   <!-- TABS -->
@@ -270,17 +191,23 @@ textarea { resize: vertical; min-height: 80px; }
   <!-- CONFIG TAB -->
   <div class="section active" id="tab-config">
     <div class="form-group">
-      <label for="cfg-uid">Quiz UID (optional)</label>
+      <label for="cfg-uid">File UID (optional)</label>
       <input type="text" id="cfg-uid" placeholder="e.g., gk-quiz-001" oninput="updateConfig()">
-      <div class="hint">Unique identifier for your quiz</div>
+      <div class="hint">Unique identifier used in localStorage and filenames</div>
     </div>
     <div class="form-group">
-      <label for="cfg-title">Quiz Title</label>
+      <label for="cfg-title">Title</label>
       <input type="text" id="cfg-title" value="General Knowledge Quiz" oninput="updateConfig()">
     </div>
     <div class="form-group">
       <label for="cfg-description">Description</label>
       <textarea id="cfg-description" rows="3" oninput="updateConfig()">Test your knowledge across science, history, geography, and more.</textarea>
+    </div>
+    <!-- Bank-only field -->
+    <div class="form-group" id="cfg-icon-group" style="display:none">
+      <label for="cfg-icon">Bank Icon (emoji)</label>
+      <input type="text" id="cfg-icon" value="🗃️" oninput="updateConfig()">
+      <div class="hint">Emoji displayed on the bank start screen</div>
     </div>
   </div>
 
@@ -298,11 +225,11 @@ textarea { resize: vertical; min-height: 80px; }
         <polyline points="17 8 12 3 7 8"></polyline>
         <line x1="12" y1="3" x2="12" y2="15"></line>
       </svg>
-      <h3>Upload HTML Quiz File</h3>
-      <p>Drag & drop or click to browse</p>
+      <h3>Upload Quiz or Bank HTML File</h3>
+      <p>Drag &amp; drop or click to browse — file type auto-detected</p>
       <div style="margin-top: 1rem; font-size: 0.85rem; color: var(--text-muted);">
-        <strong>Supported format:</strong><br>
-        • HTML files with <code>const QUIZ_CONFIG = {...}</code> and <code>const QUESTIONS = [...]</code> (.html, .htm)
+        <strong>Quiz files:</strong> <code>QUIZ_CONFIG</code> + <code>QUESTIONS</code><br>
+        <strong>Bank files:</strong> <code>BANK_CONFIG</code> + <code>QUESTION_BANK</code>
       </div>
       <input type="file" id="file-input" accept=".html,.htm" style="display: none;" onchange="handleFileUpload(event)">
     </div>
@@ -311,19 +238,19 @@ textarea { resize: vertical; min-height: 80px; }
       <div class="form-group">
         <label for="url-input">Or load from URL</label>
         <input type="url" id="url-input" placeholder="https://example.com/quiz.html">
-        <div class="hint">Enter the URL of a hosted HTML quiz file</div>
+        <div class="hint">URL of a hosted HTML quiz or bank file</div>
       </div>
       <button class="btn-secondary" onclick="loadFromURL()">🌐 Load from URL</button>
     </div>
 
     <div class="form-group" style="margin-top: 1.5rem;">
-      <label for="bank-file-input">📚 Load Question Bank File (JSON)</label>
+      <label for="bank-file-input">📚 Merge Questions from JSON Bank File</label>
       <input type="file" id="bank-file-input" accept=".json" onchange="loadBankFile(event)" style="margin-top: 0.5rem;">
-      <div class="hint">Upload a JSON file containing questions to merge with current questions (works after loading HTML)</div>
+      <div class="hint">Upload a JSON file with a questions array to append to current questions</div>
     </div>
 
     <div class="form-group" style="margin-top: 1.5rem;">
-      <label for="import-text">Or paste your JSON configuration below</label>
+      <label for="import-text">Or paste JSON configuration</label>
       <textarea id="import-text" rows="8" placeholder='{"uid": "my-quiz", "title": "My Quiz", "description": "...", "questions": [...]}'></textarea>
       <button class="btn-secondary" style="margin-top: 0.75rem;" onclick="importFromText()">📥 Import from JSON</button>
     </div>
@@ -331,30 +258,46 @@ textarea { resize: vertical; min-height: 80px; }
 
   <!-- EXPORT TAB -->
   <div class="section" id="tab-export">
+
     <div id="upload-status" style="display: none; margin-bottom: 1rem; padding: 0.75rem 1rem; background: var(--correct-bg); border: 1px solid var(--correct); border-radius: var(--radius);">
-      <div style="display: flex; align-items: center; justify-content: space-between;">
-        <span style="color: var(--correct); font-weight: 500;">✓ Using uploaded HTML (custom code preserved)</span>
-        <button class="btn-secondary" onclick="clearUploadedHTML()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Use Default Template</button>
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+        <span style="color: var(--correct); font-weight: 500;">✓ Editing uploaded HTML — file structure preserved on hosted export</span>
+        <button class="btn-secondary" onclick="clearUploadedHTML()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; white-space: nowrap;">Use Default Template</button>
       </div>
     </div>
-    
-    <div class="form-group" style="margin-bottom: 1.5rem;">
-      <label for="engine-source">Engine Source (for template export)</label>
-      <input type="text" id="engine-source" placeholder="../quiz-engine.js" value="../quiz-engine.js">
-      <div class="hint">Path to quiz engine JS file for template mode (standalone embeds engine directly)</div>
+
+    <!-- ENGINE STATUS PANEL -->
+    <div class="engine-panel" id="engine-load-section">
+      <div class="engine-panel-title">⚡ Engine Files <small>(required for Standalone export only)</small></div>
+      <div class="engine-grid">
+        <div class="engine-item">
+          <span class="en">quiz-engine.js</span>
+          <span class="es" id="engine-quiz-status" style="color:var(--wrong)">❌ Not loaded</span>
+          <span class="el" onclick="document.getElementById('quiz-engine-file').click()">📁 Load manually</span>
+          <input type="file" id="quiz-engine-file" accept=".js" style="display:none" onchange="handleEngineFileLoad(event,'quiz')">
+        </div>
+        <div class="engine-item">
+          <span class="en">bank-engine.js</span>
+          <span class="es" id="engine-bank-status" style="color:var(--wrong)">❌ Not loaded</span>
+          <span class="el" onclick="document.getElementById('bank-engine-file').click()">📁 Load manually</span>
+          <input type="file" id="bank-engine-file" accept=".js" style="display:none" onchange="handleEngineFileLoad(event,'bank')">
+        </div>
+      </div>
+      <div class="hint">Engines auto-load when served over HTTP. When opening as file://, use "Load manually". The ⚡ Standalone button embeds the full engine so the file works anywhere.</div>
     </div>
-    
-    <div class="preview-panel">
+
+    <div class="preview-panel" style="margin-top:0">
       <h3>📄 Generated Configuration</h3>
       <pre id="export-preview"></pre>
       <div class="preview-actions">
         <button class="btn-secondary" onclick="exportJSON()">📋 Copy JSON</button>
         <button class="btn-secondary" onclick="downloadJSON()">💾 Download JSON</button>
-        <button class="btn-secondary" onclick="generateHTML('template')">🌐 Generate HTML (Template)</button>
-        <button class="btn-secondary" onclick="generateHTML('standalone')" style="background: var(--accent-dim); border-color: var(--accent); color: var(--accent);">⚡ Generate Standalone HTML</button>
+        <button class="btn-secondary" onclick="generateHTML('template')">🌐 Generate HTML (Hosted)</button>
+        <button class="btn-secondary" onclick="generateHTML('standalone')" style="background:var(--accent-dim);border-color:var(--accent);color:var(--accent);">⚡ Generate Standalone HTML</button>
       </div>
     </div>
-    <div class="preview-panel" id="html-output" style="display: none; margin-top: 1.5rem;">
+
+    <div class="preview-panel" id="html-output" style="display:none">
       <h3>✅ Generated HTML</h3>
       <pre id="html-code"></pre>
       <div class="preview-actions">
@@ -365,115 +308,144 @@ textarea { resize: vertical; min-height: 80px; }
 </div>
 
 <script>
-/* ─────────────────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════
    STATE
-──────────────────────────────────────────────────────────────────*/
+═══════════════════════════════════════════════════════════════ */
 let quizConfig = {
-  uid: "",
-  title: "General Knowledge Quiz",
-  description: "Test your knowledge across science, history, geography, and more.",
+  uid: '',
+  title: 'General Knowledge Quiz',
+  description: 'Test your knowledge across science, history, geography, and more.',
+  icon: '🗃️',
 };
-let questions = [];
+let questions       = [];
 let questionCounter = 0;
-let uploadedHTMLContent = ''; // Store uploaded HTML to preserve custom code
+let uploadedHTML    = '';   // raw content of the uploaded file
+let fileType        = 'quiz'; // 'quiz' | 'bank'
+let quizEngineCode  = '';
+let bankEngineCode  = '';
 
-/* ─────────────────────────────────────────────────────────────────
-   UTILITIES (must be defined before use)
-──────────────────────────────────────────────────────────────────*/
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
+/* ═══════════════════════════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════════════════════════ */
+function escapeHtml(t) {
+  if (!t) return '';
+  const d = document.createElement('div');
+  d.textContent = t;
+  return d.innerHTML;
 }
 
-/* ─────────────────────────────────────────────────────────────────
-   INITIALIZATION
-──────────────────────────────────────────────────────────────────*/
+/* ═══════════════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════════════ */
 function init() {
   loadTheme();
   updateStats();
   updateExportPreview();
-  if (questions.length === 0) addQuestionEntry();
+  if (!questions.length) addQuestionEntry();
+  tryLoadEngines();
 }
 
+async function tryLoadEngines() {
+  try { const r = await fetch('quiz-engine.js'); if (r.ok) quizEngineCode = await r.text(); } catch(_) {}
+  try { const r = await fetch('bank-engine.js'); if (r.ok) bankEngineCode = await r.text(); } catch(_) {}
+  updateEngineStatus();
+}
+
+function updateEngineStatus() {
+  const q = document.getElementById('engine-quiz-status');
+  const b = document.getElementById('engine-bank-status');
+  if (q) { q.textContent = quizEngineCode ? `✅ Loaded (${Math.round(quizEngineCode.length/1024)} KB)` : '❌ Not loaded'; q.style.color = quizEngineCode ? 'var(--correct)' : 'var(--wrong)'; }
+  if (b) { b.textContent = bankEngineCode ? `✅ Loaded (${Math.round(bankEngineCode.length/1024)} KB)` : '❌ Not loaded'; b.style.color = bankEngineCode ? 'var(--correct)' : 'var(--wrong)'; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   THEME
+═══════════════════════════════════════════════════════════════ */
 function loadTheme() {
-  const saved = localStorage.getItem('quiz-theme');
-  if (saved) document.documentElement.setAttribute('data-theme', saved);
+  const s = localStorage.getItem('quiz-theme');
+  if (s) document.documentElement.setAttribute('data-theme', s);
   updateThemeIcon();
 }
-
 function toggleTheme() {
-  const html = document.documentElement;
-  const isDark = html.getAttribute('data-theme') === 'dark';
-  const newTheme = isDark ? 'light' : 'dark';
-  html.setAttribute('data-theme', newTheme);
-  localStorage.setItem('quiz-theme', newTheme);
+  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const t = dark ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  localStorage.setItem('quiz-theme', t);
   updateThemeIcon();
   updateStats();
 }
-
 function updateThemeIcon() {
-  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
   const btn = document.getElementById('theme-toggle');
-  if (btn) btn.textContent = isDark ? '☀' : '☾';
+  if (btn) btn.textContent = document.documentElement.getAttribute('data-theme') === 'dark' ? '☀' : '☾';
 }
 
-/* ─────────────────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════
    TABS
-──────────────────────────────────────────────────────────────────*/
-function switchTab(tabName) {
-  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-  document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
-  
-  // Find the button directly or just use event if explicitly passed
-  let targetBtn;
+═══════════════════════════════════════════════════════════════ */
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  let btn;
   if (window.event && window.event.target && window.event.target.classList.contains('tab-btn')) {
-    targetBtn = window.event.target;
+    btn = window.event.target;
   } else {
-    // fallback if event not available
-    const tabButtons = document.querySelectorAll('.tab-btn');
-    for (const btn of tabButtons) {
-      if (btn.getAttribute('onclick').includes(tabName)) {
-        targetBtn = btn;
-        break;
-      }
-    }
+    document.querySelectorAll('.tab-btn').forEach(b => { if (b.getAttribute('onclick') && b.getAttribute('onclick').includes(name)) btn = b; });
   }
-  
-  if (targetBtn) targetBtn.classList.add('active');
-  document.getElementById('tab-' + tabName).classList.add('active');
-  
-  if (tabName === 'export') {
-    updateExportPreview();
-  }
+  if (btn) btn.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'export') updateExportPreview();
 }
 
-/* ─────────────────────────────────────────────────────────────────
-   CONFIG MANAGEMENT
-──────────────────────────────────────────────────────────────────*/
-function updateConfig() {
-  quizConfig.uid = document.getElementById('cfg-uid').value.trim();
-  quizConfig.title = document.getElementById('cfg-title').value.trim();
-  quizConfig.description = document.getElementById('cfg-description').value.trim();
+function switchTabByName(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  const map = { questions: '📝', config: '⚙️', import: '📥', export: '💾' };
+  document.querySelectorAll('.tab-btn').forEach(b => { if (map[name] && b.textContent.includes(map[name])) b.classList.add('active'); });
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'export') updateExportPreview();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   FILE TYPE SWITCH
+═══════════════════════════════════════════════════════════════ */
+function switchFileType(type) {
+  fileType = type;
+  const ig = document.getElementById('cfg-icon-group');
+  if (ig) ig.style.display = type === 'bank' ? 'block' : 'none';
+  const hf = document.getElementById('header-filetype');
+  if (hf) hf.textContent = type === 'bank' ? 'Bank' : 'Quiz';
   updateStats();
   updateExportPreview();
 }
 
-/* ─────────────────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════
+   CONFIG
+═══════════════════════════════════════════════════════════════ */
+function updateConfig() {
+  quizConfig.uid         = document.getElementById('cfg-uid').value.trim();
+  quizConfig.title       = document.getElementById('cfg-title').value.trim();
+  quizConfig.description = document.getElementById('cfg-description').value.trim();
+  if (fileType === 'bank') {
+    const el = document.getElementById('cfg-icon');
+    quizConfig.icon = el ? (el.value.trim() || '🗃️') : '🗃️';
+  }
+  updateStats();
+  updateExportPreview();
+}
+
+function buildConfigData() {
+  const o = { uid: quizConfig.uid, title: quizConfig.title, description: quizConfig.description };
+  if (fileType === 'bank') o.icon = quizConfig.icon || '🗃️';
+  return o;
+}
+
+/* ═══════════════════════════════════════════════════════════════
    QUESTION MANAGEMENT
-──────────────────────────────────────────────────────────────────*/
-function addQuestionEntry(data = null) {
+═══════════════════════════════════════════════════════════════ */
+function addQuestionEntry(data) {
   const container = document.getElementById('question-entries-container');
   const qNum = ++questionCounter;
-  
-  const questionData = data || {
-    question: "",
-    options: ["", "", "", ""],
-    correct: 0,
-    explanation: ""
-  };
-  
+  const qd = data || { question: '', options: ['', '', '', ''], correct: 0, explanation: '' };
   const div = document.createElement('div');
   div.className = 'question-entry';
   div.dataset.index = questions.length;
@@ -485,804 +457,464 @@ function addQuestionEntry(data = null) {
     </div>
     <div class="form-group">
       <label>Question Text</label>
-      <textarea class="q-text" rows="2" placeholder="Enter your question..." oninput="updateQuestionData()">${escapeHtml(questionData.question)}</textarea>
+      <textarea class="q-text" rows="2" placeholder="Enter your question..." oninput="updateQuestionData()">${escapeHtml(qd.question)}</textarea>
     </div>
     <div class="options-container">
-      <label style="margin-bottom: 0.75rem; display: block;">Options (select the correct answer)</label>
+      <label style="margin-bottom:0.75rem;display:block">Options (select the correct answer)</label>
       <div class="options-list">
-      ${questionData.options.map((opt, i) => `
+      ${qd.options.map((opt, i) => `
         <div class="option-row">
-          <input type="radio" name="correct-${div.dataset.index}" class="option-radio" ${i === questionData.correct ? 'checked' : ''} onchange="updateCorrectOption(${div.dataset.index}, ${i})">
+          <input type="radio" name="correct-${div.dataset.index}" class="option-radio" ${i === qd.correct ? 'checked' : ''} onchange="updateCorrectOption(${div.dataset.index},${i})">
           <input type="text" class="option-input" placeholder="Option ${String.fromCharCode(65+i)}" value="${escapeHtml(opt)}" oninput="updateQuestionData()">
-          <button class="move-btn up-btn" onclick="moveOptionUp(this)" ${i === 0 ? 'disabled' : ''}>↑</button>
-          <button class="move-btn down-btn" onclick="moveOptionDown(this)" ${i === questionData.options.length - 1 ? 'disabled' : ''}>↓</button>
-          <button class="move-btn remove-btn" onclick="removeOption(this)" style="color:var(--wrong);" ${questionData.options.length <= 2 ? 'disabled' : ''} title="Remove Option">✖</button>
-        </div>
-      `).join('')}
+          <button class="move-btn up-btn" onclick="moveOptionUp(this)" ${i===0?'disabled':''}>↑</button>
+          <button class="move-btn down-btn" onclick="moveOptionDown(this)" ${i===qd.options.length-1?'disabled':''}>↓</button>
+          <button class="move-btn remove-btn" onclick="removeOption(this)" style="color:var(--wrong)" ${qd.options.length<=2?'disabled':''} title="Remove">✖</button>
+        </div>`).join('')}
       </div>
-      <div style="margin-top: 0.75rem; text-align: right;">
-        <button class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; border-style: dashed;" onclick="addOptionToQuestion(this)">+ Add Option</button>
+      <div style="margin-top:0.75rem;text-align:right">
+        <button class="btn-secondary" style="padding:0.4rem 0.8rem;font-size:0.85rem;border-style:dashed" onclick="addOptionToQuestion(this)">+ Add Option</button>
       </div>
     </div>
-    <div class="form-group" style="margin-top: 1rem;">
+    <div class="form-group" style="margin-top:1rem">
       <label>Explanation (optional)</label>
-      <textarea class="q-explanation" rows="2" placeholder="Explain why this answer is correct..." oninput="updateQuestionData()">${escapeHtml(questionData.explanation)}</textarea>
-    </div>
-  `;
-  
+      <textarea class="q-explanation" rows="2" placeholder="Explain why this answer is correct..." oninput="updateQuestionData()">${escapeHtml(qd.explanation)}</textarea>
+    </div>`;
   container.appendChild(div);
-  questions.push(questionData);
+  questions.push(qd);
   updateStats();
   updateExportPreview();
 }
 
 function deleteQuestion(btn) {
   const entry = btn.closest('.question-entry');
-  const index = parseInt(entry.dataset.index);
+  questions.splice(parseInt(entry.dataset.index), 1);
   entry.remove();
-  questions.splice(index, 1);
   renumberQuestions();
   updateStats();
   updateExportPreview();
 }
 
 function renumberQuestions() {
-  const entries = document.querySelectorAll('.question-entry');
   questionCounter = 0;
-  entries.forEach((entry, i) => {
+  document.querySelectorAll('.question-entry').forEach((entry, i) => {
     entry.dataset.index = i;
-    const numSpan = entry.querySelector('.question-number');
-    numSpan.textContent = `Question ${++questionCounter}`;
-    
-    // Update radio button names
-    const radios = entry.querySelectorAll('.option-radio');
-    radios.forEach((r) => {
-      r.name = `correct-${i}`;
-      r.setAttribute('onchange', `updateCorrectOption(${i}, Array.from(this.closest('.options-list').querySelectorAll('.option-radio')).indexOf(this))`);
-    });
-    
+    entry.querySelector('.question-number').textContent = `Question ${++questionCounter}`;
+    entry.querySelectorAll('.option-radio').forEach(r => { r.name = `correct-${i}`; });
     renumberOptions(entry);
   });
 }
 
 function updateQuestionData() {
-  const entries = document.querySelectorAll('.question-entry');
-  entries.forEach((entry, i) => {
+  document.querySelectorAll('.question-entry').forEach((entry, i) => {
     questions[i] = {
       question: entry.querySelector('.q-text').value.trim(),
-      options: Array.from(entry.querySelectorAll('.option-input')).map(inp => inp.value.trim()),
-      correct: Array.from(entry.querySelectorAll('.option-radio')).findIndex(r => r.checked),
+      options:  Array.from(entry.querySelectorAll('.option-input')).map(x => x.value.trim()),
+      correct:  Array.from(entry.querySelectorAll('.option-radio')).findIndex(r => r.checked),
       explanation: entry.querySelector('.q-explanation').value.trim()
     };
-    
-    // Fix correct value if none chosen
-    if(questions[i].correct === -1) {
-       questions[i].correct = 0;
-       const firstRadio = entry.querySelector('.option-radio');
-       if(firstRadio) firstRadio.checked = true;
-    }
+    if (questions[i].correct === -1) { questions[i].correct = 0; const r = entry.querySelector('.option-radio'); if (r) r.checked = true; }
   });
   updateStats();
   updateExportPreview();
 }
 
-function updateCorrectOption(index, optionIndex) {
-  questions[index].correct = optionIndex;
+function updateCorrectOption(idx, optIdx) {
+  if (questions[idx]) questions[idx].correct = optIdx;
   updateExportPreview();
 }
 
 function moveOptionUp(btn) {
-  const row = btn.closest('.option-row');
-  const prev = row.previousElementSibling;
-  if (prev) {
-    swapOptions(row, prev);
-    updateQuestionData();
-    renumberOptions(row.closest('.question-entry'));
-  }
+  const row = btn.closest('.option-row'), prev = row.previousElementSibling;
+  if (prev) { swapOptions(row, prev); updateQuestionData(); renumberOptions(row.closest('.question-entry')); }
 }
-
 function moveOptionDown(btn) {
-  const row = btn.closest('.option-row');
-  const next = row.nextElementSibling;
-  if (next) {
-    swapOptions(row, next);
-    updateQuestionData();
-    renumberOptions(row.closest('.question-entry'));
-  }
+  const row = btn.closest('.option-row'), next = row.nextElementSibling;
+  if (next) { swapOptions(row, next); updateQuestionData(); renumberOptions(row.closest('.question-entry')); }
 }
-
-function swapOptions(row1, row2) {
-  const parent = row1.parentElement;
-  const radio1 = row1.querySelector('.option-radio');
-  const radio2 = row2.querySelector('.option-radio');
-  const checked1 = radio1.checked;
-  const checked2 = radio2.checked;
-  
-  parent.insertBefore(row1, row2.nextSibling);
-  
-  if (checked1) radio2.checked = true;
-  if (checked2) radio1.checked = true;
+function swapOptions(a, b) {
+  const ra = a.querySelector('.option-radio'), rb = b.querySelector('.option-radio');
+  const ca = ra.checked, cb = rb.checked;
+  a.parentElement.insertBefore(a, b.nextSibling);
+  ra.checked = cb; rb.checked = ca;
 }
-
 function renumberOptions(entry) {
-  const rows = entry.querySelectorAll('.option-row');
-  const len = rows.length;
+  const rows = entry.querySelectorAll('.option-row'), len = rows.length;
   rows.forEach((row, i) => {
-    const input = row.querySelector('.option-input');
-    input.placeholder = `Option ${String.fromCharCode(65+i)}`;
-    
-    const upBtn = row.querySelector('.up-btn');
-    const downBtn = row.querySelector('.down-btn');
-    const rmBtn = row.querySelector('.remove-btn');
-    if(upBtn) upBtn.disabled = i === 0;
-    if(downBtn) downBtn.disabled = i === len - 1;
-    if(rmBtn) rmBtn.disabled = len <= 2;
-    
-    // Update onchange event for radio
-    const radio = row.querySelector('.option-radio');
-    const qIndex = entry.dataset.index;
-    radio.setAttribute('onchange', `updateCorrectOption(${qIndex}, ${i})`);
+    row.querySelector('.option-input').placeholder = `Option ${String.fromCharCode(65+i)}`;
+    const up = row.querySelector('.up-btn'), dn = row.querySelector('.down-btn'), rm = row.querySelector('.remove-btn');
+    if (up) up.disabled = i === 0;
+    if (dn) dn.disabled = i === len - 1;
+    if (rm) rm.disabled = len <= 2;
+    const r = row.querySelector('.option-radio');
+    r.setAttribute('onchange', `updateCorrectOption(${entry.dataset.index},${i})`);
   });
-  
-  const addBtn = entry.querySelector('button[onclick="addOptionToQuestion(this)"]');
-  if(addBtn) {
-    addBtn.disabled = len >= 12;
-  }
+  const ab = entry.querySelector('button[onclick="addOptionToQuestion(this)"]');
+  if (ab) ab.disabled = len >= 12;
 }
-
 function addOptionToQuestion(btn) {
-  const entry = btn.closest('.question-entry');
-  const list = entry.querySelector('.options-list');
-  const index = entry.dataset.index;
-  const rows = list.querySelectorAll('.option-row');
-  const i = rows.length;
-  if(i >= 12) return;
-  
-  const div = document.createElement('div');
-  div.className = 'option-row';
-  div.innerHTML = `
-    <input type="radio" name="correct-${index}" class="option-radio" onchange="updateCorrectOption(${index}, ${i})">
+  const entry = btn.closest('.question-entry'), list = entry.querySelector('.options-list');
+  const i = list.querySelectorAll('.option-row').length;
+  if (i >= 12) return;
+  const d = document.createElement('div'); d.className = 'option-row';
+  d.innerHTML = `<input type="radio" name="correct-${entry.dataset.index}" class="option-radio" onchange="updateCorrectOption(${entry.dataset.index},${i})">
     <input type="text" class="option-input" placeholder="Option ${String.fromCharCode(65+i)}" oninput="updateQuestionData()">
     <button class="move-btn up-btn" onclick="moveOptionUp(this)">↑</button>
     <button class="move-btn down-btn" onclick="moveOptionDown(this)">↓</button>
-    <button class="move-btn remove-btn" onclick="removeOption(this)" style="color:var(--wrong);" title="Remove Option">✖</button>
-  `;
-  list.appendChild(div);
-  
+    <button class="move-btn remove-btn" onclick="removeOption(this)" style="color:var(--wrong)" title="Remove">✖</button>`;
+  list.appendChild(d);
   renumberOptions(entry);
   updateQuestionData();
 }
-
 function removeOption(btn) {
-  const row = btn.closest('.option-row');
-  const entry = btn.closest('.question-entry');
-  const list = entry.querySelector('.options-list');
+  const row = btn.closest('.option-row'), entry = btn.closest('.question-entry'), list = entry.querySelector('.options-list');
   if (list.querySelectorAll('.option-row').length <= 2) return;
-  
-  const radio = row.querySelector('.option-radio');
-  const wasChecked = radio.checked;
+  const wasChecked = row.querySelector('.option-radio').checked;
   row.remove();
-  
-  if (wasChecked) {
-     const firstRadio = list.querySelector('.option-radio');
-     if (firstRadio) firstRadio.checked = true;
-  }
-  
+  if (wasChecked) { const r = list.querySelector('.option-radio'); if (r) r.checked = true; }
   renumberOptions(entry);
   updateQuestionData();
 }
 
-/* ─────────────────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════
    STATS
-──────────────────────────────────────────────────────────────────*/
+═══════════════════════════════════════════════════════════════ */
 function updateStats() {
   document.getElementById('stat-questions').textContent = questions.length;
-  document.getElementById('stat-title').textContent = quizConfig.title.substring(0, 15) + (quizConfig.title.length > 15 ? '...' : '');
-  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-  document.getElementById('stat-theme').textContent = isDark ? 'Dark' : 'Light';
+  const t = quizConfig.title || 'Untitled';
+  document.getElementById('stat-title').textContent = t.length > 15 ? t.slice(0, 15) + '…' : t;
+  document.getElementById('stat-theme').textContent = document.documentElement.getAttribute('data-theme') === 'dark' ? 'Dark' : 'Light';
+  const st = document.getElementById('stat-type');
+  if (st) st.textContent = fileType === 'bank' ? '🗃️ Bank' : '📝 Quiz';
 }
 
-/* ─────────────────────────────────────────────────────────────────
-   IMPORT FUNCTIONS
-──────────────────────────────────────────────────────────────────*/
-// Drag and drop
+/* ═══════════════════════════════════════════════════════════════
+   IMPORT — DRAG & DROP
+═══════════════════════════════════════════════════════════════ */
 const dropzone = document.getElementById('dropzone');
-['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-  dropzone.addEventListener(eventName, preventDefaults, false);
-});
+['dragenter','dragover','dragleave','drop'].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); }));
+['dragenter','dragover'].forEach(ev => dropzone.addEventListener(ev, () => dropzone.classList.add('dragover')));
+['dragleave','drop'].forEach(ev => dropzone.addEventListener(ev, () => dropzone.classList.remove('dragover')));
+dropzone.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) processFile(f); });
 
-function preventDefaults(e) {
-  e.preventDefault();
-  e.stopPropagation();
-}
-
-['dragenter', 'dragover'].forEach(eventName => {
-  dropzone.addEventListener(eventName, () => dropzone.classList.add('dragover'), false);
-});
-
-['dragleave', 'drop'].forEach(eventName => {
-  dropzone.addEventListener(eventName, () => dropzone.classList.remove('dragover'), false);
-});
-
-dropzone.addEventListener('drop', (e) => {
-  const dt = e.dataTransfer;
-  const file = dt.files[0];
-  if (file) processFile(file);
-});
-
-function handleFileUpload(event) {
-  const file = event.target.files[0];
-  if (file) processFile(file);
-}
-
+function handleFileUpload(e) { const f = e.target.files[0]; if (f) processFile(f); }
 function processFile(file) {
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const content = e.target.result;
-    if (file.name.endsWith('.html') || file.name.endsWith('.htm')) {
-      importFromHTML(content);
-    } else {
-      showToast('❌ Please upload an HTML file');
-    }
+  const r = new FileReader();
+  r.onload = e => {
+    if (file.name.match(/\.html?$/i)) importFromHTML(e.target.result);
+    else showToast('❌ Please upload an HTML file');
   };
-  reader.readAsText(file);
+  r.readAsText(file);
 }
-
 async function loadFromURL() {
   const url = document.getElementById('url-input').value.trim();
-  if (!url) {
-    showToast('❌ Please enter a URL');
-    return;
-  }
-  
+  if (!url) { showToast('❌ Please enter a URL'); return; }
   try {
-    showToast('⏳ Loading from URL...');
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const content = await response.text();
-    importFromHTML(content);
-    showToast('✅ Successfully loaded from URL!');
-  } catch (err) {
-    console.error('URL load error:', err);
-    showToast('❌ Failed to load from URL: ' + err.message);
-  }
+    showToast('⏳ Loading…');
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    importFromHTML(await res.text());
+  } catch(e) { showToast('❌ Failed: ' + e.message); }
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   IMPORT — HTML (quiz + bank auto-detect)
+═══════════════════════════════════════════════════════════════ */
 function importFromHTML(content) {
-  // Store the uploaded HTML to preserve custom code
-  uploadedHTMLContent = content;
+  uploadedHTML = content;
   updateUploadStatus();
-  
-  // Try to extract QUIZ_CONFIG
-  const configMatch = content.match(/const\s+QUIZ_CONFIG\s*=\s*\{/);
-  if (configMatch) {
+  const isBank = /const\s+BANK_CONFIG\s*=/.test(content) || /const\s+QUESTION_BANK\s*=/.test(content);
+  switchFileType(isBank ? 'bank' : 'quiz');
+  isBank ? importBankHTML(content) : importQuizHTML(content);
+}
+
+function importQuizHTML(content) {
+  // Config
+  const cm = content.match(/const\s+QUIZ_CONFIG\s*=\s*\{/);
+  if (cm) {
     try {
-      const openPos = configMatch.index + configMatch[0].length - 1;
-      const closePos = findMatchingBracket(content, openPos, '{', '}');
-      if (openPos !== -1 && closePos !== -1) {
-        let configStr = content.substring(openPos, closePos + 1);
-        configStr = sanitizeJavaScriptObject(configStr);
-        const config = JSON.parse(configStr);
-        
-        if (config.uid) document.getElementById('cfg-uid').value = config.uid;
-        if (config.title) document.getElementById('cfg-title').value = config.title;
-        if (config.description) document.getElementById('cfg-description').value = config.description;
-        
+      const op = cm.index + cm[0].length - 1;
+      const cl = findMatchingBracket(content, op, '{', '}');
+      if (cl !== -1) {
+        const cfg = JSON.parse(sanitizeJS(content.substring(op, cl+1)));
+        if (cfg.uid  !== undefined) document.getElementById('cfg-uid').value = cfg.uid;
+        if (cfg.title)              document.getElementById('cfg-title').value = cfg.title;
+        if (cfg.description)        document.getElementById('cfg-description').value = cfg.description;
         updateConfig();
       }
-    } catch (err) {
-      console.warn('QUIZ_CONFIG parse failed:', err);
-    }
+    } catch(e) { console.warn('QUIZ_CONFIG parse:', e); }
   }
-  
-  // Try to extract QUESTIONS array
-  const questionsMatch = content.match(/const\s+QUESTIONS\s*=\s*\[/);
-  if (questionsMatch) {
+  // Questions
+  const qm = content.match(/const\s+QUESTIONS\s*=\s*\[/);
+  if (qm) {
     try {
-      const openPos = questionsMatch.index + questionsMatch[0].length - 1;
-      if (openPos !== -1) {
-        const closePos = findMatchingBracket(content, openPos, '[', ']');
-        if (closePos !== -1) {
-          let questionsStr = content.substring(openPos, closePos + 1);
-          questionsStr = sanitizeJavaScriptObject(questionsStr);
-          const parsedQuestions = JSON.parse(questionsStr);
-          
-          // Clear existing questions and add from HTML
-          questions = [];
-          questionCounter = 0;
-          document.getElementById('question-entries-container').innerHTML = '';
-          
-          // Add each question
-          parsedQuestions.forEach(q => {
-            addQuestionEntry({
-              question: q.question || '',
-              options: q.options || ['', '', '', ''],
-              correct: q.correct !== undefined ? q.correct : 0,
-              explanation: q.explanation || ''
-            });
-          });
-          
-          showToast(`✅ Successfully imported ${parsedQuestions.length} questions from HTML!`);
-          return;
-        }
+      const op = qm.index + qm[0].length - 1;
+      const cl = findMatchingBracket(content, op, '[', ']');
+      if (cl !== -1) {
+        const parsed = JSON.parse(sanitizeJS(content.substring(op, cl+1)));
+        loadQuestionsIntoEditor(parsed);
+        showToast(`✅ Quiz imported: ${parsed.length} questions`);
+        switchTabByName('config');
+        return;
       }
-    } catch (err) {
-      console.warn('QUESTIONS parse failed:', err);
-      showToast('⚠️ Config imported but questions parse failed: ' + err.message);
-      return;
-    }
+    } catch(e) { showToast('⚠️ Questions parse failed: ' + e.message); return; }
   }
-  
-  if (!configMatch && !questionsMatch) {
-    showToast('❌ No quiz configuration found in HTML file');
-  } else if (configMatch && !questionsMatch) {
-    showToast('✅ Config imported, no questions found. You can now load a bank file to add questions.');
-  }
+  if (!cm && !qm) showToast('❌ No quiz data found in file');
+  else if (cm && !qm) showToast('✅ Config imported, no questions found');
 }
 
-function clearUploadedHTML() {
-  uploadedHTMLContent = '';
-  updateUploadStatus();
-  showToast('✓ Now using default template');
+function importBankHTML(content) {
+  // Config
+  const cm = content.match(/const\s+BANK_CONFIG\s*=\s*\{/);
+  if (cm) {
+    try {
+      const op = cm.index + cm[0].length - 1;
+      const cl = findMatchingBracket(content, op, '{', '}');
+      if (cl !== -1) {
+        const cfg = JSON.parse(sanitizeJS(content.substring(op, cl+1)));
+        if (cfg.uid  !== undefined) document.getElementById('cfg-uid').value = cfg.uid;
+        if (cfg.title)              document.getElementById('cfg-title').value = cfg.title;
+        if (cfg.description)        document.getElementById('cfg-description').value = cfg.description;
+        const iconEl = document.getElementById('cfg-icon');
+        if (iconEl && cfg.icon)     iconEl.value = cfg.icon;
+        updateConfig();
+      }
+    } catch(e) { console.warn('BANK_CONFIG parse:', e); }
+  }
+  // Questions
+  const bm = content.match(/const\s+QUESTION_BANK\s*=\s*\[/);
+  if (bm) {
+    try {
+      const op = bm.index + bm[0].length - 1;
+      const cl = findMatchingBracket(content, op, '[', ']');
+      if (cl !== -1) {
+        const parsed = JSON.parse(sanitizeJS(content.substring(op, cl+1)));
+        loadQuestionsIntoEditor(parsed);
+        showToast(`✅ Bank imported: ${parsed.length} questions`);
+        switchTabByName('config');
+        return;
+      }
+    } catch(e) { showToast('⚠️ Bank parse failed: ' + e.message); return; }
+  }
+  if (!cm && !bm) showToast('❌ No bank data found in file');
+  else if (cm && !bm) showToast('✅ Config imported, no questions found');
 }
 
+function loadQuestionsIntoEditor(parsed) {
+  questions = []; questionCounter = 0;
+  document.getElementById('question-entries-container').innerHTML = '';
+  parsed.forEach(q => addQuestionEntry({ question: q.question||'', options: q.options||['','','',''], correct: q.correct??0, explanation: q.explanation||'' }));
+}
+
+function clearUploadedHTML() { uploadedHTML = ''; updateUploadStatus(); showToast('✓ Using default template'); }
 function updateUploadStatus() {
-  const statusEl = document.getElementById('upload-status');
-  if (statusEl) {
-    statusEl.style.display = uploadedHTMLContent ? 'block' : 'none';
-  }
+  const el = document.getElementById('upload-status');
+  if (el) el.style.display = uploadedHTML ? 'block' : 'none';
 }
 
-function findMatchingBracket(content, openPos, openChar, closeChar) {
-  let count = 0;
-  for (let i = openPos; i < content.length; i++) {
-    if (content[i] === openChar) count++;
-    else if (content[i] === closeChar) {
-      count--;
-      if (count === 0) return i;
-    }
-  }
-  return -1;
-}
-
-function sanitizeJavaScriptObject(str) {
-  // Remove single-line comments (but not URLs with //)
-  str = str.replace(/^\s*\/\/.*$/gm, '');
-  // Remove trailing commas before closing brackets/braces
-  str = str.replace(/,\s*([}\]])/g, '$1');
-  // Quote unquoted object keys
-  str = str.replace(/(\{|,)\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":');
-  // Handle first key without comma
-  str = str.replace(/^\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/gm, '"$1":');
-  // Replace single quotes with double quotes (carefully)
-  str = str.trim();
-  return str;
-}
-
+/* ═══════════════════════════════════════════════════════════════
+   IMPORT — TEXT / JSON BANK
+═══════════════════════════════════════════════════════════════ */
 function importFromText() {
   const text = document.getElementById('import-text').value.trim();
   if (!text) return showToast('❌ Paste JSON first');
   try {
-    const json = JSON.parse(text);
-    if (json.uid) document.getElementById('cfg-uid').value = json.uid;
-    if (json.title) document.getElementById('cfg-title').value = json.title;
-    if (json.description) document.getElementById('cfg-description').value = json.description;
+    const j = JSON.parse(text);
+    if (j.uid !== undefined) document.getElementById('cfg-uid').value = j.uid;
+    if (j.title)             document.getElementById('cfg-title').value = j.title;
+    if (j.description)       document.getElementById('cfg-description').value = j.description;
     updateConfig();
-    
-    if (json.questions && Array.isArray(json.questions)) {
-      questions = [];
-      questionCounter = 0;
-      document.getElementById('question-entries-container').innerHTML = '';
-      json.questions.forEach(q => {
-        addQuestionEntry({
-          question: q.question || '',
-          options: q.options || ['', '', '', ''],
-          correct: q.correct || 0,
-          explanation: q.explanation || ''
-        });
-      });
-    }
-    
+    if (j.questions?.length) loadQuestionsIntoEditor(j.questions);
     showToast('✅ JSON imported!');
     document.getElementById('import-text').value = '';
-  } catch (err) {
-    showToast('❌ Invalid JSON: ' + err.message);
-  }
+  } catch(e) { showToast('❌ Invalid JSON: ' + e.message); }
 }
 
-// Load bank file (JSON with questions array) - works after loading HTML or standalone
 function loadBankFile(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  
-  const reader = new FileReader();
-  reader.onload = (e) => {
+  const file = event.target.files[0]; if (!file) return;
+  const r = new FileReader();
+  r.onload = e => {
     try {
-      const json = JSON.parse(e.target.result);
-      let questionsToAdd = [];
-      
-      // Handle different formats
-      if (Array.isArray(json)) {
-        questionsToAdd = json;
-      } else if (json.questions && Array.isArray(json.questions)) {
-        questionsToAdd = json.questions;
-      } else if (json.data && json.data.questions && Array.isArray(json.data.questions)) {
-        questionsToAdd = json.data.questions;
-      } else {
-        showToast('❌ No questions array found in bank file');
-        return;
-      }
-      
-      if (questionsToAdd.length === 0) {
-        showToast('⚠️ Bank file contains no questions');
-        return;
-      }
-      
-      // Add each question from bank to current questions
-      questionsToAdd.forEach(q => {
-        addQuestionEntry({
-          question: q.question || '',
-          options: q.options || ['', '', '', ''],
-          correct: q.correct !== undefined ? q.correct : 0,
-          explanation: q.explanation || ''
-        });
-      });
-      
-      const totalQuestions = document.querySelectorAll('.question-entry').length;
-      showToast(`✅ Loaded ${questionsToAdd.length} questions from bank! Total: ${totalQuestions}`);
+      const j = JSON.parse(e.target.result);
+      const qs = Array.isArray(j) ? j : (j.questions || j.data?.questions || []);
+      if (!qs.length) { showToast('⚠️ No questions found'); return; }
+      qs.forEach(q => addQuestionEntry({ question: q.question||'', options: q.options||['','','',''], correct: q.correct??0, explanation: q.explanation||'' }));
+      showToast(`✅ Merged ${qs.length} questions. Total: ${questions.length}`);
       document.getElementById('bank-file-input').value = '';
-      
-      // Switch to Questions tab to show loaded questions
       switchTabByName('questions');
-      
-    } catch (err) {
-      showToast('❌ Invalid bank file: ' + err.message);
-    }
+    } catch(e) { showToast('❌ Invalid file: ' + e.message); }
   };
-  reader.readAsText(file);
+  r.readAsText(file);
 }
 
-// Helper to switch tabs programmatically
-function switchTabByName(tabName) {
-  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-  document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
-  
-  // Find and activate the correct tab button
-  const tabButtons = document.querySelectorAll('.tab-btn');
-  for (let btn of tabButtons) {
-    if (btn.textContent.toLowerCase().includes(tabName.toLowerCase()) || 
-        (tabName === 'questions' && btn.textContent.includes('📝')) ||
-        (tabName === 'config' && btn.textContent.includes('⚙️')) ||
-        (tabName === 'import' && btn.textContent.includes('📥')) ||
-        (tabName === 'export' && btn.textContent.includes('💾'))) {
-      btn.classList.add('active');
-      break;
-    }
-  }
-  
-  document.getElementById('tab-' + tabName).classList.add('active');
-  
-  if (tabName === 'export') {
-    updateExportPreview();
-  }
+/* ═══════════════════════════════════════════════════════════════
+   ENGINE FILE LOADING (manual, for file:// protocol)
+═══════════════════════════════════════════════════════════════ */
+function handleEngineFileLoad(event, type) {
+  const file = event.target.files[0]; if (!file) return;
+  const r = new FileReader();
+  r.onload = e => {
+    if (type === 'quiz') quizEngineCode = e.target.result;
+    else                 bankEngineCode = e.target.result;
+    updateEngineStatus();
+    showToast(`✅ ${type === 'quiz' ? 'Quiz' : 'Bank'} engine loaded (${Math.round(e.target.result.length/1024)} KB)`);
+  };
+  r.readAsText(file);
 }
 
-/* ─────────────────────────────────────────────────────────────────
-   EXPORT FUNCTIONS
-──────────────────────────────────────────────────────────────────*/
+/* ═══════════════════════════════════════════════════════════════
+   BRACKET PARSER + JS SANITIZER
+═══════════════════════════════════════════════════════════════ */
+function findMatchingBracket(src, start, open, close) {
+  let n = 0;
+  for (let i = start; i < src.length; i++) {
+    if (src[i] === open)  n++;
+    else if (src[i] === close) { n--; if (!n) return i; }
+  }
+  return -1;
+}
+function sanitizeJS(str) {
+  str = str.replace(/^\s*\/\/.*$/gm, '');
+  str = str.replace(/,\s*([}\]])/g, '$1');
+  str = str.replace(/(\{|,)\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":');
+  str = str.replace(/^\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/gm, '"$1":');
+  return str.trim();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   EXPORT — PREVIEW + JSON
+═══════════════════════════════════════════════════════════════ */
 function updateExportPreview() {
-  const preview = {
-    uid: quizConfig.uid,
-    title: quizConfig.title,
-    description: quizConfig.description,
-    questions: questions.map(q => ({
-      question: q.question,
-      options: q.options,
-      correct: q.correct,
-      explanation: q.explanation
-    }))
-  };
-  document.getElementById('export-preview').textContent = JSON.stringify(preview, null, 2);
+  const el = document.getElementById('export-preview');
+  if (!el) return;
+  el.textContent = JSON.stringify({
+    ...buildConfigData(),
+    questions: questions.map(q => ({ question: q.question, options: q.options, correct: q.correct, explanation: q.explanation }))
+  }, null, 2);
 }
-
 function exportJSON() {
   updateExportPreview();
-  const text = document.getElementById('export-preview').textContent;
-  navigator.clipboard.writeText(text).then(() => {
-    showToast('✅ Copied to clipboard!');
-  }).catch(() => {
-    showToast('❌ Failed to copy');
-  });
+  navigator.clipboard.writeText(document.getElementById('export-preview').textContent)
+    .then(() => showToast('✅ Copied!'))
+    .catch(() => showToast('❌ Copy failed'));
 }
-
 function downloadJSON() {
   updateExportPreview();
-  const data = document.getElementById('export-preview').textContent;
-  const blob = new Blob([data], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = (quizConfig.uid || 'quiz') + '-config.json';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 100);
+  dlBlob(document.getElementById('export-preview').textContent, 'application/json', (quizConfig.uid || fileType) + '-config.json');
   showToast('✅ JSON downloaded!');
 }
 
-function generateHTML(mode = 'template') {
+/* ═══════════════════════════════════════════════════════════════
+   EXPORT — HTML GENERATION
+═══════════════════════════════════════════════════════════════ */
+function generateHTML(mode) {
   updateQuestionData();
-  
-  const configJSON = JSON.stringify(quizConfig, null, 2);
-  const questionsJSON = JSON.stringify(questions, null, 2);
-  const engineSource = document.getElementById('engine-source').value.trim() || '../quiz-engine.js';
-  
-  let htmlContent;
-  
-  if (uploadedHTMLContent && mode === 'template') {
-    // Use uploaded HTML as template, replace QUIZ_CONFIG and QUESTIONS
-    htmlContent = uploadedHTMLContent;
-    
-    // Replace QUIZ_CONFIG
-    const configStart = htmlContent.indexOf('/* [QUIZ_CONFIG_START] */');
-    const configEnd = htmlContent.indexOf('/* [QUIZ_CONFIG_END] */');
-    if (configStart !== -1 && configEnd !== -1) {
-      const beforeConfig = htmlContent.substring(0, configStart + 28);
-      const afterConfig = htmlContent.substring(configEnd);
-      htmlContent = beforeConfig + '\nconst QUIZ_CONFIG = ' + configJSON + ';\n' + afterConfig;
+  const cfg  = buildConfigData();
+  const cfgJ = JSON.stringify(cfg, null, 2);
+  const qJ   = JSON.stringify(questions, null, 2);
+  let html;
+
+  if (mode === 'standalone') {
+    const engine = fileType === 'quiz' ? quizEngineCode : bankEngineCode;
+    const name   = fileType === 'quiz' ? 'quiz-engine.js' : 'bank-engine.js';
+    if (!engine) {
+      showToast(`❌ Load ${name} first — see Engine Files above`);
+      switchTabByName('export');
+      setTimeout(() => document.getElementById('engine-load-section')?.scrollIntoView({ behavior: 'smooth' }), 150);
+      return;
     }
-    
-    // Replace QUESTIONS
-    const questionsStart = htmlContent.indexOf('/* [QUESTIONS_START] */');
-    const questionsEnd = htmlContent.indexOf('/* [QUESTIONS_END] */');
-    if (questionsStart !== -1 && questionsEnd !== -1) {
-      const beforeQuestions = htmlContent.substring(0, questionsStart + 26);
-      const afterQuestions = htmlContent.substring(questionsEnd);
-      htmlContent = beforeQuestions + '\nconst QUESTIONS = ' + questionsJSON + ';\n' + afterQuestions;
-    }
+    html = buildStandaloneHTML(cfg, cfgJ, qJ, engine);
   } else {
-    // Use default template
-    const engineScript = mode === 'standalone' ? getQuizEngineCode() : 
-      `<scr` + `ipt>` + `\n/* Engine loader — computes correct relative path for any folder depth */\n(function () {\n  window.__QUIZ_ENGINE_BASE = '../'.repeat(\n    Math.max(0, location.pathname.split('/').filter(Boolean).length - 2)\n  );\n  document.write('<scr' + 'ipt src=\"' + window.__QUIZ_ENGINE_BASE + escapeHtml(engineSource) + '\"></scr' + 'ipt>');\n})();\n` + '</scr' + 'ipt>';
-    
-    htmlContent = `<!DOCTYPE html>
-<html lang="en" data-theme="dark">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<scr` + `ipt>` + `
-(function(){var t=localStorage.getItem('quiz-theme')||'dark';var s=document.createElement('style');s.textContent='html,body{background:'+(t==='light'?'#f3f0eb':'#0d1117')+';color:'+(t==='light'?'#1c1917':'#e6edf3')+';margin:0;padding:0;overflow:hidden;height:100%}';document.head.appendChild(s)})();
-` + '</scr' + 'ipt>' + `
-<title>${escapeHtml(quizConfig.title)}</title>
-</head>
-<body>
-<scr` + `ipt>` + `
-/* ────────────────────────────────────────────────────────────────
-   QUIZ DATA  — only edit below this line
-──────────────────────────────────────────────────────────────────*/
-
-/* [QUIZ_CONFIG_START] */
-const QUIZ_CONFIG = ${configJSON};
-/* [QUIZ_CONFIG_END] */
-
-/* ─────────────────────────────────────────────────────────────────
-   QUESTIONS ARRAY
-   Format for each question:
-   {
-     question:    "Your question text",
-     options: ["Option A", "Option B", "Option C", "Option D"],
-     correct:     0,   // index of the correct option (0-based)
-     explanation: "Why this answer is correct.",
-   }
-──────────────────────────────────────────────────────────────────*/
-/* [QUESTIONS_START] */
-const QUESTIONS = ${questionsJSON};
-/* [QUESTIONS_END] */
-` + '</scr' + 'ipt>' + `
-${engineScript}
-</body>
-</html>`;
+    // Hosted mode: edit uploaded file or build fresh template
+    html = uploadedHTML ? editUploadedHTML(uploadedHTML, cfg, cfgJ, qJ) : buildHostedHTML(cfg, cfgJ, qJ);
   }
-  
-  document.getElementById('html-code').textContent = htmlContent;
+
+  document.getElementById('html-code').textContent = html;
   document.getElementById('html-output').style.display = 'block';
   document.getElementById('html-output').scrollIntoView({ behavior: 'smooth' });
-  showToast(mode === 'standalone' ? '✅ Standalone HTML generated!' : '✅ HTML generated!');
+  showToast(mode === 'standalone' ? '⚡ Standalone HTML generated!' : '✅ Hosted HTML generated!');
 }
 
-// Minimal quiz engine code for standalone export
-function getQuizEngineCode() {
-  return '<scr' + 'ipt>\n' + 
-    '/* ═══════════════════════════════════════════\n' +
-    '   QUIZ ENGINE (Embedded)\n' +
-    '═══════════════════════════════════════════ */\n' +
-    '(function(){\n' +
-    '  "use strict";\n' +
-    '  const Q=QUIZ_CONFIG||{},T=QUESTIONS||[];\n' +
-    '  let current=0,score=0,answered=false,theme=localStorage.getItem("quiz-theme")||"dark";\n' +
-    '  \n' +
-    '  function $(s){return document.querySelector(s)}\n' +
-    '  function $$(s){return document.querySelectorAll(s)}\n' +
-    '  \n' +
-    '  function init(){\n' +
-    '    document.documentElement.setAttribute("data-theme",theme);\n' +
-    '    $("body").innerHTML="";\n' +
-    '    $("body").appendChild(createUI());\n' +
-    '    renderQuestion();\n' +
-    '    updateProgress();\n' +
-    '  }\n' +
-    '  \n' +
-    '  function createUI(){\n' +
-    '    const c=document.createElement("div");\n' +
-    '    c.className="container";\n' +
-    '    c.innerHTML=\n' +
-    '      \'<div class="topbar">\' +\n' +
-    '        \'<div class="topbar-title">\' + escapeHtml(Q.title||"Quiz") + \'</div>\' +\n' +
-    '        \'<button class="icon-btn" id="theme-toggle">☀</button>\' +\n' +
-    '      \'</div>\' +\n' +
-    '      \'<div class="header">\' +\n' +
-    '        \'<h1>\' + escapeHtml(Q.title||"Quiz") + \'</h1>\' +\n' +
-    '        \'<p>\' + escapeHtml(Q.description||"") + \'</p>\' +\n' +
-    '      \'</div>\' +\n' +
-    '      \'<div class="progress-bar"><div class="progress-fill" id="progress"></div></div>\' +\n' +
-    '      \'<div class="quiz-card" id="quiz-card"></div>\' +\n' +
-    '      \'<div class="controls" id="controls"></div>\' +\n' +
-    '      \'<div class="results" id="results" style="display:none"></div>\';\n' +
-    '    c.querySelector("#theme-toggle").onclick=toggleTheme;\n' +
-    '    return c;\n' +
-    '  }\n' +
-    '  \n' +
-    '  function toggleTheme(){\n' +
-    '    theme=theme==="dark"?"light":"dark";\n' +
-    '    localStorage.setItem("quiz-theme",theme);\n' +
-    '    document.documentElement.setAttribute("data-theme",theme);\n' +
-    '    $("#theme-toggle").textContent=theme==="dark"?"☀":"☾";\n' +
-    '  }\n' +
-    '  \n' +
-    '  function renderQuestion(){\n' +
-    '    answered=false;\n' +
-    '    const q=T[current];\n' +
-    '    const card=$("#quiz-card");\n' +
-    '    card.innerHTML=\n' +
-    '      \'<div class="question-number">Question \' + (current+1) + \' of \' + T.length + \'</div>\' +\n' +
-    '      \'<div class="question-text">\' + escapeHtml(q.question) + \'</div>\' +\n' +
-    '      \'<div class="options">\' + q.options.map((o,i)=>\'<button class="option-btn" data-i="\' + i + \'">\' + escapeHtml(o) + \'</button>\').join("") + \'</div>\' +\n' +
-    '      (q.explanation ? \'<div class="explanation" id="explanation" style="display:none">\' + escapeHtml(q.explanation) + \'</div>\' : "");\n' +
-    '    $$(".option-btn").forEach(b=>b.onclick=selectOption);\n' +
-    '    $("#controls").innerHTML=\'<button class="btn-primary" id="next-btn" onclick="nextQuestion()" disabled>Next →</button>\';\n' +
-    '  }\n' +
-    '  \n' +
-    '  function selectOption(e){\n' +
-    '    if(answered)return;\n' +
-    '    answered=true;\n' +
-    '    const i=+e.target.dataset.i;\n' +
-    '    const correct=i===T[current].correct;\n' +
-    '    if(correct)score++;\n' +
-    '    e.target.classList.add(correct?"correct":"wrong");\n' +
-    '    $$(".option-btn").forEach((b,j)=>{\n' +
-    '      if(j===T[current].correct)b.classList.add("correct");\n' +
-    '      else if(j!==i)b.classList.add("disabled");\n' +
-    '      b.disabled=true;\n' +
-    '    });\n' +
-    '    if($("#explanation"))$("#explanation").style.display="block";\n' +
-    '    $("#next-btn").disabled=false;\n' +
-    '    $("#next-btn").textContent=current===T.length-1?"Show Results":"Next →";\n' +
-    '    updateProgress();\n' +
-    '  }\n' +
-    '  \n' +
-    '  function nextQuestion(){\n' +
-    '    if(current<T.length-1){current++;renderQuestion();updateProgress();}\n' +
-    '    else showResults();\n' +
-    '  }\n' +
-    '  \n' +
-    '  function updateProgress(){\n' +
-    '    const p=((current+(answered?1:0))/T.length)*100;\n' +
-    '    $("#progress").style.width=p+"%";\n' +
-    '  }\n' +
-    '  \n' +
-    '  function showResults(){\n' +
-    '    $("#quiz-card").style.display="none";\n' +
-    '    $("#controls").style.display="none";\n' +
-    '    const r=$("#results");\n' +
-    '    r.style.display="block";\n' +
-    '    r.innerHTML=\n' +
-    '      "<h2>Quiz Complete!</h2>" +\n' +
-    '      "<div class=\\"score-circle\\">" + score + "/" + T.length + "</div>" +\n' +
-    '      "<p class=\\"score-percent\\">" + Math.round(score/T.length*100) + "%</p>" +\n' +
-    '      "<button class=\\"btn-primary\\" onclick=\\"location.reload()\\">Restart Quiz</button>";\n' +
-    '  }\n' +
-    '  \n' +
-    '  function escapeHtml(t){if(!t)return"";const d=document.createElement("div");d.textContent=t;return d.innerHTML}\n' +
-    '  \n' +
-    '  // Add styles\n' +
-    '  const s=document.createElement("style");\n' +
-    '  s.textContent=\n' +
-    '    ":root{--bg:" + (theme==="dark"?"#0d1117":"#f3f0eb") + ";--surface:" + (theme==="dark"?"#161b22":"#ffffff") + ";--text:" + (theme==="dark"?"#e6edf3":"#1c1917") + ";--accent:#f0a500;--correct:#2ea043;--wrong:#da3633}\\n" +\n' +
-    '    "[data-theme=\\"light\\"]{--bg:#f3f0eb;--surface:#ffffff;--text:#1c1917}\\n" +\n' +
-    '    "body{font-family:\'Outfit\',sans-serif;background:var(--bg);color:var(--text);margin:0;padding:0;line-height:1.6}\\n" +\n' +
-    '    ".container{max-width:800px;margin:0 auto;padding:2rem 1.5rem}\\n" +\n' +
-    '    ".topbar{display:flex;align-items:center;padding:0.75rem 1.5rem;background:var(--surface);border-bottom:1px solid #30363d}\\n" +\n' +
-    '    ".topbar-title{font-weight:700;flex:1}\\n" +\n' +
-    '    ".icon-btn{width:36px;height:36px;border-radius:8px;background:#1c2330;border:1px solid #30363d;color:#8b949e;cursor:pointer}\\n" +\n' +
-    '    ".header{text-align:center;margin-bottom:2rem}\\n" +\n' +
-    '    ".header h1{font-size:2rem;margin-bottom:0.5rem}\\n" +\n' +
-    '    ".header p{color:#8b949e}\\n" +\n' +
-    '    ".progress-bar{height:6px;background:#30363d;border-radius:3px;overflow:hidden;margin-bottom:2rem}\\n" +\n' +
-    '    ".progress-fill{height:100%;background:var(--accent);width:0;transition:width 0.3s}\\n" +\n' +
-    '    ".quiz-card{background:var(--surface);padding:2rem;border-radius:12px;border:1px solid #30363d}\\n" +\n' +
-    '    ".question-number{display:inline-block;background:var(--accent);color:#000;padding:0.2rem 0.75rem;border-radius:6px;font-weight:700;font-size:0.8rem;margin-bottom:1rem}\\n" +\n' +
-    '    ".question-text{font-size:1.2rem;font-weight:600;margin-bottom:1.5rem}\\n" +\n' +
-    '    ".options{display:flex;flex-direction:column;gap:0.75rem}\\n" +\n' +
-    '    ".option-btn{padding:1rem;text-align:left;background:#1c2330;border:1.5px solid #30363d;border-radius:8px;color:var(--text);cursor:pointer;font-size:1rem;transition:all 0.2s}\\n" +\n' +
-    '    ".option-btn:hover:not(:disabled){border-color:var(--accent)}\\n" +\n' +
-    '    ".option-btn.correct{background:rgba(46,160,67,0.2);border-color:var(--correct)}\\n" +\n' +
-    '    ".option-btn.wrong{background:rgba(218,54,51,0.2);border-color:var(--wrong)}\\n" +\n' +
-    '    ".option-btn.disabled{opacity:0.5;cursor:not-allowed}\\n" +\n' +
-    '    ".explanation{margin-top:1.5rem;padding:1rem;background:#1c2330;border-left:3px solid var(--accent);border-radius:6px}\\n" +\n' +
-    '    ".controls{margin-top:1.5rem;text-align:right}\\n" +\n' +
-    '    ".btn-primary{padding:1rem 2rem;background:var(--accent);color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:1rem}\\n" +\n' +
-    '    ".btn-primary:disabled{opacity:0.5;cursor:not-allowed}\\n" +\n' +
-    '    ".results{text-align:center;padding:3rem 1rem}\\n" +\n' +
-    '    ".results h2{font-size:2rem;margin-bottom:1rem}\\n" +\n' +
-    '    ".score-circle{font-size:4rem;font-weight:700;color:var(--accent);margin:1rem 0}\\n" +\n' +
-    '    ".score-percent{font-size:1.5rem;color:#8b949e;margin-bottom:2rem}";\n' +
-    '  document.head.appendChild(s);\n' +
-    '  \n' +
-    '  init();\n' +
-    '})();\n' +
-    '</scr' + 'ipt>';
+/* Replace content between /* [MARKER_START] */ /* and /* [MARKER_END] */ /* */
+function replaceMarker(content, start, end, replacement) {
+  const s = `/* ${start} */`, e = `/* ${end} */`;
+  const si = content.indexOf(s), ei = content.indexOf(e);
+  if (si === -1 || ei === -1) return content;
+  return content.slice(0, si + s.length) + replacement + content.slice(ei);
 }
-function getQuizEngineScriptTag() {
-  return '<scr' + 'ipt>' + getQuizEngineCode() + '</scr' + 'ipt>';
+
+/* Edit uploaded file in-place: only swap data blocks, preserve everything else */
+function editUploadedHTML(content, cfg, cfgJ, qJ) {
+  let r = content;
+  r = r.replace(/<title>[^<]*<\/title>/i, `<title>${escapeHtml(cfg.title)}</title>`);
+  if (fileType === 'quiz') {
+    r = replaceMarker(r, '[QUIZ_CONFIG_START]', '[QUIZ_CONFIG_END]', '\nconst QUIZ_CONFIG = ' + cfgJ + ';\n');
+    r = replaceMarker(r, '[QUESTIONS_START]',   '[QUESTIONS_END]',   '\nconst QUESTIONS = '   + qJ   + ';\n');
+  } else {
+    r = replaceMarker(r, '[BANK_CONFIG_START]',  '[BANK_CONFIG_END]',  '\nconst BANK_CONFIG = '  + cfgJ + ';\n');
+    r = replaceMarker(r, '[QUESTION_BANK_START]', '[QUESTION_BANK_END]', '\nconst QUESTION_BANK = ' + qJ   + ';\n');
+  }
+  return r;
+}
+
+/* Theme flash snippet (same as in both templates) */
+const FLASH = `(function(){var t=localStorage.getItem('quiz-theme')||'dark';var s=document.createElement('style');s.textContent='html,body{background:'+(t==='light'?'#f3f0eb':'#0d1117')+';color:'+(t==='light'?'#1c1917':'#e6edf3')+';margin:0;padding:0;overflow:hidden;height:100%}';document.head.appendChild(s)})();`;
+
+/* Build a fresh hosted HTML — identical structure to quiz-template.html / question-bank-template.html */
+function buildHostedHTML(cfg, cfgJ, qJ) {
+  const title = escapeHtml(cfg.title);
+  if (fileType === 'quiz') {
+    return '<!DOCTYPE html>\n<html lang="en" data-theme="dark">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<script>\n' + FLASH + '\n<\/script>\n<title>' + title + '</title>\n</head>\n<body>\n<script>\n/* ────────────────────────────────────────────────────────────────\n   QUIZ DATA  — only edit below this line\n──────────────────────────────────────────────────────────────────*/\n\n/* [QUIZ_CONFIG_START] */\nconst QUIZ_CONFIG = ' + cfgJ + ';\n/* [QUIZ_CONFIG_END] */\n\n/* [QUESTIONS_START] */\nconst QUESTIONS = ' + qJ + ';\n/* [QUESTIONS_END] */\n<\/script>\n<script>\n/* Engine loader — computes correct relative path for any folder depth */\n(function () {\n  window.__QUIZ_ENGINE_BASE = \'../\'.repeat(\n    Math.max(0, location.pathname.split(\'/\').filter(Boolean).length - 2)\n  );\n  document.write(\'<scr\' + \'ipt src="\' + window.__QUIZ_ENGINE_BASE + \'quiz-engine.js"><\\/scr\' + \'ipt>\');\n})();\n<\/script>\n</body>\n</html>';
+  } else {
+    return '<!DOCTYPE html>\n<html lang="en" data-theme="dark">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<script>\n' + FLASH + '\n<\/script>\n<title>' + title + '</title>\n</head>\n<body>\n<script>\n/* ────────────────────────────────────────────────────────────────\n   BANK DATA  — only edit below this line\n──────────────────────────────────────────────────────────────────*/\n\n/* [BANK_CONFIG_START] */\nconst BANK_CONFIG = ' + cfgJ + ';\n/* [BANK_CONFIG_END] */\n\n/* [QUESTION_BANK_START] */\nconst QUESTION_BANK = ' + qJ + ';\n/* [QUESTION_BANK_END] */\n<\/script>\n<script>\n/* Engine loader */\n(function () {\n  window.__QUIZ_ENGINE_BASE = \'../\'.repeat(\n    Math.max(0, location.pathname.split(\'/\').filter(Boolean).length - 2)\n  );\n  document.write(\'<scr\' + \'ipt src="\' + window.__QUIZ_ENGINE_BASE + \'bank-engine.js"><\\/scr\' + \'ipt>\');\n})();\n<\/script>\n</body>\n</html>';
+  }
+}
+
+/* Build standalone HTML — engine code embedded inline, identical runtime behaviour */
+function buildStandaloneHTML(cfg, cfgJ, qJ, engineCode) {
+  const title = escapeHtml(cfg.title);
+  if (fileType === 'quiz') {
+    return '<!DOCTYPE html>\n<html lang="en" data-theme="dark">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<script>\n' + FLASH + '\n<\/script>\n<title>' + title + '</title>\n</head>\n<body>\n<script>\n/* ────────────────────────────────────────────────────────────────\n   QUIZ DATA  — only edit below this line\n──────────────────────────────────────────────────────────────────*/\n\n/* [QUIZ_CONFIG_START] */\nconst QUIZ_CONFIG = ' + cfgJ + ';\n/* [QUIZ_CONFIG_END] */\n\n/* [QUESTIONS_START] */\nconst QUESTIONS = ' + qJ + ';\n/* [QUESTIONS_END] */\n<\/script>\n<script>\n' + engineCode + '\n<\/script>\n</body>\n</html>';
+  } else {
+    return '<!DOCTYPE html>\n<html lang="en" data-theme="dark">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<script>\n' + FLASH + '\n<\/script>\n<title>' + title + '</title>\n</head>\n<body>\n<script>\n/* ────────────────────────────────────────────────────────────────\n   BANK DATA  — only edit below this line\n──────────────────────────────────────────────────────────────────*/\n\n/* [BANK_CONFIG_START] */\nconst BANK_CONFIG = ' + cfgJ + ';\n/* [BANK_CONFIG_END] */\n\n/* [QUESTION_BANK_START] */\nconst QUESTION_BANK = ' + qJ + ';\n/* [QUESTION_BANK_END] */\n<\/script>\n<script>\n' + engineCode + '\n<\/script>\n</body>\n</html>';
+  }
 }
 
 function downloadHTML() {
-  const htmlContent = document.getElementById('html-code').textContent;
-  const blob = new Blob([htmlContent], { type: 'text/html' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = (quizConfig.uid || quizConfig.title.toLowerCase().replace(/\s+/g, '-') || 'quiz') + '.html';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 100);
+  const content = document.getElementById('html-code').textContent;
+  const base = quizConfig.uid || quizConfig.title.toLowerCase().replace(/\s+/g, '-') || (fileType === 'bank' ? 'question-bank' : 'quiz');
+  dlBlob(content, 'text/html', base + '.html');
   showToast('✅ HTML downloaded!');
 }
 
-/* ─────────────────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════
    UTILITIES
-──────────────────────────────────────────────────────────────────*/
-function showToast(message) {
-  // Remove existing toast
+═══════════════════════════════════════════════════════════════ */
+function dlBlob(content, type, filename) {
+  const blob = new Blob([content], { type });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 100);
+}
+
+function showToast(msg) {
   const existing = document.querySelector('.toast');
   if (existing) existing.remove();
-  
-  const toast = document.createElement('div');
-  toast.className = 'toast';
-  toast.textContent = message;
-  document.body.appendChild(toast);
-  
-  setTimeout(() => toast.classList.add('show'), 10);
-  setTimeout(() => {
-    toast.classList.remove('show');
-    setTimeout(() => toast.remove(), 300);
-  }, 2500);
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.classList.add('show'), 10);
+  setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 2800);
 }
 
-function navigateBack(event) {
-  event.preventDefault();
-  // Try to go back in history, or redirect to index.html
-  if (window.history.length > 1) {
-    window.history.back();
-  } else {
-    window.location.href = 'index.html';
-  }
+function navigateBack(e) {
+  e.preventDefault();
+  if (window.history.length > 1) window.history.back();
+  else window.location.href = 'index.html';
 }
 
-// Initialize on load
 init();
 </script>
-
 </body>
 </html>
