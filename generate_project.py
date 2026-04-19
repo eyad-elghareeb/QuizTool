@@ -264,10 +264,10 @@ INDEX_ENGINE_CSS = read_file('index-engine.css')
 QUIZ_ENGINE_JS = read_file('quiz-engine.js')
 BANK_ENGINE_JS = read_file('bank-engine.js')
 
-# Read sync scripts from MU61S8
-MU61S8_BASE = BASE_DIR.parent / 'MU61S8'
-SYNC_SCRIPT = (MU61S8_BASE / 'scripts' / 'sync_quiz_assets.py').read_text(encoding='utf-8') if (MU61S8_BASE / 'scripts' / 'sync_quiz_assets.py').exists() else ''
-STANDARDIZE_SCRIPT = (MU61S8_BASE / 'scripts' / 'standardize_quiz_files.py').read_text(encoding='utf-8') if (MU61S8_BASE / 'scripts' / 'standardize_quiz_files.py').exists() else ''
+# Read sync scripts from QuizTool's own scripts/ folder (self-contained, no MU61S8 dependency)
+_SCRIPTS_DIR = BASE_DIR / 'scripts'
+SYNC_SCRIPT = (_SCRIPTS_DIR / 'sync_quiz_assets.py').read_text(encoding='utf-8') if (_SCRIPTS_DIR / 'sync_quiz_assets.py').exists() else ''
+STANDARDIZE_SCRIPT = (_SCRIPTS_DIR / 'standardize_quiz_files.py').read_text(encoding='utf-8') if (_SCRIPTS_DIR / 'standardize_quiz_files.py').exists() else ''
 
 # Auto-index script
 AUTO_INDEX_SCRIPT = '''#!/usr/bin/env python3
@@ -662,7 +662,7 @@ const QUIZZES = {q_json};
     <div class="dash-body" id="dash-body"></div>
     <div class="dash-footer">
       <button class="btn-dash-action" onclick="exportTrackerToPDF()" title="Export to PDF">\U0001F4C4 Export PDF</button>
-      <button class="btn-dash-action btn-dash-danger" onclick="clearAllTrackerData()">\U0001F5D1 Clear All</button>
+      <button class="btn-dash-action btn-dash-danger" onclick="confirmClearTrackerData()">\U0001F5D1 Clear All</button>
       <button class="btn-dash-close" onclick="closeTrackerDashboard()">Close</button>
     </div>
   </div>

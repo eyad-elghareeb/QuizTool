@@ -399,7 +399,7 @@ const QUIZZES = [
     <div class="dash-body" id="dash-body"></div>
     <div class="dash-footer">
       <button class="btn-dash-action" onclick="exportTrackerToPDF()" title="Export to PDF">📄 Export PDF</button>
-      <button class="btn-dash-action btn-dash-danger" onclick="clearAllTrackerData()">🗑 Clear All</button>
+      <button class="btn-dash-action btn-dash-danger" onclick="confirmClearTrackerData()">🗑 Clear All</button>
       <button class="btn-dash-close" onclick="closeTrackerDashboard()">Close</button>
     </div>
   </div>
@@ -408,6 +408,13 @@ const QUIZZES = [
 <script src="index-engine.js"></script>
 <script>
 (function(){var s=localStorage.getItem('quiz-theme');if(s)document.documentElement.setAttribute('data-theme',s);if(window.__updateThemeIcon)window.__updateThemeIcon();if(window.renderQuizzes)window.renderQuizzes();})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
 </script>
 
 </body>
