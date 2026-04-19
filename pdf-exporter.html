@@ -598,6 +598,17 @@ body {
     padding: 0.6rem 0.75rem;
     font-size: 0.8rem;
   }
+  /* MCQ Notes print adjustments */
+  #print-area.mcq-notes-layout.textbook-layout {
+    column-gap: 2rem;
+    column-rule: 1px solid #ddd;
+  }
+  #print-area.mcq-notes-layout .question-item {
+    break-inside: avoid;
+  }
+  #print-area.mcq-notes-layout.styled-output .question-item {
+    box-shadow: none;
+  }
 }
 
 .status-msg {
@@ -662,10 +673,6 @@ body {
 .mcq-notes-layout .question-item {
   margin-bottom: 0.75rem;
   break-inside: avoid;
-  padding: 0.5rem 0.75rem;
-  background: #fafafa;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
 }
 .mcq-notes-layout .question-text {
   font-size: 0.9rem;
@@ -673,14 +680,40 @@ body {
   margin-bottom: 0.35rem;
   line-height: 1.4;
 }
+/* Default compact answer style (no boxes, just letter + text) */
 .mcq-notes-layout .compact-answer {
   font-size: 0.85rem;
+  color: var(--text);
+  display: inline-block;
+}
+/* Styled output variant for MCQ Notes */
+.mcq-notes-layout.styled-output .question-item {
+  padding: 0.5rem 0.75rem;
+  background: #fafafa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+}
+.mcq-notes-layout.styled-output .compact-answer {
   color: #16a34a;
   font-weight: 600;
-  display: inline-block;
   background: rgba(22,163,74,0.08);
   padding: 0.15rem 0.5rem;
   border-radius: 4px;
+}
+/* Two-column support for MCQ Notes */
+.mcq-notes-layout.textbook-layout {
+  column-count: 2;
+  column-gap: 2.5rem;
+  column-rule: 1px solid #ccc;
+}
+.mcq-notes-layout.textbook-layout .question-item {
+  margin-bottom: 0.6rem;
+}
+.mcq-notes-layout.textbook-layout .question-text {
+  font-size: 0.85rem;
+}
+.mcq-notes-layout.textbook-layout .compact-answer {
+  font-size: 0.8rem;
 }
 </style>
 </head>
@@ -1043,13 +1076,13 @@ function updatePreview() {
   const useMcqNotes = document.getElementById('mcq-notes-mode').checked;
   const letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
 
-  // Apply layout classes
-  if (useTwoColumn && !useMcqNotes) {
+  // Apply layout classes - MCQ Notes can combine with other modes
+  if (useTwoColumn) {
     printArea.classList.add('textbook-layout');
   } else {
     printArea.classList.remove('textbook-layout');
   }
-  if (useStyled && !useMcqNotes) {
+  if (useStyled) {
     printArea.classList.add('styled-output');
   } else {
     printArea.classList.remove('styled-output');
@@ -1064,13 +1097,25 @@ function updatePreview() {
 
   // MCQ Notes mode: compact question + correct answer only
   if (useMcqNotes) {
-    html += `
-      <div class="quiz-header">
-        <h1>${quizData.config.title}</h1>
-        <p>${quizData.config.description || ''}</p>
-        ${quizData.config.icon ? `<p style="font-size: 2rem; margin-top: 0.5rem;">${quizData.config.icon}</p>` : ''}
-      </div>
-    `;
+    // Use styled header if styled mode is also enabled
+    if (useStyled) {
+      html += `
+        <div class="quiz-header">
+          ${quizData.config.icon ? `<span class="header-icon">${quizData.config.icon}</span>` : ''}
+          <h1>${quizData.config.title}</h1>
+          <p>${quizData.config.description || ''}</p>
+          <div class="header-meta">${quizData.questions.length} Questions &middot; ${quizData.fileType === 'bank' ? 'Question Bank' : 'Quiz'}</div>
+        </div>
+      `;
+    } else {
+      html += `
+        <div class="quiz-header">
+          <h1>${quizData.config.title}</h1>
+          <p>${quizData.config.description || ''}</p>
+          ${quizData.config.icon ? `<p style="font-size: 2rem; margin-top: 0.5rem;">${quizData.config.icon}</p>` : ''}
+        </div>
+      `;
+    }
 
     quizData.questions.forEach((q, i) => {
       html += `
