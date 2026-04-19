@@ -258,40 +258,85 @@ textarea:focus { outline: none; border-color: var(--accent); }
     <p style="color:var(--text-muted);font-size:0.85rem;margin-top:0.75rem;margin-bottom:0.5rem;">
       Use this prompt with any AI assistant to generate a properly formatted questions array:
     </p>
-    <textarea id="prompt-template" class="prompt-textarea" readonly>Extract ALL questions from the provided material and format them into a JSON array. MAKE THE EXACT QUESTIONS FROM SOURCE
+    <textarea id="prompt-template" class="prompt-textarea" readonly>You are a precise data extraction engine. Your ONLY task is to extract every question from the provided source material and output them as a valid JSON array.
 
-ENSURE DATA INTEGRITY DON'T SKIP QUESTIONS
+---
 
-Format each question EXACTLY like this (use double quotes; escape any internal double quotes with backslash):
+## ABSOLUTE OUTPUT RULES
+
+1. Output ONLY a single valid JSON array — nothing else.
+2. Do NOT include markdown, code fences (no ```), commentary, preambles, summaries, or any text outside the JSON array.
+3. The output MUST start with `[` and end with `]` — no exceptions.
+4. Every string value MUST use double quotes. Escape any internal double quotes with a backslash: `\"`.
+5. Every object MUST have exactly these 4 keys in this exact order: `"question"`, `"options"`, `"correct"`, `"explanation"`.
+6. No trailing commas. No single quotes. No unescaped special characters that break JSON.
+
+---
+
+## EXTRACTION RULES
+
+7. Extract EVERY question from the source — do not skip, summarize, combine, or reorder any question.
+8. Do not paraphrase or reword questions or answer choices. Use the EXACT text from the source.
+9. If the source contains 160 questions, your output MUST contain exactly 160 question objects — no more, no less.
+10. Count the questions in the source BEFORE generating output. State nothing about this count — just ensure it matches.
+11. Questions must appear in the SAME ORDER as in the source.
+
+---
+
+## FIELD SPECIFICATIONS
+
+### `"question"` (string)
+- Copy the question text EXACTLY as it appears in the source.
+- Do NOT include any numbering, bullet points, or prefixes (e.g., no "1.", "Q1:", "•").
+- Escape any internal double quotes with `\"`.
+
+### `"options"` (array of strings)
+- Include ALL answer choices exactly as written in the source.
+- Do NOT include labels or numbering (e.g., no "A.", "1.", "(a)").
+- Each option is a plain string in double quotes.
+- Example: `["Option one", "Option two", "Option three", "Option four"]`
+
+### `"correct"` (integer)
+- Zero-based index of the correct answer within the `"options"` array.
+- 0 = first option, 1 = second option, 2 = third option, etc.
+- Must be an integer — NOT a string, NOT a letter.
+
+### `"explanation"` (string)
+- Write a clear, educational explanation that:
+  (a) States WHY the correct answer is right with supporting facts.
+  (b) States WHY each incorrect option is wrong.
+- Do NOT copy the explanation verbatim if one exists — expand it to be educational.
+- Escape any internal double quotes with `\"`.
+
+---
+
+## INTEGRITY CHECKS (apply mentally before outputting)
+
+- [ ] Have I extracted EVERY question? None skipped?
+- [ ] Does each object have exactly 4 keys: question, options, correct, explanation?
+- [ ] Are all strings in double quotes with internal quotes escaped?
+- [ ] Is `"correct"` an integer (not a string)?
+- [ ] Are option labels/numbers removed from each option string?
+- [ ] Is question numbering removed from each question string?
+- [ ] Is the output valid JSON parseable by `JSON.parse()`?
+- [ ] Does the output start with `[` and end with `]` with NOTHING before or after?
+
+---
+
+## EXAMPLE FORMAT
 
 [
   {
     "question": "What is a long-term complication of FGM Type 3?",
     "options": ["Increased fertility", "Need for de-infibulation", "Weight gain", "Improved sexual satisfaction"],
     "correct": 1,
-    "explanation": "De-infibulation is the surgical procedure required to reopen the vaginal introitus in women with Type 3 FGM to allow for intercourse or safe childbirth."
+    "explanation": "De-infibulation is the surgical procedure required to reopen the vaginal introitus in women with Type 3 FGM, necessary for intercourse or safe childbirth. Increased fertility and improved sexual satisfaction are incorrect as FGM typically causes the opposite. Weight gain is unrelated to FGM complications."
   }
 ]
 
-CRITICAL REQUIREMENTS:
-- Extract EVERY question from the material — do not skip any content
-- Cover all topics, sections, and concepts mentioned in the source
-- Each question MUST have exactly these 4 fields: "question", "options", "correct", "explanation"
-- "question": A clear question string (use double quotes; escape any internal double quotes with backslash)
-- "options": An array of exactly 4 answer choices (use double quotes; escape any internal double quotes with backslash)
-- "correct": Zero-based index of the correct answer (0, 1, 2, or 3)
-- "explanation": A detailed explanation of WHY the answer is correct and why other options are wrong (use double quotes; escape any internal double quotes with backslash)
+---
 
-QUESTION QUALITY:
-- Ensure explanations are educational and help learning
-- Use clear, unambiguous language
-- Do not include unescaped double quotes or backslashes that would break JSON parsing
-
-COVERAGE:
-- Extract questions from EVERY section/topic in the material
-- Don't skip any MCQs — aim for comprehensive coverage
-
-Output ONLY the JSON array — no markdown, no explanation text, no code fences. Just valid JSON starting with [ and ending with ].</textarea>
+Begin extraction now. Output only the JSON array.</textarea>
     <button class="btn-primary" style="width:auto;padding:0.6rem 1.25rem;margin-bottom:0;" onclick="copyPrompt()">
       📋 Copy Prompt
     </button>
