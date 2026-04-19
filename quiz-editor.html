@@ -880,10 +880,12 @@ function buildStandaloneHTML(cfg, cfgJ, qJ, engineCode) {
 }
 
 function downloadHTML() {
-  const content = document.getElementById('html-code').textContent;
-  const base = quizConfig.uid || quizConfig.title.toLowerCase().replace(/\s+/g, '-') || (fileType === 'bank' ? 'question-bank' : 'quiz');
-  dlBlob(content, 'text/html', base + '.html');
-  showToast('✅ HTML downloaded!');
+  const content  = document.getElementById('html-code').textContent;
+  const title    = quizConfig.title || (fileType === 'bank' ? 'Question Bank' : 'Quiz');
+  const safeName = title.replace(/[^a-z0-9\s-]/gi, '').trim().replace(/\s+/g, '-').toLowerCase();
+  const filename = (safeName || (fileType === 'bank' ? 'question-bank' : 'quiz')) + '.html';
+  dlBlob(content, 'text/html', filename);
+  showToast(`💾 ${filename} downloaded!`);
 }
 
 /* ═══════════════════════════════════════════════════════════════
