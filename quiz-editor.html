@@ -764,19 +764,57 @@ function handleEngineFileLoad(event, type) {
 /* ═══════════════════════════════════════════════════════════════
    BRACKET PARSER + JS SANITIZER
 ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * String-aware bracket matcher.
+ * Skips over quoted string literals so that brackets/braces inside
+ * string values (e.g. "[Na+]", "[H+]") are not counted.
+ */
 function findMatchingBracket(src, start, open, close) {
-  let n = 0;
-  for (let i = start; i < src.length; i++) {
-    if (src[i] === open)  n++;
-    else if (src[i] === close) { n--; if (!n) return i; }
+  let depth = 0;
+  let i = start;
+  while (i < src.length) {
+    const ch = src[i];
+    // Enter a string literal — skip until closing (unescaped) quote
+    if (ch === '"' || ch === "'") {
+      const q = ch;
+      i++;
+      while (i < src.length) {
+        if (src[i] === '\\') { i += 2; continue; }  // skip escape sequence
+        if (src[i] === q)    { i++; break; }          // closing quote
+        i++;
+      }
+      continue;
+    }
+    // Handle template literals (backtick strings)
+    if (ch === '`') {
+      i++;
+      while (i < src.length) {
+        if (src[i] === '\\') { i += 2; continue; }
+        if (src[i] === '`')  { i++; break; }
+        i++;
+      }
+      continue;
+    }
+    if (ch === open)  { depth++; }
+    else if (ch === close) { depth--; if (depth === 0) return i; }
+    i++;
   }
   return -1;
 }
+
+/**
+ * Minimal JS-to-JSON sanitiser.
+ * Only touches genuinely unquoted object keys; never modifies string values.
+ */
 function sanitizeJS(str) {
+  // Remove single-line comments (// …)
   str = str.replace(/^\s*\/\/.*$/gm, '');
+  // Remove trailing commas before } or ]
   str = str.replace(/,\s*([}\]])/g, '$1');
-  str = str.replace(/(\{|,)\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":');
-  str = str.replace(/^\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/gm, '"$1":');
+  // Quote unquoted keys that follow { or ,   e.g.  { uid: … → { "uid": …
+  // The look-ahead ensures we only touch keys, not string content
+  str = str.replace(/([{,])\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":');
   return str.trim();
 }
 
