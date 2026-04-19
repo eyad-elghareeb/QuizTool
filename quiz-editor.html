@@ -820,7 +820,18 @@ function sanitizeJS(str) {
   // Remove trailing commas before } or ]
   str = str.replace(/,\s*([}\]])/g, '$1');
   // Quote unquoted keys that follow { or ,   e.g.  { uid: … → { "uid": …
-  str = str.replace(/([{,])\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":');
+  // Use a more careful approach: only match keys that are NOT inside quotes
+  // Strategy: split by quotes and only process non-string parts
+  
+  const parts = str.split('"');
+  for (let i = 0; i < parts.length; i++) {
+    // Even indices are outside quotes (0, 2, 4...), odd are inside quotes (1, 3, 5...)
+    if (i % 2 === 0) {
+      parts[i] = parts[i].replace(/([{,])\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":');
+    }
+  }
+  str = parts.join('"');
+  
   return str.trim();
 }
 
