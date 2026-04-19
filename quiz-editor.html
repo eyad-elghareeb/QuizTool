@@ -812,6 +812,9 @@ function sanitizeJS(str) {
   // (common in question text that was copy-pasted from Word/docs)
   str = str.replace(/[\u201c\u201d]/g, '\"'); // " " → "
   str = str.replace(/[\u2018\u2019]/g, "'");  // ' ' → '
+  // Normalize various dash characters → standard hyphen
+  // (en-dash, em-dash, horizontal bar, minus sign)
+  str = str.replace(/[\u2013\u2014\u2015\u2212]/g, '-');
   // Remove single-line comments (// …)
   str = str.replace(/^\s*\/\/.*$/gm, '');
   // Remove trailing commas before } or ]
