@@ -24,7 +24,19 @@
   _toastEl.id = 'toast';
   _toastEl.className = 'toast';
   document.body.appendChild(_toastEl);
-  
+
+  /* ── Modal Styles ─────────────────────────────────────────── */
+  var _modalStyle = document.createElement('style');
+  _modalStyle.textContent = '.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);z-index:2100;display:none;align-items:center;justify-content:center;padding:1rem}.modal-overlay.open{display:flex}.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:2rem;max-width:420px;width:100%;box-shadow:var(--shadow);animation:modalIn 0.38s var(--ease-spring) both}.modal h3{font-family:\'Playfair Display\',serif;font-size:1.3rem;margin-bottom:0.75rem}.modal p{color:var(--text-muted);font-size:0.9rem;line-height:1.6;margin-bottom:1.25rem}.modal-actions{display:flex;gap:0.75rem}.modal-actions .btn-cancel{flex:1;padding:0.75rem;border-radius:10px;background:var(--surface2);border:1.5px solid var(--border);color:var(--text);font-weight:600;font-size:0.9rem;transition:all var(--transition)}.modal-actions .btn-cancel:hover{border-color:var(--accent)}.modal-actions .btn-confirm{flex:1;padding:0.75rem;border-radius:10px;background:var(--correct);border:none;color:#fff;font-weight:700;font-size:0.9rem;transition:all var(--transition)}.modal-actions .btn-confirm:hover{opacity:0.85}.modal-actions .btn-confirm.danger{background:var(--wrong)}@keyframes modalIn{from{opacity:0;transform:translateY(28px) scale(0.93)}to{opacity:1;transform:translateY(0) scale(1)}}';
+  document.head.appendChild(_modalStyle);
+
+  /* ── Clear Tracker Modal HTML ─────────────────────────────── */
+  var _clearModalEl = document.createElement('div');
+  _clearModalEl.className = 'modal-overlay';
+  _clearModalEl.id = 'clear-tracker-modal';
+  _clearModalEl.innerHTML = '<div class="modal"><h3>Clear Questions?</h3><p id="clear-tracker-message">Are you sure you want to clear all questions for this section? This cannot be undone.</p><div class="modal-actions"><button class="btn-cancel" onclick="closeClearTrackerModal()">Go Back</button><button class="btn-confirm danger" onclick="clearAllTrackerData()">Clear Now</button></div></div>';
+  document.body.appendChild(_clearModalEl);
+
   /* ── Toast Function ───────────────────────────────────────── */
   var toastTimer;
   window.showToast = function(msg) {
@@ -640,17 +652,62 @@
     } catch (e) {}
   };
 
-  /* ── Clear all ─────────────────────────────────────────────── */
+  /* ── Clear all (scope-aware) ───────────────────────────────── */
+  window.confirmClearTrackerData = function () {
+    // Update the message to show current scope
+    var scopeName = getCurrentScopeDisplayName();
+    var messageEl = document.getElementById('clear-tracker-message');
+    if (messageEl && scopeName) {
+      messageEl.textContent = 'Are you sure you want to clear all questions for "' + scopeName + '"? This cannot be undone.';
+    }
+    document.getElementById('clear-tracker-modal').classList.add('open');
+  };
+
+  window.closeClearTrackerModal = function () {
+    document.getElementById('clear-tracker-modal').classList.remove('open');
+  };
+
   window.clearAllTrackerData = function () {
-    if (!confirm('Clear all tracked questions? This cannot be undone.')) return;
+    // Close modal first
+    closeClearTrackerModal();
+
     try {
       var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
-      keys.forEach(function (uid) { localStorage.removeItem(getStorageKey(uid)); });
-      localStorage.removeItem(KEYS_LIST_KEY);
+
+      // Filter data based on current scope
+      var dataToClear = getDataForScope(currentScope, currentScopePath);
+      var uidsToClear = {};
+      dataToClear.forEach(function (d) { uidsToClear[d.uid] = true; });
+
+      // Only remove items that match the current scope
+      keys.forEach(function (uid) {
+        if (uidsToClear[uid]) {
+          localStorage.removeItem(getStorageKey(uid));
+        }
+      });
+
+      // Update keys list — keep only keys not being cleared
+      var remainingKeys = keys.filter(function (uid) { return !uidsToClear[uid]; });
+      localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(remainingKeys));
+
       renderDashboard();
       updateBadge();
+      showToast('🗑 Questions cleared for this section!');
     } catch (e) {}
   };
+
+  function getCurrentScopeDisplayName() {
+    if (currentScope === 'folder' && currentScopePath) {
+      var folderPath = currentScopePath + '/';
+      if (_folderTitleCache[folderPath]) {
+        return _folderTitleCache[folderPath];
+      }
+      return decodeURIComponent(currentScopePath);
+    } else if (currentScope === 'all') {
+      return 'All Selected Exams';
+    }
+    return 'this section';
+  }
 
   /* ── PDF Export ────────────────────────────────────────────── */
   window.exportTrackerToPDF = function () {
