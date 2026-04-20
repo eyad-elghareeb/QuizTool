@@ -296,26 +296,25 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
 }
 
 .dash-header {
-  display: flex; align-items: center; gap: 0.75rem;
-  padding: 1.25rem 1.5rem;
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.8rem 1.25rem;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 .dash-header h2 {
   font-family: 'Playfair Display', serif;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   flex: 1;
 }
 .dash-close-btn {
-  width: 34px; height: 34px;
-  border-radius: 8px;
+  width: 32px; height: 32px;
+  border-radius: 7px;
   background: var(--surface2);
   border: 1px solid var(--border);
   display: flex; align-items: center; justify-content: center;
   color: var(--text-muted);
-  font-size: 1.1rem;
+  font-size: 1rem;
   cursor: pointer;
-  
 }
 .dash-close-btn:hover { color: var(--text); border-color: var(--accent); }
 
@@ -326,13 +325,12 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
   justify-content: center;
 }
 .dash-scope-tab {
-  padding: 0.6rem 1rem;
-  font-size: 0.8rem;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--text-muted);
   border-bottom: 2px solid transparent;
   cursor: pointer;
-  
   background: none; border-top: none; border-left: none; border-right: none;
 }
 .dash-scope-tab:hover { color: var(--text); }
@@ -341,20 +339,20 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
 .dash-summary {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 0.75rem;
-  padding: 1.25rem 1.5rem;
+  gap: 0.6rem;
+  padding: 0.8rem 1.25rem;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 .dash-stat {
   background: var(--surface2);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 0.85rem;
+  border-radius: 9px;
+  padding: 0.6rem;
   text-align: center;
 }
-.dash-stat .ds-val { font-size: 1.5rem; font-weight: 700; line-height: 1.2; }
-.dash-stat .ds-lbl { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.2rem; }
+.dash-stat .ds-val { font-size: 1.25rem; font-weight: 700; line-height: 1.2; }
+.dash-stat .ds-lbl { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.15rem; }
 .ds-val.red { color: var(--wrong); }
 .ds-val.blue { color: var(--flagged); }
 .ds-val.green { color: var(--correct); }
@@ -432,8 +430,8 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
 .dash-quiz-title .quiz-badge.flag-badge { background: var(--flagged-bg); color: var(--flagged); }
 
 .dash-q-item {
-  display: flex; align-items: flex-start; gap: 0.5rem;
-  padding: 0.5rem 0.65rem; border-radius: 8px; margin-bottom: 0.25rem;
+  display: flex; align-items: flex-start; gap: 0.4rem;
+  padding: 0.4rem 0.6rem; border-radius: 8px; margin-bottom: 0.2rem;
   border: 1px solid var(--border); background: var(--surface2);
 }
 .dash-q-item:last-child { margin-bottom: 0; }
@@ -458,8 +456,8 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
 .dash-q-remove:hover { border-color: var(--wrong); color: var(--wrong); background: var(--wrong-bg); }
 
 .dash-footer {
-  padding: 1rem 1.5rem; border-top: 1px solid var(--border);
-  display: flex; gap: 0.75rem; flex-shrink: 0;
+  padding: 0.8rem 1.25rem; border-top: 1px solid var(--border);
+  display: flex; gap: 0.6rem; flex-shrink: 0;
 }
 .btn-dash-action {
   padding: 0.65rem 1.25rem; border-radius: 8px;

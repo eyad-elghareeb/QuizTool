@@ -351,6 +351,7 @@
   /* ── Scope state ───────────────────────────────────────────── */
   var currentScope = 'folder';
   var currentScopePath = '';
+  var _activeDashboard = null; // null | 'tracker' | 'review'
 
   /* ── Extract a clean folder display name from a full HTML <title> ── */
   function cleanTitle(raw) {
@@ -359,7 +360,12 @@
     return raw.replace(/^(?:MU61\s+Quiz|Mansoura\s+MCQ)\s*[-–—]\s*/i, '').trim();
   }
 
-  window.openTrackerDashboard = function () {
+  window.openTrackerDashboard = function (scope, fromPopState) {
+    if (!fromPopState) {
+      history.pushState({ dash: 'tracker' }, '');
+    }
+    _activeDashboard = 'tracker';
+
     // Reset selection state when opening dashboard (all folders selected by default)
     _selectedQuizzes = {};
 
@@ -455,7 +461,10 @@
       
       renderDashboard();
       var overlay = document.getElementById('tracker-dashboard');
-      if (overlay) overlay.classList.add('open');
+      if (overlay) {
+        overlay.classList.remove('closing');
+        overlay.classList.add('open');
+      }
     };
 
     if (foldersToFetch.length > 0) {
@@ -644,9 +653,21 @@
   }
 
   /* ── Close dashboard ───────────────────────────────────────── */
-  window.closeTrackerDashboard = function () {
+  window.closeTrackerDashboard = function (fromPopState) {
+    if (!fromPopState && _activeDashboard === 'tracker') {
+      history.back();
+      return;
+    }
+    _activeDashboard = null;
     var overlay = document.getElementById('tracker-dashboard');
-    if (overlay) overlay.classList.remove('open');
+    if (overlay) {
+      overlay.classList.add('closing');
+      var onEnd = function () {
+        overlay.removeEventListener('animationend', onEnd);
+        overlay.classList.remove('open', 'closing');
+      };
+      overlay.addEventListener('animationend', onEnd);
+    }
   };
 
   /* ── Toggle folder collapse ────────────────────────────────── */
@@ -955,7 +976,10 @@
     var isSyncChecked = document.getElementById('rev-sync-checkbox').checked;
     _isSyncRequested = isSyncChecked;
 
-    closeTrackerDashboard();
+    history.pushState({ dash: 'review' }, '');
+    _activeDashboard = 'review';
+
+    closeTrackerDashboard(true);
 
     var useBank = qs.length > 40;
     var engineScript = useBank ? 'bank-engine.js' : 'quiz-engine.js';
@@ -1028,19 +1052,43 @@
   };
 
 
+  window.closeReviewMode = function(fromPopState) {
+    if (!fromPopState && _activeDashboard === 'review') {
+      history.back();
+      return;
+    }
+    _activeDashboard = null;
+    var iframe = document.getElementById('review-iframe');
+    if (iframe) {
+      iframe.remove();
+      // Re-open dashboard instantly when exiting review to show changes!
+      openTrackerDashboard(null, true);
+    }
+  };
+
   window.addEventListener('message', function(e) {
       if (e.data === 'close-review') {
-          var iframe = document.getElementById('review-iframe');
-          if (iframe) {
-              iframe.remove();
-              // Re-open dashboard instantly when exiting review to show changes!
-              openTrackerDashboard();
-          }
+          closeReviewMode();
       } else if (e.data && e.data.type === 'review-sync') {
           if (_isSyncRequested && Array.isArray(e.data.correctItems)) {
               batchRemoveTrackerItems(e.data.correctItems);
           }
       }
+  });
+
+  window.addEventListener('popstate', function(e) {
+    var state = e.state;
+    if (state && state.dash === 'tracker') {
+      openTrackerDashboard(null, true);
+    } else if (state && state.dash === 'review') {
+      // Review mode is launched via launchReviewFinal; 
+      // if we're here, it means we went forward to a review state.
+      // For simplicity, we just close everything if the state is unexpected.
+    } else {
+      // No dashboard state -> close any open overlays
+      if (_activeDashboard === 'tracker') closeTrackerDashboard(true);
+      if (_activeDashboard === 'review') closeReviewMode(true);
+    }
   });
 
   /* ── PDF Export ────────────────────────────────────────────── */
@@ -1195,17 +1243,8 @@
       }, { once: true });
     });
 
-    /* 4. Smooth modal close (add .closing class before hiding) */
-    var _origClose = window.closeTrackerDashboard;
-    window.closeTrackerDashboard = function () {
-      var overlay = document.getElementById('tracker-dashboard');
-      if (!overlay || !overlay.classList.contains('open')) return;
-      overlay.classList.add('closing');
-      overlay.addEventListener('animationend', function onEnd() {
-        overlay.removeEventListener('animationend', onEnd);
-        overlay.classList.remove('open', 'closing');
-      });
-    };
+    /* 4. [Legacy] Patch for back-compat if needed, though now handled by popstate */
+    // window.closeTrackerDashboard is now history-aware in the main scope.
   })();
 
 })();
