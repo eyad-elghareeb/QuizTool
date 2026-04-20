@@ -951,6 +951,10 @@
       '    if(e) e.preventDefault();\n' +
       '    try { window.parent.postMessage("close-review", "*"); } catch(err){}\n' +
       '  };\n' +
+      '</script>\n' +
+      '</head>\n<body>\n' +
+      '<script src="' + (ENGINE_BASE || '') + engineScript + '"></script>\n' +
+      '<script>\n' +
       '  (function(){\n' +
       '    const originalSave = window.saveTrackerData;\n' +
       '    window.saveTrackerData = function() {\n' +
@@ -967,8 +971,6 @@
       '    };\n' +
       '  })();\n' +
       '</script>\n' +
-      '</head>\n<body>\n' +
-      '<script src="' + (ENGINE_BASE || '') + engineScript + '"></script>\n' +
       '</body>\n</html>';
 
     // Use srcdoc for better Service Worker and Origin inheritance (Offline PWA compatibility)
