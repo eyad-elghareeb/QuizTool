@@ -251,6 +251,38 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
 }
 .dash-overlay.open { display: flex; }
 
+/* Modal overlay for confirmations (same as quiz-engine) */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+  z-index: 2100; display: none; align-items: center; justify-content: center; padding: 1rem;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+  padding: 2rem; max-width: 420px; width: 100%; box-shadow: var(--shadow);
+  animation: slideUp 0.25s ease;
+}
+@keyframes slideUp { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform: translateY(0); } }
+.modal h3 { font-family: 'Playfair Display', serif; font-size: 1.3rem; margin-bottom: 0.75rem; }
+.modal p  { color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; margin-bottom: 1.25rem; }
+.modal-actions { display: flex; gap: 0.75rem; }
+.modal-actions .btn-cancel {
+  flex: 1; padding: 0.75rem; border-radius: 10px;
+  background: var(--surface2); border: 1.5px solid var(--border);
+  color: var(--text); font-weight: 600; cursor: pointer;
+  transition: all 0.2s ease;
+}
+.modal-actions .btn-cancel:hover { border-color: var(--accent); }
+.modal-actions .btn-confirm {
+  flex: 1; padding: 0.75rem; border-radius: 10px;
+  background: var(--accent); border: none;
+  color: #fff; font-weight: 600; cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+.modal-actions .btn-confirm.danger { background: var(--wrong); }
+.modal-actions .btn-confirm:hover { opacity: 0.85; }
+
 .dash-modal {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -436,7 +468,8 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
   cursor: pointer; 
 }
 .btn-dash-action:hover { border-color: var(--accent); color: var(--accent); }
-.btn-dash-danger:hover { border-color: var(--wrong); color: var(--wrong); }
+.btn-dash-danger { border-color: var(--wrong); color: var(--wrong); }
+.btn-dash-danger:hover { border-color: var(--wrong); color: var(--wrong); background: rgba(220, 38, 38, 0.08); }
 .btn-dash-close {
   flex: 1; padding: 0.65rem 1.25rem; border-radius: 8px;
   background: var(--accent); border: 1.5px solid var(--accent);
