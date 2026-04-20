@@ -13,6 +13,7 @@
   var _trackerStyle = document.createElement('style');
   _trackerStyle.textContent = '.dash-folder-title{font-family:"Playfair Display",serif;font-size:1.05rem;font-weight:700;color:var(--accent);padding:0.75rem 0 0.4rem;margin-bottom:0.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:0.4rem;cursor:pointer;user-select:none}.dash-folder-title:hover{opacity:0.85}.dash-folder-toggle{font-size:0.9rem;transition:transform 0.2s ease;display:inline-block}.dash-folder-toggle.collapsed{transform:rotate(-90deg)}.dash-folder-content{transition:max-height 0.3s ease,opacity 0.25s ease;overflow:visible;max-height:none;opacity:1;padding-bottom:0.5rem;flex:1}.dash-folder-content.collapsed{max-height:0;opacity:0;overflow:hidden}.dash-folder-header{display:flex;align-items:center;justify-content:space-between;gap:0.5rem}.dash-folder-select{margin-left:auto;width:18px;height:18px;cursor:pointer;accent-color:var(--accent)}' +
     '.btn-dash-review{flex:1;padding:0.65rem 1.25rem;border-radius:8px;background:var(--correct);border:1.5px solid var(--correct);color:#fff;font-weight:700;font-size:0.85rem;cursor:pointer;transition:opacity 0.2s ease}.btn-dash-review:hover{opacity:0.85}.btn-dash-review:disabled{opacity:0.4;cursor:not-allowed}' +
+    '.dash-search-container{flex:1;margin:0 1rem;max-width:300px;position:relative}.dash-search-container input{width:100%;padding:0.45rem 0.85rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.85rem;transition:all var(--transition)}.dash-search-container input:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px var(--accent-dim)}' +
     '.dash-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-muted);font-style:italic}';
   document.head.appendChild(_trackerStyle);
   
@@ -46,6 +47,9 @@
   _dashEl.innerHTML = '<div class="dash-modal">' +
     '<div class="dash-header">' +
       '<h2 id="dash-title-text">📊 Question Tracker</h2>' +
+      '<div class="dash-search-container">' +
+        '<input type="text" id="dash-search-input" placeholder="Search questions..." oninput="handleDashSearch(this.value)">' +
+      '</div>' +
       '<button class="dash-close-btn" onclick="closeTrackerDashboard()">✕</button>' +
     '</div>' +
     '<div class="dash-scope-bar" id="dash-scope-bar">' +
@@ -503,6 +507,13 @@
   /* ── Render dashboard ──────────────────────────────────────── */
   var _collapsedFolders = {};
   var _selectedQuizzes = {};
+  var _dashSearchQuery = '';
+
+  window.handleDashSearch = function(query) {
+    _dashSearchQuery = (query || '').toLowerCase().trim();
+    renderDashboard();
+  };
+
   function renderDashboard() {
     var data = getDataForScope(currentScope, currentScopePath);
     var totalWrong = 0, totalFlagged = 0;
@@ -610,6 +621,16 @@
       var folderUids = fGroups.map(function(g) { return g.uid; });
       var isFolderSelected = folderUids.every(function(uid) { return _selectedQuizzes[uid] !== false; });
 
+      // If searching, force-expand folders that have matches
+      if (_dashSearchQuery) {
+        var hasMatch = fGroups.some(function(g) {
+          if (g.title.toLowerCase().indexOf(_dashSearchQuery) !== -1) return true;
+          return g.wrongItems.some(function(q) { return (q.text || '').toLowerCase().indexOf(_dashSearchQuery) !== -1; }) ||
+                 g.flaggedItems.some(function(q) { return (q.text || '').toLowerCase().indexOf(_dashSearchQuery) !== -1; });
+        });
+        if (hasMatch) isCollapsed = false;
+      }
+
       if (displayFolderTitle) {
         html += '<div class="dash-folder-header" style="align-items:center;">';
         html += '<div class="dash-folder-title" onclick="toggleFolder(\'' + escHtml(folder) + '\')">';
@@ -625,30 +646,39 @@
 
       html += '<div class="dash-folder-content' + (isCollapsed ? ' collapsed' : '') + '" id="folder-content-' + escHtml(folder) + '">';
 
-      fGroups.forEach(function (g) {
-        var isQuizSelected = _selectedQuizzes[g.uid] !== false;
-        var dateStr = g.timestamp
-          ? new Date(g.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-          : '';
+      if (!isCollapsed) {
+        fGroups.forEach(function (g) {
+          var isQuizSelected = _selectedQuizzes[g.uid] !== false;
+          var dateStr = g.timestamp
+            ? new Date(g.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+            : '';
 
-        html += '<div class="dash-quiz-group">';
-        html += '<div class="dash-quiz-title" style="cursor:pointer; display:flex; align-items:center;" onclick="document.getElementById(\'chk-\'+\''+g.uid+'\').click()">';
-        html += '<input type="checkbox" id="chk-'+g.uid+'" class="dash-quiz-select" style="margin-right:8px; width:16px; height:16px; cursor:pointer; accent-color:var(--accent)" ' + (isQuizSelected ? 'checked' : '') + ' onclick="event.stopPropagation(); toggleQuizSelection(\'' + g.uid + '\', this.checked)"> ';
-        html += escHtml(g.title);
-        if (g.wrongItems.length)   html += ' <span class="quiz-badge wrong-badge">' + g.wrongItems.length + ' wrong</span>';
-        if (g.flaggedItemsAll.length) html += ' <span class="quiz-badge flag-badge">' + g.flaggedItemsAll.length + ' flagged</span>';
-        if (dateStr)             html += ' <span style="font-size:0.7rem;color:var(--text-muted);font-weight:400;margin-left:auto;">' + dateStr + '</span>';
-        html += '</div>';
+          // If searching, filter out quizzes that don't match (unless they have matching questions)
+          var quizMatches = g.title.toLowerCase().indexOf(_dashSearchQuery) !== -1;
+          var matchingWrong = g.wrongItems.filter(function(q) { return !(_dashSearchQuery) || quizMatches || (q.text || '').toLowerCase().indexOf(_dashSearchQuery) !== -1; });
+          var matchingFlagged = g.flaggedItems.filter(function(q) { return !(_dashSearchQuery) || quizMatches || (q.text || '').toLowerCase().indexOf(_dashSearchQuery) !== -1; });
+          
+          if (_dashSearchQuery && !quizMatches && !matchingWrong.length && !matchingFlagged.length) return;
 
-        g.wrongItems.forEach(function (q) {
-          var isAlsoFlagged = g.flaggedItemsAll.some(function (f) { return f.idx === q.idx; });
-          html += buildItem(g.uid, q, isAlsoFlagged ? 'Wrong + Flagged' : 'Wrong', 'wrong', '\u2717');
+          html += '<div class="dash-quiz-group">';
+          html += '<div class="dash-quiz-title" style="cursor:pointer; display:flex; align-items:center;" onclick="document.getElementById(\'chk-\'+\''+g.uid+'\').click()">';
+          html += '<input type="checkbox" id="chk-'+g.uid+'" class="dash-quiz-select" style="margin-right:8px; width:16px; height:16px; cursor:pointer; accent-color:var(--accent)" ' + (isQuizSelected ? 'checked' : '') + ' onclick="event.stopPropagation(); toggleQuizSelection(\'' + g.uid + '\', this.checked)"> ';
+          html += escHtml(g.title);
+          if (g.wrongItems.length)   html += ' <span class="quiz-badge wrong-badge">' + g.wrongItems.length + ' wrong</span>';
+          if (g.flaggedItemsAll.length) html += ' <span class="quiz-badge flag-badge">' + g.flaggedItemsAll.length + ' flagged</span>';
+          if (dateStr)             html += ' <span style="font-size:0.7rem;color:var(--text-muted);font-weight:400;margin-left:auto;">' + dateStr + '</span>';
+          html += '</div>';
+
+          matchingWrong.forEach(function (q) {
+            var isAlsoFlagged = g.flaggedItemsAll.some(function (f) { return f.idx === q.idx; });
+            html += buildItem(g.uid, q, isAlsoFlagged ? 'Wrong + Flagged' : 'Wrong', 'wrong', '\u2717');
+          });
+          matchingFlagged.forEach(function (q) {
+            html += buildItem(g.uid, q, 'Flagged', 'flagged', '\u2691');
+          });
+          html += '</div>';
         });
-        g.flaggedItems.forEach(function (q) {
-          html += buildItem(g.uid, q, 'Flagged', 'flagged', '\u2691');
-        });
-        html += '</div>';
-      });
+      }
 
       html += '</div>'; // close dash-folder-content
     });
@@ -694,14 +724,8 @@
   /* ── Toggle folder collapse ────────────────────────────────── */
   window.toggleFolder = function (folder) {
     _collapsedFolders[folder] = !_collapsedFolders[folder];
-    var contentEl = document.getElementById('folder-content-' + folder);
-    var toggleEl = contentEl ? contentEl.previousElementSibling.querySelector('.dash-folder-toggle') : null;
-    if (contentEl) {
-      contentEl.classList.toggle('collapsed', _collapsedFolders[folder]);
-    }
-    if (toggleEl) {
-      toggleEl.classList.toggle('collapsed', _collapsedFolders[folder]);
-    }
+    // Re-render because lazy rendering skips collapsed folder children
+    renderDashboard();
   };
 
   /* ── Toggle selection logic ───────────────────────────────── */
@@ -762,6 +786,9 @@
         uidMap[it.uid].push(it.idx);
       });
 
+      var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
+      var keysChanged = false;
+
       Object.keys(uidMap).forEach(function(uid) {
         var indices = uidMap[uid];
         var raw = localStorage.getItem(getStorageKey(uid));
@@ -772,12 +799,16 @@
 
         if (!data.wrong.length && !data.flagged.length) {
           localStorage.removeItem(getStorageKey(uid));
-          var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
-          localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(keys.filter(function(k) { return k !== uid; })));
+          keys = keys.filter(function(k) { return k !== uid; });
+          keysChanged = true;
         } else {
           localStorage.setItem(getStorageKey(uid), JSON.stringify(data));
         }
       });
+      
+      if (keysChanged) {
+        localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(keys));
+      }
       renderDashboard();
       updateBadge();
     } catch (e) {}

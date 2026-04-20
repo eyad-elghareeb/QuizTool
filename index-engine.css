@@ -262,6 +262,7 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
   background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
   padding: 2rem; max-width: 420px; width: 100%; box-shadow: var(--shadow);
   animation: slideUp 0.25s ease;
+  will-change: transform, opacity;
 }
 @keyframes slideUp { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform: translateY(0); } }
 .modal h3 { font-family: 'Playfair Display', serif; font-size: 1.3rem; margin-bottom: 0.75rem; }
@@ -289,10 +290,12 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
   border-radius: 20px;
   width: 100%;
   max-width: 680px;
-  max-height: 95vh;
+  max-height: 85vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  animation: dashSlideUp 0.25s ease;
+  will-change: transform, opacity;
 }
 
 .dash-header {
@@ -408,19 +411,13 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
 }
 .dash-folder-toggle.collapsed { transform: rotate(-90deg); }
 .dash-folder-content {
-  transition: max-height 0.3s ease, opacity 0.25s ease;
-  overflow: visible;
-  max-height: none;
-  opacity: 1;
-  padding-bottom: 0.25rem;
-  flex: 1;
-}
-.dash-folder-content.collapsed { 
-  max-height: 0; 
-  opacity: 0; 
   overflow: hidden;
-  margin-bottom: 0;
-  padding-bottom: 0;
+  transition: max-height 0.3s ease-out;
+  contain: layout style;
+}
+.dash-folder-content.collapsed {
+  max-height: 0;
+  display: none;
 }
 .dash-folder-select {
   margin-left: auto;
@@ -440,9 +437,11 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
 .dash-quiz-title .quiz-badge.flag-badge { background: var(--flagged-bg); color: var(--flagged); }
 
 .dash-q-item {
-  display: flex; align-items: flex-start; gap: 0.4rem;
-  padding: 0.4rem 0.6rem; border-radius: 8px; margin-bottom: 0.2rem;
+  display: flex; align-items: flex-start; gap: 0.65rem;
+  padding: 0.55rem 0.85rem; border-radius: 8px; margin-bottom: 0.4rem;
   border: 1px solid var(--border); background: var(--surface2);
+  transition: border-color 0.2s, transform 0.2s;
+  contain: layout style;
 }
 .dash-q-item:last-child { margin-bottom: 0; }
 .dash-q-item:hover { border-color: var(--accent); }
