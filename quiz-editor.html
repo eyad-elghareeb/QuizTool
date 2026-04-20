@@ -619,15 +619,25 @@ async function loadFromURL() {
 /* ═══════════════════════════════════════════════════════════════
    IMPORT — HTML (quiz + bank auto-detect)
 ═══════════════════════════════════════════════════════════════ */
-function importFromHTML(content) {
+async function importFromHTML(content) {
   uploadedHTML = content;
   updateUploadStatus();
   const isBank = /const\s+BANK_CONFIG\s*=/.test(content) || /const\s+QUESTION_BANK\s*=/.test(content);
   switchFileType(isBank ? 'bank' : 'quiz');
-  isBank ? importBankHTML(content) : importQuizHTML(content);
+  
+  try {
+    if (isBank) {
+      await importBankHTML(content);
+    } else {
+      await importQuizHTML(content);
+    }
+  } catch(e) {
+    console.error('Import error:', e);
+    showToast('❌ Import failed: ' + e.message);
+  }
 }
 
-function importQuizHTML(content) {
+async function importQuizHTML(content) {
   // Config
   const cm = content.match(/const\s+QUIZ_CONFIG\s*=\s*\{/);
   if (cm) {
@@ -643,26 +653,31 @@ function importQuizHTML(content) {
       }
     } catch(e) { console.warn('QUIZ_CONFIG parse:', e); }
   }
-  // Questions
+  // Questions - use robust parser
   const qm = content.match(/const\s+QUESTIONS\s*=\s*\[/);
   if (qm) {
     try {
       const op = qm.index + qm[0].length - 1;
       const cl = findMatchingBracket(content, op, '[', ']');
       if (cl !== -1) {
-        const parsed = JSON.parse(sanitizeJS(content.substring(op, cl+1)));
+        const rawContent = content.substring(op, cl+1);
+        const parsed = await parseQuestionsAsync(rawContent);
         loadQuestionsIntoEditor(parsed);
         showToast(`✅ Quiz imported: ${parsed.length} questions`);
         switchTabByName('config');
         return;
       }
-    } catch(e) { showToast('⚠️ Questions parse failed: ' + e.message); return; }
+    } catch(e) { 
+      console.error('Questions parse error:', e);
+      showToast('⚠️ Questions parse failed: ' + e.message); 
+      return; 
+    }
   }
   if (!cm && !qm) showToast('❌ No quiz data found in file');
   else if (cm && !qm) showToast('✅ Config imported, no questions found');
 }
 
-function importBankHTML(content) {
+async function importBankHTML(content) {
   // Config
   const cm = content.match(/const\s+BANK_CONFIG\s*=\s*\{/);
   if (cm) {
@@ -680,20 +695,25 @@ function importBankHTML(content) {
       }
     } catch(e) { console.warn('BANK_CONFIG parse:', e); }
   }
-  // Questions
+  // Questions - use robust parser
   const bm = content.match(/const\s+QUESTION_BANK\s*=\s*\[/);
   if (bm) {
     try {
       const op = bm.index + bm[0].length - 1;
       const cl = findMatchingBracket(content, op, '[', ']');
       if (cl !== -1) {
-        const parsed = JSON.parse(sanitizeJS(content.substring(op, cl+1)));
+        const rawContent = content.substring(op, cl+1);
+        const parsed = await parseQuestionsAsync(rawContent);
         loadQuestionsIntoEditor(parsed);
         showToast(`✅ Bank imported: ${parsed.length} questions`);
         switchTabByName('config');
         return;
       }
-    } catch(e) { showToast('⚠️ Bank parse failed: ' + e.message); return; }
+    } catch(e) { 
+      console.error('Bank parse error:', e);
+      showToast('⚠️ Bank parse failed: ' + e.message); 
+      return; 
+    }
   }
   if (!cm && !bm) showToast('❌ No bank data found in file');
   else if (cm && !bm) showToast('✅ Config imported, no questions found');
@@ -833,6 +853,477 @@ function sanitizeJS(str) {
   str = parts.join('"');
   
   return str.trim();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ROBUST QUESTION PARSER (from bank-maker)
+   Multi-strategy parser with async chunking for large files
+═══════════════════════════════════════════════════════════════ */
+
+/**
+ * Async parser that processes large files in chunks to avoid blocking UI
+ */
+async function parseQuestionsAsync(input) {
+  const startTime = performance.now();
+  console.log(`Starting parse, input length: ${input.length} chars`);
+
+  // Step 1: Clean and normalize input
+  const cleaned = cleanJSArrayInput(input);
+  console.log(`Cleaned input length: ${cleaned.length} chars`);
+
+  // Step 2: Try multiple parsing strategies in order of safety
+  let arr = null;
+  const parseErrors = [];
+
+  // Strategy 1: Direct JSON.parse (fastest, safest)
+  try {
+    arr = JSON.parse(cleaned);
+    if (Array.isArray(arr)) {
+      console.log(`✅ JSON.parse succeeded in ${(performance.now() - startTime).toFixed(1)}ms, found ${arr.length} items`);
+      return validateQuestions(arr);
+    }
+  } catch(e) {
+    parseErrors.push(`JSON.parse: ${e.message}`);
+    console.log('JSON.parse failed:', e.message);
+    showParseErrorContext(cleaned, e);
+  }
+
+  // Strategy 2: Sanitized JSON.parse (remove comments, fix common issues)
+  try {
+    const sanitized = sanitizeForJSON(cleaned);
+    arr = JSON.parse(sanitized);
+    if (Array.isArray(arr)) {
+      console.log(`✅ Sanitized JSON.parse succeeded in ${(performance.now() - startTime).toFixed(1)}ms, found ${arr.length} items`);
+      return validateQuestions(arr);
+    }
+  } catch(e) {
+    parseErrors.push(`Sanitized JSON: ${e.message}`);
+    console.log('Sanitized JSON failed:', e.message);
+    const sanitized = sanitizeForJSON(cleaned);
+    showParseErrorContext(sanitized, e);
+  }
+
+  // Strategy 3: Chunked parsing for very large files (>5MB)
+  if (cleaned.length > 5_000_000) {
+    try {
+      arr = await parseLargeArrayChunked(cleaned);
+      if (Array.isArray(arr)) {
+        console.log(`✅ Chunked parsing succeeded in ${(performance.now() - startTime).toFixed(1)}ms, found ${arr.length} items`);
+        return validateQuestions(arr);
+      }
+    } catch(e) {
+      parseErrors.push(`Chunked parser: ${e.message}`);
+      console.log('Chunked parser failed:', e.message);
+    }
+  }
+
+  // Strategy 4: Function constructor (handles unquoted keys, single quotes, etc.)
+  try {
+    const sanitized = sanitizeJSForEval(cleaned);
+    arr = new Function('return ' + sanitized)();
+    if (Array.isArray(arr)) {
+      console.log(`✅ Function parser succeeded in ${(performance.now() - startTime).toFixed(1)}ms, found ${arr.length} items`);
+      return validateQuestions(arr);
+    }
+  } catch(e) {
+    parseErrors.push(`Function parser: ${e.message}`);
+    console.log('Function parser failed:', e.message);
+  }
+
+  console.error('All parsing strategies failed:', parseErrors);
+  throw new Error(`All parsing strategies failed:\n${parseErrors.map(e => '  • ' + e).join('\n')}`);
+}
+
+/**
+ * Show context around a JSON parse error to help debugging
+ */
+function showParseErrorContext(text, error) {
+  let pos = -1;
+  const posMatch = error.message.match(/position\s+(\d+)/i);
+  if (posMatch) {
+    pos = parseInt(posMatch[1]);
+  }
+  if (pos < 0) {
+    const lineMatch = error.message.match(/line\s+(\d+)\s+column\s+(\d+)/i);
+    if (lineMatch) {
+      const line = parseInt(lineMatch[1]);
+      const col = parseInt(lineMatch[2]);
+      const lines = text.split('\n');
+      if (line <= lines.length) {
+        let charPos = 0;
+        for (let i = 0; i < line - 1; i++) {
+          charPos += lines[i].length + 1;
+        }
+        pos = charPos + col - 1;
+      }
+    }
+  }
+  if (pos >= 0 && pos < text.length) {
+    const before = text.substring(Math.max(0, pos - 100), pos);
+    const after = text.substring(pos, Math.min(text.length, pos + 100));
+    console.log(`\n📍 Error context (char ${pos}):`);
+    console.log('  ...' + before.replace(/\n/g, '\\n') + ' <<HERE>> ' + after.replace(/\n/g, '\\n') + '...\n');
+  }
+}
+
+/**
+ * Clean common issues in JS array input
+ */
+function cleanJSArrayInput(input) {
+  let cleaned = input
+    .replace(/^\uFEFF/, '')                              // Remove BOM
+    .replace(/^\s*```(?:json|js|javascript)?\s*/i, '')   // Remove opening code fence
+    .replace(/\s*```\s*$/i, '')                          // Remove closing code fence
+    .replace(/[\u201C\u201D\u00AB\u00BB]/g, '"')         // Normalise curly/angle double quotes
+    .replace(/[\u2018\u2019\u2032\u02BC]/g, "'")         // Normalise curly single quotes
+    .replace(/,(\s*[\]\}])/g, '$1')                      // Remove trailing commas
+    .trim();
+
+  // Ensure it starts with [ and ends with ]
+  if (!cleaned.startsWith('[')) cleaned = '[' + cleaned;
+  if (!cleaned.endsWith(']'))   cleaned = cleaned + ']';
+
+  return cleaned;
+}
+
+/**
+ * Sanitize JS input for JSON.parse by fixing common issues
+ */
+function sanitizeForJSON(str) {
+  // FIRST: Try to parse as-is - if it works, no sanitization needed!
+  try {
+    JSON.parse(str);
+    return str.trim();
+  } catch (e) {
+    // Continue with sanitization only if parse fails
+  }
+
+  let result = str;
+
+  // Remove multi-line comments first
+  result = result.replace(/\/\*[\s\S]*?\*\//g, '');
+
+  // Remove single-line comments (but not inside strings)
+  result = result.replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|\/\/[^\n]*/gm, (m, str) => str || '');
+
+  // Add quotes to unquoted object keys (works for ALL value types, not just strings)
+  result = result.replace(/([\{,]\s*)([a-zA-Z_$][a-zA-Z_$0-9]*)(\s*:)/g, '$1"$2"$3');
+
+  // Convert single-quoted strings to double-quoted (including curly quotes)
+  result = result.replace(/'((?:[^'\\]|\\.)*)'/g, '"$1"');
+  result = result.replace(/`((?:[^`\\]|\\.)*)`/g, '"$1"');
+
+  // Use a state machine to properly handle strings and escape control characters
+  result = sanitizeStringsStateMachine(result);
+
+  // Fix unescaped double quotes - PASS 1: Merge adjacent broken strings
+  let prevResult;
+  do {
+    prevResult = result;
+
+    // For value strings after colon: :"text1"text2" -> :"text1text2"
+    result = result.replace(/(:\s*)"([^"]*)"([^",:\]\}\{\[]+)"/g, function(match, prefix, content1, content2) {
+      return prefix + '"' + content1 + content2 + '"';
+    });
+
+    // For array elements after comma: ,"text1"text2" -> ,"text1text2"
+    result = result.replace(/(,\s*)"([^"]*)"([^",:\]\}\{\[]+)"/g, function(match, prefix, content1, content2) {
+      return prefix + '"' + content1 + content2 + '"';
+    });
+
+    // For first array element after [: ["text1"text2" -> ["text1text2"
+    result = result.replace(/(\[\s*)"([^"]*)"([^",:\]\}\{\[]+)"/g, function(match, prefix, content1, content2) {
+      return prefix + '"' + content1 + content2 + '"';
+    });
+  } while (result !== prevResult);
+
+  // After initial fixes, try parsing again
+  try {
+    JSON.parse(result);
+    return result.trim();
+  } catch (e) {
+    // Continue if still failing
+  }
+
+  // PASS 2: More aggressive fix for strings with multiple internal quotes
+  // Pattern matches strings like "text1"text2"text3" and removes all interior quotes
+  do {
+    prevResult = result;
+
+    // For value strings after colon
+    result = result.replace(/(:\s*)"([^"]*(?:"[^"]*)+)"/g, function(match, prefix, fullContent) {
+      const clean = fullContent.replace(/"/g, '');
+      return prefix + '"' + clean + '"';
+    });
+
+    // For array elements after comma
+    result = result.replace(/(,\s*)"([^"]*(?:"[^"]*)+)"/g, function(match, prefix, fullContent) {
+      const clean = fullContent.replace(/"/g, '');
+      return prefix + '"' + clean + '"';
+    });
+
+    // For first array element after [
+    result = result.replace(/(\[\s*)"([^"]*(?:"[^"]*)+)"/g, function(match, prefix, fullContent) {
+      const clean = fullContent.replace(/"/g, '');
+      return prefix + '"' + clean + '"';
+    });
+  } while (result !== prevResult);
+
+  // Remove trailing commas
+  result = result.replace(/,(\s*[\]\}])/g, '$1');
+
+  // Remove semicolons at end
+  result = result.replace(/;\s*$/, '');
+
+  return result.trim();
+}
+
+/**
+ * State machine to properly escape control characters in JSON strings.
+ * Also handles unescaped internal double-quotes via look-ahead heuristic:
+ * a `"` that is NOT followed by a JSON structural character (, } ] : EOF)
+ * is treated as an internal unescaped quote and escaped as \".
+ */
+function sanitizeStringsStateMachine(str) {
+  let result = '';
+  let i = 0;
+  let inString = false;
+  let stringStartQuote = '';
+
+  while (i < str.length) {
+    const char = str[i];
+
+    if (!inString) {
+      if (char === '"' || char === "'") {
+        inString = true;
+        stringStartQuote = char;
+        result += '"'; // Always use double quotes in output
+      } else {
+        result += char;
+      }
+    } else {
+      if (char === '\\') {
+        // Escape sequence — consume the escape char and the next char together
+        i++;
+        if (i < str.length) {
+          const escaped = str[i];
+          if (escaped === "'") {
+            // \' is not a valid JSON escape; emit the bare apostrophe
+            result += "'";
+          } else if (escaped === '\n' || escaped === '\r') {
+            // Escaped literal newline (line-continuation style) — drop it
+          } else {
+            result += '\\' + escaped;
+          }
+        }
+      } else if (char === stringStartQuote) {
+        if (stringStartQuote === '"') {
+          // Look ahead (skipping spaces/tabs) to decide if this is a
+          // legitimate close-quote or an unescaped internal quote.
+          let j = i + 1;
+          while (j < str.length && (str[j] === ' ' || str[j] === '\t')) j++;
+          const peek = j < str.length ? str[j] : '';
+          const isClose = peek === '' ||
+                          peek === ',' || peek === '}' || peek === ']' ||
+                          peek === ':' || peek === '\n' || peek === '\r';
+          if (isClose) {
+            // Legitimate end of string
+            inString = false;
+            result += '"';
+            stringStartQuote = '';
+          } else {
+            // Unescaped internal double-quote — escape it
+            result += '\\"';
+          }
+        } else {
+          // Single-quoted string close — convert to double-quote
+          inString = false;
+          result += '"';
+          stringStartQuote = '';
+        }
+      } else if (char === '"' && stringStartQuote === "'") {
+        // Double-quote inside a single-quoted string — must escape for JSON
+        result += '\\"';
+      } else if (char === '\n') {
+        result += '\\n';
+      } else if (char === '\r') {
+        result += '\\r';
+      } else if (char === '\t') {
+        result += '\\t';
+      } else if (char === '\b') {
+        result += '\\b';
+      } else if (char === '\f') {
+        result += '\\f';
+      } else if (char.charCodeAt(0) < 0x20) {
+        result += '\\u' + char.charCodeAt(0).toString(16).padStart(4, '0');
+      } else {
+        result += char;
+      }
+    }
+
+    i++;
+  }
+
+  return result;
+}
+
+/**
+ * Sanitize JS input before using Function constructor (prevent code injection)
+ */
+function sanitizeJSForEval(str) {
+  return str
+    // Remove potentially dangerous patterns
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/javascript\s*:/gi, '')
+    .replace(/eval\s*\(/gi, 'invalid(')
+    .replace(/Function\s*\(/gi, 'invalid(')
+    .replace(/require\s*\(/gi, 'invalid(')
+    .replace(/import\s+/gi, 'invalid ')
+    .replace(/process\s*\./gi, 'invalid.')
+    .replace(/global\s*\./gi, 'invalid.')
+    .replace(/window\s*\./gi, 'invalid.')
+    .replace(/document\s*\./gi, 'invalid.');
+}
+
+/**
+ * Parse large JS arrays by processing in chunks to avoid memory issues
+ */
+async function parseLargeArrayChunked(str) {
+  const results = [];
+  let depth = 0;
+  let chunkStart = 0;
+  let inString = false;
+  let stringChar = '';
+  let escapeNext = false;
+
+  // Skip the opening bracket
+  for (let i = 1; i < str.length; i++) {
+    const char = str[i];
+
+    if (escapeNext) {
+      escapeNext = false;
+      continue;
+    }
+
+    if (char === '\\') {
+      escapeNext = true;
+      continue;
+    }
+
+    if (!inString && (char === '"' || char === "'")) {
+      inString = true;
+      stringChar = char;
+      continue;
+    }
+
+    if (inString && char === stringChar) {
+      inString = false;
+      continue;
+    }
+
+    if (inString) continue;
+
+    if (char === '{') depth++;
+    if (char === '}') depth--;
+
+    // When we're at depth 0 and hit a comma or closing bracket, we have a complete object
+    if (depth === 0 && (char === ',' || char === ']')) {
+      const chunk = str.substring(chunkStart, i + 1);
+      if (chunk.trim().length > 2) { // Skip empty chunks
+        try {
+          // Parse individual object
+          let objStr = chunk.trim();
+          if (!objStr.startsWith('{')) objStr = '{' + objStr;
+          if (!objStr.endsWith('}')) objStr = objStr + '}';
+
+          const sanitized = sanitizeForJSON(objStr);
+          const obj = JSON.parse(sanitized);
+          results.push(obj);
+        } catch(e) {
+          // Try Function parser for this chunk
+          try {
+            const sanitized = sanitizeJSForEval(chunk);
+            const obj = new Function('return ' + sanitized)();
+            if (obj && typeof obj === 'object') results.push(obj);
+          } catch(e2) {
+            console.warn(`Skipping malformed chunk at position ${i}: ${e2.message}`);
+          }
+        }
+      }
+      chunkStart = i + 1;
+
+      // Yield to UI every chunk to prevent freezing
+      if (results.length % 100 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+    }
+  }
+
+  if (results.length === 0) {
+    throw new Error('No valid questions found in chunked parsing');
+  }
+
+  return results;
+}
+
+/**
+ * Validate parsed questions array
+ */
+function validateQuestions(arr) {
+  if (!Array.isArray(arr)) {
+    throw new Error('Input is not an array');
+  }
+
+  if (arr.length === 0) {
+    throw new Error('Array is empty');
+  }
+
+  // Batch validation for performance with large arrays
+  const errors = [];
+  const batchSize = 1000;
+
+  for (let batch = 0; batch < arr.length; batch += batchSize) {
+    const end = Math.min(batch + batchSize, arr.length);
+
+    for (let i = batch; i < end; i++) {
+      const q = arr[i];
+
+      if (!q || typeof q !== 'object') {
+        errors.push(`Question ${i+1}: not a valid object`);
+        continue;
+      }
+
+      if (!q.question || typeof q.question !== 'string') {
+        errors.push(`Question ${i+1}: missing or invalid "question" field`);
+      }
+
+      if (!Array.isArray(q.options)) {
+        errors.push(`Question ${i+1}: missing "options" array`);
+      } else if (q.options.length < 2) {
+        errors.push(`Question ${i+1}: needs at least 2 options`);
+      }
+
+      if (q.correct === undefined || q.correct === null) {
+        errors.push(`Question ${i+1}: missing "correct" index`);
+      } else if (!Array.isArray(q.options) || q.correct < 0 || q.correct >= q.options.length) {
+        if (Array.isArray(q.options)) {
+          errors.push(`Question ${i+1}: "correct" index (${q.correct}) out of range (0-${q.options.length - 1})`);
+        }
+      }
+    }
+
+    // Stop early if too many errors
+    if (errors.length >= 20) {
+      errors.push('... (stopping after 20 errors)');
+      break;
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new Error(errors.join('\n'));
+  }
+
+  return arr;
 }
 
 /* ═══════════════════════════════════════════════════════════════
