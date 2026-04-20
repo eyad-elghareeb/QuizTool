@@ -954,9 +954,6 @@
       '  (function(){\n' +
       '    const originalSave = window.saveTrackerData;\n' +
       '    window.saveTrackerData = function() {\n' +
-      '      if(typeof originalSave === "function") {\n' +
-      '         try { originalSave.apply(this, arguments); } catch(e){}\n' +
-      '      }\n' +
       '      const correct = [];\n' +
       '      const qsArr = (typeof SESSION_QUESTIONS !== "undefined") ? SESSION_QUESTIONS : QUESTIONS;\n' +
       '      qsArr.forEach((q, i) => {\n' +
