@@ -647,26 +647,7 @@ def gen_index_html(topbar_title, hero_title, hero_desc, quizzes,
 const QUIZZES = {q_json};
 </script>
 
-<div class="dash-overlay" id="tracker-dashboard">
-  <div class="dash-modal">
-    <div class="dash-header">
-      <h2 id="dash-title-text">\U0001F4CA Question Tracker</h2>
-      <button class="dash-close-btn" onclick="closeTrackerDashboard()">\u2715</button>
-    </div>
-    <div class="dash-scope-bar" id="dash-scope-bar"></div>
-    <div class="dash-summary">
-      <div class="dash-stat"><div class="ds-val red" id="dash-total-wrong">0</div><div class="ds-lbl">Wrong</div></div>
-      <div class="dash-stat"><div class="ds-val blue" id="dash-total-flagged">0</div><div class="ds-lbl">Flagged</div></div>
-      <div class="dash-stat"><div class="ds-val green" id="dash-total-quizzes">0</div><div class="ds-lbl">Quizzes</div></div>
-    </div>
-    <div class="dash-body" id="dash-body"></div>
-    <div class="dash-footer">
-      <button class="btn-dash-action" onclick="exportTrackerToPDF()" title="Export to PDF">\U0001F4C4 Export PDF</button>
-      <button class="btn-dash-action btn-dash-danger" onclick="confirmClearTrackerData()">\U0001F5D1 Clear All</button>
-      <button class="btn-dash-close" onclick="closeTrackerDashboard()">Close</button>
-    </div>
-  </div>
-</div>
+
 
 <script src="{engine_path}"></script>
 <script>

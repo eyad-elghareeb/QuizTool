@@ -319,7 +319,7 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
 }
 .dash-close-btn:hover { color: var(--text); border-color: var(--accent); }
 
-.dash-scope-bar {
+.dash-scope-bar { justify-content: center;
   display: flex; gap: 0; padding: 0 1.5rem;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
