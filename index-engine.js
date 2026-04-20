@@ -48,7 +48,7 @@
       '<h2 id="dash-title-text">📊 Question Tracker</h2>' +
       '<button class="dash-close-btn" onclick="closeTrackerDashboard()">✕</button>' +
     '</div>' +
-    '<div class="dash-scope-bar">' +
+    '<div class="dash-scope-bar" id="dash-scope-bar">' +
       '<div id="dash-scope-tabs"></div>' +
       '<button id="dash-master-toggle" class="dash-master-toggle" onclick="toggleMasterSelection()"></button>' +
     '</div>' +
@@ -439,6 +439,13 @@
 
       var tabsContainer = document.getElementById('dash-scope-tabs');
       var masterToggle = document.getElementById('dash-master-toggle');
+      
+      // Fallback: If IDs are missing (legacy HTML), upgrade the bar
+      if (!tabsContainer || !masterToggle) {
+        scopeBar.innerHTML = '<div id="dash-scope-tabs"></div><button id="dash-master-toggle" class="dash-master-toggle" onclick="toggleMasterSelection()"></button>';
+        tabsContainer = document.getElementById('dash-scope-tabs');
+        masterToggle = document.getElementById('dash-master-toggle');
+      }
       if (!tabsContainer || !masterToggle) return;
 
       var scopeHTML = '';
