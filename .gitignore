@@ -1,4 +1,1 @@
-```html
-bank-maker.html
-quiz-maker-js.html
-```
+Nothing should be ignored in this case, as only a single HTML file (`quiz-editor.html`) was modified and no build artifacts, dependencies, or temporary files were included in the changes.
