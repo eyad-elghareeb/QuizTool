@@ -705,6 +705,36 @@
     } catch (e) {}
   };
 
+  /* ── Batch Remove Items (Performance Update) ── */
+  window.batchRemoveTrackerItems = function (items) {
+    try {
+      var uidMap = {};
+      items.forEach(function(it) {
+        if (!uidMap[it.uid]) uidMap[it.uid] = [];
+        uidMap[it.uid].push(it.idx);
+      });
+
+      Object.keys(uidMap).forEach(function(uid) {
+        var indices = uidMap[uid];
+        var raw = localStorage.getItem(getStorageKey(uid));
+        if (!raw) return;
+        var data = JSON.parse(raw);
+        data.wrong = (data.wrong || []).filter(function(q) { return !indices.includes(q.idx); });
+        data.flagged = (data.flagged || []).filter(function(q) { return !indices.includes(q.idx); });
+
+        if (!data.wrong.length && !data.flagged.length) {
+          localStorage.removeItem(getStorageKey(uid));
+          var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
+          localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(keys.filter(function(k) { return k !== uid; })));
+        } else {
+          localStorage.setItem(getStorageKey(uid), JSON.stringify(data));
+        }
+      });
+      renderDashboard();
+      updateBadge();
+    } catch (e) {}
+  };
+
   /* ── Clear all ─────────────────────────────────────────────── */
   window.confirmClearTrackerData = function () {
     // Update the message to show current scope
@@ -938,6 +968,12 @@
     var blobHTML = '<!DOCTYPE html>\n<html lang="en" data-theme="' + currentTheme + '">\n<head>\n' +
       '<meta charset="UTF-8">\n' +
       '<meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
+      '<script>(function(){' +
+      'var t="' + currentTheme + '";' +
+      'var s=document.createElement("style");' +
+      's.textContent="html,body{background:"+(t==="light"?"#f3f0eb":"#0d1117")+";color:"+(t==="light"?"#1c1917":"#e6edf3")+";margin:0;padding:0;overflow:hidden;height:100%}";' +
+      'document.head.appendChild(s);' +
+      '})();</script>\n' +
       '<base href="' + window.location.href + '">\n' +
       '<title>Review Session</title>\n' +
       '<script>\n' +
@@ -1002,9 +1038,7 @@
           }
       } else if (e.data && e.data.type === 'review-sync') {
           if (_isSyncRequested && Array.isArray(e.data.correctItems)) {
-              e.data.correctItems.forEach(function(item) {
-                  removeTrackerItem(item.uid, item.idx);
-              });
+              batchRemoveTrackerItems(e.data.correctItems);
           }
       }
   });
