@@ -385,10 +385,9 @@
     return raw.replace(/^(?:MU61\s+Quiz|Mansoura\s+MCQ)\s*[-–—]\s*/i, '').trim();
   }
 
-  /* ── Open dashboard ────────────────────────────────────────── */
   window.openTrackerDashboard = function () {
     // Reset selection state when opening dashboard (all folders selected by default)
-    _selectedFolders = {};
+    _selectedQuizzes = {};
 
     var segments = getFolderSegments(location.pathname);
     var scopeBar = document.getElementById('dash-scope-bar');
