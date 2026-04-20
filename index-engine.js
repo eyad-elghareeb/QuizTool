@@ -48,7 +48,10 @@
       '<h2 id="dash-title-text">📊 Question Tracker</h2>' +
       '<button class="dash-close-btn" onclick="closeTrackerDashboard()">✕</button>' +
     '</div>' +
-    '<div class="dash-scope-bar" id="dash-scope-bar"></div>' +
+    '<div class="dash-scope-bar">' +
+      '<div id="dash-scope-tabs"></div>' +
+      '<button id="dash-master-toggle" class="dash-master-toggle" onclick="toggleMasterSelection()"></button>' +
+    '</div>' +
     '<div class="dash-summary">' +
       '<div class="dash-stat"><div class="ds-val red" id="dash-total-wrong">0</div><div class="ds-lbl">Wrong</div></div>' +
       '<div class="dash-stat"><div class="ds-val blue" id="dash-total-flagged">0</div><div class="ds-lbl">Flagged</div></div>' +
@@ -434,6 +437,10 @@
       // Tab: All quizzes from all folders
       tabs.push({ id: 'all', label: 'All Quizzes', path: '' });
 
+      var tabsContainer = document.getElementById('dash-scope-tabs');
+      var masterToggle = document.getElementById('dash-master-toggle');
+      if (!tabsContainer || !masterToggle) return;
+
       var scopeHTML = '';
       tabs.forEach(function (t, i) {
         scopeHTML += '<button class="dash-scope-tab' + (i === 0 ? ' active' : '')
@@ -441,7 +448,7 @@
           + ' onclick="switchDashScope(\'' + t.id + '\',\'' + (t.path || '') + '\')">'
           + escHtml(t.label) + '</button>';
       });
-      scopeBar.innerHTML = scopeHTML;
+      tabsContainer.innerHTML = scopeHTML;
 
       // Set default tab to current/deepest folder (first tab)
       if (tabs.length > 0 && tabs[0].id === 'folder') {
@@ -515,7 +522,17 @@
     // Discover folder titles first, then render
     discoverAndCacheFolderTitles(data).then(function () {
       renderDashboardContent(body, data);
+      updateMasterToggleState(data);
     });
+  }
+
+  function updateMasterToggleState(data) {
+    var masterToggle = document.getElementById('dash-master-toggle');
+    if (!masterToggle) return;
+    
+    var allSelected = data.every(function(d) { return _selectedQuizzes[d.uid] !== false; });
+    masterToggle.textContent = allSelected ? 'Deselect All' : 'Select All';
+    masterToggle.classList.toggle('active', allSelected);
   }
 
   function renderDashboardContent(body, data) {
@@ -554,10 +571,7 @@
 
     var html = '';
     
-    html += '<div style="display:flex; justify-content:flex-end; padding:0 0 10px; border-bottom:1px solid var(--border); margin-bottom:10px;">';
-    html += '<button onclick="toggleAllSelection(true)" style="background:none;border:none;color:var(--text);border-bottom:1.5px solid var(--accent);cursor:pointer;font-weight:600;font-size:0.8rem;margin-right:15px;padding:2px">Select All</button>';
-    html += '<button onclick="toggleAllSelection(false)" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-weight:600;font-size:0.8rem;padding:2px">Deselect All</button>';
-    html += '</div>';
+    // Selection buttons removed from here (now a single toggle in scope bar)
 
     var lastTopFolder = '__none__';
     var folderGroups = {}; // folder -> [groups]
@@ -704,6 +718,12 @@
        _selectedQuizzes[d.uid] = checked;
     });
     renderDashboard();
+  };
+
+  window.toggleMasterSelection = function() {
+    var data = getDataForScope(currentScope, currentScopePath);
+    var allSelected = data.every(function(d) { return _selectedQuizzes[d.uid] !== false; });
+    toggleAllSelection(!allSelected);
   };
 
   /* ── Remove single item ────────────────────────────────────── */
