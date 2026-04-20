@@ -84,6 +84,7 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
   font-size: 1.1rem;
 }
 .icon-btn:hover { color: var(--text); border-color: var(--accent); }
+.icon-btn { transition: border-color 0.22s var(--ease-out), color 0.22s var(--ease-out); }
 .back-btn { margin-right: 0.75rem; }
 
 /* ═══════════════════════════════════════════
@@ -138,6 +139,10 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
   transform: translateY(-5px);
   border-color: var(--accent);
 }
+.quiz-card {
+  transition: transform 0.3s var(--ease-out), border-color 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
+  will-change: transform, border-color;
+}
 .card-icon {
   width: 56px; height: 56px;
   background: var(--accent-dim);
@@ -189,6 +194,7 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
 }
 .btn-take-quiz:hover { opacity: 0.88; transform: translateY(-1px); }
 .btn-take-quiz:active { transform: translateY(0); }
+.btn-take-quiz { transition: transform 0.2s var(--ease-out), opacity 0.2s var(--ease-out); }
 
 /* ═══════════════════════════════════════════
    FOOTNOTE
@@ -248,6 +254,8 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
   align-items: center;
   justify-content: center;
   padding: 1rem;
+  will-change: opacity;
+  transform: translate3d(0,0,0);
 }
 .dash-overlay.open { display: flex; }
 
@@ -272,7 +280,7 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
   flex: 1; padding: 0.75rem; border-radius: 10px;
   background: var(--surface2); border: 1.5px solid var(--border);
   color: var(--text); font-weight: 600; cursor: pointer;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s var(--ease-out), background 0.2s var(--ease-out);
 }
 .modal-actions .btn-cancel:hover { border-color: var(--accent); }
 .modal-actions .btn-confirm {
@@ -332,7 +340,7 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
 .dash-master-toggle {
   background: none; border: none; font-size: 0.7rem; font-weight: 700;
   color: var(--text-muted); cursor: pointer; padding: 0.4rem 0.6rem;
-  border-radius: 6px; transition: all 0.2s ease; white-space: nowrap;
+  border-radius: 6px; transition: color 0.2s var(--ease-out), background 0.2s var(--ease-out); white-space: nowrap;
   text-transform: uppercase; letter-spacing: 0.03em;
 }
 .dash-master-toggle:hover { color: var(--accent); background: var(--surface2); }
@@ -440,7 +448,7 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
   display: flex; align-items: flex-start; gap: 0.65rem;
   padding: 0.55rem 0.85rem; border-radius: 8px; margin-bottom: 0.4rem;
   border: 1px solid var(--border); background: var(--surface2);
-  transition: border-color 0.2s, transform 0.2s;
+  transition: border-color 0.2s var(--ease-out), transform 0.2s var(--ease-out);
   contain: layout style;
 }
 .dash-q-item:last-child { margin-bottom: 0; }
