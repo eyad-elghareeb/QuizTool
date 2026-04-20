@@ -254,7 +254,7 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
 /* Modal overlay for confirmations (same as quiz-engine) */
 .modal-overlay {
   position: fixed; inset: 0;
-  background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+  background: rgba(0,0,0,0.7);
   z-index: 2100; display: none; align-items: center; justify-content: center; padding: 1rem;
 }
 .modal-overlay.open { display: flex; }

@@ -976,8 +976,7 @@ input[type=radio]:checked + .option-label .option-key {
 /* Dashboard overlay */
 .dash-overlay {
   position: fixed; inset: 0;
-  background: rgba(0,0,0,0.7);
-  backdrop-filter: blur(6px);
+  background: rgba(0,0,0,0.85);
   z-index: 2000;
   display: none;
   align-items: center;
@@ -1156,7 +1155,7 @@ input[type=radio]:checked + .option-label .option-key {
 /* Modal */
 .modal-overlay {
   position: fixed; inset: 0;
-  background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+  background: rgba(0,0,0,0.7);
   z-index: 1000; display: none; align-items: center; justify-content: center; padding: 1rem;
 }
 .modal-overlay.open { display: flex; }
@@ -3167,8 +3166,7 @@ checkSavedProgress();
 .kb-help-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.45);
-  backdrop-filter: blur(3px);
+  background: rgba(0,0,0,0.65);
   z-index: 2000;
   display: none;
   align-items: center;
