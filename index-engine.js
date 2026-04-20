@@ -11,7 +11,8 @@
 
   /* ── Inject tracker dashboard extra styles ─────────────────── */
   var _trackerStyle = document.createElement('style');
-  _trackerStyle.textContent = '.dash-folder-title{font-family:"Playfair Display",serif;font-size:1.05rem;font-weight:700;color:var(--accent);padding:0.75rem 0 0.4rem;margin-bottom:0.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:0.4rem;cursor:pointer;user-select:none}.dash-folder-title:hover{opacity:0.85}.dash-folder-toggle{font-size:0.9rem;transition:transform 0.2s ease;display:inline-block}.dash-folder-toggle.collapsed{transform:rotate(-90deg)}.dash-folder-content{transition:max-height 0.3s ease,opacity 0.25s ease;overflow:visible;max-height:none;opacity:1;padding-bottom:0.5rem;flex:1}.dash-folder-content.collapsed{max-height:0;opacity:0;overflow:hidden}.dash-folder-header{display:flex;align-items:center;justify-content:space-between;gap:0.5rem}.dash-folder-select{margin-left:auto;width:18px;height:18px;cursor:pointer;accent-color:var(--accent)}';
+  _trackerStyle.textContent = '.dash-folder-title{font-family:"Playfair Display",serif;font-size:1.05rem;font-weight:700;color:var(--accent);padding:0.75rem 0 0.4rem;margin-bottom:0.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:0.4rem;cursor:pointer;user-select:none}.dash-folder-title:hover{opacity:0.85}.dash-folder-toggle{font-size:0.9rem;transition:transform 0.2s ease;display:inline-block}.dash-folder-toggle.collapsed{transform:rotate(-90deg)}.dash-folder-content{transition:max-height 0.3s ease,opacity 0.25s ease;overflow:visible;max-height:none;opacity:1;padding-bottom:0.5rem;flex:1}.dash-folder-content.collapsed{max-height:0;opacity:0;overflow:hidden}.dash-folder-header{display:flex;align-items:center;justify-content:space-between;gap:0.5rem}.dash-folder-select{margin-left:auto;width:18px;height:18px;cursor:pointer;accent-color:var(--accent)}' +
+    '.btn-dash-review{flex:1;padding:0.65rem 1.25rem;border-radius:8px;background:var(--correct);border:1.5px solid var(--correct);color:#fff;font-weight:700;font-size:0.85rem;cursor:pointer;transition:opacity 0.2s ease}.btn-dash-review:hover{opacity:0.85}.btn-dash-review:disabled{opacity:0.4;cursor:not-allowed}#review-overlay{position:fixed;inset:0;z-index:3000;background:var(--bg);display:none;flex-direction:column;font-family:"Outfit",sans-serif}#review-overlay.open{display:flex}#review-overlay .rev-topbar{display:flex;align-items:center;gap:1rem;padding:0.75rem 1.25rem;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}#review-overlay .rev-topbar-title{font-family:"Playfair Display",serif;font-size:1.05rem;font-weight:700;flex:1}#review-overlay .rev-progress-text{font-size:0.82rem;color:var(--text-muted);font-weight:600}#review-overlay .rev-body{flex:1;overflow-y:auto;padding:1.5rem;display:flex;flex-direction:column;gap:1.25rem;max-width:720px;margin:0 auto;width:100%}#review-overlay .rev-q-text{font-size:clamp(1rem,2.5vw,1.2rem);font-weight:500;line-height:1.7;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius,12px);padding:1.25rem 1.5rem}#review-overlay .rev-source-badge{font-size:0.72rem;color:var(--text-muted);font-weight:500;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:0.2rem 0.6rem;display:inline-block;margin-bottom:0.25rem}#review-overlay .rev-options{display:flex;flex-direction:column;gap:0.65rem}#review-overlay .rev-option{display:flex;align-items:flex-start;gap:0.85rem;padding:0.95rem 1.15rem;border-radius:var(--radius,12px);border:1.5px solid var(--border);background:var(--surface);cursor:pointer;transition:all 0.2s ease}#review-overlay .rev-option:hover{border-color:var(--accent)}#review-overlay .rev-option.selected{border-color:var(--accent);background:rgba(240,165,0,0.12)}#review-overlay .rev-option.correct-reveal{border-color:var(--correct);background:rgba(46,160,67,0.12)}#review-overlay .rev-option.wrong-reveal{border-color:var(--wrong);background:rgba(218,54,51,0.12)}#review-overlay .rev-option-key{width:28px;height:28px;border-radius:7px;background:var(--surface2);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;flex-shrink:0;transition:all 0.2s ease;text-transform:uppercase}#review-overlay .rev-option.selected .rev-option-key{background:var(--accent);border-color:var(--accent);color:#000}#review-overlay .rev-option.correct-reveal .rev-option-key{background:var(--correct);border-color:var(--correct);color:#fff}#review-overlay .rev-option.wrong-reveal .rev-option-key{background:var(--wrong);border-color:var(--wrong);color:#fff}#review-overlay .rev-option-text{font-size:0.95rem;line-height:1.5}#review-overlay .rev-explanation{display:none;margin-top:0.75rem;padding:0.85rem 1.1rem;background:var(--surface2);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;font-size:0.875rem;line-height:1.6;color:var(--text-muted)}#review-overlay .rev-explanation.visible{display:block}#review-overlay .rev-explanation strong{color:var(--text);font-size:0.8rem;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:0.25rem}#review-overlay .rev-nav{display:flex;gap:0.75rem;padding-top:0.5rem}#review-overlay .rev-btn{display:flex;align-items:center;gap:0.4rem;padding:0.75rem 1.25rem;border-radius:var(--radius,12px);font-size:0.9rem;font-weight:600;transition:all 0.2s ease;border:1.5px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer}#review-overlay .rev-btn:hover{border-color:var(--accent);color:var(--accent)}#review-overlay .rev-btn.primary{background:var(--accent);color:#000;border-color:var(--accent);margin-left:auto}#review-overlay .rev-btn.primary:hover{opacity:0.88}#review-overlay .rev-btn.submit{background:var(--correct);border-color:var(--correct);color:#fff;margin-left:auto}#review-overlay .rev-btn.submit:hover{opacity:0.88}#review-overlay .rev-results-body{flex:1;overflow-y:auto;padding:1.5rem;display:none;flex-direction:column;gap:1.5rem;max-width:720px;margin:0 auto;width:100%}#review-overlay .rev-results-body.active{display:flex}#review-overlay .rev-score-banner{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.5rem 2rem;display:flex;align-items:center;gap:2rem;flex-wrap:wrap}#review-overlay .rev-score-num{font-size:2.5rem;font-weight:700;color:var(--correct)}#review-overlay .rev-score-label{font-size:0.85rem;color:var(--text-muted)}#review-overlay .rev-update-toggle{display:flex;align-items:flex-start;gap:0.75rem;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius,12px);padding:1rem 1.25rem;cursor:pointer}#review-overlay .rev-update-toggle input[type=checkbox]{width:18px;height:18px;accent-color:var(--correct);margin-top:2px;flex-shrink:0;cursor:pointer}#review-overlay .rev-update-label{font-size:0.9rem;font-weight:600}#review-overlay .rev-update-sub{font-size:0.8rem;color:var(--text-muted);margin-top:0.2rem}#review-overlay .rev-done-btn{padding:0.85rem 2rem;border-radius:var(--radius,12px);background:var(--accent);border:none;color:#000;font-weight:700;font-size:1rem;cursor:pointer;align-self:flex-start;transition:opacity 0.2s ease}#review-overlay .rev-done-btn:hover{opacity:0.88}#review-overlay .rev-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:1rem;color:var(--text-muted)}#review-overlay .rev-spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:revSpin 0.8s linear infinite}@keyframes revSpin{to{transform:rotate(360deg)}}';
   document.head.appendChild(_trackerStyle);
   
   /* ── Toast Notification Styles ────────────────────────────── */
@@ -19,24 +20,75 @@
   _toastStyle.textContent = '.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:0.65rem 1.2rem;font-size:0.88rem;font-weight:500;box-shadow:var(--shadow);z-index:9999;transition:transform 0.3s ease,opacity 0.3s ease;white-space:nowrap;display:flex;align-items:center;gap:0.5rem;max-width:90%}.toast.show{transform:translateX(-50%) translateY(0)}';
   document.head.appendChild(_toastStyle);
   
+  /* ── Modal Styles ─────────────────────────────────────────── */
+  var _modalStyle = document.createElement('style');
+  _modalStyle.textContent = '.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);z-index:2100;display:none;align-items:center;justify-content:center;padding:1rem}.modal-overlay.open{display:flex}.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:2rem;max-width:420px;width:100%;box-shadow:var(--shadow);animation:modalIn 0.38s var(--ease-spring) both}.modal h3{font-family:\'Playfair Display\',serif;font-size:1.3rem;margin-bottom:0.75rem}.modal p{color:var(--text-muted);font-size:0.9rem;line-height:1.6;margin-bottom:1.25rem}.modal-actions{display:flex;gap:0.75rem}.modal-actions .btn-cancel{flex:1;padding:0.75rem;border-radius:10px;background:var(--surface2);border:1.5px solid var(--border);color:var(--text);font-weight:600;font-size:0.9rem;transition:all var(--transition)}.modal-actions .btn-cancel:hover{border-color:var(--accent)}.modal-actions .btn-confirm{flex:1;padding:0.75rem;border-radius:10px;background:var(--correct);border:none;color:#fff;font-weight:700;font-size:0.9rem;transition:all var(--transition)}.modal-actions .btn-confirm:hover{opacity:0.85}.modal-actions .btn-confirm.danger{background:var(--wrong)}@keyframes modalIn{from{opacity:0;transform:translateY(28px) scale(0.93)}to{opacity:1;transform:translateY(0) scale(1)}}';
+  document.head.appendChild(_modalStyle);
+  
   /* ── Toast HTML Element ───────────────────────────────────── */
   var _toastEl = document.createElement('div');
   _toastEl.id = 'toast';
   _toastEl.className = 'toast';
   document.body.appendChild(_toastEl);
-
-  /* ── Modal Styles ─────────────────────────────────────────── */
-  var _modalStyle = document.createElement('style');
-  _modalStyle.textContent = '.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);z-index:2100;display:none;align-items:center;justify-content:center;padding:1rem}.modal-overlay.open{display:flex}.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:2rem;max-width:420px;width:100%;box-shadow:var(--shadow);animation:modalIn 0.38s var(--ease-spring) both}.modal h3{font-family:\'Playfair Display\',serif;font-size:1.3rem;margin-bottom:0.75rem}.modal p{color:var(--text-muted);font-size:0.9rem;line-height:1.6;margin-bottom:1.25rem}.modal-actions{display:flex;gap:0.75rem}.modal-actions .btn-cancel{flex:1;padding:0.75rem;border-radius:10px;background:var(--surface2);border:1.5px solid var(--border);color:var(--text);font-weight:600;font-size:0.9rem;transition:all var(--transition)}.modal-actions .btn-cancel:hover{border-color:var(--accent)}.modal-actions .btn-confirm{flex:1;padding:0.75rem;border-radius:10px;background:var(--correct);border:none;color:#fff;font-weight:700;font-size:0.9rem;transition:all var(--transition)}.modal-actions .btn-confirm:hover{opacity:0.85}.modal-actions .btn-confirm.danger{background:var(--wrong)}@keyframes modalIn{from{opacity:0;transform:translateY(28px) scale(0.93)}to{opacity:1;transform:translateY(0) scale(1)}}';
-  document.head.appendChild(_modalStyle);
-
+  
   /* ── Clear Tracker Modal HTML ─────────────────────────────── */
-  var _clearModalEl = document.createElement('div');
-  _clearModalEl.className = 'modal-overlay';
-  _clearModalEl.id = 'clear-tracker-modal';
-  _clearModalEl.innerHTML = '<div class="modal"><h3>Clear Questions?</h3><p id="clear-tracker-message">Are you sure you want to clear all questions for this section? This cannot be undone.</p><div class="modal-actions"><button class="btn-cancel" onclick="closeClearTrackerModal()">Go Back</button><button class="btn-confirm danger" onclick="clearAllTrackerData()">Clear Now</button></div></div>';
-  document.body.appendChild(_clearModalEl);
-
+  var _modalEl = document.createElement('div');
+  _modalEl.className = 'modal-overlay';
+  _modalEl.id = 'clear-tracker-modal';
+  _modalEl.innerHTML = '<div class="modal"><h3>Clear Questions?</h3><p id="clear-tracker-message">Are you sure you want to clear all questions for this section? This cannot be undone.</p><div class="modal-actions"><button class="btn-cancel" onclick="closeClearTrackerModal()">Go Back</button><button class="btn-confirm danger" onclick="clearAllTrackerData()">Clear Now</button></div></div>';
+  document.body.appendChild(_modalEl);
+  
+  /* ── Tracker Dashboard HTML ───────────────────────────────── */
+  var _dashEl = document.createElement('div');
+  _dashEl.className = 'dash-overlay';
+  _dashEl.id = 'tracker-dashboard';
+  _dashEl.innerHTML = '<div class="dash-modal">' +
+    '<div class="dash-header">' +
+      '<h2 id="dash-title-text">📊 Question Tracker</h2>' +
+      '<button class="dash-close-btn" onclick="closeTrackerDashboard()">✕</button>' +
+    '</div>' +
+    '<div class="dash-scope-bar" id="dash-scope-bar"></div>' +
+    '<div class="dash-summary">' +
+      '<div class="dash-stat"><div class="ds-val red" id="dash-total-wrong">0</div><div class="ds-lbl">Wrong</div></div>' +
+      '<div class="dash-stat"><div class="ds-val blue" id="dash-total-flagged">0</div><div class="ds-lbl">Flagged</div></div>' +
+      '<div class="dash-stat"><div class="ds-val green" id="dash-total-quizzes">0</div><div class="ds-lbl">Quizzes</div></div>' +
+    '</div>' +
+    '<div class="dash-body" id="dash-body"></div>' +
+    '<div class="dash-footer">' +
+      '<button class="btn-dash-action" onclick="exportTrackerToPDF()" title="Export to PDF">📄 Export PDF</button>' +
+      '<button class="btn-dash-action btn-dash-danger" onclick="confirmClearTrackerData()">🗑 Clear All</button>' +
+      '<button class="btn-dash-review" id="btn-start-review" onclick="startReviewMode()">▶ Start Review</button>' +
+    '</div>' +
+  '</div>';
+  document.body.appendChild(_dashEl);
+  
+  /* ── Review Overlay HTML ──────────────────────────────────── */
+  var _revEl = document.createElement('div');
+  _revEl.id = 'review-overlay';
+  _revEl.innerHTML = '<div class="rev-topbar">' +
+    '<button class="icon-btn" onclick="revCloseOverlay()">✕</button>' +
+    '<div class="rev-topbar-title">Review Session</div>' +
+    '<div class="rev-progress-text" id="rev-progress-text"></div>' +
+  '</div>' +
+  '<div class="rev-body" id="rev-body"></div>' +
+  '<div class="rev-results-body" id="rev-results-body">' +
+    '<div class="rev-score-banner">' +
+      '<div>' +
+        '<div class="rev-score-num" id="rev-score-num">0%</div>' +
+        '<div class="rev-score-label" id="rev-score-val">0 / 0 correct</div>' +
+      '</div>' +
+    '</div>' +
+    '<label class="rev-update-toggle">' +
+      '<input type="checkbox" id="rev-update-checkbox" checked>' +
+      '<div>' +
+        '<div class="rev-update-label">Update tracker with these results</div>' +
+        '<div class="rev-update-sub">Questions you answered correctly will be removed from your tracker.</div>' +
+      '</div>' +
+    '</label>' +
+    '<button class="rev-done-btn" onclick="revFinishReview()">Back to Hub</button>' +
+  '</div>';
+  document.body.appendChild(_revEl);
+  
   /* ── Toast Function ───────────────────────────────────────── */
   var toastTimer;
   window.showToast = function(msg) {
@@ -454,7 +506,7 @@
 
   /* ── Render dashboard ──────────────────────────────────────── */
   var _collapsedFolders = {};
-  var _selectedFolders = {};
+  var _selectedQuizzes = {};
   function renderDashboard() {
     var data = getDataForScope(currentScope, currentScopePath);
     var totalWrong = 0, totalFlagged = 0;
@@ -519,6 +571,12 @@
     });
 
     var html = '';
+    
+    html += '<div style="display:flex; justify-content:flex-end; padding:0 0 10px; border-bottom:1px solid var(--border); margin-bottom:10px;">';
+    html += '<button onclick="toggleAllSelection(true)" style="background:none;border:none;color:var(--text);border-bottom:1.5px solid var(--accent);cursor:pointer;font-weight:600;font-size:0.8rem;margin-right:15px;padding:2px">Select All</button>';
+    html += '<button onclick="toggleAllSelection(false)" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-weight:600;font-size:0.8rem;padding:2px">Deselect All</button>';
+    html += '</div>';
+
     var lastTopFolder = '__none__';
     var folderGroups = {}; // folder -> [groups]
 
@@ -546,7 +604,8 @@
       }
 
       var isCollapsed = _collapsedFolders[folder] || false;
-      var isSelected = _selectedFolders.hasOwnProperty(folder) ? _selectedFolders[folder] : true;
+      var folderUids = fGroups.map(function(g) { return g.uid; });
+      var isFolderSelected = folderUids.every(function(uid) { return _selectedQuizzes[uid] !== false; });
 
       if (displayFolderTitle) {
         html += '<div class="dash-folder-header" style="align-items:center;">';
@@ -555,21 +614,24 @@
         html += escFolderIcon(escHtml(displayFolderTitle));
         html += '</div>';
         html += '<input type="checkbox" class="dash-folder-select" ';
-        html += (isSelected ? 'checked' : '') + ' ';
+        html += (isFolderSelected ? 'checked' : '') + ' ';
         html += 'onclick="event.stopPropagation(); toggleFolderSelection(\'' + escHtml(folder) + '\', this.checked)" ';
-        html += 'title="Select for export">';
+        html += 'title="Select all in folder">';
         html += '</div>';
       }
 
       html += '<div class="dash-folder-content' + (isCollapsed ? ' collapsed' : '') + '" id="folder-content-' + escHtml(folder) + '">';
 
       fGroups.forEach(function (g) {
+        var isQuizSelected = _selectedQuizzes[g.uid] !== false;
         var dateStr = g.timestamp
           ? new Date(g.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
           : '';
 
         html += '<div class="dash-quiz-group">';
-        html += '<div class="dash-quiz-title">' + (g.title);
+        html += '<div class="dash-quiz-title" style="cursor:pointer; display:flex; align-items:center;" onclick="document.getElementById(\'chk-\'+\''+g.uid+'\').click()">';
+        html += '<input type="checkbox" id="chk-'+g.uid+'" class="dash-quiz-select" style="margin-right:8px; width:16px; height:16px; cursor:pointer; accent-color:var(--accent)" ' + (isQuizSelected ? 'checked' : '') + ' onclick="event.stopPropagation(); toggleQuizSelection(\'' + g.uid + '\', this.checked)"> ';
+        html += escHtml(g.title);
         if (g.wrongItems.length)   html += ' <span class="quiz-badge wrong-badge">' + g.wrongItems.length + ' wrong</span>';
         if (g.flaggedItemsAll.length) html += ' <span class="quiz-badge flag-badge">' + g.flaggedItemsAll.length + ' flagged</span>';
         if (dateStr)             html += ' <span style="font-size:0.7rem;color:var(--text-muted);font-weight:400;margin-left:auto;">' + dateStr + '</span>';
@@ -627,9 +689,27 @@
     }
   };
 
-  /* ── Toggle folder selection ───────────────────────────────── */
+  /* ── Toggle selection logic ───────────────────────────────── */
+  window.toggleQuizSelection = function (uid, checked) {
+    _selectedQuizzes[uid] = checked;
+    renderDashboard();
+  };
+
   window.toggleFolderSelection = function (folder, checked) {
-    _selectedFolders[folder] = checked;
+    var data = getDataForScope(currentScope, currentScopePath);
+    data.forEach(function(d) {
+       var dFolder = getFolderForEntry(d) || '__root__';
+       if (dFolder === folder) _selectedQuizzes[d.uid] = checked;
+    });
+    renderDashboard();
+  };
+
+  window.toggleAllSelection = function(checked) {
+    var data = getDataForScope(currentScope, currentScopePath);
+    data.forEach(function(d) {
+       _selectedQuizzes[d.uid] = checked;
+    });
+    renderDashboard();
   };
 
   /* ── Remove single item ────────────────────────────────────── */
@@ -652,7 +732,7 @@
     } catch (e) {}
   };
 
-  /* ── Clear all (scope-aware) ───────────────────────────────── */
+  /* ── Clear all ─────────────────────────────────────────────── */
   window.confirmClearTrackerData = function () {
     // Update the message to show current scope
     var scopeName = getCurrentScopeDisplayName();
@@ -662,40 +742,43 @@
     }
     document.getElementById('clear-tracker-modal').classList.add('open');
   };
-
+  
   window.closeClearTrackerModal = function () {
     document.getElementById('clear-tracker-modal').classList.remove('open');
   };
-
+  
   window.clearAllTrackerData = function () {
     // Close modal first
     closeClearTrackerModal();
-
+    
     try {
       var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
-
-      // Filter data based on current scope
+      var allData = getAllTrackerData();
+      
+      // Filter data based on current scope AND selection
       var dataToClear = getDataForScope(currentScope, currentScopePath);
       var uidsToClear = {};
-      dataToClear.forEach(function (d) { uidsToClear[d.uid] = true; });
-
+      dataToClear.forEach(function (d) { 
+        if (_selectedQuizzes[d.uid] !== false) uidsToClear[d.uid] = true; 
+      });
+      
       // Only remove items that match the current scope
       keys.forEach(function (uid) {
         if (uidsToClear[uid]) {
           localStorage.removeItem(getStorageKey(uid));
         }
       });
-
-      // Update keys list — keep only keys not being cleared
+      
+      // Update keys list - keep only keys not being cleared
       var remainingKeys = keys.filter(function (uid) { return !uidsToClear[uid]; });
       localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(remainingKeys));
-
+      
       renderDashboard();
       updateBadge();
       showToast('🗑 Questions cleared for this section!');
     } catch (e) {}
   };
-
+  
   function getCurrentScopeDisplayName() {
     if (currentScope === 'folder' && currentScopePath) {
       var folderPath = currentScopePath + '/';
@@ -709,15 +792,316 @@
     return 'this section';
   }
 
+  /* ── Review Mode Logic ─────────────────────────────────────── */
+  var _reviewQuestionsAll = [];
+  var _reviewQuestions = [];
+  var _revAnswers = {};
+  var _revCurrent = 0;
+  var _reviewCountTarget = 40;
+  
+  function fetchAndParseQuestions(path) {
+    var url = window.location.origin + path;
+    if (path && window.location.pathname.endsWith('index.html') && path.startsWith('.')) {
+        url = new URL(path, window.location.href).href;
+    } else if (path && !path.startsWith('http') && !path.startsWith('/')) {
+        var rootAbs = new URL(ENGINE_BASE || '', window.location.href).href;
+        url = rootAbs + path;
+    } else if (path && path.startsWith('/')) {
+        url = location.origin + path;
+    }
+
+    return fetch(url)
+      .then(function(r) { return r.ok ? r.text() : null; })
+      .then(function(html) {
+        if (!html) return null;
+        var match = html.match(/\/\*\s*\[QUESTIONS_START\]\s*\*\/([\s\S]*?)\/\*\s*\[QUESTIONS_END\]\s*\*\//);
+        if (!match) {
+          match = html.match(/\/\*\s*\[QUESTION_BANK_START\]\s*\*\/([\s\S]*?)\/\*\s*\[QUESTION_BANK_END\]\s*\*\//);
+        }
+        if (!match) return null;
+        var block = match[1].trim();
+        block = block.replace(/^const\s+(?:QUESTIONS|QUESTION_BANK)\s*=\s*/, '').replace(/;\s*$/, '');
+        
+        try {
+          var arr;
+          eval('arr = ' + block + ';');
+          if (Array.isArray(arr)) return arr;
+        } catch(e) {}
+        
+        try { return JSON.parse(block); } catch(e) { return null; }
+      })
+      .catch(function() { return null; });
+  }
+
+  window.startReviewMode = function() {
+    var data = getDataForScope(currentScope, currentScopePath);
+    
+    data = data.filter(function(d) {
+        return _selectedQuizzes[d.uid] !== false;
+    });
+
+    if (!data || !data.length) {
+      showToast('No questions selected. Please check at least one folder.');
+      return;
+    }
+    
+    var b = document.getElementById('rev-body');
+    var r = document.getElementById('rev-results-body');
+    if (b) b.style.display = 'flex';
+    if (r) r.classList.remove('active');
+    if (b) b.innerHTML = '<div class="rev-loading"><div class="rev-spinner"></div><div>Preparing your review session...</div></div>';
+    
+    closeTrackerDashboard();
+    var revLayer = document.getElementById('review-overlay');
+    if (revLayer) revLayer.classList.add('open');
+
+    var qByPath = {};
+    data.forEach(function(d) {
+      var p = d.path || '';
+      if (!qByPath[p]) qByPath[p] = { uid: d.uid, title: d.title || 'Unknown', qs: [] };
+      
+      var seenMsg = {};
+      (d.wrong || []).forEach(function(q) {
+        if (!seenMsg[q.idx]) { seenMsg[q.idx] = true; qByPath[p].qs.push({ q: q, type: 'wrong' }); }
+      });
+      (d.flagged || []).forEach(function(q) {
+        if (!seenMsg[q.idx]) { seenMsg[q.idx] = true; qByPath[p].qs.push({ q: q, type: 'flagged' }); }
+      });
+    });
+
+    var paths = Object.keys(qByPath);
+    var fetches = paths.map(function(p) {
+        if (!p) return Promise.resolve({ p: p, arr: null });
+        return fetchAndParseQuestions(p).then(function(arr) { return { p: p, arr: arr }; });
+    });
+
+    Promise.all(fetches).then(function(results) {
+      var arrMap = {};
+      results.forEach(function(res) { arrMap[res.p] = res.arr; });
+
+      var finalQs = [];
+      paths.forEach(function(p) {
+        var group = qByPath[p];
+        var sourceArr = arrMap[p];
+        
+        group.qs.forEach(function(item) {
+          var tq = item.q;
+          var srcQuestion = (sourceArr && sourceArr[tq.idx]) ? sourceArr[tq.idx] : null;
+
+          if (srcQuestion && srcQuestion.options && srcQuestion.options.length) {
+             // To prevent options being pre-marked with an answer state, we clean them
+             // Wait, options are just text arrays.
+            finalQs.push({
+              question: srcQuestion.question || tq.text,
+              options: srcQuestion.options,
+              correct: srcQuestion.correct,
+              explanation: srcQuestion.explanation || tq.explanation || '',
+              _uid: group.uid,
+              _idx: tq.idx,
+              _source: group.title,
+              _fallback: false
+            });
+          } else {
+            var cText = (tq.correctAnswer || '').replace(/^[A-Z]\.\s*/, '');
+            var yText = (tq.yourAnswer || '').replace(/^[A-Z]\.\s*/, '');
+            var isNotAns = tq.yourAnswer === 'Not answered';
+            var opts = [cText];
+            if (!isNotAns && yText && yText !== cText) opts.push(yText);
+            
+            for (var i = opts.length - 1; i > 0; i--) {
+              var j = Math.floor(Math.random() * (i + 1));
+              var temp = opts[i]; opts[i] = opts[j]; opts[j] = temp;
+            }
+            var cIdx = opts.indexOf(cText);
+            
+            finalQs.push({
+              question: tq.text,
+              options: opts,
+              correct: cIdx,
+              explanation: tq.explanation || '',
+              _uid: group.uid,
+              _idx: tq.idx,
+              _source: group.title,
+              _fallback: true
+            });
+          }
+        });
+      });
+
+      for (var k = finalQs.length - 1; k > 0; k--) {
+        var m = Math.floor(Math.random() * (k + 1));
+        var tmp2 = finalQs[k]; finalQs[k] = finalQs[m]; finalQs[m] = tmp2;
+      }
+
+      if (!finalQs.length) {
+        if (b) b.innerHTML = '<div class="rev-loading">No questions found.</div>';
+        return;
+      }
+
+      _reviewQuestionsAll = finalQs;
+      
+      if (finalQs.length > 40) {
+         revRenderStartScreen();
+      } else {
+         _reviewQuestions = finalQs;
+         _revAnswers = {};
+         _revCurrent = 0;
+         revRenderQuestion();
+      }
+    });
+  };
+
+  function revRenderStartScreen() {
+      var b = document.getElementById('rev-body');
+      if (!b) return;
+      document.getElementById('rev-progress-text').textContent = 'Session Settings';
+      var maxQ = _reviewQuestionsAll.length;
+      _reviewCountTarget = Math.min(maxQ, 40);
+      
+      var html = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;padding:2rem;">';
+      html += '<h2 style="font-family:\'Playfair Display\',serif;font-size:2rem;margin-bottom:0.5rem;color:var(--text);">\uD83D\uDCDA Multiple Questions</h2>';
+      html += '<p style="color:var(--text-muted);margin-bottom:2rem;">You have <strong>' + maxQ + '</strong> tracked questions. How many would you like to review?</p>';
+      
+      html += '<div style="display:flex;align-items:center;gap:1.5rem;margin-bottom:3rem;background:var(--surface2);padding:1rem 2rem;border-radius:24px;border:1px solid var(--border);">';
+      html += '<button class="icon-btn" style="width:48px;height:48px;font-size:1.5rem;border-radius:12px;background:var(--surface);border:1px solid var(--border);" onclick="revAdjustCount(-10)">-</button>';
+      html += '<div id="rev-count-display" style="font-size:3rem;font-weight:700;width:100px;color:var(--accent);">' + _reviewCountTarget + '</div>';
+      html += '<button class="icon-btn" style="width:48px;height:48px;font-size:1.5rem;border-radius:12px;background:var(--surface);border:1px solid var(--border);" onclick="revAdjustCount(10)">+</button>';
+      html += '</div>';
+      
+      html += '<button class="rev-done-btn" style="align-self:center;padding:1rem 3rem;font-size:1.1rem;border-radius:16px;" onclick="revStartSession()">Start \u2192</button>';
+      html += '</div>';
+      
+      b.innerHTML = html;
+  }
+
+  window.revAdjustCount = function(delta) {
+      var maxQ = _reviewQuestionsAll.length;
+      _reviewCountTarget += delta;
+      if (_reviewCountTarget < 5) _reviewCountTarget = (maxQ < 5 ? maxQ : 5);
+      if (_reviewCountTarget > maxQ) _reviewCountTarget = maxQ;
+      var d = document.getElementById('rev-count-display');
+      if (d) d.textContent = _reviewCountTarget;
+  };
+
+  window.revStartSession = function() {
+      _reviewQuestions = _reviewQuestionsAll.slice(0, _reviewCountTarget);
+      _revAnswers = {};
+      _revCurrent = 0;
+      revRenderQuestion();
+  };
+
+  function revRenderQuestion() {
+    var b = document.getElementById('rev-body');
+    if (!b) return;
+    
+    document.getElementById('rev-progress-text').textContent = (_revCurrent + 1) + ' of ' + _reviewQuestions.length;
+    var q = _reviewQuestions[_revCurrent];
+    var isAnswered = _revAnswers.hasOwnProperty(_revCurrent);
+    var uAns = isAnswered ? _revAnswers[_revCurrent] : -1;
+
+    var html = '<div class="rev-source-badge">\uD83D\uDCC1 ' + escHtml(q._source || 'Review') + '</div>';
+    html += '<div class="rev-q-text">' + q.question + '</div>';
+    html += '<div class="rev-options">';
+    
+    var letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    for (var i = 0; i < q.options.length; i++) {
+        var oClass = 'rev-option';
+        if (isAnswered) {
+            if (i === q.correct) oClass += ' correct-reveal';
+            else if (i === uAns) oClass += ' wrong-reveal';
+        }
+        var onClick = isAnswered ? '' : ' onclick="revSelectOption(' + i + ')"';
+        html += '<div class="' + oClass + '"' + onClick + '>';
+        html += '<div class="rev-option-key">' + letters[i] + '</div>';
+        html += '<div class="rev-option-text">' + escHtml(q.options[i]) + '</div>';
+        html += '</div>';
+    }
+    html += '</div>';
+
+    if (isAnswered && q.explanation) {
+        html += '<div class="rev-explanation visible"><strong>Explanation</strong>' + q.explanation + '</div>';
+    }
+
+    html += '<div class="rev-nav">';
+    if (_revCurrent < _reviewQuestions.length - 1) {
+        if (isAnswered) {
+            html += '<button class="rev-btn primary" onclick="revNextQuestion()">Next \u2192</button>';
+        }
+    } else {
+        if (isAnswered) {
+            html += '<button class="rev-btn submit" onclick="revSubmitReview()">Finish Review</button>';
+        }
+    }
+    html += '</div>';
+
+    b.innerHTML = html;
+  }
+
+  window.revSelectOption = function(optIdx) {
+      if (_revAnswers.hasOwnProperty(_revCurrent)) return;
+      _revAnswers[_revCurrent] = optIdx;
+      revRenderQuestion();
+  };
+
+  window.revNextQuestion = function() {
+      if (_revCurrent < _reviewQuestions.length - 1) {
+          _revCurrent++;
+          revRenderQuestion();
+      }
+  };
+
+  window.revSubmitReview = function() {
+      var b = document.getElementById('rev-body');
+      var r = document.getElementById('rev-results-body');
+      if (b) b.style.display = 'none';
+      if (r) r.classList.add('active');
+      document.getElementById('rev-progress-text').textContent = 'Results';
+
+      var correctCount = 0;
+      for (var i = 0; i < _reviewQuestions.length; i++) {
+          if (_revAnswers[i] === _reviewQuestions[i].correct) correctCount++;
+      }
+      
+      var pct = Math.round((correctCount / Math.max(1, _reviewQuestions.length)) * 100);
+      document.getElementById('rev-score-num').textContent = pct + '%';
+      document.getElementById('rev-score-val').textContent = correctCount + ' of ' + _reviewQuestions.length + ' correct';
+  };
+
+  window.revFinishReview = function() {
+      var r = document.getElementById('rev-results-body');
+      var b = document.getElementById('rev-body');
+      var revLayer = document.getElementById('review-overlay');
+      var chk = document.getElementById('rev-update-checkbox');
+
+      if (chk && chk.checked) {
+          for (var i = 0; i < _reviewQuestions.length; i++) {
+              if (_revAnswers[i] === _reviewQuestions[i].correct) {
+                  var q = _reviewQuestions[i];
+                  removeTrackerItem(q._uid, q._idx);
+              }
+          }
+      }
+
+      if (r) r.classList.remove('active');
+      if (b) b.style.display = 'flex';
+      if (b) b.innerHTML = '';
+      if (revLayer) revLayer.classList.remove('open');
+      _reviewQuestionsAll = [];
+      _reviewQuestions = [];
+      _revAnswers = {};
+  };
+
+  window.revCloseOverlay = function() {
+      window.revFinishReview();
+  };
+
   /* ── PDF Export ────────────────────────────────────────────── */
   window.exportTrackerToPDF = function () {
-    // Get all tracker data and filter by selected folders
-    var allData = getAllTrackerData();
+    var data = getDataForScope(currentScope, currentScopePath);
     
-    // Filter data based on selected folders (default: all selected)
-    var data = allData.filter(function (d) {
-      var folder = getFolderForEntry(d) || '__root__';
-      return _selectedFolders.hasOwnProperty(folder) ? _selectedFolders[folder] : true;
+    // Filter data based on explicitly selected quizzes
+    data = data.filter(function (d) {
+      return _selectedQuizzes[d.uid] !== false;
     });
 
     if (!data.length) { showToast('No tracked questions to export.'); return; }
