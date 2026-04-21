@@ -1008,10 +1008,9 @@
     var isSyncChecked = document.getElementById('rev-sync-checkbox').checked;
     _isSyncRequested = isSyncChecked;
 
+    closeTrackerDashboard(true);
     history.pushState({ dash: 'review' }, '');
     _activeDashboard = 'review';
-
-    closeTrackerDashboard(true);
 
     var useBank = qs.length > 40;
     var engineScript = useBank ? 'bank-engine.js' : 'quiz-engine.js';
@@ -1085,9 +1084,11 @@
 
 
   window.closeReviewMode = function(fromPopState) {
-    if (!fromPopState && _activeDashboard === 'review') {
-      history.back();
-      return;
+    if (!fromPopState && (_activeDashboard === 'review' || document.getElementById('review-iframe'))) {
+      if (_activeDashboard === 'review') {
+        history.back();
+        return;
+      }
     }
     _activeDashboard = null;
     var iframe = document.getElementById('review-iframe');
@@ -1119,7 +1120,11 @@
     } else {
       // No dashboard state -> close any open overlays
       if (_activeDashboard === 'tracker') closeTrackerDashboard(true);
-      if (_activeDashboard === 'review') closeReviewMode(true);
+      
+      // Always check for and remove review iframe when navigating to a non-review state
+      var iframe = document.getElementById('review-iframe');
+      if (iframe) iframe.remove();
+      if (_activeDashboard === 'review') _activeDashboard = null;
     }
   });
 

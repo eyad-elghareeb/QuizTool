@@ -1,6 +1,6 @@
 /* QuizTool — generated precache manifest for all quiz and hub pages.
    CACHE_VERSION is content-hashed by scripts/sync_quiz_assets.py so new files activate automatically. */
-const CACHE_VERSION = 'quiz-cache-a27e8176d139';
+const CACHE_VERSION = 'quiz-cache-ff4fd21741e6';
 const CACHE_NAME = 'quiztool-cache-' + CACHE_VERSION;
 
 const GOOGLE_FONT_CSS =
