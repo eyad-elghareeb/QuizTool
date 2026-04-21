@@ -415,32 +415,22 @@
 
     var buildTabs = function () {
       var tabs = [];
-
-      // Tab: Current/deepest folder (first/leftmost, only if we have at least 1 segment)
       if (segments.length >= 1) {
         var folderKey = segments[segments.length - 1] + '/';
         var folderLabel = _folderTitleCache[folderKey] || decodeURIComponent(segments[segments.length - 1]);
         tabs.push({ id: 'folder', label: folderLabel, path: segments[segments.length - 1], level: segments.length - 1 });
       }
-
-      // Tab: Intermediate folders (parent directories) - only if we have nested structure
-      // e.g., for gyn/dep/file.html, add "gyn" as an intermediate folder tab
       if (segments.length >= 2) {
-        // Add all intermediate folders except the deepest one
         for (var i = 0; i < segments.length - 1; i++) {
           var folderKey = segments[i] + '/';
           var folderLabel = _folderTitleCache[folderKey] || decodeURIComponent(segments[i]);
           tabs.push({ id: 'folder', label: folderLabel, path: segments[i], level: i });
         }
       }
-
-      // Tab: All quizzes from all folders
       tabs.push({ id: 'all', label: 'All Quizzes', path: '' });
 
       var tabsContainer = document.getElementById('dash-scope-tabs');
       var masterToggle = document.getElementById('dash-master-toggle');
-      
-      // Fallback: If IDs are missing (legacy HTML), upgrade the bar
       if (!tabsContainer || !masterToggle) {
         scopeBar.innerHTML = '<div id="dash-scope-tabs"></div><button id="dash-master-toggle" class="dash-master-toggle" onclick="toggleMasterSelection()"></button>';
         tabsContainer = document.getElementById('dash-scope-tabs');
@@ -450,28 +440,13 @@
 
       var scopeHTML = '';
       tabs.forEach(function (t, i) {
-        scopeHTML += '<button class="dash-scope-tab' + (i === 0 ? ' active' : '')
+        var isActive = t.id === currentScope && (t.id === 'all' || t.path === currentScopePath);
+        scopeHTML += '<button class="dash-scope-tab' + (isActive ? ' active' : '')
           + '" data-scope="' + t.id + '" data-path="' + (t.path || '') + '"'
           + ' onclick="switchDashScope(\'' + t.id + '\',\'' + (t.path || '') + '\')">'
           + escHtml(t.label) + '</button>';
       });
       tabsContainer.innerHTML = scopeHTML;
-
-      // Set default tab to current/deepest folder (first tab)
-      if (tabs.length > 0 && tabs[0].id === 'folder') {
-        currentScope = 'folder';
-        currentScopePath = tabs[0].path;
-      } else {
-        currentScope = 'all';
-        currentScopePath = '';
-      }
-      
-      // Update active state on tabs
-      document.querySelectorAll('.dash-scope-tab').forEach(function (tab) {
-        var isActive = tab.getAttribute('data-scope') === currentScope && 
-                       tab.getAttribute('data-path') === currentScopePath;
-        tab.classList.toggle('active', isActive);
-      });
       
       renderDashboard();
       var overlay = document.getElementById('tracker-dashboard');
@@ -481,13 +456,17 @@
       }
     };
 
+    // Open dashboard IMMEDIATELY
+    buildTabs();
+
+    // Fetch titles in background to refresh labels later
     if (foldersToFetch.length > 0) {
-      // Fetch missing titles, then build tabs with complete cache
       Promise.all(foldersToFetch.map(function (f) { return fetchFolderTitle(f); }))
-        .then(function () { buildTabs(); })
-        .catch(function () { buildTabs(); }); // build tabs even if fetch fails
-    } else {
-      buildTabs();
+        .then(function () { 
+          // Check if dashboard still open to avoid unnecessary work
+          if (_activeDashboard === 'tracker') buildTabs(); 
+        })
+        .catch(function () {}); 
     }
   };
 
@@ -527,10 +506,19 @@
 
     data.sort(function (a, b) { return (b.timestamp || 0) - (a.timestamp || 0); });
 
-    // Discover folder titles first, then render
+    // 1. Render IMMEDIATELY with current cache (Optimistic Render)
+    // This makes the dashboard pop up instantly with raw paths if titles are missing.
+    renderDashboardContent(body, data);
+    updateMasterToggleState(data);
+
+    // 2. Discover missing titles in the background
     discoverAndCacheFolderTitles(data).then(function () {
-      renderDashboardContent(body, data);
-      updateMasterToggleState(data);
+      // 3. Re-render once we have better names
+      // Check if we are still on the tracker dashboard to avoid background layout thrashing
+      if (_activeDashboard === 'tracker') {
+          renderDashboardContent(body, data);
+          updateMasterToggleState(data);
+      }
     });
   }
 
