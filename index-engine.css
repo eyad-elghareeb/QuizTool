@@ -492,6 +492,15 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
   cursor: pointer; 
 }
 .btn-dash-close:hover { opacity: 0.85; }
+.btn-dash-review {
+  padding: 0.65rem 1.25rem; border-radius: 8px;
+  background: var(--flagged); border: 1.5px solid var(--flagged);
+  color: #0d1117; font-weight: 700; font-size: 0.85rem;
+  cursor: pointer; transition: all var(--transition);
+  margin-left: auto;
+}
+.btn-dash-review:hover { opacity: 0.85; }
+.btn-dash-review:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .dash-empty { text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); }
 .dash-empty-icon { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.5; }
