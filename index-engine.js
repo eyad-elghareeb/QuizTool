@@ -12,7 +12,7 @@
   /* ── Inject tracker dashboard extra styles ─────────────────── */
   var _trackerStyle = document.createElement('style');
   _trackerStyle.textContent = '.dash-folder-title{font-family:"Playfair Display",serif;font-size:1.05rem;font-weight:700;color:var(--accent);padding:0.75rem 0 0.4rem;margin-bottom:0.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:0.4rem;cursor:pointer;user-select:none}.dash-folder-title:hover{opacity:0.85}.dash-folder-toggle{font-size:0.9rem;transition:transform 0.2s ease;display:inline-block}.dash-folder-toggle.collapsed{transform:rotate(-90deg)}.dash-folder-content{transition:max-height 0.3s ease,opacity 0.25s ease;overflow:visible;max-height:none;opacity:1;padding-bottom:0.5rem;flex:1}.dash-folder-content.collapsed{max-height:0;opacity:0;overflow:hidden}.dash-folder-header{display:flex;align-items:center;justify-content:space-between;gap:0.5rem}.dash-folder-select{margin-left:auto;width:18px;height:18px;cursor:pointer;accent-color:var(--accent)}' +
-    '.btn-dash-review{padding:0.65rem 1.25rem;border-radius:8px;background:var(--flagged);border:1.5px solid var(--flagged);color:#0d1117;font-weight:700;font-size:0.85rem;cursor:pointer;transition:all var(--transition);margin-left:auto}.btn-dash-review:hover{opacity:0.85}.btn-dash-review:disabled{opacity:0.4;cursor:not-allowed}' +
+    '.btn-dash-review{padding:0.65rem 1.25rem;border-radius:8px;background:var(--correct);border:1.5px solid var(--correct);color:#ffffff;font-weight:700;font-size:0.85rem;cursor:pointer;transition:all var(--transition);margin-left:auto}.btn-dash-review:hover{opacity:0.85}.btn-dash-review:disabled{opacity:0.4;cursor:not-allowed}' +
     '.dash-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-muted);font-style:italic}';
   document.head.appendChild(_trackerStyle);
   
@@ -983,7 +983,7 @@
     html += '<span style="font-size:0.92rem; font-weight:500;">Remove corrected questions from tracker</span>';
     html += '</label>';
     
-    html += '<button class="btn-dash-review" style="padding:1.1rem 3rem; font-size:1.05rem; border-radius:14px; width:auto; flex:none;" onclick="launchReviewFinal()">Start Session \u2192</button>';
+    html += '<button class="btn-dash-review" style="padding:1.1rem 3rem; font-size:1.05rem; border-radius:14px; width:auto; flex:none; margin:0 auto; display:block;" onclick="launchReviewFinal()">Start Session \u2192</button>';
     html += '</div>';
     
     b.innerHTML = html;
