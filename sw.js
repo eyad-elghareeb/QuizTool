@@ -1,7 +1,7 @@
-/* MU61 Quiz — generated precache manifest for all quiz and hub pages.
+/* QuizTool — generated precache manifest for all quiz and hub pages.
    CACHE_VERSION is content-hashed by scripts/sync_quiz_assets.py so new files activate automatically. */
 const CACHE_VERSION = 'quiz-cache-448cd742ae0d';
-const CACHE_NAME = 'mu61-cache-' + CACHE_VERSION;
+const CACHE_NAME = 'quiztool-cache-' + CACHE_VERSION;
 
 const GOOGLE_FONT_CSS =
   'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap';

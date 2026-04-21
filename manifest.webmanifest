@@ -1,7 +1,7 @@
 {
-  "name": "MU61 Quiz",
-  "short_name": "MU61 Quiz",
-  "description": "MU61 Interactive Quiz. Test your medical knowledge.",
+  "name": "QuizTool",
+  "short_name": "QuizTool",
+  "description": "Interactive quiz authoring toolkit and project generator.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

@@ -2794,7 +2794,7 @@ checkSavedProgress();
           var rawTitle = match[1].trim();
           // Cache the CLEANED title for display, but return the raw title
           // so saveTrackerData can store it as-is (it gets cleaned again when displayed)
-          var cleaned = rawTitle.replace(/^(?:MU61\s+Quiz|Mansoura\s+MCQ)\s*[-–—]\s*/i, '').trim();
+          var cleaned = rawTitle.replace(/^(?:QuizTool|MU61\s+Quiz|Mansoura\s+MCQ)\s*[-–—]\s*/i, '').trim();
           if (cleaned) _folderTitleCache[folderPath] = cleaned;
           return rawTitle;
         }
@@ -2997,7 +2997,7 @@ checkSavedProgress();
     _allData.forEach(function(d) {
       if (d.folderTitle && d.folderPath) {
         if (!_folderTitleCache[d.folderPath]) {
-          _folderTitleCache[d.folderPath] = d.folderTitle.replace(/^(?:MU61\s+Quiz|Mansoura\s+MCQ)\s*[-–—]\s*/i, '').trim();
+          _folderTitleCache[d.folderPath] = d.folderTitle.replace(/^(?:QuizTool|MU61\s+Quiz|Mansoura\s+MCQ)\s*[-–—]\s*/i, '').trim();
         }
       }
     });
@@ -3005,7 +3005,7 @@ checkSavedProgress();
     if (segments.length >= 2) {
       var _pageFolder = segments[segments.length - 1] + '/';
       if (!_folderTitleCache[_pageFolder]) {
-        var _cleaned = document.title.replace(/^(?:MU61\s+Quiz|Mansoura\s+MCQ)\s*[-–—]\s*/i, '').trim();
+        var _cleaned = document.title.replace(/^(?:QuizTool|MU61\s+Quiz|Mansoura\s+MCQ)\s*[-–—]\s*/i, '').trim();
         if (_cleaned) _folderTitleCache[_pageFolder] = _cleaned;
       }
     }
