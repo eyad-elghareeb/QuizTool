@@ -242,13 +242,41 @@ def build_quiz_entry(quiz_path: Path, dir_rel: Path, icon: str) -> dict[str, obj
     }
 
 
+def discover_asset_files() -> list[Path]:
+    """Find all image, style, script, and manifest files recursively, excluding engines and skip dirs."""
+    extensions = {".png", ".svg", ".jpg", ".jpeg", ".css", ".webmanifest", ".js", ".json"}
+    paths: list[Path] = []
+    # Known engines are handled separately to ensure they are at the top of the list
+    engines = {"quiz-engine.js", "bank-engine.js", "index-engine.js"}
+    
+    for path in REPO_ROOT.rglob("*"):
+        if not path.is_file():
+            continue
+        rel = path.relative_to(REPO_ROOT)
+        if any(part in SKIP_DIRS or part.startswith(".") for part in rel.parts[:-1]):
+            continue
+        if path.suffix.lower() not in extensions:
+            continue
+        if path.name in engines or path.name == "sw.js":
+            continue
+        paths.append(path)
+    return sorted(paths, key=lambda item: natural_key(item.relative_to(REPO_ROOT).as_posix()))
+
+
 def update_service_worker() -> bool:
     text = SW_PATH.read_text(encoding="utf-8")
+    
+    # Discovery
     html_paths = [path.relative_to(REPO_ROOT).as_posix() for path in discover_html_files()]
-    # Engine files must always be first in the precache list
-    engine_paths = ["quiz-engine.js", "bank-engine.js", "index-engine.js"]
-    # Icon assets and CSS must be included in the precache list for offline availability
-    asset_paths = [path for path in ROOT_CACHE_ASSETS if path.endswith((".png", ".svg", ".css")) and (REPO_ROOT / path).exists()]
+    asset_paths = [path.relative_to(REPO_ROOT).as_posix() for path in discover_asset_files()]
+    
+    # Engine files must always be first in the precache list for prioritized installation
+    # Engines are specifically placed first to ensure cache robustness logic in sw.js works.
+    engine_paths = []
+    for eng in ["quiz-engine.js", "bank-engine.js", "index-engine.js"]:
+        if (REPO_ROOT / eng).exists():
+            engine_paths.append(eng)
+            
     all_cache_paths = engine_paths + html_paths + asset_paths
     cache_version = build_cache_version(all_cache_paths)
 
