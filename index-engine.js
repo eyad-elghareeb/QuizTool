@@ -372,6 +372,13 @@
     // Reset selection state when opening dashboard (all folders selected by default)
     _selectedQuizzes = {};
 
+    // Reset footer review button text and action
+    var revBtn = document.getElementById('btn-start-review');
+    if (revBtn) {
+      revBtn.textContent = '▶ Start Review';
+      revBtn.onclick = startReviewMode;
+    }
+
     var segments = getFolderSegments(location.pathname);
     var scopeBar = document.getElementById('dash-scope-bar');
     if (!scopeBar) return;
@@ -965,6 +972,13 @@
         return;
       }
 
+      // Update footer button to launch final session
+      var revBtn = document.getElementById('btn-start-review');
+      if (revBtn) {
+        revBtn.textContent = 'Start Session \u2192';
+        revBtn.onclick = launchReviewFinal;
+      }
+
       renderReviewSetup(finalQs);
     });
   };
@@ -983,7 +997,6 @@
     html += '<span style="font-size:0.92rem; font-weight:500;">Remove corrected questions from tracker</span>';
     html += '</label>';
     
-    html += '<button class="btn-dash-review" style="padding:1.1rem 3rem; font-size:1.05rem; border-radius:14px; width:auto; flex:none; margin:0 auto; display:block;" onclick="launchReviewFinal()">Start Session \u2192</button>';
     html += '</div>';
     
     b.innerHTML = html;
