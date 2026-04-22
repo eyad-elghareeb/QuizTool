@@ -80,7 +80,8 @@ var PRECACHE_REL_PATHS = {paths};
     sw_content += r'''
 /* ── Build a full URL from scope + relative path ── */
 function hrefFromScope(scope, relPath) {
-  return new URL(relPath, scope).href;
+  var s = scope.endsWith('/') ? scope : scope + '/';
+  return new URL(relPath, s).href;
 }
 
 function shouldStore(res) {
@@ -196,9 +197,17 @@ function handleNavigate(event, request) {
       if (cached) return cached;
 
       /* Try matching without query/hash (some browsers append them) */
-      var cleanUrl = request.url.split('?')[0].split('#')[0];
+      var url = new URL(request.url);
+      var cleanUrl = url.origin + url.pathname;
       cached = await cache.match(cleanUrl);
       if (cached) return cached;
+
+      /* Directory support: if URL ends in / or has no extension, try appending index.html */
+      if (url.pathname.endsWith('/') || !url.pathname.split('/').pop().includes('.')) {
+        var indexUrl = cleanUrl.endsWith('/') ? cleanUrl + 'index.html' : cleanUrl + '/index.html';
+        cached = await cache.match(indexUrl);
+        if (cached) return cached;
+      }
 
       /* Last resort: serve the main hub page */
       var fb = await cache.match(hrefFromScope(self.registration.scope, 'index.html'));
