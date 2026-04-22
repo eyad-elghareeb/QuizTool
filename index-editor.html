@@ -611,6 +611,120 @@ function downloadJSON() {
   showToast('✅ JSON downloaded!');
 }
 
+function stripMarkedBlock(content, startMarker, endMarker) {
+  const start = `<!-- [${startMarker}] -->`;
+  const end = `<!-- [${endMarker}] -->`;
+  const startIdx = content.indexOf(start);
+  const endIdx = content.indexOf(end);
+  if (startIdx === -1 || endIdx === -1 || endIdx < startIdx) return content;
+  return content.slice(0, startIdx) + content.slice(endIdx + end.length);
+}
+
+const INDEX_SHARED_HEAD_BOOTSTRAP = `<!-- [INDEX_SHARED_HEAD_START] -->
+<script>
+(function () {
+  function getCandidateBases() {
+    var normalized = location.pathname.replace(/\\\\/g, '/');
+    var parts = normalized.split('/').filter(Boolean);
+    if (parts.length && /\\.[^./]+$/.test(parts[parts.length - 1])) parts.pop();
+    var bases = [''];
+    for (var i = 1; i <= parts.length; i++) bases.push('../'.repeat(i));
+    return bases;
+  }
+
+  function ensureLink(rel, href, extra, marker) {
+    if (document.querySelector('link[data-index-shared="' + marker + '"]')) return;
+    var el = document.createElement('link');
+    el.rel = rel;
+    el.href = href;
+    el.setAttribute('data-index-shared', marker);
+    if (extra) {
+      for (var key in extra) {
+        if (Object.prototype.hasOwnProperty.call(extra, key)) el.setAttribute(key, extra[key]);
+      }
+    }
+    document.head.appendChild(el);
+  }
+
+  function ensureSharedHead(base, options) {
+    ensureLink('manifest', base + 'assets/manifest.webmanifest', null, 'manifest');
+    ensureLink('icon', base + 'assets/favicon.svg', { type: 'image/svg+xml' }, 'favicon');
+    ensureLink('apple-touch-icon', base + 'assets/favicon.svg', null, 'apple-touch');
+    if (options && options.includeCss && !document.querySelector('link[data-index-shared="css"]')) {
+      ensureLink('stylesheet', base + 'assets/index-engine.css', null, 'css');
+    }
+  }
+
+  window.__loadIndexSharedResources = function (options, done) {
+    var bases = getCandidateBases();
+    var idx = 0;
+
+    function tryNext() {
+      if (idx >= bases.length) {
+        if (typeof done === 'function') done('', false);
+        return;
+      }
+
+      var base = bases[idx++];
+      window.__INDEX_SHARED_BASE = base;
+      var script = document.createElement('script');
+      script.async = false;
+      script.src = base + 'engines/index-engine.js';
+      script.onload = function () {
+        ensureSharedHead(base, options || {});
+        if (typeof done === 'function') done(base, true);
+      };
+      script.onerror = function () {
+        script.remove();
+        tryNext();
+      };
+      document.body.appendChild(script);
+    }
+
+    tryNext();
+  };
+})();
+<\/script>
+<!-- [INDEX_SHARED_HEAD_END] -->`;
+
+function buildIndexSharedFooterBootstrap(includeCss) {
+  return `<!-- [INDEX_SHARED_FOOT_START] -->
+<script>
+window.__loadIndexSharedResources({ includeCss: ${includeCss ? 'true' : 'false'} }, function (base) {
+  var s = localStorage.getItem('quiz-theme');
+  if (s) document.documentElement.setAttribute('data-theme', s);
+  if (window.__updateThemeIcon) window.__updateThemeIcon();
+  if (window.renderQuizzes) window.renderQuizzes();
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register((base || '') + 'sw.js').catch(function () {});
+    });
+  }
+});
+<\/script>
+<!-- [INDEX_SHARED_FOOT_END] -->`;
+}
+
+function normalizeIndexSharedMarkup(content, options = {}) {
+  let out = content;
+  out = stripMarkedBlock(out, 'INDEX_SHARED_HEAD_START', 'INDEX_SHARED_HEAD_END');
+  out = stripMarkedBlock(out, 'INDEX_SHARED_FOOT_START', 'INDEX_SHARED_FOOT_END');
+  out = out.replace(/<link[^>]+href=["'][^"']*manifest\.webmanifest[^"']*["'][^>]*>\s*/gi, '');
+  out = out.replace(/<link[^>]+href=["'][^"']*favicon\.svg[^"']*["'][^>]*>\s*/gi, '');
+  out = out.replace(/<link[^>]+href=["'][^"']*index-engine\.css[^"']*["'][^>]*>\s*/gi, '');
+  out = out.replace(/<script[^>]+src=["'][^"']*index-engine\.js[^"']*["'][^>]*><\/script>\s*/gi, '');
+  out = out.replace(/<script>\s*\(function\(\)\{var s=localStorage\.getItem\('quiz-theme'\)[\s\S]*?window\.renderQuizzes\(\);\}\)\(\);\s*<\/script>\s*/gi, '');
+  out = out.replace(/<script>\s*if\s*\(['"]serviceWorker['"]\s*in\s*navigator[\s\S]*?navigator\.serviceWorker\.register\([\s\S]*?<\/script>\s*/gi, '');
+
+  if (/<\/title>/i.test(out)) out = out.replace(/<\/title>/i, '</title>\n' + INDEX_SHARED_HEAD_BOOTSTRAP);
+  else out = out.replace(/<head>/i, '$&\n' + INDEX_SHARED_HEAD_BOOTSTRAP);
+
+  if (/<\/body>/i.test(out)) out = out.replace(/<\/body>/i, buildIndexSharedFooterBootstrap(!!options.includeCss) + '\n</body>');
+  else out += '\n' + buildIndexSharedFooterBootstrap(!!options.includeCss);
+
+  return out;
+}
+
 function generateHTML() {
   const config = getConfig();
   const quizzesJson = JSON.stringify(config.quizzes, null, 2);
@@ -626,6 +740,7 @@ function generateHTML() {
 
   templatePromise
     .then(template => {
+      const includeSharedCss = /index-engine\.css/i.test(template);
       let modified = template;
 
       // Replace the QUIZZES array entirely
@@ -681,6 +796,8 @@ function generateHTML() {
         /(<p>).*?(<\/p>\s*<\/header>)/s,
         `$1${config.hero.description}$2`
       );
+
+      modified = normalizeIndexSharedMarkup(modified, { includeCss: includeSharedCss });
 
       document.getElementById('html-output').style.display = 'block';
       document.getElementById('html-code').textContent = modified;

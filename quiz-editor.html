@@ -261,7 +261,7 @@ textarea { resize: vertical; min-height: 80px; }
 
     <div id="upload-status" style="display: none; margin-bottom: 1rem; padding: 0.75rem 1rem; background: var(--correct-bg); border: 1px solid var(--correct); border-radius: var(--radius);">
       <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
-        <span style="color: var(--correct); font-weight: 500;">✓ Editing uploaded HTML — file structure preserved on hosted export</span>
+        <span style="color: var(--correct); font-weight: 500;">✓ Editing uploaded HTML — data preserved and shared loaders updated for hosted export</span>
         <button class="btn-secondary" onclick="clearUploadedHTML()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; white-space: nowrap;">Use Default Template</button>
       </div>
     </div>
@@ -274,16 +274,16 @@ textarea { resize: vertical; min-height: 80px; }
           <span class="en">quiz-engine.js</span>
           <span class="es" id="engine-quiz-status" style="color:var(--wrong)">❌ Not loaded</span>
           <span class="el" onclick="document.getElementById('quiz-engine-file').click()">📁 Load manually</span>
-          <input type="file" id="quiz-engine-file" accept=".js" style="display:none" onchange="handleEngineFileLoad(event,'quiz')">
+          <input type="file" id="quiz-engine-file" accept=".js" multiple style="display:none" onchange="handleEngineFileLoad(event,'quiz')">
         </div>
         <div class="engine-item">
           <span class="en">bank-engine.js</span>
           <span class="es" id="engine-bank-status" style="color:var(--wrong)">❌ Not loaded</span>
           <span class="el" onclick="document.getElementById('bank-engine-file').click()">📁 Load manually</span>
-          <input type="file" id="bank-engine-file" accept=".js" style="display:none" onchange="handleEngineFileLoad(event,'bank')">
+          <input type="file" id="bank-engine-file" accept=".js" multiple style="display:none" onchange="handleEngineFileLoad(event,'bank')">
         </div>
       </div>
-      <div class="hint">Engines auto-load when served over HTTP. When opening as file://, use "Load manually". The ⚡ Standalone button embeds the full engine so the file works anywhere.</div>
+      <div class="hint">Engines auto-load from the <code>engines/</code> folder when served over HTTP. When opening as <code>file://</code>, use "Load manually" and either select a bundled standalone engine file or all required engine modules together. The ⚡ Standalone button embeds the full bundled runtime so the file works anywhere.</div>
     </div>
 
     <div class="preview-panel" style="margin-top:0">
@@ -323,6 +323,28 @@ let uploadedHTML    = '';   // raw content of the uploaded file
 let fileType        = 'quiz'; // 'quiz' | 'bank'
 let quizEngineCode  = '';
 let bankEngineCode  = '';
+const ENGINE_MODULE_PATHS = {
+  quiz: [
+    'engines/engine-common.js',
+    'engines/tracker-storage.js',
+    'engines/engine-highlights.js',
+    'engines/dash-ui.js',
+    'engines/quiz-engine.js',
+  ],
+  bank: [
+    'engines/engine-common.js',
+    'engines/tracker-storage.js',
+    'engines/engine-highlights.js',
+    'engines/dash-ui.js',
+    'engines/bank-engine.js',
+  ],
+};
+const ENGINE_BUNDLE_MARKERS = [
+  'window.__EngineCommonLoaded = true;',
+  'window.__TrackerStorageLoaded = true;',
+  'window.__EngineHighlightsLoaded = true;',
+  'window.__DashUILoaded = true;',
+];
 
 /* ═══════════════════════════════════════════════════════════════
    HELPERS
@@ -332,6 +354,74 @@ function escapeHtml(t) {
   const d = document.createElement('div');
   d.textContent = t;
   return d.innerHTML;
+}
+
+function buildHostedEngineLoader(type) {
+  const engineFile = type === 'bank' ? 'bank-engine.js' : 'quiz-engine.js';
+  return `<script>
+/* [ENGINE_LOADER_START] */
+/* Engine loader — dynamically searches parent folders for engines/${engineFile} */
+(function () {
+  var normalized = location.pathname.replace(/\\\\/g, '/');
+  var parts = normalized.split('/').filter(Boolean);
+  if (parts.length && /\\.[^./]+$/.test(parts[parts.length - 1])) parts.pop();
+
+  var bases = [''];
+  for (var i = 1; i <= parts.length; i++) bases.push('../'.repeat(i));
+
+  function tryNext(idx) {
+    if (idx >= bases.length) {
+      console.error('Could not locate engines/${engineFile}');
+      return;
+    }
+    var base = bases[idx];
+    window.__QUIZ_ENGINE_BASE = base;
+    var script = document.createElement('script');
+    script.async = false;
+    script.src = base + 'engines/${engineFile}';
+    script.onerror = function () {
+      script.remove();
+      tryNext(idx + 1);
+    };
+    document.body.appendChild(script);
+  }
+
+  tryNext(0);
+})();
+/* [ENGINE_LOADER_END] */
+<\/script>`;
+}
+
+function stripMatchingScriptBlocks(content, predicate) {
+  return content.replace(/<script\b[^>]*>[\s\S]*?<\/script>\s*/gi, block => predicate(block) ? '' : block);
+}
+
+function isStandaloneEngineBundle(code, type) {
+  if (!ENGINE_BUNDLE_MARKERS.every(marker => code.includes(marker))) return false;
+  const isBankBundle = code.includes('function selectSessionQuestions(');
+  return type === 'bank' ? isBankBundle : !isBankBundle;
+}
+
+function normalizeHostedEngineLoader(content, type) {
+  let out = content;
+
+  out = out.replace(/<script[^>]+src=["'][^"']*(?:engines\/)?(?:quiz|bank)-engine\.js[^"']*["'][^>]*><\/script>\s*/gi, '');
+  out = stripMatchingScriptBlocks(out, block => {
+    const lowered = block.toLowerCase();
+    if (lowered.includes('[engine_loader_start]')) return true;
+    if (lowered.includes('__quiz_engine_base')) return true;
+    if (lowered.includes('window.__enginecommonloaded = true')) return true;
+    if (lowered.includes('window.__trackerstorageloaded = true')) return true;
+    if (lowered.includes('window.__enginehighlightsloaded = true')) return true;
+    if (lowered.includes('window.__dashuiloaded = true')) return true;
+    if (lowered.includes('engines/quiz-engine.js') || lowered.includes('engines/bank-engine.js')) return true;
+    if ((lowered.includes('engine-common.js') || lowered.includes('tracker-storage.js') || lowered.includes('engine-highlights.js') || lowered.includes('dash-ui.js')) && lowered.includes('document.write')) return true;
+    return false;
+  });
+
+  const loader = buildHostedEngineLoader(type);
+  if (/<\/body>/i.test(out)) return out.replace(/<\/body>/i, loader + '\n</body>');
+  return out + '\n' + loader;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -346,9 +436,20 @@ function init() {
 }
 
 async function tryLoadEngines() {
-  try { const r = await fetch('engines/quiz-engine.js'); if (r.ok) quizEngineCode = await r.text(); } catch(_) {}
-  try { const r = await fetch('engines/bank-engine.js'); if (r.ok) bankEngineCode = await r.text(); } catch(_) {}
+  try { quizEngineCode = await fetchEngineBundle('quiz'); } catch(_) {}
+  try { bankEngineCode = await fetchEngineBundle('bank'); } catch(_) {}
   updateEngineStatus();
+}
+
+async function fetchEngineBundle(type) {
+  const paths = ENGINE_MODULE_PATHS[type] || [];
+  const parts = [];
+  for (const path of paths) {
+    const r = await fetch(path);
+    if (!r.ok) throw new Error(`Failed to load ${path}`);
+    parts.push(await r.text());
+  }
+  return parts.join('\n\n');
 }
 
 function updateEngineStatus() {
@@ -770,15 +871,50 @@ function loadBankFile(event) {
    ENGINE FILE LOADING (manual, for file:// protocol)
 ═══════════════════════════════════════════════════════════════ */
 function handleEngineFileLoad(event, type) {
-  const file = event.target.files[0]; if (!file) return;
-  const r = new FileReader();
-  r.onload = e => {
-    if (type === 'quiz') quizEngineCode = e.target.result;
-    else                 bankEngineCode = e.target.result;
+  const files = Array.from(event.target.files || []);
+  if (!files.length) return;
+  const clearPicker = () => { if (event.target) event.target.value = ''; };
+
+  const setEngineCode = code => {
+    if (type === 'quiz') quizEngineCode = code;
+    else                 bankEngineCode = code;
     updateEngineStatus();
-    showToast(`✅ ${type === 'quiz' ? 'Quiz' : 'Bank'} engine loaded (${Math.round(e.target.result.length/1024)} KB)`);
+    showToast(`✅ ${type === 'quiz' ? 'Quiz' : 'Bank'} engine loaded (${Math.round(code.length/1024)} KB)`);
+    clearPicker();
   };
-  r.readAsText(file);
+
+  if (files.length === 1) {
+    const r = new FileReader();
+    r.onload = e => {
+      const code = e.target.result || '';
+      if (!isStandaloneEngineBundle(code, type)) {
+        clearPicker();
+        showToast('❌ Single-file load must be a bundled standalone engine. Otherwise select all engine modules together.');
+        return;
+      }
+      setEngineCode(code);
+    };
+    r.readAsText(files[0]);
+    return;
+  }
+
+  const expectedOrder = (ENGINE_MODULE_PATHS[type] || []).map(path => path.split('/').pop());
+  Promise.all(files.map(async file => ({ name: file.name, text: await file.text() })))
+    .then(entries => {
+      const byName = new Map(entries.map(entry => [entry.name, entry.text]));
+      const missing = expectedOrder.filter(name => !byName.has(name));
+      if (missing.length) {
+        clearPicker();
+        showToast(`❌ Missing engine files: ${missing.join(', ')}`);
+        return;
+      }
+      const bundle = expectedOrder.map(name => byName.get(name)).join('\n\n');
+      setEngineCode(bundle);
+    })
+    .catch(err => {
+      clearPicker();
+      showToast(`❌ Failed to load engine files: ${err.message}`);
+    });
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1388,7 +1524,7 @@ function replaceMarker(content, start, end, replacement) {
   return content.slice(0, si + s.length) + replacement + content.slice(ei);
 }
 
-/* Edit uploaded file in-place: only swap data blocks, preserve everything else */
+/* Edit uploaded file in-place: swap data blocks and migrate shared loaders to the current hosted layout */
 function editUploadedHTML(content, cfg, cfgJ, qJ) {
   let r = content;
   r = r.replace(/<title>[^<]*<\/title>/i, `<title>${escapeHtml(cfg.title)}</title>`);
@@ -1399,7 +1535,7 @@ function editUploadedHTML(content, cfg, cfgJ, qJ) {
     r = replaceMarker(r, '[BANK_CONFIG_START]',  '[BANK_CONFIG_END]',  '\nconst BANK_CONFIG = '  + cfgJ + ';\n');
     r = replaceMarker(r, '[QUESTION_BANK_START]', '[QUESTION_BANK_END]', '\nconst QUESTION_BANK = ' + qJ   + ';\n');
   }
-  return r;
+  return normalizeHostedEngineLoader(r, fileType);
 }
 
 /* Theme flash snippet (same as in both templates) */
@@ -1408,10 +1544,11 @@ const FLASH = `(function(){var t=localStorage.getItem('quiz-theme')||'dark';var 
 /* Build a fresh hosted HTML — identical structure to quiz-template.html / question-bank-template.html */
 function buildHostedHTML(cfg, cfgJ, qJ) {
   const title = escapeHtml(cfg.title);
+  const loader = buildHostedEngineLoader(fileType);
   if (fileType === 'quiz') {
-    return '<!DOCTYPE html>\n<html lang="en" data-theme="dark">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<script>\n' + FLASH + '\n<\/script>\n<title>' + title + '</title>\n</head>\n<body>\n<script>\n/* ────────────────────────────────────────────────────────────────\n   QUIZ DATA  — only edit below this line\n──────────────────────────────────────────────────────────────────*/\n\n/* [QUIZ_CONFIG_START] */\nconst QUIZ_CONFIG = ' + cfgJ + ';\n/* [QUIZ_CONFIG_END] */\n\n/* [QUESTIONS_START] */\nconst QUESTIONS = ' + qJ + ';\n/* [QUESTIONS_END] */\n<\/script>\n<script>\n/* Engine loader — computes correct relative path for any folder depth */\n(function () {\n  window.__QUIZ_ENGINE_BASE = \'../\'.repeat(\n    Math.max(0, location.pathname.split(\'/\').filter(Boolean).length - 2)\n  );\n  document.write(\'<scr\' + \'ipt src="\' + window.__QUIZ_ENGINE_BASE + \'engines/quiz-engine.js"><\\/scr\' + \'ipt>\');\n})();\n<\/script>\n</body>\n</html>';
+    return '<!DOCTYPE html>\n<html lang="en" data-theme="dark">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<script>\n' + FLASH + '\n<\/script>\n<title>' + title + '</title>\n</head>\n<body>\n<script>\n/* ────────────────────────────────────────────────────────────────\n   QUIZ DATA  — only edit below this line\n──────────────────────────────────────────────────────────────────*/\n\n/* [QUIZ_CONFIG_START] */\nconst QUIZ_CONFIG = ' + cfgJ + ';\n/* [QUIZ_CONFIG_END] */\n\n/* [QUESTIONS_START] */\nconst QUESTIONS = ' + qJ + ';\n/* [QUESTIONS_END] */\n<\/script>\n' + loader + '\n</body>\n</html>';
   } else {
-    return '<!DOCTYPE html>\n<html lang="en" data-theme="dark">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<script>\n' + FLASH + '\n<\/script>\n<title>' + title + '</title>\n</head>\n<body>\n<script>\n/* ────────────────────────────────────────────────────────────────\n   BANK DATA  — only edit below this line\n──────────────────────────────────────────────────────────────────*/\n\n/* [BANK_CONFIG_START] */\nconst BANK_CONFIG = ' + cfgJ + ';\n/* [BANK_CONFIG_END] */\n\n/* [QUESTION_BANK_START] */\nconst QUESTION_BANK = ' + qJ + ';\n/* [QUESTION_BANK_END] */\n<\/script>\n<script>\n/* Engine loader */\n(function () {\n  window.__QUIZ_ENGINE_BASE = \'../\'.repeat(\n    Math.max(0, location.pathname.split(\'/\').filter(Boolean).length - 2)\n  );\n  document.write(\'<scr\' + \'ipt src="\' + window.__QUIZ_ENGINE_BASE + \'engines/bank-engine.js"><\\/scr\' + \'ipt>\');\n})();\n<\/script>\n</body>\n</html>';
+    return '<!DOCTYPE html>\n<html lang="en" data-theme="dark">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<script>\n' + FLASH + '\n<\/script>\n<title>' + title + '</title>\n</head>\n<body>\n<script>\n/* ────────────────────────────────────────────────────────────────\n   BANK DATA  — only edit below this line\n──────────────────────────────────────────────────────────────────*/\n\n/* [BANK_CONFIG_START] */\nconst BANK_CONFIG = ' + cfgJ + ';\n/* [BANK_CONFIG_END] */\n\n/* [QUESTION_BANK_START] */\nconst QUESTION_BANK = ' + qJ + ';\n/* [QUESTION_BANK_END] */\n<\/script>\n' + loader + '\n</body>\n</html>';
   }
 }
 

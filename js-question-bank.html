@@ -600,13 +600,36 @@ const QUESTION_BANK = [
 /* [QUESTION_BANK_END] */
 </script>
 <script>
-/* Engine loader */
+/* [ENGINE_LOADER_START] */
+/* Engine loader — dynamically searches parent folders for engines/bank-engine.js */
 (function () {
-  window.__QUIZ_ENGINE_BASE = '../'.repeat(
-    Math.max(0, location.pathname.split('/').filter(Boolean).length - 2)
-  );
-  document.write('<scr' + 'ipt src="' + window.__QUIZ_ENGINE_BASE + 'engines/bank-engine.js"><\/scr' + 'ipt>');
+  var normalized = location.pathname.replace(/\\/g, '/');
+  var parts = normalized.split('/').filter(Boolean);
+  if (parts.length && /\.[^./]+$/.test(parts[parts.length - 1])) parts.pop();
+
+  var bases = [''];
+  for (var i = 1; i <= parts.length; i++) bases.push('../'.repeat(i));
+
+  function tryNext(idx) {
+    if (idx >= bases.length) {
+      console.error('Could not locate engines/bank-engine.js');
+      return;
+    }
+    var base = bases[idx];
+    window.__QUIZ_ENGINE_BASE = base;
+    var script = document.createElement('script');
+    script.async = false;
+    script.src = base + 'engines/bank-engine.js';
+    script.onerror = function () {
+      script.remove();
+      tryNext(idx + 1);
+    };
+    document.body.appendChild(script);
+  }
+
+  tryNext(0);
 })();
+/* [ENGINE_LOADER_END] */
 </script>
 </body>
 </html>

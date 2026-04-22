@@ -23,9 +23,13 @@
     _addLink('preconnect', 'https://fonts.googleapis.com');
     _addLink('preconnect', 'https://fonts.gstatic.com', {crossOrigin: ''});
     _addLink('stylesheet', 'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap');
-    _addLink('manifest',   ENGINE_BASE + 'assets/manifest.webmanifest');
-    _addLink('icon',       ENGINE_BASE + 'assets/favicon.svg', {type: 'image/svg+xml'});
-    _addLink('apple-touch-icon', ENGINE_BASE + 'assets/favicon.svg');
+    var baseHref = ENGINE_BASE || window.location.href;
+    var assetsHref = /\/engines\/?$/i.test(baseHref) ? new URL('../assets/', baseHref).href : new URL('./assets/', baseHref).href;
+    var manifestHref = new URL('manifest.webmanifest', assetsHref).href;
+    var faviconHref = new URL('favicon.svg', assetsHref).href;
+    _addLink('manifest', manifestHref);
+    _addLink('icon', faviconHref, {type: 'image/svg+xml'});
+    _addLink('apple-touch-icon', faviconHref);
   }
 
   /* ── 2. FOUC Prevention ───────────────────────────────────────── */

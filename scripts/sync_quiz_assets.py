@@ -247,7 +247,15 @@ def discover_asset_files() -> list[Path]:
     extensions = {".png", ".svg", ".jpg", ".jpeg", ".css", ".webmanifest", ".js", ".json"}
     paths: list[Path] = []
     # Known engines are handled separately to ensure they are at the top of the list
-    engines = {"quiz-engine.js", "bank-engine.js", "index-engine.js", "engines/quiz-engine.js", "engines/bank-engine.js", "engines/index-engine.js"}
+    engines = {
+        "engines/quiz-engine.js",
+        "engines/bank-engine.js",
+        "engines/index-engine.js",
+        "engines/engine-common.js",
+        "engines/tracker-storage.js",
+        "engines/engine-highlights.js",
+        "engines/dash-ui.js",
+    }
     
     for path in REPO_ROOT.rglob("*"):
         if not path.is_file():
@@ -274,7 +282,15 @@ def update_service_worker() -> bool:
     # Engine files must always be first in the precache list for prioritized installation
     # Engines are specifically placed first to ensure cache robustness logic in sw.js works.
     engine_paths = []
-    for eng in ["engines/quiz-engine.js", "engines/bank-engine.js", "engines/index-engine.js"]:
+    for eng in [
+        "engines/quiz-engine.js",
+        "engines/bank-engine.js",
+        "engines/index-engine.js",
+        "engines/engine-common.js",
+        "engines/tracker-storage.js",
+        "engines/engine-highlights.js",
+        "engines/dash-ui.js",
+    ]:
         if (REPO_ROOT / eng).exists():
             engine_paths.append(eng)
             

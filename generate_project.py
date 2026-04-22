@@ -268,10 +268,18 @@ self.addEventListener('fetch', function (event) {
     return sw_content
 
 SW_JS = read_file('sw.js')
-INDEX_ENGINE_JS = read_file('engines/index-engine.js')
-INDEX_ENGINE_CSS = read_file('assets/index-engine.css')
-QUIZ_ENGINE_JS = read_file('engines/quiz-engine.js')
-BANK_ENGINE_JS = read_file('engines/bank-engine.js')
+ENGINE_TEXT_FILES = {
+    'engines/index-engine.js': read_file('engines/index-engine.js'),
+    'engines/quiz-engine.js': read_file('engines/quiz-engine.js'),
+    'engines/bank-engine.js': read_file('engines/bank-engine.js'),
+    'engines/engine-common.js': read_file('engines/engine-common.js'),
+    'engines/tracker-storage.js': read_file('engines/tracker-storage.js'),
+    'engines/dash-ui.js': read_file('engines/dash-ui.js'),
+    'engines/engine-highlights.js': read_file('engines/engine-highlights.js'),
+}
+ASSET_TEXT_FILES = {
+    'assets/index-engine.css': read_file('assets/index-engine.css'),
+}
 
 # Read sync scripts from QuizTool's own scripts/ folder (self-contained, no MU61S8 dependency)
 _SCRIPTS_DIR = BASE_DIR / 'scripts'
@@ -399,43 +407,43 @@ MANIFEST_JSON = lambda name: json.dumps({
     "theme_color": "#0d1117",
     "icons": [
         {
-            "src": "assets/favicon.svg",
+            "src": "favicon.svg",
             "sizes": "any",
             "type": "image/svg+xml",
             "purpose": "any"
         },
         {
-            "src": "assets/icon-48.png",
+            "src": "icon-48.png",
             "sizes": "48x48",
             "type": "image/png",
             "purpose": "any"
         },
         {
-            "src": "assets/icon-72.png",
+            "src": "icon-72.png",
             "sizes": "72x72",
             "type": "image/png",
             "purpose": "any"
         },
         {
-            "src": "assets/icon-96.png",
+            "src": "icon-96.png",
             "sizes": "96x96",
             "type": "image/png",
             "purpose": "any"
         },
         {
-            "src": "assets/icon-144.png",
+            "src": "icon-144.png",
             "sizes": "144x144",
             "type": "image/png",
             "purpose": "any"
         },
         {
-            "src": "assets/icon-192.png",
+            "src": "icon-192.png",
             "sizes": "192x192",
             "type": "image/png",
             "purpose": "any maskable"
         },
         {
-            "src": "assets/icon-512.png",
+            "src": "icon-512.png",
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "any maskable"
@@ -686,13 +694,14 @@ def build_project_zip(config):
     
     # Collect all file paths for service worker precaching
     all_file_paths = [
-        'engines/index-engine.js',
         'assets/index-engine.css',
+        'assets/manifest.webmanifest',
+        'assets/favicon.svg',
+        'engines/index-engine.js',
         'engines/quiz-engine.js',
         'engines/bank-engine.js',
-        'assets/favicon.svg',
-        'assets/manifest.webmanifest'
     ]
+    all_file_paths.extend(ENGINE_TEXT_FILES.keys())
     
     # Add icon files
     all_file_paths.extend([
@@ -763,23 +772,27 @@ def build_project_zip(config):
                 all_file_paths.append(filename)
     
     # Sort paths for consistency
-    all_file_paths.sort()
+    all_file_paths = sorted(dict.fromkeys(all_file_paths))
     
     # Generate service worker with all file paths
     sw_js_content = generate_sw_js(project_name, all_file_paths)
 
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
 
-        # --- Shared engines ---
-        zf.writestr('engines/index-engine.js', INDEX_ENGINE_JS)
-        zf.writestr('assets/index-engine.css', INDEX_ENGINE_CSS)
-        zf.writestr('engines/quiz-engine.js', QUIZ_ENGINE_JS)
-        zf.writestr('engines/bank-engine.js', BANK_ENGINE_JS)
-        
+        # --- Engine modules and assets ---
+        for path, content in ENGINE_TEXT_FILES.items():
+            if content:
+                zf.writestr(path, content)
+        for path, content in ASSET_TEXT_FILES.items():
+            if content:
+                zf.writestr(path, content)
+
         # --- Static assets ---
-        zf.writestr('assets/favicon.svg', FAVICON_SVG)
+        manifest_json = MANIFEST_JSON(project_name)
+        favicon_svg = read_file('assets/favicon.svg') or FAVICON_SVG
         zf.writestr('sw.js', sw_js_content)  # Use dynamically generated sw.js
-        zf.writestr('assets/manifest.webmanifest', MANIFEST_JSON(project_name))
+        zf.writestr('assets/manifest.webmanifest', manifest_json)
+        zf.writestr('assets/favicon.svg', favicon_svg)
 
         # --- Icon files (PNG icons for PWA) ---
         for icon_name, icon_data in ICON_FILES.items():
