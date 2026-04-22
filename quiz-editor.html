@@ -143,8 +143,8 @@ textarea { resize: vertical; min-height: 80px; }
   .engine-grid { grid-template-columns: 1fr; }
 }
 </style>
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
-<link rel="apple-touch-icon" href="favicon.svg">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="apple-touch-icon" href="assets/favicon.svg">
 </head>
 <body>
 
@@ -346,8 +346,8 @@ function init() {
 }
 
 async function tryLoadEngines() {
-  try { const r = await fetch('quiz-engine.js'); if (r.ok) quizEngineCode = await r.text(); } catch(_) {}
-  try { const r = await fetch('bank-engine.js'); if (r.ok) bankEngineCode = await r.text(); } catch(_) {}
+  try { const r = await fetch('engines/quiz-engine.js'); if (r.ok) quizEngineCode = await r.text(); } catch(_) {}
+  try { const r = await fetch('engines/bank-engine.js'); if (r.ok) bankEngineCode = await r.text(); } catch(_) {}
   updateEngineStatus();
 }
 
@@ -1361,7 +1361,7 @@ function generateHTML(mode) {
 
   if (mode === 'standalone') {
     const engine = fileType === 'quiz' ? quizEngineCode : bankEngineCode;
-    const name   = fileType === 'quiz' ? 'quiz-engine.js' : 'bank-engine.js';
+    const name   = fileType === 'quiz' ? 'engines/quiz-engine.js' : 'engines/bank-engine.js';
     if (!engine) {
       showToast(`❌ Load ${name} first — see Engine Files above`);
       switchTabByName('export');
@@ -1409,9 +1409,9 @@ const FLASH = `(function(){var t=localStorage.getItem('quiz-theme')||'dark';var 
 function buildHostedHTML(cfg, cfgJ, qJ) {
   const title = escapeHtml(cfg.title);
   if (fileType === 'quiz') {
-    return '<!DOCTYPE html>\n<html lang="en" data-theme="dark">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<script>\n' + FLASH + '\n<\/script>\n<title>' + title + '</title>\n</head>\n<body>\n<script>\n/* ────────────────────────────────────────────────────────────────\n   QUIZ DATA  — only edit below this line\n──────────────────────────────────────────────────────────────────*/\n\n/* [QUIZ_CONFIG_START] */\nconst QUIZ_CONFIG = ' + cfgJ + ';\n/* [QUIZ_CONFIG_END] */\n\n/* [QUESTIONS_START] */\nconst QUESTIONS = ' + qJ + ';\n/* [QUESTIONS_END] */\n<\/script>\n<script>\n/* Engine loader — computes correct relative path for any folder depth */\n(function () {\n  window.__QUIZ_ENGINE_BASE = \'../\'.repeat(\n    Math.max(0, location.pathname.split(\'/\').filter(Boolean).length - 2)\n  );\n  document.write(\'<scr\' + \'ipt src="\' + window.__QUIZ_ENGINE_BASE + \'quiz-engine.js"><\\/scr\' + \'ipt>\');\n})();\n<\/script>\n</body>\n</html>';
+    return '<!DOCTYPE html>\n<html lang="en" data-theme="dark">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<script>\n' + FLASH + '\n<\/script>\n<title>' + title + '</title>\n</head>\n<body>\n<script>\n/* ────────────────────────────────────────────────────────────────\n   QUIZ DATA  — only edit below this line\n──────────────────────────────────────────────────────────────────*/\n\n/* [QUIZ_CONFIG_START] */\nconst QUIZ_CONFIG = ' + cfgJ + ';\n/* [QUIZ_CONFIG_END] */\n\n/* [QUESTIONS_START] */\nconst QUESTIONS = ' + qJ + ';\n/* [QUESTIONS_END] */\n<\/script>\n<script>\n/* Engine loader — computes correct relative path for any folder depth */\n(function () {\n  window.__QUIZ_ENGINE_BASE = \'../\'.repeat(\n    Math.max(0, location.pathname.split(\'/\').filter(Boolean).length - 2)\n  );\n  document.write(\'<scr\' + \'ipt src="\' + window.__QUIZ_ENGINE_BASE + \'engines/quiz-engine.js"><\\/scr\' + \'ipt>\');\n})();\n<\/script>\n</body>\n</html>';
   } else {
-    return '<!DOCTYPE html>\n<html lang="en" data-theme="dark">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<script>\n' + FLASH + '\n<\/script>\n<title>' + title + '</title>\n</head>\n<body>\n<script>\n/* ────────────────────────────────────────────────────────────────\n   BANK DATA  — only edit below this line\n──────────────────────────────────────────────────────────────────*/\n\n/* [BANK_CONFIG_START] */\nconst BANK_CONFIG = ' + cfgJ + ';\n/* [BANK_CONFIG_END] */\n\n/* [QUESTION_BANK_START] */\nconst QUESTION_BANK = ' + qJ + ';\n/* [QUESTION_BANK_END] */\n<\/script>\n<script>\n/* Engine loader */\n(function () {\n  window.__QUIZ_ENGINE_BASE = \'../\'.repeat(\n    Math.max(0, location.pathname.split(\'/\').filter(Boolean).length - 2)\n  );\n  document.write(\'<scr\' + \'ipt src="\' + window.__QUIZ_ENGINE_BASE + \'bank-engine.js"><\\/scr\' + \'ipt>\');\n})();\n<\/script>\n</body>\n</html>';
+    return '<!DOCTYPE html>\n<html lang="en" data-theme="dark">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<script>\n' + FLASH + '\n<\/script>\n<title>' + title + '</title>\n</head>\n<body>\n<script>\n/* ────────────────────────────────────────────────────────────────\n   BANK DATA  — only edit below this line\n──────────────────────────────────────────────────────────────────*/\n\n/* [BANK_CONFIG_START] */\nconst BANK_CONFIG = ' + cfgJ + ';\n/* [BANK_CONFIG_END] */\n\n/* [QUESTION_BANK_START] */\nconst QUESTION_BANK = ' + qJ + ';\n/* [QUESTION_BANK_END] */\n<\/script>\n<script>\n/* Engine loader */\n(function () {\n  window.__QUIZ_ENGINE_BASE = \'../\'.repeat(\n    Math.max(0, location.pathname.split(\'/\').filter(Boolean).length - 2)\n  );\n  document.write(\'<scr\' + \'ipt src="\' + window.__QUIZ_ENGINE_BASE + \'engines/bank-engine.js"><\\/scr\' + \'ipt>\');\n})();\n<\/script>\n</body>\n</html>';
   }
 }
 

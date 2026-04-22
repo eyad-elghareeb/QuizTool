@@ -1,6 +1,7 @@
 /* ================================================================
    index-engine.js  —  Shared engine for all index/hub pages.
-   Handles theme toggle, quiz card rendering, and tracker dashboard.
+   Handles theme toggle, quiz card rendering, review mode, and PDF export.
+   Tracker dashboard UI is now in dash-ui.js (loaded by bootstrap).
    Load this after defining QUIZZES config and #quiz-grid element.
    ================================================================ */
 (function () {
@@ -9,13 +10,23 @@
   var _cs = document.currentScript;
   var ENGINE_BASE = _cs ? _cs.src.replace(/[^\/]*$/, '') : '';
 
-  /* ── Inject tracker dashboard extra styles ─────────────────── */
-  var _trackerStyle = document.createElement('style');
-  _trackerStyle.textContent = '.dash-folder-title{font-family:"Playfair Display",serif;font-size:1.05rem;font-weight:700;color:var(--accent);padding:0.75rem 0 0.4rem;margin-bottom:0.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:0.4rem;cursor:pointer;user-select:none}.dash-folder-title:hover{opacity:0.85}.dash-folder-toggle{font-size:0.9rem;transition:transform 0.2s ease;display:inline-block}.dash-folder-toggle.collapsed{transform:rotate(-90deg)}.dash-folder-content{transition:max-height 0.3s ease,opacity 0.25s ease;overflow:visible;max-height:none;opacity:1;padding-bottom:0.5rem;flex:1}.dash-folder-content.collapsed{max-height:0;opacity:0;overflow:hidden}.dash-folder-header{display:flex;align-items:center;justify-content:space-between;gap:0.5rem}.dash-folder-select{margin-left:auto;width:18px;height:18px;cursor:pointer;accent-color:var(--accent)}' +
-    '.btn-dash-review{padding:0.65rem 1.25rem;border-radius:8px;background:var(--correct);border:1.5px solid var(--correct);color:#ffffff;font-weight:700;font-size:0.85rem;cursor:pointer;transition:all var(--transition);margin-left:auto}.btn-dash-review:hover{opacity:0.85}.btn-dash-review:disabled{opacity:0.4;cursor:not-allowed}' +
-    '.dash-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-muted);font-style:italic}';
-  document.head.appendChild(_trackerStyle);
-  
+  // Expose for dash-ui.js (loaded after this file)
+  window.__IndexEngineBase = ENGINE_BASE;
+
+  /* ── Bootstrap: load shared dependencies if not present ─────── */
+  if (!window.__TrackerStorageLoaded || !window.__DashUILoaded) {
+    var deps = '';
+    if (!window.__TrackerStorageLoaded) deps += '<script src="' + ENGINE_BASE + 'tracker-storage.js"><\/script>';
+    if (!window.__DashUILoaded) deps += '<script src="' + ENGINE_BASE + 'dash-ui.js"><\/script>';
+    deps += '<script src="' + ENGINE_BASE + 'index-engine.js"><\/script>';
+    document.write(deps);
+    return;
+  }
+
+  // Initialize tracker root name for path computation
+  QuizTracker.initRootName(ENGINE_BASE);
+
+
   /* ── Toast Notification Styles ────────────────────────────── */
   var _toastStyle = document.createElement('style');
   _toastStyle.textContent = '.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:0.65rem 1.2rem;font-size:0.88rem;font-weight:500;box-shadow:var(--shadow);z-index:9999;transition:transform 0.3s ease,opacity 0.3s ease;white-space:nowrap;display:flex;align-items:center;gap:0.5rem;max-width:90%}.toast.show{transform:translateX(-50%) translateY(0)}';
@@ -32,40 +43,6 @@
   _toastEl.className = 'toast';
   document.body.appendChild(_toastEl);
   
-  /* ── Clear Tracker Modal HTML ─────────────────────────────── */
-  var _modalEl = document.createElement('div');
-  _modalEl.className = 'modal-overlay';
-  _modalEl.id = 'clear-tracker-modal';
-  _modalEl.innerHTML = '<div class="modal"><h3>Clear Questions?</h3><p id="clear-tracker-message">Are you sure you want to clear all questions for this section? This cannot be undone.</p><div class="modal-actions"><button class="btn-cancel" onclick="closeClearTrackerModal()">Go Back</button><button class="btn-confirm danger" onclick="clearAllTrackerData()">Clear Now</button></div></div>';
-  document.body.appendChild(_modalEl);
-  
-  /* ── Tracker Dashboard HTML ───────────────────────────────── */
-  var _dashEl = document.createElement('div');
-  _dashEl.className = 'dash-overlay';
-  _dashEl.id = 'tracker-dashboard';
-  _dashEl.innerHTML = '<div class="dash-modal">' +
-    '<div class="dash-header">' +
-      '<h2 id="dash-title-text">📊 Question Tracker</h2>' +
-      '<button id="dash-master-toggle" class="dash-master-toggle" onclick="toggleMasterSelection()"></button>' +
-      '<button class="dash-close-btn" onclick="closeTrackerDashboard()">✕</button>' +
-    '</div>' +
-    '<div class="dash-scope-bar" id="dash-scope-bar">' +
-      '<div id="dash-scope-tabs"></div>' +
-    '</div>' +
-    '<div class="dash-summary">' +
-      '<div class="dash-stat"><div class="ds-val red" id="dash-total-wrong">0</div><div class="ds-lbl">Wrong</div></div>' +
-      '<div class="dash-stat"><div class="ds-val blue" id="dash-total-flagged">0</div><div class="ds-lbl">Flagged</div></div>' +
-      '<div class="dash-stat"><div class="ds-val green" id="dash-total-quizzes">0</div><div class="ds-lbl">Quizzes</div></div>' +
-    '</div>' +
-    '<div class="dash-body" id="dash-body"></div>' +
-    '<div class="dash-footer">' +
-      '<button class="btn-dash-action" onclick="exportTrackerToPDF()" title="Export to PDF">📄 Export PDF</button>' +
-      '<button class="btn-dash-action btn-dash-danger" onclick="confirmClearTrackerData()">🗑 Clear All</button>' +
-      '<button class="btn-dash-review" id="btn-start-review" onclick="startReviewMode()">▶ Start Review</button>' +
-    '</div>' +
-  '</div>';
-  document.body.appendChild(_dashEl);
-
   /* ── Toast Function ───────────────────────────────────────── */
   var toastTimer;
   window.showToast = function(msg) {
@@ -127,727 +104,12 @@
     }).join('');
   };
 
-  /* ── Tracker storage ───────────────────────────────────────── */
-  var STORAGE_PREFIX = 'quiz_tracker_v2_';
-  var KEYS_LIST_KEY  = 'quiz_tracker_keys';
+  /* ── Tracker storage (using shared QuizTracker API) ────────── */
+  // All storage, path normalization, and data functions are now in tracker-storage.js
+  // Access via: QuizTracker.getAllTrackerData(), QuizTracker.getDataForScope(), etc.
+  // Dashboard UI is now in dash-ui.js — functions accessed via window.* globals
 
-  function getStorageKey(uid) { return STORAGE_PREFIX + uid; }
 
-  /* -- Get the project root name from ENGINE_BASE (e.g. "MU61S8") -- */
-  var _rootName = '';
-  try {
-    _rootName = new URL(ENGINE_BASE || '', location.href).pathname
-      .replace(/\/$/, '').replace(/^\//, '');
-  } catch (e) {}
-
-  /* -- Normalize a stored d.path by stripping the project root prefix -- */
-  function _normStoredPath(p) {
-    if (!p) return '';
-    var s = p.replace(/^\//, '');
-    if (_rootName && s.indexOf(_rootName + '/') === 0) {
-      s = s.substring(_rootName.length + 1);
-    } else if (_rootName && s === _rootName) {
-      s = '';
-    }
-    return s;
-  }
-
-  /* -- Normalize a folder path to strip the project root prefix --
-     e.g. "MU61S8/gyn/dep/" -> "gyn/dep/"
-     e.g. "gyn/dep/" -> "gyn/dep/" (no change) */
-  function _normalizeFolderPath(p) {
-    if (!p) return '';
-    var s = p.replace(/^\//, '');
-    if (_rootName && s.indexOf(_rootName + '/') === 0) {
-      s = s.substring(_rootName.length + 1);
-    } else if (_rootName && s === _rootName) {
-      s = '';
-    }
-    // Ensure trailing slash
-    if (s && s.charAt(s.length - 1) !== '/') s += '/';
-    return s;
-  }
-
-  /* -- Get folder segments RELATIVE to ENGINE_BASE (project root) --
-     e.g. "/MU61S8/gyn/dep/index.html" -> ["gyn", "gyn/dep"]
-     This matches the format used by computeFolderPath() in quiz/bank-engine.js */
-  function getFolderSegments(path) {
-    var cleaned = path.replace(/\/[^\/]*$/, '').replace(/^\//, '');
-    // Strip project root prefix
-    if (_rootName && cleaned.indexOf(_rootName + '/') === 0) {
-      cleaned = cleaned.substring(_rootName.length + 1);
-    } else if (_rootName && cleaned === _rootName) {
-      cleaned = '';
-    }
-    var parts = cleaned.split('/').filter(Boolean);
-    var segs = [];
-    for (var i = 0; i < parts.length; i++) segs.push(parts.slice(0, i + 1).join('/'));
-    return segs;
-  }
-
-  function getAllTrackerData() {
-    try {
-      var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
-      var results = [];
-      keys.forEach(function (uid) {
-        var raw = localStorage.getItem(getStorageKey(uid));
-        if (raw) try { results.push(JSON.parse(raw)); } catch (e) {}
-      });
-      return results;
-    } catch (e) { return []; }
-  }
-
-  function getDataForScope(scope, scopePath) {
-    var all = getAllTrackerData();
-    if (scope === 'folder' && scopePath) {
-      var target = scopePath.replace(/^\/|\/$/g, ''); // normalize: remove leading/trailing slashes
-      return all.filter(function (d) {
-        // Check stored folderPath (ENGINE_BASE-relative) and d.path (full URL, normalized)
-        var fp = (d.folderPath || '').replace(/^\/|\/$/g, '');
-        var dp = _normStoredPath(d.path);
-        // Extract folder from full path for comparison
-        var dpFolder = '';
-        if (dp) {
-          var dpParts = dp.split('/');
-          if (dpParts.length > 1) {
-            dpFolder = dpParts.slice(0, -1).join('/').replace(/^\/|\/$/g, '');
-          }
-        }
-        // Match if the quiz's folder starts with the target folder path
-        // This ensures "gyn/dep" matches when target is "gyn", but "gyn-extra" does not
-        return (fp && (fp === target || fp.indexOf(target + '/') === 0)) 
-            || (dpFolder && (dpFolder === target || dpFolder.indexOf(target + '/') === 0));
-      });
-    }
-    return all;
-  }
-
-  /* ── Folder title cache ────────────────────────────────────── */
-  var _folderTitleCache = {};
-
-  /* Extract folder path from tracker entry — prefer stored folderPath,
-     otherwise fall back to deriving it from the URL path relative to ENGINE_BASE.
-     ALWAYS normalizes the result to be relative to the project root. */
-  function getFolderForEntry(d) {
-    var raw = '';
-
-    // Use folderPath stored by quiz-engine.js (relative to project root)
-    if (d.folderPath) {
-      raw = d.folderPath;
-    } else {
-      // Fallback: derive from d.path relative to ENGINE_BASE
-      try {
-        var rootAbs = new URL(ENGINE_BASE || '', location.href).href;
-        // Build absolute URL from stored path
-        var absUrl = new URL(d.path || '', location.origin).href;
-        if (absUrl.indexOf(rootAbs) === 0) {
-          var relative = absUrl.substring(rootAbs.length);
-          raw = relative.replace(/[^/]*$/, '') || '';
-        }
-      } catch (e) {}
-
-      // Last resort: extract from d.path and strip root prefix
-      if (!raw && d.path) {
-        var cleaned = d.path.replace(/^\//, '').replace(/\\/g, '/');
-        var parts = cleaned.split('/');
-        if (parts.length > 1) raw = parts.slice(0, -1).join('/') + '/';
-      }
-    }
-
-    // ALWAYS normalize: strip project root prefix to get relative path
-    return _normalizeFolderPath(raw);
-  }
-
-  /* Get the top-level folder from a full folder path for grouping.
-     e.g. "gyn/dep/" → "gyn/", "Cardio/" → "Cardio/" */
-  function getTopLevelFolder(folderPath) {
-    if (!folderPath) return '';
-    var parts = folderPath.replace(/\/$/, '').split('/');
-    return parts.length > 0 ? parts[0] + '/' : '';
-  }
-
-  function fetchFolderTitle(folderPath) {
-    if (!folderPath) return Promise.resolve(null);
-    if (_folderTitleCache[folderPath]) return Promise.resolve(_folderTitleCache[folderPath]);
-
-    try {
-      var rootAbs = new URL(ENGINE_BASE || '', location.href).href;
-      var indexUrl = rootAbs + folderPath + 'index.html';
-      return fetch(indexUrl)
-        .then(function (resp) {
-          if (!resp.ok) return null;
-          return resp.text();
-        })
-        .then(function (html) {
-          if (!html) return null;
-          var match = html.match(/<title>([^<]+)<\/title>/i);
-          if (match) {
-            var title = cleanTitle(match[1].trim());
-            if (title) _folderTitleCache[folderPath] = title;
-            return title;
-          }
-          return null;
-        })
-        .catch(function () { return null; });
-    } catch (e) {
-      return Promise.resolve(null);
-    }
-  }
-
-  /* Discover and cache folder titles for entries that don't have stored folderTitle */
-  function discoverAndCacheFolderTitles(data) {
-    var folders = {};
-    data.forEach(function (d) {
-      if (d.folderTitle) {
-        // ONLY cache for the exact folder path — never derive parent titles
-        // from child data (that causes wrong titles like surg showing Gynecology).
-        var folder = _normalizeFolderPath(d.folderPath) || getFolderForEntry(d);
-        if (folder && !_folderTitleCache[folder]) {
-          _folderTitleCache[folder] = cleanTitle(d.folderTitle);
-        }
-      }
-    });
-    // For entries without stored folderTitle, try to fetch from index.html
-    data.forEach(function (d) {
-      if (!d.folderTitle) {
-        var folder = _normalizeFolderPath(d.folderPath) || getFolderForEntry(d);
-        if (folder && !_folderTitleCache[folder]) {
-          folders[folder] = true;
-        }
-      }
-    });
-    // Also fetch titles for parent folders that are still missing
-    data.forEach(function (d) {
-      var folder = _normalizeFolderPath(d.folderPath) || getFolderForEntry(d);
-      if (folder) {
-        var top = getTopLevelFolder(folder);
-        if (top && top !== folder && !_folderTitleCache[top]) {
-          folders[top] = true;
-        }
-      }
-    });
-    var promises = [];
-    Object.keys(folders).forEach(function (folder) {
-      promises.push(fetchFolderTitle(folder));
-    });
-    return Promise.all(promises);
-  }
-
-  /* ── Badge ─────────────────────────────────────────────────── */
-  function updateBadge() {
-    var segments = getFolderSegments(location.pathname);
-    var folderPath = segments.length > 0 ? segments[segments.length - 1] : '';
-    var data = folderPath
-      ? getAllTrackerData().filter(function (d) {
-          var fp = (d.folderPath || '').replace(/^\//, '');
-          var dp = _normStoredPath(d.path);
-          var target = folderPath.replace(/^\//, '');
-          return (fp && fp.indexOf(target) === 0) || (dp && dp.indexOf(target) === 0);
-        })
-      : getAllTrackerData();
-    var total = 0;
-    data.forEach(function (d) { total += (d.wrong || []).length + (d.flagged || []).length; });
-    var badge = document.getElementById('tracker-badge-count');
-    if (badge) badge.textContent = total > 0 ? total : '';
-  }
-
-  /* ── Scope state ───────────────────────────────────────────── */
-  var currentScope = 'folder';
-  var currentScopePath = '';
-  var _activeDashboard = null; // null | 'tracker' | 'review'
-
-  /* ── Extract a clean folder display name from a full HTML <title> ── */
-  function cleanTitle(raw) {
-    if (!raw) return '';
-    // Strip common prefixes like "QuizTool - ", "MU61 Quiz - ", "Mansoura MCQ - ", etc.
-    return raw.replace(/^(?:QuizTool|MU61\s+Quiz|Mansoura\s+MCQ)\s*[-–—]\s*/i, '').trim();
-  }
-
-  window.openTrackerDashboard = function (scope, fromPopState) {
-    if (!fromPopState) {
-      history.pushState({ dash: 'tracker' }, '');
-    }
-    _activeDashboard = 'tracker';
-
-    // Reset selection state when opening dashboard (all folders selected by default)
-    _selectedQuizzes = {};
-
-    // Reset footer review button text and action
-    var revBtn = document.getElementById('btn-start-review');
-    if (revBtn) {
-      revBtn.textContent = '▶ Start Review';
-      revBtn.onclick = startReviewMode;
-    }
-
-    var segments = getFolderSegments(location.pathname);
-    if (segments.length > 0) {
-      currentScope = 'folder';
-      currentScopePath = segments[segments.length - 1];
-    } else {
-      currentScope = 'all';
-      currentScopePath = '';
-    }
-    var scopeBar = document.getElementById('dash-scope-bar');
-    if (!scopeBar) return;
-
-    // Step 1: Pre-cache titles from document.title (current page only)
-    var pageFolder = segments.length > 0 ? segments[segments.length - 1] + '/' : '';
-    if (pageFolder && !_folderTitleCache[pageFolder]) {
-      var cleaned = cleanTitle(document.title);
-      if (cleaned) _folderTitleCache[pageFolder] = cleaned;
-    }
-
-    // Step 2: Pre-cache from stored tracker data (sync — only for EXACT folder paths).
-    // Do NOT set parent folder titles here — that causes wrong titles (e.g., surg gets Gynecology).
-    // Parent folder titles are resolved via eager fetch from the parent's own index.html.
-    var allData = getAllTrackerData();
-    allData.forEach(function (d) {
-      if (d.folderTitle) {
-        var f = _normalizeFolderPath(d.folderPath) || '';
-        if (f && !_folderTitleCache[f]) {
-          _folderTitleCache[f] = cleanTitle(d.folderTitle);
-        }
-      }
-    });
-
-    // Step 3: Eagerly fetch any folder titles that are still missing BEFORE building tabs.
-    // This is critical for parent-folder tabs whose index.html we haven't loaded yet.
-    var foldersToFetch = [];
-    if (segments.length >= 1) {
-      var fk1 = segments[segments.length - 1] + '/';
-      if (!_folderTitleCache[fk1]) foldersToFetch.push(fk1);
-    }
-    if (segments.length >= 2) {
-      var fk2 = segments[segments.length - 2] + '/';
-      if (!_folderTitleCache[fk2]) foldersToFetch.push(fk2);
-    }
-    // Also fetch the top-level subject folder if we have 3+ depth
-    if (segments.length >= 3) {
-      var fk3 = segments[segments.length - 3] + '/';
-      if (!_folderTitleCache[fk3]) foldersToFetch.push(fk3);
-    }
-
-    var buildTabs = function () {
-      var tabs = [];
-      if (segments.length >= 1) {
-        var folderKey = segments[segments.length - 1] + '/';
-        var folderLabel = _folderTitleCache[folderKey] || decodeURIComponent(segments[segments.length - 1]);
-        tabs.push({ id: 'folder', label: folderLabel, path: segments[segments.length - 1], level: segments.length - 1 });
-      }
-      if (segments.length >= 2) {
-        for (var i = 0; i < segments.length - 1; i++) {
-          var folderKey = segments[i] + '/';
-          var folderLabel = _folderTitleCache[folderKey] || decodeURIComponent(segments[i]);
-          tabs.push({ id: 'folder', label: folderLabel, path: segments[i], level: i });
-        }
-      }
-      tabs.push({ id: 'all', label: 'All Quizzes', path: '' });
-
-      var tabsContainer = document.getElementById('dash-scope-tabs');
-      if (!tabsContainer) {
-        scopeBar.innerHTML = '<div id="dash-scope-tabs"></div>';
-        tabsContainer = document.getElementById('dash-scope-tabs');
-      }
-      if (!tabsContainer) return;
-
-      var scopeHTML = '';
-      tabs.forEach(function (t, i) {
-        var isActive = t.id === currentScope && (t.id === 'all' || t.path === currentScopePath);
-        scopeHTML += '<button class="dash-scope-tab' + (isActive ? ' active' : '')
-          + '" data-scope="' + t.id + '" data-path="' + (t.path || '') + '"'
-          + ' onclick="switchDashScope(\'' + t.id + '\',\'' + (t.path || '') + '\')">'
-          + escHtml(t.label) + '</button>';
-      });
-      tabsContainer.innerHTML = scopeHTML;
-      
-      renderDashboard();
-      var overlay = document.getElementById('tracker-dashboard');
-      if (overlay) {
-        overlay.classList.remove('closing');
-        overlay.classList.add('open');
-      }
-    };
-
-    // Open dashboard IMMEDIATELY
-    buildTabs();
-
-    // Fetch titles in background to refresh labels later
-    if (foldersToFetch.length > 0) {
-      Promise.all(foldersToFetch.map(function (f) { return fetchFolderTitle(f); }))
-        .then(function () { 
-          // Check if dashboard still open to avoid unnecessary work
-          if (_activeDashboard === 'tracker') buildTabs(); 
-        })
-        .catch(function () {}); 
-    }
-  };
-
-  window.switchDashScope = function (scope, path) {
-    currentScope = scope;
-    currentScopePath = path;
-    document.querySelectorAll('.dash-scope-tab').forEach(function (tab) {
-      tab.classList.toggle('active', tab.getAttribute('data-path') === path && tab.getAttribute('data-scope') === scope);
-    });
-    renderDashboard();
-  };
-
-  /* ── Render dashboard ──────────────────────────────────────── */
-  var _collapsedFolders = {};
-  var _selectedQuizzes = {};
-
-  function renderDashboard() {
-    var data = getDataForScope(currentScope, currentScopePath);
-    var totalWrong = 0, totalFlagged = 0;
-    data.forEach(function (d) { totalWrong += (d.wrong || []).length; totalFlagged += (d.flagged || []).length; });
-
-    var elW = document.getElementById('dash-total-wrong');
-    var elF = document.getElementById('dash-total-flagged');
-    var elQ = document.getElementById('dash-total-quizzes');
-    if (elW) elW.textContent = totalWrong;
-    if (elF) elF.textContent = totalFlagged;
-    if (elQ) elQ.textContent = data.length;
-
-    var body = document.getElementById('dash-body');
-    if (!body) return;
-
-    if (!data.length) {
-      body.innerHTML = '<div class="dash-empty"><div class="dash-empty-icon">\uD83D\uDCCB</div>'
-        + '<p>No tracked questions yet.<br>Complete a quiz to start tracking wrong and flagged questions.</p></div>';
-      return;
-    }
-
-    data.sort(function (a, b) { return (b.timestamp || 0) - (a.timestamp || 0); });
-
-    // 1. Render IMMEDIATELY with current cache (Optimistic Render)
-    // This makes the dashboard pop up instantly with raw paths if titles are missing.
-    renderDashboardContent(body, data);
-    updateMasterToggleState(data);
-
-    // 2. Discover missing titles in the background
-    discoverAndCacheFolderTitles(data).then(function () {
-      // 3. Re-render once we have better names
-      // Check if we are still on the tracker dashboard to avoid background layout thrashing
-      if (_activeDashboard === 'tracker') {
-          renderDashboardContent(body, data);
-          updateMasterToggleState(data);
-      }
-    });
-  }
-
-  function updateMasterToggleState(data) {
-    var masterToggle = document.getElementById('dash-master-toggle');
-    if (!masterToggle) return;
-    
-    var allSelected = data.every(function(d) { return _selectedQuizzes[d.uid] !== false; });
-    masterToggle.textContent = allSelected ? 'Deselect All' : 'Select All';
-    masterToggle.classList.toggle('active', allSelected);
-  }
-
-  function renderDashboardContent(body, data) {
-    // Group items by folder
-    var groups = []; // { folder, folderTitle, items }
-    var currentFolder = null;
-    var currentGroup = null;
-
-    data.forEach(function (d) {
-      var wrongItems = d.wrong || [];
-      var flaggedItems = d.flagged || [];
-      var wrongIdxs = {};
-      wrongItems.forEach(function (q) { wrongIdxs[q.idx] = true; });
-      var uniqueFlagged = flaggedItems.filter(function (q) { return !wrongIdxs[q.idx]; });
-      if (!wrongItems.length && !uniqueFlagged.length) return;
-
-      var folder = getFolderForEntry(d);
-      var topFolder = getTopLevelFolder(folder);
-      // Build title lookup: try stored title (cleaned), then cache for folder, then cache for topFolder
-      var storedTitle = d.folderTitle ? cleanTitle(d.folderTitle) : '';
-      var folderTitle = storedTitle || _folderTitleCache[folder] || _folderTitleCache[topFolder] || null;
-
-      // Create a new group for this quiz
-      groups.push({
-        folder: folder,
-        topFolder: topFolder,
-        folderTitle: folderTitle,
-        uid: d.uid,
-        title: d.title || 'Unknown Quiz',
-        wrongItems: wrongItems,
-        flaggedItems: uniqueFlagged,
-        flaggedItemsAll: flaggedItems,
-        timestamp: d.timestamp
-      });
-    });
-
-    var html = '';
-    
-    // Selection buttons removed from here (now a single toggle in scope bar)
-
-    var lastTopFolder = '__none__';
-    var folderGroups = {}; // folder -> [groups]
-
-    // First pass: organize groups by folder
-    groups.forEach(function (g) {
-      if (!g.folder) g.folder = '__root__';
-      if (!folderGroups[g.folder]) folderGroups[g.folder] = [];
-      folderGroups[g.folder].push(g);
-    });
-
-    // Render each folder section
-    Object.keys(folderGroups).forEach(function (folder) {
-      var fGroups = folderGroups[folder];
-      if (!fGroups.length) return;
-
-      var firstGroup = fGroups[0];
-      // Try to get the folder title from multiple sources in order of preference
-      var displayFolderTitle = firstGroup.folderTitle
-        || _folderTitleCache[firstGroup.folder]
-        || decodeURIComponent(firstGroup.folder.replace(/\/$/, ''));
-
-      // Don't show raw folder name if it matches the project root
-      if (displayFolderTitle && displayFolderTitle === _rootName) {
-        displayFolderTitle = '';
-      }
-
-      var isCollapsed = _collapsedFolders[folder] || false;
-      var folderUids = fGroups.map(function(g) { return g.uid; });
-      var isFolderSelected = folderUids.every(function(uid) { return _selectedQuizzes[uid] !== false; });
-
-      if (displayFolderTitle) {
-        html += '<div class="dash-folder-header" style="align-items:center;">';
-        html += '<div class="dash-folder-title" onclick="toggleFolder(\'' + escHtml(folder) + '\')">';
-        html += '<span class="dash-folder-toggle' + (isCollapsed ? ' collapsed' : '') + '">\u25BC</span> ';
-        html += escFolderIcon(escHtml(displayFolderTitle));
-        html += '</div>';
-        html += '<input type="checkbox" class="dash-folder-select" ';
-        html += (isFolderSelected ? 'checked' : '') + ' ';
-        html += 'onclick="event.stopPropagation(); toggleFolderSelection(\'' + escHtml(folder) + '\', this.checked)" ';
-        html += 'title="Select all in folder">';
-        html += '</div>';
-      }
-
-      html += '<div class="dash-folder-content' + (isCollapsed ? ' collapsed' : '') + '" id="folder-content-' + escHtml(folder) + '">';
-
-      if (!isCollapsed) {
-        fGroups.forEach(function (g) {
-          var isQuizSelected = _selectedQuizzes[g.uid] !== false;
-          var dateStr = g.timestamp
-            ? new Date(g.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-            : '';
-
-          html += '<div class="dash-quiz-group">';
-          html += '<div class="dash-quiz-title" style="cursor:pointer; display:flex; align-items:center;" onclick="document.getElementById(\'chk-\'+\''+g.uid+'\').click()">';
-          html += '<input type="checkbox" id="chk-'+g.uid+'" class="dash-quiz-select" style="margin-right:8px; width:16px; height:16px; cursor:pointer; accent-color:var(--accent)" ' + (isQuizSelected ? 'checked' : '') + ' onclick="event.stopPropagation(); toggleQuizSelection(\'' + g.uid + '\', this.checked)"> ';
-          html += escHtml(g.title);
-          if (g.wrongItems.length)   html += ' <span class="quiz-badge wrong-badge">' + g.wrongItems.length + ' wrong</span>';
-          if (g.flaggedItemsAll.length) html += ' <span class="quiz-badge flag-badge">' + g.flaggedItemsAll.length + ' flagged</span>';
-          if (dateStr)             html += ' <span style="font-size:0.7rem;color:var(--text-muted);font-weight:400;margin-left:auto;">' + dateStr + '</span>';
-          html += '</div>';
-
-          g.wrongItems.forEach(function (q) {
-            var isAlsoFlagged = g.flaggedItemsAll.some(function (f) { return f.idx === q.idx; });
-            html += buildItem(g.uid, q, isAlsoFlagged ? 'Wrong + Flagged' : 'Wrong', 'wrong', '\u2717');
-          });
-          g.flaggedItems.forEach(function (q) {
-            html += buildItem(g.uid, q, 'Flagged', 'flagged', '\u2691');
-          });
-          html += '</div>';
-        });
-      }
-
-      html += '</div>'; // close dash-folder-content
-    });
-
-    body.innerHTML = html || '<div class="dash-empty"><div class="dash-empty-icon">\u2705</div><p>No wrong or flagged questions tracked. Great job!</p></div>';
-  }
-
-  function escFolderIcon(title) {
-    // Add a folder icon before the title
-    return '\uD83D\uDCC1 ' + title;
-  }
-
-  function buildItem(uid, q, typeLabel, iconClass, iconText) {
-    var esc = (q.text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    return '<div class="dash-q-item">'
-      + '<div class="dash-q-icon ' + iconClass + '">' + iconText + '</div>'
-      + '<div class="dash-q-content">'
-      +   '<div class="dash-q-num">Q' + ((q.idx || 0) + 1) + ' \u00B7 ' + typeLabel + '</div>'
-      +   '<div class="dash-q-text">' + esc + '</div>'
-      + '</div>'
-      + '<button class="dash-q-remove" onclick="removeTrackerItem(\'' + uid + '\',' + (q.idx || 0) + ')" title="Remove">\u2715</button>'
-      + '</div>';
-  }
-
-  /* ── Close dashboard ───────────────────────────────────────── */
-  window.closeTrackerDashboard = function (fromPopState) {
-    if (!fromPopState && _activeDashboard === 'tracker') {
-      history.back();
-      return;
-    }
-    _activeDashboard = null;
-    var overlay = document.getElementById('tracker-dashboard');
-    if (overlay) {
-      overlay.classList.add('closing');
-      var onEnd = function () {
-        overlay.removeEventListener('animationend', onEnd);
-        overlay.classList.remove('open', 'closing');
-      };
-      overlay.addEventListener('animationend', onEnd);
-    }
-  };
-
-  /* ── Toggle folder collapse ────────────────────────────────── */
-  window.toggleFolder = function (folder) {
-    _collapsedFolders[folder] = !_collapsedFolders[folder];
-    // Re-render because lazy rendering skips collapsed folder children
-    renderDashboard();
-  };
-
-  /* ── Toggle selection logic ───────────────────────────────── */
-  window.toggleQuizSelection = function (uid, checked) {
-    _selectedQuizzes[uid] = checked;
-    renderDashboard();
-  };
-
-  window.toggleFolderSelection = function (folder, checked) {
-    var data = getDataForScope(currentScope, currentScopePath);
-    data.forEach(function(d) {
-       var dFolder = getFolderForEntry(d) || '__root__';
-       if (dFolder === folder) _selectedQuizzes[d.uid] = checked;
-    });
-    renderDashboard();
-  };
-
-  window.toggleAllSelection = function(checked) {
-    var data = getDataForScope(currentScope, currentScopePath);
-    data.forEach(function(d) {
-       _selectedQuizzes[d.uid] = checked;
-    });
-    renderDashboard();
-  };
-
-  window.toggleMasterSelection = function() {
-    var data = getDataForScope(currentScope, currentScopePath);
-    var allSelected = data.every(function(d) { return _selectedQuizzes[d.uid] !== false; });
-    toggleAllSelection(!allSelected);
-  };
-
-  /* ── Remove single item ────────────────────────────────────── */
-  window.removeTrackerItem = function (uid, qIdx) {
-    try {
-      var raw = localStorage.getItem(getStorageKey(uid));
-      if (!raw) return;
-      var data = JSON.parse(raw);
-      data.wrong   = (data.wrong || []).filter(function (q) { return q.idx !== qIdx; });
-      data.flagged = (data.flagged || []).filter(function (q) { return q.idx !== qIdx; });
-      if (!data.wrong.length && !data.flagged.length) {
-        localStorage.removeItem(getStorageKey(uid));
-        var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
-        localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(keys.filter(function (k) { return k !== uid; })));
-      } else {
-        localStorage.setItem(getStorageKey(uid), JSON.stringify(data));
-      }
-      renderDashboard();
-      updateBadge();
-    } catch (e) {}
-  };
-
-  /* ── Batch Remove Items (Performance Update) ── */
-  window.batchRemoveTrackerItems = function (items) {
-    try {
-      var uidMap = {};
-      items.forEach(function(it) {
-        if (!uidMap[it.uid]) uidMap[it.uid] = [];
-        uidMap[it.uid].push(it.idx);
-      });
-
-      var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
-      var keysChanged = false;
-
-      Object.keys(uidMap).forEach(function(uid) {
-        var indices = uidMap[uid];
-        var raw = localStorage.getItem(getStorageKey(uid));
-        if (!raw) return;
-        var data = JSON.parse(raw);
-        data.wrong = (data.wrong || []).filter(function(q) { return !indices.includes(q.idx); });
-        data.flagged = (data.flagged || []).filter(function(q) { return !indices.includes(q.idx); });
-
-        if (!data.wrong.length && !data.flagged.length) {
-          localStorage.removeItem(getStorageKey(uid));
-          keys = keys.filter(function(k) { return k !== uid; });
-          keysChanged = true;
-        } else {
-          localStorage.setItem(getStorageKey(uid), JSON.stringify(data));
-        }
-      });
-      
-      if (keysChanged) {
-        localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(keys));
-      }
-      renderDashboard();
-      updateBadge();
-    } catch (e) {}
-  };
-
-  /* ── Clear all ─────────────────────────────────────────────── */
-  window.confirmClearTrackerData = function () {
-    // Update the message to show current scope
-    var scopeName = getCurrentScopeDisplayName();
-    var messageEl = document.getElementById('clear-tracker-message');
-    if (messageEl && scopeName) {
-      messageEl.textContent = 'Are you sure you want to clear all questions for "' + scopeName + '"? This cannot be undone.';
-    }
-    document.getElementById('clear-tracker-modal').classList.add('open');
-  };
-  
-  window.closeClearTrackerModal = function () {
-    document.getElementById('clear-tracker-modal').classList.remove('open');
-  };
-  
-  window.clearAllTrackerData = function () {
-    // Close modal first
-    closeClearTrackerModal();
-    
-    try {
-      var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
-      var allData = getAllTrackerData();
-      
-      // Filter data based on current scope AND selection
-      var dataToClear = getDataForScope(currentScope, currentScopePath);
-      var uidsToClear = {};
-      dataToClear.forEach(function (d) { 
-        if (_selectedQuizzes[d.uid] !== false) uidsToClear[d.uid] = true; 
-      });
-      
-      // Only remove items that match the current scope
-      keys.forEach(function (uid) {
-        if (uidsToClear[uid]) {
-          localStorage.removeItem(getStorageKey(uid));
-        }
-      });
-      
-      // Update keys list - keep only keys not being cleared
-      var remainingKeys = keys.filter(function (uid) { return !uidsToClear[uid]; });
-      localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(remainingKeys));
-      
-      renderDashboard();
-      updateBadge();
-      showToast('🗑 Questions cleared for this section!');
-    } catch (e) {}
-  };
-  
-  function getCurrentScopeDisplayName() {
-    if (currentScope === 'folder' && currentScopePath) {
-      var folderPath = currentScopePath + '/';
-      if (_folderTitleCache[folderPath]) {
-        return _folderTitleCache[folderPath];
-      }
-      return decodeURIComponent(currentScopePath);
-    } else if (currentScope === 'all') {
-      return 'All Selected Exams';
-    }
-    return 'this section';
-  }
-
-  
   function fetchAndParseQuestions(path) {
     var url = window.location.origin + path;
     if (path && window.location.pathname.endsWith('index.html') && path.startsWith('.')) {
@@ -886,10 +148,10 @@
   var _currentReviewQs = [];
 
   window.startReviewMode = function() {
-    var data = getDataForScope(currentScope, currentScopePath);
+    var data = QuizTracker.getDataForScope(window.__DashState.currentScope, window.__DashState.currentScopePath);
     
     data = data.filter(function(d) {
-        return _selectedQuizzes[d.uid] !== false;
+        return window.__DashState._selectedQuizzes[d.uid] !== false;
     });
 
     if (!data || !data.length) {
@@ -1015,7 +277,7 @@
 
     closeTrackerDashboard(true);
     history.pushState({ dash: 'review' }, '');
-    _activeDashboard = 'review';
+    window.__DashState._activeDashboard = 'review';
 
     var useBank = qs.length > 40;
     var engineScript = useBank ? 'bank-engine.js' : 'quiz-engine.js';
@@ -1089,13 +351,13 @@
 
 
   window.closeReviewMode = function(fromPopState) {
-    if (!fromPopState && (_activeDashboard === 'review' || document.getElementById('review-iframe'))) {
-      if (_activeDashboard === 'review') {
+    if (!fromPopState && (window.__DashState._activeDashboard === 'review' || document.getElementById('review-iframe'))) {
+      if (window.__DashState._activeDashboard === 'review') {
         history.back();
         return;
       }
     }
-    _activeDashboard = null;
+    window.__DashState._activeDashboard = null;
     var iframe = document.getElementById('review-iframe');
     if (iframe) {
       iframe.remove();
@@ -1124,22 +386,22 @@
       // For simplicity, we just close everything if the state is unexpected.
     } else {
       // No dashboard state -> close any open overlays
-      if (_activeDashboard === 'tracker') closeTrackerDashboard(true);
+      if (window.__DashState._activeDashboard === 'tracker') closeTrackerDashboard(true);
       
       // Always check for and remove review iframe when navigating to a non-review state
       var iframe = document.getElementById('review-iframe');
       if (iframe) iframe.remove();
-      if (_activeDashboard === 'review') _activeDashboard = null;
+      if (window.__DashState._activeDashboard === 'review') window.__DashState._activeDashboard = null;
     }
   });
 
   /* ── PDF Export ────────────────────────────────────────────── */
   window.exportTrackerToPDF = function () {
-    var data = getDataForScope(currentScope, currentScopePath);
+    var data = QuizTracker.getDataForScope(window.__DashState.currentScope, window.__DashState.currentScopePath);
     
     // Filter data based on explicitly selected quizzes
     data = data.filter(function (d) {
-      return _selectedQuizzes[d.uid] !== false;
+      return window.__DashState._selectedQuizzes[d.uid] !== false;
     });
 
     if (!data.length) { showToast('No tracked questions to export.'); return; }
@@ -1147,9 +409,9 @@
     var totalWrong = 0, totalFlagged = 0;
     data.forEach(function (d) { totalWrong += (d.wrong || []).length; totalFlagged += (d.flagged || []).length; });
     // Use cached folder title for PDF scope label instead of raw path
-    var scopeFolderKey = currentScopePath ? currentScopePath + '/' : '';
-    var scopeLabel = currentScope === 'folder'
-      ? (_folderTitleCache[scopeFolderKey] || decodeURIComponent(currentScopePath))
+    var scopeFolderKey = window.__DashState.currentScopePath ? window.__DashState.currentScopePath + '/' : '';
+    var scopeLabel = window.__DashState.currentScope === 'folder'
+      ? (QuizTracker._folderTitleCache[scopeFolderKey] || decodeURIComponent(window.__DashState.currentScopePath))
       : 'Selected Exams';
     var now = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -1232,7 +494,7 @@
   };
 
   /* ── Init ──────────────────────────────────────────────────── */
-  updateBadge();
+  // updateBadge() is now called by dash-ui.js on init
   window.__indexEngineReady = true;
 
   /* ── Animation Helpers ─────────────────────────────────────── */

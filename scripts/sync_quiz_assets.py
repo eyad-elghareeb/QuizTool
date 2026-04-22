@@ -10,15 +10,15 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SW_PATH = REPO_ROOT / "sw.js"
 ROOT_CACHE_ASSETS = (
-    "manifest.webmanifest",
-    "favicon.svg",
-    "icon-48.png",
-    "icon-72.png",
-    "icon-96.png",
-    "icon-144.png",
-    "icon-192.png",
-    "icon-512.png",
-    "index-engine.css",
+    "assets/manifest.webmanifest",
+    "assets/favicon.svg",
+    "assets/icon-48.png",
+    "assets/icon-72.png",
+    "assets/icon-96.png",
+    "assets/icon-144.png",
+    "assets/icon-192.png",
+    "assets/icon-512.png",
+    "assets/index-engine.css",
 )
 SKIP_DIRS = {".git", ".github", "__pycache__", "_site", "scripts", "node_modules"}
 GENERIC_DESCRIPTIONS = {"past years exams", "department book mcqs", "quiz loading..."}
@@ -247,7 +247,7 @@ def discover_asset_files() -> list[Path]:
     extensions = {".png", ".svg", ".jpg", ".jpeg", ".css", ".webmanifest", ".js", ".json"}
     paths: list[Path] = []
     # Known engines are handled separately to ensure they are at the top of the list
-    engines = {"quiz-engine.js", "bank-engine.js", "index-engine.js"}
+    engines = {"quiz-engine.js", "bank-engine.js", "index-engine.js", "engines/quiz-engine.js", "engines/bank-engine.js", "engines/index-engine.js"}
     
     for path in REPO_ROOT.rglob("*"):
         if not path.is_file():
@@ -257,7 +257,8 @@ def discover_asset_files() -> list[Path]:
             continue
         if path.suffix.lower() not in extensions:
             continue
-        if path.name in engines or path.name == "sw.js":
+        # Skip engines and sw.js as they are handled or ignored
+        if path.name in engines or rel.as_posix() in engines or path.name == "sw.js":
             continue
         paths.append(path)
     return sorted(paths, key=lambda item: natural_key(item.relative_to(REPO_ROOT).as_posix()))
@@ -273,7 +274,7 @@ def update_service_worker() -> bool:
     # Engine files must always be first in the precache list for prioritized installation
     # Engines are specifically placed first to ensure cache robustness logic in sw.js works.
     engine_paths = []
-    for eng in ["quiz-engine.js", "bank-engine.js", "index-engine.js"]:
+    for eng in ["engines/quiz-engine.js", "engines/bank-engine.js", "engines/index-engine.js"]:
         if (REPO_ROOT / eng).exists():
             engine_paths.append(eng)
             

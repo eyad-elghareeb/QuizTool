@@ -33,23 +33,22 @@ Generate production-ready quiz sites similar to MU61S8 with a single command!
 
 **Generated Project Structure:**
 ```
-project-name/
-├── .github/workflows/           # Auto-deployment workflows
-│   ├── sync-quiz-assets.yml    # Updates index pages & SW precache
-│   └── jekyll-gh-pages.yml     # Deploys to GitHub Pages
+├── engines/                     # Core JS engines
+│   ├── index-engine.js         # Hub page engine
+│   ├── quiz-engine.js          # Quiz playback engine
+│   └── bank-engine.js          # Question bank engine
+├── assets/                      # Static assets & styles
+│   ├── index-engine.css        # Hub page styles
+│   ├── manifest.webmanifest    # PWA manifest
+│   ├── favicon.svg             # SVG favicon
+│   └── icon-*.png              # PWA icons (48px-512px)
 ├── scripts/                     # Asset management scripts
 │   ├── sync_quiz_assets.py     # Auto-sync quiz assets
 │   └── standardize_quiz_files.py
 ├── [folder1]/index.html        # Folder quiz listings
 ├── [folder2]/index.html
 ├── index.html                   # Root hub page
-├── index-engine.js              # Hub page engine
-├── quiz-engine.js               # Quiz playback engine
-├── bank-engine.js               # Question bank engine
 ├── sw.js                        # Service worker (offline support)
-├── manifest.webmanifest         # PWA manifest
-├── favicon.svg                  # SVG favicon
-├── icon-*.png                   # PWA icons (48px-512px)
 ├── quiz-engine-test.html        # Diagnostic page
 └── .gitignore                   # Git ignore rules
 ```
@@ -253,6 +252,20 @@ const QUIZZES = [
 
 ```
 QuizTool/
+├── engines/                      # Shared engines
+│   ├── quiz-engine.js            # Shared quiz engine (handles quiz rendering)
+│   ├── bank-engine.js            # Shared bank engine (handles question banks)
+│   └── index-engine.js           # Shared index engine (handles hub pages)
+├── assets/                       # Shared assets
+│   ├── index-engine.css          # Shared index styles
+│   ├── manifest.webmanifest      # PWA manifest for installability
+│   ├── favicon.svg               # SVG icon for the app
+│   └── icon-*.png                # PWA icons in multiple sizes (48-512px)
+├── generator_templates/          # Templates for the generator
+│   └── index.html                # Generator web UI
+├── scripts/                      # Utility scripts
+│   ├── sync_quiz_assets.py       # Asset synchronization script
+│   └── standardize_quiz_files.py  # File standardization script
 ├── index.html                    # Main hub/landing page
 ├── index-template.html           # Reusable template for custom hub pages
 ├── index-editor.html             # Visual editor for creating index configurations
@@ -265,15 +278,7 @@ QuizTool/
 ├── quiz-template.html            # Base template for generated quizzes
 ├── question-bank-template.html   # Template for question bank files
 ├── generate_project.py           # Production-ready project generator
-├── generator_templates/          # Templates for the generator
-│   └── index.html                # Generator web UI
-├── quiz-engine.js                # Shared quiz engine (handles quiz rendering)
-├── bank-engine.js                # Shared bank engine (handles question banks)
-├── index-engine.js               # Shared index engine (handles hub pages)
 ├── sw.js                         # Service worker for offline support
-├── manifest.webmanifest          # PWA manifest for installability
-├── favicon.svg                   # SVG icon for the app
-├── icon-*.png                    # PWA icons in multiple sizes (48-512px)
 ├── GENERATOR_UPDATES.md          # Documentation for generator updates
 └── README.md                     # This file
 ```

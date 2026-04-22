@@ -344,8 +344,8 @@ Begin extraction now. Output only the JSON array.</textarea>
 
   <!-- Questions array input -->
   <div class="form-group">
-    <label>Paste or Drop QUESTION_BANK Array</label>
-    <textarea id="js-input" placeholder='Paste or drop your questions array (.json, .js) here:
+    <label>Paste QUESTION_BANK Array</label>
+    <textarea id="js-input" placeholder='Paste your questions array here:
 
 [
   {
@@ -1026,44 +1026,7 @@ function showToast(msg) {
   }, 2800);
 }
 
-/* ─── DRAG & DROP ────────────────────────────────────────── */
-function initDragAndDrop() {
-  const dropZone = document.getElementById('js-input');
-  if (!dropZone) return;
-
-  dropZone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    dropZone.style.borderColor = 'var(--accent)';
-    dropZone.style.background = 'var(--surface2)';
-  });
-
-  dropZone.addEventListener('dragleave', (e) => {
-    e.preventDefault();
-    dropZone.style.borderColor = 'var(--border)';
-    dropZone.style.background = 'var(--surface)';
-  });
-
-  dropZone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropZone.style.borderColor = 'var(--border)';
-    dropZone.style.background = 'var(--surface)';
-    
-    const file = e.dataTransfer.files[0];
-    if (file && (file.name.endsWith('.json') || file.name.endsWith('.js') || file.type === 'application/json' || file.type === 'text/javascript')) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        dropZone.value = event.target.result;
-        showToast('✅ File loaded! Click Parse to continue.');
-      };
-      reader.readAsText(file);
-    } else {
-      showToast('⚠️ Please drop a .json or .js file.');
-    }
-  });
-}
-
 init();
-initDragAndDrop();
 
 // Global error handler to catch any uncaught errors
 window.addEventListener('error', function(e) {

@@ -1,6 +1,6 @@
 /* QuizTool — generated precache manifest for all quiz and hub pages.
    CACHE_VERSION is content-hashed by scripts/sync_quiz_assets.py so new files activate automatically. */
-const CACHE_VERSION = 'quiz-cache-bb22c0d1300e';
+const CACHE_VERSION = 'quiz-cache-ff4fd21741e6';
 const CACHE_NAME = 'quiztool-cache-' + CACHE_VERSION;
 
 const GOOGLE_FONT_CSS =
@@ -10,9 +10,9 @@ const HTML2PDF_CDN =
   'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
 
 var PRECACHE_REL_PATHS = [
-  'quiz-engine.js',
-  'bank-engine.js',
-  'index-engine.js',
+  'engines/quiz-engine.js',
+  'engines/bank-engine.js',
+  'engines/index-engine.js',
   'index.html',
   'bank-maker.html',
   'generator_templates/index.html',
@@ -26,21 +26,20 @@ var PRECACHE_REL_PATHS = [
   'quiz-maker-js.html',
   'quiz-maker.html',
   'quiz-template.html',
-  'favicon.svg',
-  'icon-48.png',
-  'icon-72.png',
-  'icon-96.png',
-  'icon-144.png',
-  'icon-192.png',
-  'icon-512.png',
-  'index-engine.css',
-  'manifest.webmanifest'
+  'assets/favicon.svg',
+  'assets/icon-48.png',
+  'assets/icon-72.png',
+  'assets/icon-96.png',
+  'assets/icon-144.png',
+  'assets/icon-192.png',
+  'assets/icon-512.png',
+  'assets/index-engine.css',
+  'assets/manifest.webmanifest'
 ];
 
 /* ── Build a full URL from scope + relative path ── */
 function hrefFromScope(scope, relPath) {
-  var s = scope.endsWith('/') ? scope : scope + '/';
-  return new URL(relPath, s).href;
+  return new URL(relPath, scope).href;
 }
 
 function shouldStore(res) {
@@ -101,13 +100,13 @@ self.addEventListener('install', function (event) {
       var cache = await caches.open(CACHE_NAME);
 
       var REQUIRED = [
-        'quiz-engine.js',
-        'bank-engine.js',
-        'index-engine.js',
-        'index-engine.css',
+        'engines/quiz-engine.js',
+        'engines/bank-engine.js',
+        'engines/index-engine.js',
+        'assets/index-engine.css',
         'index.html',
-        'manifest.webmanifest',
-        'favicon.svg'
+        'assets/manifest.webmanifest',
+        'assets/favicon.svg'
       ];
 
       /* 1. Critical assets — DO NOT CATCH (fails install on error) */
@@ -175,17 +174,9 @@ function handleNavigate(event, request) {
       if (cached) return cached;
 
       /* Try matching without query/hash (some browsers append them) */
-      var url = new URL(request.url);
-      var cleanUrl = url.origin + url.pathname;
+      var cleanUrl = request.url.split('?')[0].split('#')[0];
       cached = await cache.match(cleanUrl);
       if (cached) return cached;
-
-      /* Directory support: if URL ends in / or has no extension, try appending index.html */
-      if (url.pathname.endsWith('/') || !url.pathname.split('/').pop().includes('.')) {
-        var indexUrl = cleanUrl.endsWith('/') ? cleanUrl + 'index.html' : cleanUrl + '/index.html';
-        cached = await cache.match(indexUrl);
-        if (cached) return cached;
-      }
 
       /* Last resort: serve the main hub page */
       var fb = await cache.match(hrefFromScope(self.registration.scope, 'index.html'));
@@ -207,16 +198,16 @@ function handleAsset(event, request) {
       var scope = self.registration.scope;
       if (url.origin === self.location.origin && url.href.indexOf(scope) === 0) {
         var filename = url.pathname.split('/').pop();
-        var SHARED = [
-          'quiz-engine.js',
-          'bank-engine.js',
-          'index-engine.js',
-          'index-engine.css',
-          'manifest.webmanifest',
-          'favicon.svg'
-        ];
-        if (SHARED.indexOf(filename) !== -1) {
-          cached = await cache.match(hrefFromScope(scope, filename));
+        var SHARED_MAPPING = {
+          'quiz-engine.js': 'engines/quiz-engine.js',
+          'bank-engine.js': 'engines/bank-engine.js',
+          'index-engine.js': 'engines/index-engine.js',
+          'index-engine.css': 'assets/index-engine.css',
+          'manifest.webmanifest': 'assets/manifest.webmanifest',
+          'favicon.svg': 'assets/favicon.svg'
+        };
+        if (SHARED_MAPPING[filename]) {
+          cached = await cache.match(hrefFromScope(scope, SHARED_MAPPING[filename]));
         }
       }
     }

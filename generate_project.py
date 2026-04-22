@@ -38,7 +38,7 @@ def read_file(name):
     return ''
 
 # Read quiz engine test HTML if it exists
-QUIZ_ENGINE_TEST_HTML = read_file('quiz-engine-test.html')
+QUIZ_ENGINE_TEST_HTML = read_file('engines/quiz-engine-test.html') or read_file('quiz-engine-test.html')
 
 FAVICON_SVG = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <rect width="100" height="100" rx="22" fill="#0d1117"/>
@@ -268,10 +268,10 @@ self.addEventListener('fetch', function (event) {
     return sw_content
 
 SW_JS = read_file('sw.js')
-INDEX_ENGINE_JS = read_file('index-engine.js')
-INDEX_ENGINE_CSS = read_file('index-engine.css')
-QUIZ_ENGINE_JS = read_file('quiz-engine.js')
-BANK_ENGINE_JS = read_file('bank-engine.js')
+INDEX_ENGINE_JS = read_file('engines/index-engine.js')
+INDEX_ENGINE_CSS = read_file('assets/index-engine.css')
+QUIZ_ENGINE_JS = read_file('engines/quiz-engine.js')
+BANK_ENGINE_JS = read_file('engines/bank-engine.js')
 
 # Read sync scripts from QuizTool's own scripts/ folder (self-contained, no MU61S8 dependency)
 _SCRIPTS_DIR = BASE_DIR / 'scripts'
@@ -384,7 +384,7 @@ def read_icon(name):
 
 ICON_FILES = {}
 for icon_name in ['icon-48.png', 'icon-72.png', 'icon-96.png', 'icon-144.png', 'icon-192.png', 'icon-512.png']:
-    data = read_icon(icon_name)
+    data = read_icon(f'assets/{icon_name}') or read_icon(icon_name)
     if data:
         ICON_FILES[icon_name] = data
 
@@ -399,43 +399,43 @@ MANIFEST_JSON = lambda name: json.dumps({
     "theme_color": "#0d1117",
     "icons": [
         {
-            "src": "favicon.svg",
+            "src": "assets/favicon.svg",
             "sizes": "any",
             "type": "image/svg+xml",
             "purpose": "any"
         },
         {
-            "src": "icon-48.png",
+            "src": "assets/icon-48.png",
             "sizes": "48x48",
             "type": "image/png",
             "purpose": "any"
         },
         {
-            "src": "icon-72.png",
+            "src": "assets/icon-72.png",
             "sizes": "72x72",
             "type": "image/png",
             "purpose": "any"
         },
         {
-            "src": "icon-96.png",
+            "src": "assets/icon-96.png",
             "sizes": "96x96",
             "type": "image/png",
             "purpose": "any"
         },
         {
-            "src": "icon-144.png",
+            "src": "assets/icon-144.png",
             "sizes": "144x144",
             "type": "image/png",
             "purpose": "any"
         },
         {
-            "src": "icon-192.png",
+            "src": "assets/icon-192.png",
             "sizes": "192x192",
             "type": "image/png",
             "purpose": "any maskable"
         },
         {
-            "src": "icon-512.png",
+            "src": "assets/icon-512.png",
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "any maskable"
@@ -602,10 +602,10 @@ def gen_index_html(topbar_title, hero_title, hero_desc, quizzes,
     """
     q_json = json.dumps(quizzes, indent=2)
     sw_path = engine_prefix + 'sw.js'
-    manifest_path = engine_prefix + 'manifest.webmanifest'
-    favicon_path = engine_prefix + 'favicon.svg'
-    engine_path = engine_prefix + 'index-engine.js'
-    css_path = engine_prefix + 'index-engine.css'
+    manifest_path = engine_prefix + 'assets/manifest.webmanifest'
+    favicon_path = engine_prefix + 'assets/favicon.svg'
+    engine_path = engine_prefix + 'engines/index-engine.js'
+    css_path = engine_prefix + 'assets/index-engine.css'
 
     back_btn = ''
     if parent_path:
@@ -686,18 +686,18 @@ def build_project_zip(config):
     
     # Collect all file paths for service worker precaching
     all_file_paths = [
-        'index-engine.js',
-        'index-engine.css',
-        'quiz-engine.js',
-        'bank-engine.js',
-        'favicon.svg',
-        'manifest.webmanifest'
+        'engines/index-engine.js',
+        'assets/index-engine.css',
+        'engines/quiz-engine.js',
+        'engines/bank-engine.js',
+        'assets/favicon.svg',
+        'assets/manifest.webmanifest'
     ]
     
     # Add icon files
     all_file_paths.extend([
-        'icon-48.png', 'icon-72.png', 'icon-96.png',
-        'icon-144.png', 'icon-192.png', 'icon-512.png'
+        'assets/icon-48.png', 'assets/icon-72.png', 'assets/icon-96.png',
+        'assets/icon-144.png', 'assets/icon-192.png', 'assets/icon-512.png'
     ])
     
     # Add quiz-engine-test.html if it exists
@@ -770,20 +770,20 @@ def build_project_zip(config):
 
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
 
-        # --- Shared engines (root level) ---
-        zf.writestr('index-engine.js', INDEX_ENGINE_JS)
-        zf.writestr('index-engine.css', INDEX_ENGINE_CSS)
-        zf.writestr('quiz-engine.js', QUIZ_ENGINE_JS)
-        zf.writestr('bank-engine.js', BANK_ENGINE_JS)
-
+        # --- Shared engines ---
+        zf.writestr('engines/index-engine.js', INDEX_ENGINE_JS)
+        zf.writestr('assets/index-engine.css', INDEX_ENGINE_CSS)
+        zf.writestr('engines/quiz-engine.js', QUIZ_ENGINE_JS)
+        zf.writestr('engines/bank-engine.js', BANK_ENGINE_JS)
+        
         # --- Static assets ---
-        zf.writestr('favicon.svg', FAVICON_SVG)
+        zf.writestr('assets/favicon.svg', FAVICON_SVG)
         zf.writestr('sw.js', sw_js_content)  # Use dynamically generated sw.js
-        zf.writestr('manifest.webmanifest', MANIFEST_JSON(project_name))
+        zf.writestr('assets/manifest.webmanifest', MANIFEST_JSON(project_name))
 
         # --- Icon files (PNG icons for PWA) ---
         for icon_name, icon_data in ICON_FILES.items():
-            zf.writestr(icon_name, icon_data)
+            zf.writestr(f'assets/{icon_name}', icon_data)
 
         # --- Diagnostic test page ---
         if QUIZ_ENGINE_TEST_HTML:

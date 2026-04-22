@@ -330,7 +330,7 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
 .dash-close-btn:hover { color: var(--text); border-color: var(--accent); }
 
 .dash-scope-bar { 
-  display: flex; align-items: center; padding: 0 1.25rem;
+  display: flex; align-items: center; justify-content: space-between; padding: 0 1.25rem;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
@@ -338,14 +338,13 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
   display: flex; gap: 0;
 }
 .dash-master-toggle {
-  background: var(--surface2); border: 1px solid var(--border); font-size: 0.72rem; font-weight: 700;
-  color: var(--text-muted); cursor: pointer; padding: 0.45rem 0.75rem;
-  border-radius: 6px; transition: all 0.2s var(--ease-out); white-space: nowrap;
-  text-transform: uppercase; letter-spacing: 0.04em;
-  margin-right: 0.2rem;
+  background: none; border: none; font-size: 0.7rem; font-weight: 700;
+  color: var(--text-muted); cursor: pointer; padding: 0.4rem 0.6rem;
+  border-radius: 6px; transition: color 0.2s var(--ease-out), background 0.2s var(--ease-out); white-space: nowrap;
+  text-transform: uppercase; letter-spacing: 0.03em;
 }
-.dash-master-toggle:hover { color: var(--text); border-color: var(--accent); }
-.dash-master-toggle.active { color: var(--accent); border-color: var(--accent); background: var(--accent-dim); }
+.dash-master-toggle:hover { color: var(--accent); background: var(--surface2); }
+.dash-master-toggle.active { color: var(--accent); }
 .dash-scope-tab {
   padding: 0.5rem 0.85rem;
   font-size: 0.75rem;
