@@ -46,11 +46,11 @@
   _dashEl.innerHTML = '<div class="dash-modal">' +
     '<div class="dash-header">' +
       '<h2 id="dash-title-text">📊 Question Tracker</h2>' +
+      '<button id="dash-master-toggle" class="dash-master-toggle" onclick="toggleMasterSelection()"></button>' +
       '<button class="dash-close-btn" onclick="closeTrackerDashboard()">✕</button>' +
     '</div>' +
     '<div class="dash-scope-bar" id="dash-scope-bar">' +
       '<div id="dash-scope-tabs"></div>' +
-      '<button id="dash-master-toggle" class="dash-master-toggle" onclick="toggleMasterSelection()"></button>' +
     '</div>' +
     '<div class="dash-summary">' +
       '<div class="dash-stat"><div class="ds-val red" id="dash-total-wrong">0</div><div class="ds-lbl">Wrong</div></div>' +
@@ -380,6 +380,13 @@
     }
 
     var segments = getFolderSegments(location.pathname);
+    if (segments.length > 0) {
+      currentScope = 'folder';
+      currentScopePath = segments[segments.length - 1];
+    } else {
+      currentScope = 'all';
+      currentScopePath = '';
+    }
     var scopeBar = document.getElementById('dash-scope-bar');
     if (!scopeBar) return;
 
@@ -437,13 +444,11 @@
       tabs.push({ id: 'all', label: 'All Quizzes', path: '' });
 
       var tabsContainer = document.getElementById('dash-scope-tabs');
-      var masterToggle = document.getElementById('dash-master-toggle');
-      if (!tabsContainer || !masterToggle) {
-        scopeBar.innerHTML = '<div id="dash-scope-tabs"></div><button id="dash-master-toggle" class="dash-master-toggle" onclick="toggleMasterSelection()"></button>';
+      if (!tabsContainer) {
+        scopeBar.innerHTML = '<div id="dash-scope-tabs"></div>';
         tabsContainer = document.getElementById('dash-scope-tabs');
-        masterToggle = document.getElementById('dash-master-toggle');
       }
-      if (!tabsContainer || !masterToggle) return;
+      if (!tabsContainer) return;
 
       var scopeHTML = '';
       tabs.forEach(function (t, i) {
