@@ -435,6 +435,7 @@ input[type=radio] { display: none; }
   flex: 1; overflow-y: auto;
   padding: 1.5rem;
   display: flex; flex-direction: column; gap: 1.25rem;
+  contain: layout style;
 }
 .question-area::-webkit-scrollbar { width: 6px; }
 .question-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
@@ -480,7 +481,7 @@ input[type=radio] { display: none; }
   border: 1.5px solid var(--border);
   background: var(--surface);
   cursor: pointer;
-  transition: all var(--transition);
+  transition: border-color var(--transition), background var(--transition), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   overflow: hidden;
 }
@@ -501,7 +502,7 @@ input[type=radio]:checked + .option-label { border-color: var(--accent); backgro
   border: 1.5px solid var(--border);
   display: flex; align-items: center; justify-content: center;
   font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
-  transition: all var(--transition);
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
   z-index: 1; text-transform: uppercase;
 }
 input[type=radio]:checked + .option-label .option-key { background: var(--accent); border-color: var(--accent); color: #000; }
@@ -796,179 +797,93 @@ input[type=radio]:checked + .option-label .option-key { background: var(--accent
 }
 .btn-export-pdf:hover { border-color: var(--accent); color: var(--accent); opacity: 1; }
 
-.hidden { display: none !important; }
-
-
-
 /* ═══════════════════════════════════════════
-   QUESTION TRACKER DASHBOARD
-   ═══════════════════════════════════════════ */
-/* Dashboard overlay */
-.dash-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.85);
-  z-index: 2000;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-  animation: dashFadeIn 0.2s ease;
-}
-.dash-overlay.open { display: flex; }
-@keyframes dashFadeIn { from { opacity: 0; } to { opacity: 1; } }
+   HIGHLIGHT & STRIKETHROUGH
+═══════════════════════════════════════════ */
+.q-highlight { border-radius: 2px; padding: 1px 0; transition: background 0.15s ease; color: var(--text); }
+.q-highlight.hl-color-1 { background: rgba(255,213,79,0.35); }
+.q-highlight.hl-color-2 { background: rgba(129,199,132,0.35); }
+.q-highlight.hl-color-3 { background: rgba(100,181,246,0.35); }
+.q-highlight.hl-color-4 { background: rgba(239,154,154,0.35); }
+[data-theme="light"] .q-highlight.hl-color-1 { background: rgba(255,213,79,0.55); }
+[data-theme="light"] .q-highlight.hl-color-2 { background: rgba(129,199,132,0.5); }
+[data-theme="light"] .q-highlight.hl-color-3 { background: rgba(100,181,246,0.5); }
+[data-theme="light"] .q-highlight.hl-color-4 { background: rgba(239,154,154,0.5); }
 
-.dash-modal {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  width: 100%;
-  max-width: 680px;
-  max-height: 85vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
-  animation: dashSlideUp 0.25s ease;
+.strikethrough .option-text { text-decoration: line-through; opacity: 0.45; }
+.st-toggle-btn {
+  width: 24px; height: 24px; border-radius: 5px;
+  background: var(--surface2); border: 1px solid var(--border);
+  display: none; align-items: center; justify-content: center;
+  color: var(--text-muted); font-size: 0.7rem; cursor: pointer;
+  transition: all 0.15s ease; flex-shrink: 0; margin-left: auto;
+  position: relative; z-index: 2;
 }
-@keyframes dashSlideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+.st-toggle-btn:hover { border-color: var(--wrong); color: var(--wrong); background: var(--wrong-bg); }
+.st-toggle-btn.active { background: var(--wrong-bg); border-color: var(--wrong); color: var(--wrong); }
+.highlighter-active .st-toggle-btn { display: flex; }
 
-.dash-header {
-  display: flex; align-items: center; gap: 0.75rem;
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
+/* Color button styles (used by topbar color picker) */
+.hl-color-btn {
+  width: 22px; height: 22px; border-radius: 5px; border: 2px solid transparent;
+  cursor: pointer; transition: all 0.12s ease;
 }
-.dash-header h2 {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.2rem;
-  flex: 1;
+.hl-color-btn:hover { transform: scale(1.15); }
+.hl-color-btn.cb-1 { background: rgba(255,213,79,0.7); }
+.hl-color-btn.cb-2 { background: rgba(129,199,132,0.7); }
+.hl-color-btn.cb-3 { background: rgba(100,181,246,0.7); }
+.hl-color-btn.cb-4 { background: rgba(239,154,154,0.7); }
+.hl-erase-btn {
+  width: 22px; height: 22px; border-radius: 5px; border: 1px solid var(--border);
+  background: var(--surface2); cursor: pointer; display: flex; align-items: center;
+  justify-content: center; font-size: 0.65rem; color: var(--text-muted); transition: all 0.12s ease;
 }
-.dash-close-btn {
-  width: 34px; height: 34px;
-  border-radius: 8px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
+.hl-erase-btn:hover { border-color: var(--wrong); color: var(--wrong); }
+
+.hl-mode-btn {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: var(--surface2); border: 1px solid var(--border);
   display: flex; align-items: center; justify-content: center;
-  color: var(--text-muted);
-  font-size: 1.1rem;
-  cursor: pointer;
-  transition: all var(--transition);
+  color: var(--text-muted); font-size: 0.95rem; transition: all 0.15s ease;
+  cursor: pointer; position: relative;
 }
-.dash-close-btn:hover { color: var(--text); border-color: var(--accent); }
-
-/* Dashboard scope tabs */
-.dash-scope-bar {
-  display: flex; gap: 0; padding: 0 1.5rem;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
+.hl-mode-btn:hover { border-color: var(--accent); color: var(--accent); }
+.hl-mode-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+.highlighter-active .q-text, .highlighter-active .option-text, .highlighter-active .explanation-box {
+  cursor: text; user-select: text; -webkit-user-select: text;
+  touch-action: manipulation;
 }
-.dash-scope-tab {
-  padding: 0.6rem 1rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  border-bottom: 2px solid transparent;
-  cursor: pointer;
-  transition: all var(--transition);
-  background: none; border-top: none; border-left: none; border-right: none;
+/* In highlighter mode, allow text selection on option labels for highlighting */
+.highlighter-active .option-label {
+  touch-action: manipulation !important;
 }
-.dash-scope-tab:hover { color: var(--text); }
-.dash-scope-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-
-/* Dashboard summary stats */
-.dash-summary {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.75rem;
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
+.highlighter-active .option-text {
+  user-select: text; -webkit-user-select: text;
 }
-.dash-stat {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 0.85rem;
-  text-align: center;
+/* Color picker dropdown next to highlighter button */
+.hl-color-picker {
+  position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  margin-top: 6px; z-index: 9001;
+  display: none; align-items: center; gap: 4px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 5px 7px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  animation: hlMenuIn 0.15s ease;
 }
-.dash-stat .ds-val { font-size: 1.5rem; font-weight: 700; line-height: 1.2; }
-.dash-stat .ds-lbl { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.2rem; }
-.ds-val.red { color: var(--wrong); }
-.ds-val.blue { color: var(--flagged); }
-.ds-val.green { color: var(--correct); }
-
-/* Dashboard body */
-.dash-body { flex: 1; overflow-y: auto; padding: 1rem 1.5rem; }
-.dash-body::-webkit-scrollbar { width: 6px; }
-.dash-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-
-.dash-quiz-group { margin-bottom: 1.25rem; }
-.dash-quiz-title {
-  font-weight: 700; font-size: 0.9rem; color: var(--text);
-  margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.5rem;
+.hl-color-picker.visible { display: flex; }
+.hl-color-picker .hl-color-btn { width: 24px; height: 24px; }
+.hl-color-picker .hl-color-btn.selected { border: 2px solid var(--text); box-shadow: 0 0 0 1px var(--accent); }
+.hl-color-picker .hl-erase-btn { width: 24px; height: 24px; }
+.hl-color-picker .hl-close-btn { width: 24px; height: 24px; background: rgba(255,255,255,0.08); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text-muted); margin-left: 2px; }
+.hl-color-picker .hl-close-btn:hover { background: rgba(239,68,68,0.2); color: #ef4444; }
+/* Last-color indicator dot on the mode button */
+.hl-mode-btn .hl-last-dot {
+  position: absolute; bottom: 2px; right: 2px;
+  width: 8px; height: 8px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.3);
+  pointer-events: none;
 }
-.dash-quiz-title .quiz-badge { font-size: 0.65rem; padding: 0.15rem 0.5rem; border-radius: 5px; font-weight: 600; }
-.dash-quiz-title .quiz-badge.wrong-badge { background: var(--wrong-bg); color: var(--wrong); }
-.dash-quiz-title .quiz-badge.flag-badge { background: var(--flagged-bg); color: var(--flagged); }
-
-.dash-q-item {
-  display: flex; align-items: flex-start; gap: 0.65rem;
-  padding: 0.65rem 0.85rem; border-radius: 8px; margin-bottom: 0.4rem;
-  border: 1px solid var(--border); background: var(--surface2);
-  transition: all var(--transition);
-}
-.dash-q-item:hover { border-color: var(--accent); }
-.dash-q-icon {
-  width: 24px; height: 24px; border-radius: 6px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.7rem; font-weight: 700; flex-shrink: 0; margin-top: 0.1rem;
-}
-.dash-q-icon.wrong { background: var(--wrong-bg); color: var(--wrong); }
-.dash-q-icon.flagged { background: var(--flagged-bg); color: var(--flagged); }
-.dash-q-content { flex: 1; min-width: 0; }
-.dash-q-num { font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
-.dash-q-text { font-size: 0.85rem; font-weight: 500; line-height: 1.4; color: var(--text); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-.dash-q-remove {
-  width: 22px; height: 22px; border-radius: 5px;
-  background: transparent; border: 1px solid transparent;
-  display: flex; align-items: center; justify-content: center;
-  color: var(--text-muted); font-size: 0.75rem; cursor: pointer;
-  transition: all var(--transition); flex-shrink: 0;
-}
-.dash-q-remove:hover { border-color: var(--wrong); color: var(--wrong); background: var(--wrong-bg); }
-
-/* Dashboard footer */
-.dash-footer {
-  padding: 1rem 1.5rem; border-top: 1px solid var(--border);
-  display: flex; gap: 0.75rem; flex-shrink: 0;
-}
-.btn-dash-action {
-  padding: 0.65rem 1.25rem; border-radius: 8px;
-  background: var(--surface2); border: 1.5px solid var(--border);
-  color: var(--text); font-weight: 600; font-size: 0.85rem;
-  cursor: pointer; transition: all var(--transition);
-}
-.btn-dash-action:hover { border-color: var(--accent); color: var(--accent); }
-.btn-dash-danger:hover { border-color: var(--wrong); color: var(--wrong); }
-.btn-dash-close {
-  flex: 1; padding: 0.65rem 1.25rem; border-radius: 8px;
-  background: var(--accent); border: 1.5px solid var(--accent);
-  color: #000; font-weight: 700; font-size: 0.85rem;
-  cursor: pointer; transition: all var(--transition);
-}
-.btn-dash-close:hover { opacity: 0.85; }
-
-/* Empty state */
-.dash-empty { text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); }
-.dash-empty-icon { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.5; }
-.dash-empty p { font-size: 0.9rem; line-height: 1.5; }
-
-@media (max-width: 480px) {
-  .dash-modal { max-height: 90vh; border-radius: 16px; }
-  .dash-summary { grid-template-columns: repeat(3, 1fr); gap: 0.5rem; padding: 1rem; }
-  .dash-stat { padding: 0.6rem; }
-  .dash-stat .ds-val { font-size: 1.2rem; }
-  .dash-body { padding: 0.75rem 1rem; }
-}
+.hidden { display: none !important; }
 
 @media (max-width: 640px) {
   .question-area .q-header {
@@ -1118,6 +1033,7 @@ input[type=radio]:checked + .option-label .option-key { background: var(--accent
       <span id="timer-text">00:00</span>
     </div>
     <div class="topbar-actions">
+      <div class="icon-btn hl-mode-btn" role="button" tabindex="0" onclick="toggleHighlighterMode()" title="Highlighter Mode (H)">🖍<span class="hl-last-dot" style="background:rgba(255,213,79,0.8);"></span><div class="hl-color-picker" id="hl-color-picker-1"><button class="hl-color-btn cb-1 selected" onclick="hlSelectColor(1); event.stopPropagation();" title="Yellow (1)"></button><button class="hl-color-btn cb-2" onclick="hlSelectColor(2); event.stopPropagation();" title="Green (2)"></button><button class="hl-color-btn cb-3" onclick="hlSelectColor(3); event.stopPropagation();" title="Blue (3)"></button><button class="hl-color-btn cb-4" onclick="hlSelectColor(4); event.stopPropagation();" title="Red (4)"></button><button class="hl-erase-btn" onclick="hlSelectColor(0); event.stopPropagation();" title="Eraser">🧹</button><button class="hl-close-btn" onclick="disableHighlighterMode(); event.stopPropagation();" title="Close Highlighter">✕</button></div></div>
       <a href="#" class="icon-btn" title="Back to Hub" onclick="navigateToIndex(event); return false;">🏠</a>
       <button class="icon-btn theme-toggle-btn" onclick="toggleTheme()" title="Toggle theme">☀</button>
       <button class="icon-btn danger" onclick="confirmResetProgress()" title="Reset Progress">↻</button>
@@ -1154,6 +1070,7 @@ input[type=radio]:checked + .option-label .option-key { background: var(--accent
   <div class="result-topbar">
     <h2>📊 Session Results</h2>
     <div class="topbar-actions">
+      <div class="icon-btn hl-mode-btn" role="button" tabindex="0" onclick="toggleHighlighterMode()" title="Highlighter Mode (H)">🖍<span class="hl-last-dot" style="background:rgba(255,213,79,0.8);"></span><div class="hl-color-picker" id="hl-color-picker-2"><button class="hl-color-btn cb-1 selected" onclick="hlSelectColor(1); event.stopPropagation();" title="Yellow (1)"></button><button class="hl-color-btn cb-2" onclick="hlSelectColor(2); event.stopPropagation();" title="Green (2)"></button><button class="hl-color-btn cb-3" onclick="hlSelectColor(3); event.stopPropagation();" title="Blue (3)"></button><button class="hl-color-btn cb-4" onclick="hlSelectColor(4); event.stopPropagation();" title="Red (4)"></button><button class="hl-erase-btn" onclick="hlSelectColor(0); event.stopPropagation();" title="Eraser">🧹</button><button class="hl-close-btn" onclick="disableHighlighterMode(); event.stopPropagation();" title="Close Highlighter">✕</button></div></div>
       <a href="#" class="icon-btn" title="Back to Hub" onclick="navigateToIndex(event); return false;">🏠</a>
       <button class="icon-btn theme-toggle-btn" onclick="toggleTheme()" title="Toggle theme">☀</button>
     </div>
@@ -1289,6 +1206,9 @@ let state = {
   current:   0,
   answers:   {},
   flagged:   {},
+  highlights: {},  // { qIndex: [ { part, start, end, color, optIndex? } ] } — uses GLOBAL bank index
+  strikethrough: {}, // { qIndex: { optIndex: true } } — uses GLOBAL bank index
+  isHighlighterMode: false,
   timerSecs: 0,
   elapsed:   0,
   timerID:   null,
@@ -1297,7 +1217,472 @@ let state = {
 };
 let timerPaused = false;
 let lastTime = Date.now();
+let _hlCache = {};           // memoized highlight state per qIndex
+let _hlLastColor = 1;        // last selected highlight color (1-4), default Yellow
+let _hlPickerOpen = false;   // color picker dropdown open state
+let _hoveredOption = -1;     // option index currently hovered (-1 = none)
+let _ctxStrikeDone = false;  // flag to prevent double-toggle (mousedown + contextmenu)
 let submitTimeout = null;  // tracks the setTimeout(confirmSubmit) from timer expiry
+
+/* ════════════════════════════════════════════════════════════════
+   HIGHLIGHT & STRIKETHROUGH SYSTEM
+   NOTE: qIndex in highlights/strikethrough uses GLOBAL bank index
+   (SESSION_QUESTION_INDICES[sessionIdx]) so highlights persist
+   across different randomized sessions.
+════════════════════════════════════════════════════════════════ */
+
+function _hlGlobalIdx(sessionIdx) {
+  return SESSION_QUESTION_INDICES[sessionIdx];
+}
+
+/* ── HIGHLIGHTER MODE TOGGLE ───────────────────────────────── */
+var _hlInitialized = false;  // lazy-load guard: listeners registered once
+
+// Lazy-init: register all highlighter event listeners on first activation
+function _hlInit() {
+  if (_hlInitialized) return;
+  _hlInitialized = true;
+
+  /* ── SMART LABEL CLICK HANDLING ──────── */
+  document.addEventListener('click', function(e) {
+    if (!state.isHighlighterMode || state.submitted) return;
+    var optLabel = e.target.closest('.option-label');
+    if (!optLabel) return;
+    if (e.target.closest('input[type=radio]')) return;
+    if (_hlJustApplied) {
+      e.preventDefault();
+      e.stopPropagation();
+      _hlJustApplied = false;
+      return;
+    }
+  }, true);
+
+  /* ── AUTO-HIGHLIGHT: MOUSE-UP + TOUCH-END + SELECTION-CHANGE ─ */
+  document.addEventListener('mouseup', function(e) {
+    if (e.button !== 0) return;
+    if (!state.isHighlighterMode || state.submitted) return;
+    setTimeout(_hlAutoApply, 10);
+  });
+
+  document.addEventListener('selectionchange', function() {
+    if (!state.isHighlighterMode || state.submitted) return;
+    clearTimeout(_hlSelectionTimer);
+    _hlSelectionTimer = setTimeout(_hlAutoApply, 600);
+  });
+
+  document.addEventListener('touchend', function(e) {
+    if (!state.isHighlighterMode || state.submitted) return;
+    setTimeout(_hlAutoApply, 300);
+  });
+
+  /* ── RIGHT-CLICK / LONG-PRESS: DIRECT STRIKETHROUGH ──────── */
+  document.addEventListener('mousedown', function(e) {
+    _ctxStrikeDone = false;
+    if (_hlPickerOpen) {
+      var isPickerClick = e.target.closest('.hl-color-picker') || e.target.closest('.hl-mode-btn');
+      if (!isPickerClick) _closeAllPickers();
+    }
+    if (e.button === 2 && state.isHighlighterMode && !state.submitted) {
+      var optLabel = e.target.closest('.option-label');
+      if (optLabel && optLabel.dataset.optIdx !== undefined) {
+        e.preventDefault();
+        _ctxStrikeDone = true;
+        toggleStrikethrough(state.current, parseInt(optLabel.dataset.optIdx));
+      }
+    }
+  });
+
+  document.addEventListener('contextmenu', function(e) {
+    if (!state.isHighlighterMode || state.submitted) return;
+    e.preventDefault();
+    if (_ctxStrikeDone) { _ctxStrikeDone = false; return; }
+    var optLabel = e.target.closest('.option-label');
+    if (optLabel && optLabel.dataset.optIdx !== undefined) {
+      toggleStrikethrough(state.current, parseInt(optLabel.dataset.optIdx));
+    }
+  });
+
+  /* ── TRACK HOVERED OPTION FOR S KEY ──────────────────────── */
+  document.addEventListener('mouseover', function(e) {
+    var optLabel = e.target.closest('.option-label');
+    if (optLabel && optLabel.dataset.optIdx !== undefined) {
+      _hoveredOption = parseInt(optLabel.dataset.optIdx);
+      return;
+    }
+    _hoveredOption = -1;
+  });
+  document.addEventListener('mouseout', function(e) {
+    var optLabel = e.target.closest('.option-label');
+    if (optLabel) _hoveredOption = -1;
+  });
+}
+
+// First click on highlighter button → activate mode
+// Subsequent clicks while active → toggle color picker (NOT deactivate)
+// Click ✕ in picker → deactivate
+function toggleHighlighterMode() {
+  if (!state.isHighlighterMode) {
+    _hlInit();
+    state.isHighlighterMode = true;
+    document.body.classList.add('highlighter-active');
+    document.querySelectorAll('.hl-mode-btn').forEach(function(b) {
+      b.classList.add('active');
+    });
+    if (!state.submitted) renderQuestion(state.current);
+    showToast('🖍 Highlighter ON');
+  } else {
+    _togglePicker();
+  }
+}
+
+// Explicitly disable highlighter mode (called by ✕ close button)
+function disableHighlighterMode() {
+  if (!state.isHighlighterMode) return;
+  state.isHighlighterMode = false;
+  document.body.classList.remove('highlighter-active');
+  document.querySelectorAll('.hl-mode-btn').forEach(function(b) {
+    b.classList.remove('active');
+  });
+  _closeAllPickers();
+  if (!state.submitted) renderQuestion(state.current);
+  showToast('Highlighter OFF');
+}
+
+// Toggle color picker visibility
+function _togglePicker() {
+  var anyVisible = false;
+  document.querySelectorAll('.hl-color-picker').forEach(function(p) {
+    if (p.classList.contains('visible')) anyVisible = true;
+  });
+  if (anyVisible) {
+    _closeAllPickers();
+  } else {
+    document.querySelectorAll('.hl-color-picker').forEach(function(p) {
+      p.classList.add('visible');
+    });
+    _hlPickerOpen = true;
+  }
+}
+
+/* ── COLOR PICKER (next to topbar icon) ────────────────────── */
+function _syncPickerUI() {
+  document.querySelectorAll('.hl-color-picker').forEach(function(picker) {
+    picker.querySelectorAll('.hl-color-btn').forEach(function(btn) {
+      var m = btn.className.match(/cb-(\d)/);
+      btn.classList.toggle('selected', m && parseInt(m[1]) === _hlLastColor);
+    });
+  });
+  var dotColors = { 1: 'rgba(255,213,79,0.8)', 2: 'rgba(129,199,132,0.8)', 3: 'rgba(100,181,246,0.8)', 4: 'rgba(239,154,154,0.8)' };
+  document.querySelectorAll('.hl-mode-btn .hl-last-dot').forEach(function(dot) {
+    dot.style.background = dotColors[_hlLastColor] || dotColors[1];
+  });
+}
+
+function hlSelectColor(colorNum) {
+  if (colorNum === 0) {
+    _hlLastColor = 0;
+  } else {
+    _hlLastColor = colorNum;
+  }
+  _syncPickerUI();
+}
+
+function _closeAllPickers() {
+  document.querySelectorAll('.hl-color-picker').forEach(function(p) { p.classList.remove('visible'); });
+  _hlPickerOpen = false;
+}
+
+/* ── SELECTION OFFSET CALCULATION (tag-aware) ──────────────── */
+function _getTextOffsetRelativeTo(container, node, offset) {
+  var walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
+  var total = 0;
+  while (walker.nextNode()) {
+    if (walker.currentNode === node) return total + offset;
+    total += walker.currentNode.textContent.length;
+  }
+  return -1;
+}
+
+function _getSelectionParts() {
+  var sel = window.getSelection();
+  if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
+  var range = sel.getRangeAt(0);
+  var questionArea = document.getElementById('question-area');
+  if (!questionArea || !questionArea.contains(range.commonAncestorContainer)) return null;
+
+  var part = null, optIndex = -1;
+  var qText = questionArea.querySelector('.q-text');
+  if (qText && qText.contains(range.commonAncestorContainer)) part = 'question';
+
+  if (!part) {
+    var optTexts = questionArea.querySelectorAll('.option-text');
+    for (var i = 0; i < optTexts.length; i++) {
+      if (optTexts[i].contains(range.commonAncestorContainer)) {
+        part = 'option'; optIndex = i; break;
+      }
+    }
+  }
+
+  if (!part) {
+    var expl = questionArea.querySelector('.explanation-box');
+    if (expl && expl.contains(range.commonAncestorContainer)) part = 'explanation';
+  }
+
+  if (!part) return null;
+
+  var container;
+  if (part === 'question') container = qText;
+  else if (part === 'option') container = questionArea.querySelectorAll('.option-text')[optIndex];
+  else container = questionArea.querySelector('.explanation-box');
+  if (!container) return null;
+
+  var startOffset = _getTextOffsetRelativeTo(container, range.startContainer, range.startOffset);
+  var endOffset   = _getTextOffsetRelativeTo(container, range.endContainer, range.endOffset);
+  if (startOffset < 0 || endOffset < 0 || startOffset === endOffset) return null;
+
+  return { part: part, optIndex: optIndex, start: startOffset, end: endOffset };
+}
+
+/* ── AUTO-HIGHLIGHT HELPERS ─────────────────────────────────── */
+var _hlJustApplied = false;  // set true when highlight is applied, resets after 100ms
+var _hlSelectionTimer = null;
+
+// Helper: check if current selection is inside question area
+function _isSelectionInQuestionArea() {
+  var sel = window.getSelection();
+  if (!sel || sel.isCollapsed || !sel.rangeCount) return false;
+  var questionArea = document.getElementById('question-area');
+  if (!questionArea) return false;
+  return questionArea.contains(sel.getRangeAt(0).commonAncestorContainer);
+}
+
+function _hlAutoApply() {
+  if (!state.isHighlighterMode || state.submitted) return;
+  if (!_isSelectionInQuestionArea()) return;
+  _hlJustApplied = true;
+  setTimeout(function() { _hlJustApplied = false; }, 100);
+  if (_hlLastColor === 0) {
+    hlEraseSelection();
+  } else {
+    hlApplyColor(_hlLastColor);
+  }
+}
+
+/* ── HIGHLIGHT APPLY / ERASE (uses global bank index) ──────── */
+function hlApplyColor(colorNum) {
+  if (!state.isHighlighterMode) return;
+  var info = _getSelectionParts();
+  if (!info) { window.getSelection().removeAllRanges(); return; }
+  var gIdx = _hlGlobalIdx(state.current);
+  if (gIdx === undefined) { window.getSelection().removeAllRanges(); return; }
+  if (!state.highlights[gIdx]) state.highlights[gIdx] = [];
+  state.highlights[gIdx].push({
+    part: info.part, optIndex: info.optIndex,
+    start: info.start, end: info.end, color: colorNum
+  });
+  _hlLastColor = colorNum;
+  _syncPickerUI();
+  delete _hlCache[gIdx];
+  window.getSelection().removeAllRanges();
+  renderQuestion(state.current);
+  saveProgress();
+}
+
+function hlEraseSelection() {
+  if (!state.isHighlighterMode) return;
+  var info = _getSelectionParts();
+  if (!info) { window.getSelection().removeAllRanges(); return; }
+  var gIdx = _hlGlobalIdx(state.current);
+  if (gIdx === undefined) { window.getSelection().removeAllRanges(); return; }
+  var hlList = state.highlights[gIdx];
+  if (!hlList) { window.getSelection().removeAllRanges(); return; }
+  state.highlights[gIdx] = hlList.filter(function(hl) {
+    if (hl.part !== info.part) return true;
+    if (hl.part === 'option' && hl.optIndex !== info.optIndex) return true;
+    return !(hl.start < info.end && hl.end > info.start);
+  });
+  if (state.highlights[gIdx].length === 0) delete state.highlights[gIdx];
+  delete _hlCache[gIdx];
+  window.getSelection().removeAllRanges();
+  renderQuestion(state.current);
+  saveProgress();
+}
+
+function clearAllHighlights(sessionIdx) {
+  var gIdx = _hlGlobalIdx(sessionIdx);
+  if (gIdx !== undefined) {
+    delete state.highlights[gIdx];
+    delete _hlCache[gIdx];
+  }
+  renderQuestion(sessionIdx);
+  saveProgress();
+  showToast('Highlights cleared');
+}
+
+/* ── STRIKETHROUGH TOGGLE (uses global bank index) ─────────── */
+function toggleStrikethrough(sessionIdx, optIdx) {
+  var gIdx = _hlGlobalIdx(sessionIdx);
+  if (gIdx === undefined) return;
+  if (!state.strikethrough[gIdx]) state.strikethrough[gIdx] = {};
+  state.strikethrough[gIdx][optIdx] = !state.strikethrough[gIdx][optIdx];
+  if (!state.strikethrough[gIdx][optIdx]) delete state.strikethrough[gIdx][optIdx];
+  renderQuestion(sessionIdx);
+  saveProgress();
+}
+
+/* ── KEYBOARD SHORTCUTS (H, 1-4, S) ───────────────────────── */
+document.addEventListener('keydown', function(e) {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  var quizActive = document.getElementById('quiz-screen') && document.getElementById('quiz-screen').classList.contains('active');
+  if (!quizActive) return;
+
+  if ((e.key === 'h' || e.key === 'H') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    toggleHighlighterMode();
+    return;
+  }
+  // 1-4: set highlighter color (also apply if text is selected)
+  if ((e.key >= '1' && e.key <= '4') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    _hlLastColor = parseInt(e.key);
+    _syncPickerUI();
+    var sel = window.getSelection();
+    if (sel && !sel.isCollapsed && state.isHighlighterMode) {
+      hlApplyColor(_hlLastColor);
+    }
+    return;
+  }
+  if (state.isHighlighterMode && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    if (e.key === 's' || e.key === 'S') {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      var q = SESSION_QUESTIONS[state.current];
+      if (q) {
+        // Strike the hovered option if any, otherwise the first un-struck one
+        if (_hoveredOption >= 0) {
+          toggleStrikethrough(state.current, _hoveredOption);
+          return;
+        }
+        var gIdx = _hlGlobalIdx(state.current);
+        var stMap = (gIdx !== undefined && state.strikethrough[gIdx]) || {};
+        for (var i = 0; i < q.options.length; i++) {
+          if (!stMap[i]) { toggleStrikethrough(state.current, i); return; }
+        }
+        if (gIdx !== undefined) state.strikethrough[gIdx] = {};
+        renderQuestion(state.current);
+      }
+    }
+  }
+});
+
+/* ── TAG-AWARE HIGHLIGHT INJECTION ─────────────────────────── */
+function _applyHighlightsToHTML(html, hlList, part, optIndex) {
+  var relevant = hlList.filter(function(hl) {
+    if (hl.part !== part) return false;
+    if (part === 'option' && hl.optIndex !== optIndex) return false;
+    return true;
+  });
+  if (relevant.length === 0) return html;
+  relevant.sort(function(a, b) { return a.start - b.start || a.end - b.end; });
+
+  var result = [], textIdx = 0, i = 0;
+  var pendingOpens = [];
+  var hlQueue = relevant.slice();
+
+  while (i < html.length) {
+    if (html[i] === '<') {
+      var tagEnd = html.indexOf('>', i);
+      if (tagEnd === -1) tagEnd = html.length - 1;
+      result.push(html.substring(i, tagEnd + 1));
+      i = tagEnd + 1;
+      continue;
+    }
+    while (pendingOpens.length > 0 && pendingOpens[pendingOpens.length - 1].end <= textIdx) {
+      result.push('</mark>');
+      pendingOpens.pop();
+    }
+    while (hlQueue.length > 0 && hlQueue[0].start <= textIdx) {
+      var hl = hlQueue.shift();
+      result.push('<mark class="q-highlight hl-color-' + hl.color + '">');
+      pendingOpens.push({ end: hl.end, color: hl.color });
+      pendingOpens.sort(function(a, b) { return b.end - a.end; });
+    }
+    if (html[i] === '&') {
+      var entityEnd = html.indexOf(';', i);
+      if (entityEnd !== -1 && entityEnd - i < 8) {
+        result.push(html.substring(i, entityEnd + 1));
+        textIdx++; i = entityEnd + 1; continue;
+      }
+    }
+    result.push(html[i]);
+    textIdx++; i++;
+  }
+  while (pendingOpens.length > 0) { result.push('</mark>'); pendingOpens.pop(); }
+  return result.join('');
+}
+
+function applyBulkHighlights(sessionIdx) {
+  var gIdx = _hlGlobalIdx(sessionIdx);
+  if (gIdx === undefined) return;
+  if (_hlCache[gIdx]) return;
+  var hlList = state.highlights[gIdx] || [];
+  var stMap = state.strikethrough[gIdx] || {};
+  if (hlList.length === 0 && Object.keys(stMap).length === 0) return;
+
+  var area = document.getElementById('question-area');
+  if (!area) return;
+
+  var qText = area.querySelector('.q-text');
+  if (qText && hlList.length) qText.innerHTML = _applyHighlightsToHTML(qText.innerHTML, hlList, 'question');
+
+  var optTexts = area.querySelectorAll('.option-text');
+  optTexts.forEach(function(el, i) {
+    if (hlList.length) el.innerHTML = _applyHighlightsToHTML(el.innerHTML, hlList, 'option', i);
+  });
+
+  var expl = area.querySelector('.explanation-box');
+  if (expl && hlList.length) expl.innerHTML = _applyHighlightsToHTML(expl.innerHTML, hlList, 'explanation');
+
+  var optLabels = area.querySelectorAll('.option-label');
+  optLabels.forEach(function(el, i) {
+    if (stMap[i]) el.classList.add('strikethrough');
+  });
+
+  if (state.isHighlighterMode) {
+    optLabels.forEach(function(label, i) {
+      var existing = label.querySelector('.st-toggle-btn');
+      if (existing) { existing.classList.toggle('active', !!stMap[i]); return; }
+      var btn = document.createElement('button');
+      btn.className = 'st-toggle-btn' + (stMap[i] ? ' active' : '');
+      btn.title = 'Strikethrough (S)';
+      btn.textContent = '✕';
+      btn.onclick = (function(ci) { return function(e) { e.preventDefault(); e.stopPropagation(); toggleStrikethrough(state.current, ci); }; })(i);
+      label.appendChild(btn);
+    });
+  }
+
+  _hlCache[gIdx] = true;
+}
+
+/* ── PDF HIGHLIGHT HELPER ──────────────────────────────────── */
+function _hlToPDFHTML(text, hlList, part) {
+  var relevant = hlList.filter(function(hl) { return hl.part === part; });
+  if (relevant.length === 0) return text;
+  relevant.sort(function(a, b) { return a.start - b.start; });
+  var pdfColors = { 1: '#ffd54f', 2: '#81c784', 3: '#64b5f6', 4: '#ef9a9a' };
+  var result = '', last = 0;
+  relevant.forEach(function(hl) {
+    if (hl.start > last) result += text.substring(last, hl.start);
+    result += '<span style="background:' + (pdfColors[hl.color] || '#ffd54f') + ';border-radius:2px;padding:0 2px;">';
+    result += text.substring(Math.max(last, hl.start), hl.end);
+    result += '</span>';
+    last = hl.end;
+  });
+  if (last < text.length) result += text.substring(last);
+  return result;
+}
 
 // Start screen config
 let selectedCount = 20;
@@ -1324,7 +1709,9 @@ function saveProgress() {
   const hasAnswers = Object.keys(state.answers || {}).length > 0;
   const hasFlags = Object.values(state.flagged || {}).some(v => v === true);
   const hasTime = (state.elapsed || 0) > 10;
-  if (!hasAnswers && !hasFlags && !hasTime) return;
+  const hasHighlights = Object.keys(state.highlights || {}).length > 0;
+  const hasStrikethrough = Object.keys(state.strikethrough || {}).length > 0;
+  if (!hasAnswers && !hasFlags && !hasTime && !hasHighlights && !hasStrikethrough) return;
 
   const saveData = {
     version: STORAGE_VERSION,
@@ -1335,6 +1722,8 @@ function saveProgress() {
     current: state.current,
     answers: state.answers,
     flagged: state.flagged,
+    highlights: state.highlights,
+    strikethrough: state.strikethrough,
     elapsed: state.elapsed,
     timerSecs: state.timerSecs,
     mode: state.mode,
@@ -1380,6 +1769,9 @@ function isValidSaveData(data) {
   // sessionIndices must exist and every index must be a valid bank index
   if (!Array.isArray(data.sessionIndices) || data.sessionIndices.length === 0) return false;
   if (data.sessionIndices.some(i => typeof i !== 'number' || i < 0 || i >= QUESTION_BANK.length)) return false;
+  // highlights and strikethrough are optional for backward compatibility
+  if (data.highlights && typeof data.highlights !== 'object') return false;
+  if (data.strikethrough && typeof data.strikethrough !== 'object') return false;
   return true;
 }
 
@@ -1523,6 +1915,8 @@ function doRestoreProgress(data) {
   state.current = Math.min(data.current, SESSION_QUESTIONS.length - 1);
   state.answers = data.answers;
   state.flagged = data.flagged || {};
+  state.highlights = data.highlights || {};
+  state.strikethrough = data.strikethrough || {};
   state.elapsed = data.elapsed || 0;
   // In learning mode, timerSecs is irrelevant (count-up uses elapsed only)
   // Only restore timerSecs for exam mode to avoid confusion
@@ -2053,6 +2447,7 @@ function renderQuestion(idx) {
           </svg>
           ${state.flagged[idx] ? 'Flagged' : 'Flag'}
         </button>
+        ${state.isHighlighterMode && state.highlights[_hlGlobalIdx(idx)] && state.highlights[_hlGlobalIdx(idx)].length > 0 ? '<button class="flag-btn" onclick="clearAllHighlights('+idx+')" title="Clear all highlights for this question" style="font-size:0.75rem;">✕ Clear</button>' : ''}
       </div>
     </div>
 
@@ -2074,7 +2469,7 @@ function renderQuestion(idx) {
           <input type="radio" name="q_opt" id="opt_${i}" value="${i}"
                  ${sel===i?'checked':''} ${isLearning && isAnswered ? 'disabled' : ''}
                  onchange="selectAnswer(${idx},${i})">
-          <label class="option-label" for="opt_${i}" style="${extra}">
+          <label class="option-label" for="opt_${i}" data-opt-idx="${i}" style="${extra}">
             <span class="option-key" style="${keyStyle}">${KEYS[i]}</span>
             <span class="option-text">${opt}</span>
           </label>`;
@@ -2096,6 +2491,10 @@ function renderQuestion(idx) {
   updateNavGrid();
   updateNavStats();
   area.scrollTop = 0;
+
+  // Apply highlights & strikethrough after DOM is built
+  delete _hlCache[_hlGlobalIdx(idx)];  // DOM is fresh, must re-apply
+  applyBulkHighlights(idx);
 }
 
 /* ─── ANSWER SELECTION ───────────────────────────────────────── */
@@ -2104,10 +2503,15 @@ function selectAnswer(qIdx, optIdx) {
   state.answers[qIdx] = optIdx;
   updateNavGrid();
   updateNavStats();
-  const done = Object.keys(state.answers).length;
-  document.getElementById('progress-fill').style.width =
-    (done / SESSION_QUESTIONS.length * 100) + '%';
-  if (state.mode === 'learning') renderQuestion(qIdx);
+  // In learning mode: re-render to show explanation and highlights
+  if (state.mode === 'learning') {
+    renderQuestion(qIdx);  // renderQuestion also updates progress
+    return;
+  }
+  // Update progress bar (non-learning mode)
+  var done = 0;
+  for (var k in state.answers) { if (state.answers.hasOwnProperty(k)) done++; }
+  document.getElementById('progress-fill').style.width = (done / SESSION_QUESTIONS.length * 100) + '%';
 }
 
 /* ─── NAVIGATION ─────────────────────────────────────────────── */
@@ -2135,34 +2539,33 @@ function updateNavGrid() {
   SESSION_QUESTIONS.forEach((_, i) => {
     const btn = document.getElementById(`nav-btn-${i}`);
     if (!btn) return;
-    btn.className = 'nav-btn';
-    if (i === state.current) {
-      btn.classList.add('current');
-    } else if (state.answers[i] !== undefined) {
-      if (state.mode === 'learning' && state.answers[i] !== SESSION_QUESTIONS[i].correct) {
-        btn.classList.add('wrong');
-      } else {
-        btn.classList.add('answered');
+    var isFlagged = !!state.flagged[i];
+    var isCurrent = (i === state.current);
+    var isAnswered = state.answers[i] !== undefined;
+    var isWrong = isAnswered && state.mode === 'learning' && state.answers[i] !== SESSION_QUESTIONS[i].correct;
+    btn.className = 'nav-btn' + (isCurrent ? ' current' : isWrong ? ' wrong' : isAnswered ? ' answered' : '') + (isFlagged && !isCurrent ? ' flagged' : '');
+
+    // Flag dot — reuse existing if possible
+    var existingDot = btn.querySelector('.flag-dot');
+    if (isFlagged) {
+      if (!existingDot) {
+        var dot = document.createElement('span');
+        dot.className = 'flag-dot';
+        btn.appendChild(dot);
       }
-    }
-    const existing = btn.querySelector('.flag-dot');
-    if (existing) existing.remove();
-    if (state.flagged[i]) {
-      const dot = document.createElement('span');
-      dot.className = 'flag-dot';
-      btn.appendChild(dot);
-      if (i !== state.current) btn.classList.add('flagged');
+    } else if (existingDot) {
+      existingDot.remove();
     }
   });
 }
 
 function updateNavStats() {
-  const answered = Object.keys(state.answers).length;
-  const flagged  = Object.values(state.flagged).filter(Boolean).length;
-  const skipped  = SESSION_QUESTIONS.length - answered;
+  var answered = 0, flagged = 0;
+  for (var k in state.answers) { if (state.answers.hasOwnProperty(k)) answered++; }
+  for (var k in state.flagged) { if (state.flagged[k]) flagged++; }
   document.getElementById('stat-answered').textContent  = answered;
   document.getElementById('stat-flagged-q').textContent = flagged;
-  document.getElementById('stat-skipped').textContent   = skipped;
+  document.getElementById('stat-skipped').textContent   = SESSION_QUESTIONS.length - answered;
 }
 
 /* ─── SUBMIT ─────────────────────────────────────────────────── */
@@ -2340,6 +2743,12 @@ function confirmResetAction() {
   state.current = 0;
   state.answers = {};
   state.flagged = {};
+  state.highlights = {};
+  state.strikethrough = {};
+  state.isHighlighterMode = false;
+  _hlCache = {};
+  document.body.classList.remove('highlighter-active');
+  document.querySelectorAll('.hl-mode-btn').forEach(function(b) { b.classList.remove('active'); });
   state.elapsed = 0;
 
   // Decrement session counter and remove shown indices so reset doesn't count toward bank progress
@@ -2595,15 +3004,17 @@ function exportToPDF() {
     var sc   = isSkipped ? '#78716c' : (isCorrect ? '#16a34a' : '#dc2626');
     var icon = isSkipped ? '-' : (isCorrect ? 'OK' : 'X');
     var bgH  = isSkipped ? '#f8f6f1' : (isCorrect ? 'rgba(22,163,74,.06)' : 'rgba(220,38,38,.06)');
-    var uAns = ans !== undefined ? (KEYS[ans] + '. ' + q.options[ans]) : 'Not answered';
-    var cAns = KEYS[q.correct] + '. ' + q.options[q.correct];
+    var gIdx = SESSION_QUESTION_INDICES[i];
+    var stMap = (gIdx !== undefined && state.strikethrough[gIdx]) || {};
+    var uAns = ans !== undefined ? (KEYS[ans] + '. ' + (stMap[ans] ? '<span style="text-decoration:line-through;opacity:0.5;">' + q.options[ans] + '</span>' : q.options[ans])) : 'Not answered';
+    var cAns = KEYS[q.correct] + '. ' + (stMap[q.correct] ? '<span style="text-decoration:line-through;opacity:0.5;">' + q.options[q.correct] + '</span>' : q.options[q.correct]);
     html += '<div style="border:1.5px solid ' + sc + ';border-radius:10px;margin-bottom:14px;overflow:hidden;page-break-inside:avoid;">'
       +   '<div style="padding:12px 15px;background:' + bgH + ';">'
       +     '<div style="display:flex;gap:10px;align-items:flex-start;">'
       +       '<div style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex-shrink:0;background:rgba(0,0,0,.06);color:' + sc + ';">' + icon + '</div>'
       +       '<div>'
       +         '<div style="font-size:10px;color:#78716c;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">Q' + (i+1) + (isFlagged ? ' &bull; Flagged' : '') + '</div>'
-      +         '<div style="font-size:14px;font-weight:500;line-height:1.5;">' + q.question + '</div>'
+      +         '<div style="font-size:14px;font-weight:500;line-height:1.5;">' + _hlToPDFHTML(q.question, (gIdx !== undefined && state.highlights[gIdx]) || [], 'question') + '</div>'
       +       '</div>'
       +     '</div>'
       +   '</div>'
@@ -2737,13 +3148,6 @@ checkSavedProgress();
 
   function getStorageKey(uid) {
     return STORAGE_PREFIX + TRACKER_VERSION + '_' + uid;
-  }
-
-  /* ── Get path stored with a tracker entry ── */
-  function getPathForUid(uid) {
-    var raw = localStorage.getItem(getStorageKey(uid));
-    if (raw) try { return JSON.parse(raw).path || ''; } catch(e) {}
-    return '';
   }
 
   /* ══════════════════════════════════════════
@@ -2915,11 +3319,6 @@ checkSavedProgress();
      ══════════════════════════════════════════ */
   // 30-day cleanup has been removed - all tracker data is kept indefinitely
 
-  function cleanExpiredTrackerData() {
-    // Cleanup disabled - keeping all data for long-term tracking
-    return;
-  }
-
   /* ══════════════════════════════════════════
      READ — fetch tracker entries
      ══════════════════════════════════════════ */
@@ -2984,79 +3383,6 @@ checkSavedProgress();
   var currentScope = 'quiz';
   var currentScopePath = '';
 
-  /* ══════════════════════════════════════════
-     OPEN DASHBOARD
-     ══════════════════════════════════════════ */
-  window.openTrackerDashboard = function(requestedScope) {
-    var cfg = getConfig();
-    var segments = getFolderSegments(location.pathname);
-
-    // Pre-populate folder title cache from existing tracker data so scope tabs
-    // can show clean titles instead of raw folder names
-    var _allData = getAllTrackerData();
-    _allData.forEach(function(d) {
-      if (d.folderTitle && d.folderPath) {
-        if (!_folderTitleCache[d.folderPath]) {
-          _folderTitleCache[d.folderPath] = d.folderTitle.replace(/^(?:QuizTool|MU61\s+Quiz|Mansoura\s+MCQ)\s*[-–—]\s*/i, '').trim();
-        }
-      }
-    });
-    // Also cache from current page's own document.title
-    if (segments.length >= 2) {
-      var _pageFolder = segments[segments.length - 1] + '/';
-      if (!_folderTitleCache[_pageFolder]) {
-        var _cleaned = document.title.replace(/^(?:QuizTool|MU61\s+Quiz|Mansoura\s+MCQ)\s*[-–—]\s*/i, '').trim();
-        if (_cleaned) _folderTitleCache[_pageFolder] = _cleaned;
-      }
-    }
-
-    // Build scope tabs
-    var scopeBar = document.getElementById('dash-scope-bar');
-    var tabs = [];
-
-    // Tab: This Quiz
-    tabs.push({ id: 'quiz', label: 'This Quiz' });
-
-    // Tab: All quizzes from all folders
-    tabs.push({ id: 'all', label: 'All Quizzes' });
-
-    // Tab: Intermediate folders (parent directories) - only if we have nested structure
-    // e.g., for gyn/dep/file.html, add "gyn" as an intermediate folder tab
-    if (segments.length >= 3) {
-      // Add all intermediate folders except the deepest one
-      for (var i = 0; i < segments.length - 1; i++) {
-        var folderKey = segments[i] + '/';
-        var folderLabel = _folderTitleCache[folderKey] || decodeURIComponent(segments[i]);
-        tabs.push({ id: 'folder', label: folderLabel, path: segments[i], level: i });
-      }
-    }
-
-    // Tab: Current/deepest folder (only if we have at least 2 segments)
-    if (segments.length >= 2) {
-      var folderKey = segments[segments.length - 1] + '/';
-      var folderLabel = _folderTitleCache[folderKey] || decodeURIComponent(segments[segments.length - 1]);
-      tabs.push({ id: 'folder', label: folderLabel, path: segments[segments.length - 1], level: segments.length - 1 });
-    }
-
-    var scopeHTML = '';
-    tabs.forEach(function(t) {
-      scopeHTML += '<button class="dash-scope-tab' + (t.id === 'quiz' ? ' active' : '')
-        + '" data-scope="' + t.id + '" data-path="' + (t.path || '') + '"'
-        + ' onclick="switchDashScope(\'' + t.id + '\',\'' + (t.path || '') + '\')">'
-        + t.label + '</button>';
-    });
-    scopeBar.innerHTML = scopeHTML;
-
-    // Set initial scope
-    currentScope = 'quiz';
-    currentScopePath = '';
-    if (requestedScope && requestedScope !== 'quiz') {
-      currentScope = requestedScope;
-    }
-
-    renderDashboard();
-    document.getElementById('tracker-dashboard').classList.add('open');
-  };
 
   window.switchDashScope = function(scope, path) {
     currentScope = scope;
@@ -3145,12 +3471,6 @@ checkSavedProgress();
       + '</div>';
   }
 
-  /* ══════════════════════════════════════════
-     CLOSE DASHBOARD
-     ══════════════════════════════════════════ */
-  window.closeTrackerDashboard = function() {
-    document.getElementById('tracker-dashboard').classList.remove('open');
-  };
 
   /* ══════════════════════════════════════════
      REMOVE / CLEAR
@@ -3289,7 +3609,6 @@ checkSavedProgress();
   };
 
   /* ── Init badge on load ── */
-  cleanExpiredTrackerData();
   updateDashboardBadge();
 
   /* ═══════════════════════════════════════════════════════════
@@ -3426,10 +3745,6 @@ checkSavedProgress();
   _kbHelpHTML += '        <div class="kb-desc">Select topic / Start quiz</div>';
   _kbHelpHTML += '      </div>';
   _kbHelpHTML += '      <div class="kb-shortcut-item">';
-  _kbHelpHTML += '        <div class="kb-keys"><span class="kb-key">A</span><span class="kb-key">B</span><span class="kb-key">C</span><span class="kb-key">D</span><span class="kb-key">E</span></div>';
-  _kbHelpHTML += '        <div class="kb-desc">Select answer</div>';
-  _kbHelpHTML += '      </div>';
-  _kbHelpHTML += '      <div class="kb-shortcut-item">';
   _kbHelpHTML += '        <div class="kb-keys"><span class="kb-key">←</span><span class="kb-key">→</span></div>';
   _kbHelpHTML += '        <div class="kb-desc">Previous / Next question</div>';
   _kbHelpHTML += '      </div>';
@@ -3438,8 +3753,16 @@ checkSavedProgress();
   _kbHelpHTML += '        <div class="kb-desc">Toggle flag</div>';
   _kbHelpHTML += '      </div>';
   _kbHelpHTML += '      <div class="kb-shortcut-item">';
-  _kbHelpHTML += '        <div class="kb-keys"><span class="kb-key">1</span><span class="kb-key">2</span><span class="kb-key">3</span>...</div>';
-  _kbHelpHTML += '        <div class="kb-desc">Jump to question</div>';
+  _kbHelpHTML += '        <div class="kb-keys"><span class="kb-key">H</span></div>';
+  _kbHelpHTML += '        <div class="kb-desc">Toggle highlighter mode</div>';
+  _kbHelpHTML += '      </div>';
+  _kbHelpHTML += '      <div class="kb-shortcut-item">';
+  _kbHelpHTML += '        <div class="kb-keys"><span class="kb-key">1</span><span class="kb-key">2</span><span class="kb-key">3</span><span class="kb-key">4</span></div>';
+  _kbHelpHTML += '        <div class="kb-desc">Highlight color (Yellow / Green / Blue / Red)</div>';
+  _kbHelpHTML += '      </div>';
+  _kbHelpHTML += '      <div class="kb-shortcut-item">';
+  _kbHelpHTML += '        <div class="kb-keys"><span class="kb-key">S</span></div>';
+  _kbHelpHTML += '        <div class="kb-desc">Strikethrough (highlighter mode)</div>';
   _kbHelpHTML += '      </div>';
   
   _kbHelpHTML += '    </div>';
@@ -3514,27 +3837,6 @@ checkSavedProgress();
       if (typeof state !== 'undefined' && state.current < SESSION_QUESTIONS.length - 1) renderQuestion(state.current + 1);
     }
 
-    // Answer selection: A, B, C, D, E
-    var answerKeys = ['a', 'b', 'c', 'd', 'e'];
-    if (answerKeys.includes(e.key.toLowerCase())) {
-      e.preventDefault();
-      var keyIndex = answerKeys.indexOf(e.key.toLowerCase());
-      if (typeof state !== 'undefined' && keyIndex < SESSION_QUESTIONS[state.current].options.length) {
-        state.answers[state.current] = keyIndex;
-        var radio = document.getElementById('opt_' + keyIndex);
-        if (radio) {
-          radio.checked = true;
-          // In learning mode, show feedback immediately
-          if (state.mode === 'learning') {
-            var isCorrect = keyIndex === SESSION_QUESTIONS[state.current].correct;
-            showToast(isCorrect ? '✓ Correct!' : '✗ Incorrect');
-          }
-        }
-        updateNavGrid();
-        updateNavStats();
-      }
-    }
-
     // Flag: F
     if (e.key.toLowerCase() === 'f') {
       e.preventDefault();
@@ -3552,15 +3854,6 @@ checkSavedProgress();
       } else if (typeof state !== 'undefined' && state.submitted !== true) {
         e.preventDefault();
         attemptSubmit();
-      }
-    }
-
-    // Jump to question: Number keys (1-9)
-    if (e.key >= '1' && e.key <= '9') {
-      var qNum = parseInt(e.key) - 1;
-      if (typeof state !== 'undefined' && qNum < SESSION_QUESTIONS.length) {
-        e.preventDefault();
-        renderQuestion(qNum);
       }
     }
   });
