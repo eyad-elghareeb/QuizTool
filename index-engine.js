@@ -355,6 +355,7 @@
   var currentScope = 'folder';
   var currentScopePath = '';
   var _activeDashboard = null; // null | 'tracker' | 'review'
+  var _inReviewSetup = false;  // true when review setup screen is showing (tabs should be locked)
 
   /* ── Extract a clean folder display name from a full HTML <title> ── */
   function cleanTitle(raw) {
@@ -368,6 +369,9 @@
       history.pushState({ dash: 'tracker' }, '');
     }
     _activeDashboard = 'tracker';
+
+    // Reset review setup state when opening dashboard
+    _inReviewSetup = false;
 
     // Reset selection state when opening dashboard (all folders selected by default)
     _selectedQuizzes = {};
@@ -453,7 +457,8 @@
       var scopeHTML = '';
       tabs.forEach(function (t, i) {
         var isActive = t.id === currentScope && (t.id === 'all' || t.path === currentScopePath);
-        scopeHTML += '<button class="dash-scope-tab' + (isActive ? ' active' : '')
+        var isLocked = _inReviewSetup ? ' disabled' : '';
+      scopeHTML += '<button class="dash-scope-tab' + (isActive ? ' active' : '') + isLocked
           + '" data-scope="' + t.id + '" data-path="' + (t.path || '') + '"'
           + ' onclick="switchDashScope(\'' + t.id + '\',\'' + (t.path || '') + '\')">'
           + escHtml(t.label) + '</button>';
@@ -483,6 +488,11 @@
   };
 
   window.switchDashScope = function (scope, path) {
+    // Prevent tab switching while in review setup — it would destroy the pending review session
+    if (_inReviewSetup) {
+      showToast('Finish or cancel the review setup first');
+      return;
+    }
     currentScope = scope;
     currentScopePath = path;
     document.querySelectorAll('.dash-scope-tab').forEach(function (tab) {
@@ -496,6 +506,9 @@
   var _selectedQuizzes = {};
 
   function renderDashboard() {
+    // Don't re-render the dashboard body while review setup is active — it would destroy the pending session
+    if (_inReviewSetup) return;
+
     var data = getDataForScope(currentScope, currentScopePath);
     var totalWrong = 0, totalFlagged = 0;
     data.forEach(function (d) { totalWrong += (d.wrong || []).length; totalFlagged += (d.flagged || []).length; });
@@ -984,7 +997,17 @@
         revBtn.onclick = launchReviewFinal;
       }
 
-      renderReviewSetup(finalQs);
+      // Lock scope tabs to prevent switching during review setup
+      _inReviewSetup = true;
+      // Re-render tabs with disabled state
+      var tabsContainer2 = document.getElementById('dash-scope-tabs');
+      if (tabsContainer2) {
+        tabsContainer2.querySelectorAll('.dash-scope-tab').forEach(function(tab) {
+          tab.classList.add('disabled');
+        });
+      }
+
+    renderReviewSetup(finalQs);
     });
   };
 
@@ -1089,24 +1112,17 @@
 
 
   window.closeReviewMode = function(fromPopState) {
-    // Early exit if nothing to close
-    var iframe = document.getElementById('review-iframe');
-    if (!iframe && _activeDashboard !== 'review') return;
-
-    // Always remove the review iframe FIRST (before any async history navigation)
-    // so it never lingers on top of the tracker dashboard.
-    if (iframe) iframe.remove();
-
-    var wasInReview = _activeDashboard === 'review';
+    if (!fromPopState && (_activeDashboard === 'review' || document.getElementById('review-iframe'))) {
+      if (_activeDashboard === 'review') {
+        history.back();
+        return;
+      }
+    }
     _activeDashboard = null;
-
-    if (!fromPopState && wasInReview) {
-      // User-initiated close (home button / back-to-hub via postMessage).
-      // Pop the review history entry so the popstate handler can
-      // reactivate the tracker dashboard at the {tracker} state.
-      history.back();
-    } else if (fromPopState && wasInReview) {
-      // Arrived here from the popstate handler itself — reopen tracker directly.
+    var iframe = document.getElementById('review-iframe');
+    if (iframe) {
+      iframe.remove();
+      // Re-open dashboard instantly when exiting review to show changes!
       openTrackerDashboard(null, true);
     }
   };
@@ -1123,26 +1139,20 @@
 
   window.addEventListener('popstate', function(e) {
     var state = e.state;
-
-    // Safety net: always remove the review iframe if it somehow survived
-    // (covers every branch so the overlay never lingers on screen).
-    var reviewIframe = document.getElementById('review-iframe');
-    if (reviewIframe) {
-      reviewIframe.remove();
-    }
-
     if (state && state.dash === 'tracker') {
-      // Navigated back to tracker state (e.g. from review) — reopen dashboard
-      _activeDashboard = 'tracker';
       openTrackerDashboard(null, true);
     } else if (state && state.dash === 'review') {
-      // Forward navigation to review state — shouldn't normally happen,
-      // but clean up to avoid orphaned state.
-      _activeDashboard = null;
+      // Review mode is launched via launchReviewFinal; 
+      // if we're here, it means we went forward to a review state.
+      // For simplicity, we just close everything if the state is unexpected.
     } else {
       // No dashboard state -> close any open overlays
       if (_activeDashboard === 'tracker') closeTrackerDashboard(true);
-      _activeDashboard = null;
+      
+      // Always check for and remove review iframe when navigating to a non-review state
+      var iframe = document.getElementById('review-iframe');
+      if (iframe) iframe.remove();
+      if (_activeDashboard === 'review') _activeDashboard = null;
     }
   });
 

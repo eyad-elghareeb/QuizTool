@@ -357,6 +357,7 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
 }
 .dash-scope-tab:hover { color: var(--text); }
 .dash-scope-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.dash-scope-tab.disabled { opacity: 0.35; pointer-events: none; cursor: not-allowed; }
 
 .dash-summary {
   display: grid;
