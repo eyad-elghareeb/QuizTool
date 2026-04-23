@@ -1225,6 +1225,7 @@ let _hlLastColor = 1;        // last selected highlight color (1-4), default Yel
 let _hlPickerOpen = false;   // color picker dropdown open state
 let _hoveredOption = -1;     // option index currently hovered (-1 = none)
 let _ctxStrikeDone = false;  // flag to prevent double-toggle (mousedown + contextmenu)
+let _hlPointerDown = false;  // true while mouse/touch is down (prevents mid-selection auto-apply)
 let submitTimeout = null;  // tracks the setTimeout(confirmSubmit) from timer expiry
 
 /* ════════════════════════════════════════════════════════════════
@@ -1261,25 +1262,35 @@ function _hlInit() {
   }, true);
 
   /* ── AUTO-HIGHLIGHT: MOUSE-UP + TOUCH-END + SELECTION-CHANGE ─ */
+  document.addEventListener('touchstart', function(e) {
+    _hlPointerDown = true;
+  }, { passive: true });
+
   document.addEventListener('mouseup', function(e) {
     if (e.button !== 0) return;
     if (!state.isHighlighterMode || state.submitted) return;
-    setTimeout(_hlAutoApply, 10);
+    _hlPointerDown = false;
+    clearTimeout(_hlSelectionTimer);
+    _hlSelectionTimer = setTimeout(_hlAutoApply, 50);
   });
 
   document.addEventListener('selectionchange', function() {
     if (!state.isHighlighterMode || state.submitted) return;
+    if (_hlPointerDown) return; // wait until user releases pointer
     clearTimeout(_hlSelectionTimer);
-    _hlSelectionTimer = setTimeout(_hlAutoApply, 120);
+    _hlSelectionTimer = setTimeout(_hlAutoApply, 50);
   });
 
   document.addEventListener('touchend', function(e) {
     if (!state.isHighlighterMode || state.submitted) return;
-    setTimeout(_hlAutoApply, 50);
+    _hlPointerDown = false;
+    clearTimeout(_hlSelectionTimer);
+    _hlSelectionTimer = setTimeout(_hlAutoApply, 50);
   });
 
   /* ── RIGHT-CLICK / LONG-PRESS: DIRECT STRIKETHROUGH ──────── */
   document.addEventListener('mousedown', function(e) {
+    if (e.button === 0) _hlPointerDown = true;
     _ctxStrikeDone = false;
     if (_hlPickerOpen) {
       var isPickerClick = e.target.closest('.hl-color-picker') || e.target.closest('.hl-mode-btn');
@@ -1461,6 +1472,7 @@ function _isSelectionInQuestionArea() {
 
 function _hlAutoApply() {
   if (!state.isHighlighterMode || state.submitted) return;
+  if (_hlPointerDown) return; // still selecting — wait for mouseup/touchend
   if (!_isSelectionInQuestionArea()) return;
   _hlJustApplied = true;
   setTimeout(function() { _hlJustApplied = false; }, 100);
