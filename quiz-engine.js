@@ -1022,13 +1022,16 @@ input[type=radio]:checked + .option-label .option-key {
 .highlighter-active .q-text, .highlighter-active .option-text, .highlighter-active .explanation-box {
   cursor: text; user-select: text; -webkit-user-select: text;
   touch-action: manipulation;
+  -webkit-touch-callout: none;
 }
 /* In highlighter mode, allow text selection on option labels for highlighting */
 .highlighter-active .option-label {
   touch-action: manipulation !important;
+  -webkit-touch-callout: none;
 }
 .highlighter-active .option-text {
   user-select: text; -webkit-user-select: text;
+  -webkit-touch-callout: none;
 }
 /* Color picker dropdown next to highlighter button */
 .hl-color-picker {
@@ -1415,13 +1418,13 @@ function _hlInit() {
   document.addEventListener('selectionchange', function() {
     if (!state.isHighlighterMode || state.submitted) return;
     clearTimeout(_hlSelectionTimer);
-    _hlSelectionTimer = setTimeout(_hlAutoApply, 600);
+    _hlSelectionTimer = setTimeout(_hlAutoApply, 120);
   });
 
   // Touch: touchend as fallback for quick taps on text
   document.addEventListener('touchend', function(e) {
     if (!state.isHighlighterMode || state.submitted) return;
-    setTimeout(_hlAutoApply, 300);
+    setTimeout(_hlAutoApply, 50);
   });
 
   /* ── RIGHT-CLICK / LONG-PRESS: DIRECT STRIKETHROUGH ──────── */
