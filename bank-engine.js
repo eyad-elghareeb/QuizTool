@@ -469,7 +469,7 @@ input[type=radio] { display: none; }
 }
 .flag-btn:hover, .flag-btn.active { background: var(--flagged-bg); border-color: var(--flagged); color: var(--flagged); }
 
-.q-text { font-size: clamp(1rem, 2.5vw, 1.2rem); font-weight: 500; color: var(--text); line-height: 1.7; flex: 1; }
+.q-text { font-size: clamp(1rem, 2.5vw, 1.2rem); font-weight: 500; color: var(--text); line-height: 1.7; flex: 1; -webkit-touch-callout: default; -webkit-user-select: text; user-select: text; touch-action: manipulation; }
 
 .options-list { display: flex; flex-direction: column; gap: 0.65rem; }
 .option-label {
@@ -506,7 +506,7 @@ input[type=radio]:checked + .option-label { border-color: var(--accent); backgro
   z-index: 1; text-transform: uppercase;
 }
 input[type=radio]:checked + .option-label .option-key { background: var(--accent); border-color: var(--accent); color: #000; }
-.option-text { font-size: 0.95rem; line-height: 1.5; z-index: 1; padding-top: 0.05rem; }
+.option-text { font-size: 0.95rem; line-height: 1.5; z-index: 1; padding-top: 0.05rem; -webkit-touch-callout: default; -webkit-user-select: text; user-select: text; touch-action: manipulation; }
 
 .q-nav-btns { display: flex; gap: 0.75rem; padding-top: 0.5rem; flex-wrap: wrap; }
 .btn-nav {
@@ -687,7 +687,7 @@ input[type=radio]:checked + .option-label .option-key { background: var(--accent
 
 .result-q-meta { flex: 1; }
 .result-q-num  { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem; font-weight: 600; }
-.result-q-text { font-size: 0.95rem; font-weight: 500; line-height: 1.5; }
+.result-q-text { font-size: 0.95rem; font-weight: 500; line-height: 1.5; -webkit-touch-callout: default; -webkit-user-select: text; user-select: text; touch-action: manipulation; }
 .expand-arrow  { color: var(--text-muted); font-size: 0.8rem; margin-top: 0.2rem; transition: transform 0.2s; }
 .result-item-header.open .expand-arrow { transform: rotate(180deg); }
 
@@ -706,6 +706,10 @@ input[type=radio]:checked + .option-label .option-key { background: var(--accent
   margin-top: 0.75rem; padding: 0.75rem 1rem;
   background: var(--surface2); border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0;
   font-size: 0.875rem; line-height: 1.6; color: var(--text-muted);
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  user-select: text;
+  touch-action: manipulation;
 }
 .explanation-box strong { color: var(--text); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 0.25rem; }
 

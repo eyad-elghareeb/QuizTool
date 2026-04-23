@@ -468,6 +468,10 @@ input[type=radio] { display: none; }
   color: var(--text);
   line-height: 1.7;
   flex: 1;
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  user-select: text;
+  touch-action: manipulation;
 }
 
 /* OPTIONS */
@@ -522,7 +526,7 @@ input[type=radio]:checked + .option-label .option-key {
   border-color: var(--accent);
   color: #000;
 }
-.option-text { font-size: 0.95rem; line-height: 1.5; z-index: 1; padding-top: 0.05rem; }
+.option-text { font-size: 0.95rem; line-height: 1.5; z-index: 1; padding-top: 0.05rem; -webkit-touch-callout: default; -webkit-user-select: text; user-select: text; touch-action: manipulation; }
 
 /* NAVIGATION BUTTONS */
 .q-nav-btns {
@@ -867,7 +871,7 @@ input[type=radio]:checked + .option-label .option-key {
 
 .result-q-meta { flex: 1; }
 .result-q-num  { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem; font-weight: 600; }
-.result-q-text { font-size: 0.95rem; font-weight: 500; line-height: 1.5; }
+.result-q-text { font-size: 0.95rem; font-weight: 500; line-height: 1.5; -webkit-touch-callout: default; -webkit-user-select: text; user-select: text; touch-action: manipulation; }
 .expand-arrow { color: var(--text-muted); font-size: 0.8rem; margin-top: 0.2rem; transition: transform 0.2s; }
 .result-item-header.open .expand-arrow { transform: rotate(180deg); }
 
@@ -901,6 +905,10 @@ input[type=radio]:checked + .option-label .option-key {
   font-size: 0.875rem;
   line-height: 1.6;
   color: var(--text-muted);
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  user-select: text;
+  touch-action: manipulation;
 }
 .explanation-box strong { color: var(--text); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 0.25rem; }
 
