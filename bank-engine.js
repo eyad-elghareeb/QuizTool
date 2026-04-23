@@ -1191,7 +1191,7 @@ input[type=radio]:checked + .option-label .option-key { background: var(--accent
 /* ══════════════════════════════════════════════════
    QUESTION BANK ENGINE
 ══════════════════════════════════════════════════ */
-const KEYS = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+const KEYS = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T'];
 
 // Session questions (selected subset from bank for this session)
 let SESSION_QUESTIONS = [];
