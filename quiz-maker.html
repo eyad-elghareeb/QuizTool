@@ -252,6 +252,15 @@ input:focus, textarea:focus {
   .options-grid { grid-template-columns: 1fr; }
 }
 </style>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="favicon.svg">
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
+</script>
 </head>
 <body>
 
