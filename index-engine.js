@@ -1089,17 +1089,24 @@
 
 
   window.closeReviewMode = function(fromPopState) {
-    if (!fromPopState && (_activeDashboard === 'review' || document.getElementById('review-iframe'))) {
-      if (_activeDashboard === 'review') {
-        history.back();
-        return;
-      }
-    }
-    _activeDashboard = null;
+    // Early exit if nothing to close
     var iframe = document.getElementById('review-iframe');
-    if (iframe) {
-      iframe.remove();
-      // Re-open dashboard instantly when exiting review to show changes!
+    if (!iframe && _activeDashboard !== 'review') return;
+
+    // Always remove the review iframe FIRST (before any async history navigation)
+    // so it never lingers on top of the tracker dashboard.
+    if (iframe) iframe.remove();
+
+    var wasInReview = _activeDashboard === 'review';
+    _activeDashboard = null;
+
+    if (!fromPopState && wasInReview) {
+      // User-initiated close (home button / back-to-hub via postMessage).
+      // Pop the review history entry so the popstate handler can
+      // reactivate the tracker dashboard at the {tracker} state.
+      history.back();
+    } else if (fromPopState && wasInReview) {
+      // Arrived here from the popstate handler itself — reopen tracker directly.
       openTrackerDashboard(null, true);
     }
   };
@@ -1116,20 +1123,26 @@
 
   window.addEventListener('popstate', function(e) {
     var state = e.state;
+
+    // Safety net: always remove the review iframe if it somehow survived
+    // (covers every branch so the overlay never lingers on screen).
+    var reviewIframe = document.getElementById('review-iframe');
+    if (reviewIframe) {
+      reviewIframe.remove();
+    }
+
     if (state && state.dash === 'tracker') {
+      // Navigated back to tracker state (e.g. from review) — reopen dashboard
+      _activeDashboard = 'tracker';
       openTrackerDashboard(null, true);
     } else if (state && state.dash === 'review') {
-      // Review mode is launched via launchReviewFinal; 
-      // if we're here, it means we went forward to a review state.
-      // For simplicity, we just close everything if the state is unexpected.
+      // Forward navigation to review state — shouldn't normally happen,
+      // but clean up to avoid orphaned state.
+      _activeDashboard = null;
     } else {
       // No dashboard state -> close any open overlays
       if (_activeDashboard === 'tracker') closeTrackerDashboard(true);
-      
-      // Always check for and remove review iframe when navigating to a non-review state
-      var iframe = document.getElementById('review-iframe');
-      if (iframe) iframe.remove();
-      if (_activeDashboard === 'review') _activeDashboard = null;
+      _activeDashboard = null;
     }
   });
 
