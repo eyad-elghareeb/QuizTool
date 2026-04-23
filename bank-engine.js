@@ -2436,7 +2436,7 @@ function renderQuestion(idx) {
   area.innerHTML = `
     <div class="q-header">
       <span class="q-number-badge">Q ${idx+1} / ${SESSION_QUESTIONS.length}</span>
-      <div class="q-text">${q.question}</div>
+      <div class="q-text" tabindex="-1" role="text">${q.question}</div>
       <div class="q-actions">
         <button class="flag-btn ${state.flagged[idx]?'active':''}" onclick="toggleFlag(${idx})" id="flag-btn-${idx}">
           <svg width="13" height="13" viewBox="0 0 24 24"
@@ -2471,13 +2471,13 @@ function renderQuestion(idx) {
                  onchange="selectAnswer(${idx},${i})">
           <label class="option-label" for="opt_${i}" data-opt-idx="${i}" style="${extra}">
             <span class="option-key" style="${keyStyle}">${KEYS[i]}</span>
-            <span class="option-text">${opt}</span>
+            <span class="option-text" tabindex="-1" role="text">${opt}</span>
           </label>`;
       }).join('')}
     </div>
 
     ${(isLearning && isAnswered) ? `
-      <div class="explanation-box" style="margin-top: 1rem;">
+      <div class="explanation-box" style="margin-top: 1rem;" tabindex="-1" role="text">
         <strong>${sel === q.correct ? '✅ Correct!' : '❌ Incorrect'}</strong>
         ${q.explanation}
       </div>` : ''}
@@ -2690,7 +2690,7 @@ function renderResultItems(filter) {
         <div class="result-status-icon">${icon}</div>
         <div class="result-q-meta">
           <div class="result-q-num">Question ${i+1}${isFlagged?' · ⚑ Flagged':''}</div>
-          <div class="result-q-text">${q.question}</div>
+          <div class="result-q-text" tabindex="-1" role="text">${q.question}</div>
         </div>
         <div class="expand-arrow">▼</div>
       </div>
@@ -2705,7 +2705,7 @@ function renderResultItems(filter) {
             <span class="ar-label">Correct Answer</span>
             <span>${KEYS[q.correct]}. ${corrOpt}</span>
           </div>` : ''}
-        <div class="explanation-box">
+        <div class="explanation-box" tabindex="-1" role="text">
           <strong>Explanation</strong>
           ${q.explanation}
         </div>
@@ -3465,7 +3465,7 @@ checkSavedProgress();
       + '<div class="dash-q-icon ' + iconClass + '">' + iconText + '</div>'
       + '<div class="dash-q-content">'
       +   '<div class="dash-q-num">Q' + ((q.idx || 0) + 1) + ' · ' + typeLabel + '</div>'
-      +   '<div class="dash-q-text">' + esc + '</div>'
+      +   '<div class="dash-q-text" tabindex="-1" role="text">' + esc + '</div>'
       + '</div>'
       + '<button class="dash-q-remove" onclick="removeTrackerItem(\'' + uid + '\',' + (q.idx || 0) + ')" title="Remove">✕</button>'
       + '</div>';
