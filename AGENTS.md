@@ -101,14 +101,13 @@ Same structure as quiz template but for `bank-maker.html` output. Uses `BANK_CON
 
 ### `index-template.html`
 Template for `index-editor.html` output. Contains:
-- Full topbar with tracker button and theme toggle
+- Standardized topbar, hero, and grid structure
 - `const QUIZZES = [...]` array (populated by editor)
 - Full tracker dashboard HTML block
-- `<script src="index-engine.js">` loader
-- Init script for theme + renderQuizzes
-- SW registration block
+- **Modernized Structure:** Uses `<link rel="stylesheet" href="index-engine.css">` instead of embedded styles.
+- SW registration block (depth-aware in generated output)
 
-**Critical:** `index-editor.html` calls `fetch('index-template.html')` to load this template. Changes to the template immediately affect all pages the editor produces.
+**Critical:** `index-editor.html` fetches this template. Changes to the template affect all future hub pages produced by the editor.
 
 ---
 
@@ -308,14 +307,18 @@ project/
     └── jekyll-gh-pages.yml
 ```
 
-### Key generator functions
-
 | Function | Purpose |
 |----------|---------|
-| `generate_sw_js(project_name, paths)` | Build a complete `sw.js` with all file paths in `PRECACHE_REL_PATHS` |
-| `gen_index_html(topbar_title, hero_title, hero_desc, quizzes, engine_prefix, parent_path)` | Generate a hub page. `engine_prefix` = `'../'×depth`; `parent_path` = relative path to parent folder |
-| `build_project_zip(config)` | Full pipeline: builds all pages, copies engines, writes ZIP |
-| `read_file(name)` | Read from QuizTool's own directory at startup |
+| `generate_sw_js(project_name, paths)` | Builds a robust `sw.js` with `REQUIRED` vs `others` install logic and `SHARED` asset fallback. |
+| `gen_index_html(...)` | Produces hub pages linking to `index-engine.css`. |
+| `build_project_zip(config)` | Full pipeline: ensures engines are prioritized in precache list. |
+| `read_file(name)` | Read from QuizTool root. |
+
+### 6a. Robust SW Logic in Generator
+The generated `sw.js` includes:
+- **REQUIRED List**: Critical assets (engines, manifest, hubs) that must load for successful installation.
+- **SHARED Fallback**: Resolves `index-engine.css`, etc., from the root if requested from subfolders.
+- **Cache Name**: Prefixed with `quiz-cache-` for generated projects.
 
 ### Script self-sufficiency
 
@@ -403,23 +406,81 @@ The modal (`#clear-tracker-modal`) and its styles are **dynamically injected by 
 
 ---
 
-## 11. Tracker System
+## 11. Question Tracker System
 
-### After quiz submit
-`confirmSubmit()` → `saveTrackerData()`:
-- Builds `wrongQs[]` and `flaggedQs[]` from current session
-- Merges with existing stored data for this UID:
-  - Questions in the **current session** (by index if `SESSION_QUESTION_INDICES` exists, by text otherwise) replace their previous entries
-  - Questions from previous sessions **not covered** in this session are preserved
-- Stores under `quiz_tracker_v2_<uid>`; registers UID in `quiz_tracker_keys`
+The tracker is a persistence layer that aggregates mistakes and flagged items across all sessions for long-term review. It is shared between all engines and hub pages.
 
-### Scope-aware clear
-`confirmClearTrackerData()` shows modal with current scope name.
-`clearAllTrackerData()` deletes **only UIDs matching the current scope** (folder prefix or all), not the entire tracker.
+### 11a. Data Lifecycle
+1. **Capture**: On `confirmSubmit()`, the engine calls `saveTrackerData()`.
+2. **Merge**: It reads existing data for the UID and merges it with the current session.
+   - Questions in the **current session** (by global index for banks, or by text for quizzes) are updated.
+   - Historical questions **not present** in the current session are preserved.
+3. **Storage**: Data is saved in `localStorage` under `quiz_tracker_v2_<uid>`. The UID is added to a global index `quiz_tracker_keys`.
+
+### 11b. Dashboard Features
+- **Scoped View**: Hub pages automatically filter the dashboard to the current folder's quizzes.
+- **Review Mode**: Users can select specific quizzes or folders and click "Start Review" to launch a dynamic session containing only those tracked questions.
+- **Deduplication**: The tracker identifies questions by text to prevent duplicates if the same question appears in multiple quizzes.
+- **Selective Clearing**: `confirmClearTrackerData()` only deletes data for the currently visible scope (Current Folder, All, or This Quiz).
 
 ---
 
-## 12. CSS / Theme System
+## 12. Highlighter & Markup System
+
+A robust toolset for annotating questions during a session. Markups are persisted in the user's progress and restored on reload.
+
+### 12a. Highlighting
+- **Activation**: Toggle via the 🖍️ icon in the topbar or the `H` key.
+- **Colors**: Provides 4 highlight colors (Yellow, Green, Blue, Red) and an Eraser mode.
+- **Auto-Apply**: When active, simply selecting text (Mouse drag or Touch selection) automatically applies the last selected color.
+- **Persistence**: Stored in `state.highlights[qIdx]` as offsets. These are saved to `localStorage` progress automatically.
+
+### 12b. Strikethrough (Process of Elimination)
+- **Usage**: Right-click on an option label, or press the `S` key while hovering over an option.
+- **Visual**: Places a red line through the option text and dims it.
+- **Persistence**: Stored in `state.strikethrough[qIdx]`.
+
+### 12c. Technical Implementation
+Markups are applied dynamically during `renderQuestion()` by injecting `<mark>` tags into the text nodes based on stored offsets. This prevents breaking the underlying data while allowing rich visuals.
+
+---
+
+## 13. Keyboard Shortcut System
+
+The engine includes a full keyboard interface to speed up MCQ solving.
+
+| Key | Action |
+|-----|--------|
+| `←` / `→` | Previous / Next question |
+| `1` - `4` | Select option A, B, C, or D (or set highlight color in hl mode) |
+| `F` | Toggle Flag for review |
+| `H` | Toggle Highlighter mode |
+| `S` | Toggle Strikethrough (while hovering an option) |
+| `Enter` | Submit quiz (from question screen) |
+| `/` | Show / Hide keyboard shortcut help |
+| `Esc` | Close modals or help panel |
+
+---
+
+## 14. Session Management & Persistence
+
+The engine ensures that a user's progress is never lost, even if they close the browser or refresh the page.
+
+### 14a. Auto-Save Logic
+- **Triggers**: Every time an option is selected, a question is flagged, or a highlight is applied, `saveProgress()` is called.
+- **Data**: The current `state` (answers, flags, elapsed time, highlights, etc.) is serialized to JSON.
+- **Storage**: Saved in `localStorage` under `quiz_progress_v1_<uid_sanitized>`.
+
+### 14b. Restore Workflow
+1. **Detection**: On page load, the engine checks for an existing progress key for the current UID.
+2. **Toast**: If found, a toast notification appears: *"Resume previous session? [Restore] [Dismiss]"*.
+3. **Action**: 
+   - **Restore**: Overwrites the initial state with the saved data and jumps to the last seen question.
+   - **Dismiss**: Deletes the saved progress and starts fresh.
+
+---
+
+## 15. CSS / Theme System
 
 All CSS is injected by the engines — do not add external stylesheets to quiz/bank files.
 
@@ -440,27 +501,30 @@ All CSS is injected by the engines — do not add external stylesheets to quiz/b
 
 ---
 
-## 13. What NOT To Do
+## 16. CRITICAL RULES: DO NOT BREAK
 
-### In templates (`quiz-template.html`, `question-bank-template.html`, `index-template.html`):
-- **Never remove `/* [QUIZ_CONFIG_START/END] */` markers** — sync script and editor depend on them
-- **Never remove `/* [QUESTIONS_START/END] */` markers** — same reason
-- **Never remove SW registration** from `index-template.html` — every generated index page needs it
-- **Never use `clearAllTrackerData()` in a button `onclick`** — always call `confirmClearTrackerData()`
+To maintain the stability of the toolkit, the accuracy of the project generator, and the offline functionality of all produced sites, every agent MUST follow these rules:
 
-### In `generate_project.py`:
-- **Never reference a sibling directory** (e.g., `../MU61S8/`) — the generator must be self-contained
-- **Never hardcode a project-specific prefix** in `generate_sw_js` — use `project_name`
-- **Never skip `generate_sw_js`** in favour of `read_file('sw.js')` — the bundled sw.js needs the actual file list
+### 16a. Project Generator (`generate_project.py`)
+- **Never reference external directories**: The generator MUST be self-contained. It should only read from the `QuizTool` root or its own subfolders. Never reference `../MU61S8/` or other sibling repos.
+- **Never skip `generate_sw_js`**: In the `build_project_zip` function, always use the dynamic `generate_sw_js` helper instead of reading a static `sw.js`. The generated SW needs a manifest specific to the new project's files.
+- **Prioritize Engines in ZIP**: When building the precache list for a generated project, the engines (`quiz-engine.js`, `index-engine.js`, etc.) MUST be included in the `REQUIRED` list to ensure the PWA is functional even if some quiz files fail to cache.
 
-### In engines:
-- **Never modify the engine path detection snippet** — the `location.pathname` computation is intentional
-- **Never add logic that assumes a fixed folder depth** — engines work at any depth
+### 16b. Templates & Markers
+- **Never remove parsing markers**: The comments `/* [QUIZ_CONFIG_START/END] */`, `/* [QUESTIONS_START/END] */`, etc., are functional code. Removing them breaks the `sync_quiz_assets.py` script and the GUI editors (`quiz-editor.html`, etc.).
+- **SW Registration in `index-template.html`**: Every index page produced by the toolkit MUST include the service worker registration block. Never remove this from the template.
 
-### In general:
-- **Never rename `uid` values** in deployed quiz files — orphans all user progress
-- **Never add `<head>` content to quiz/bank files** — engines own the `<head>`
-- **Never manually edit `sw.js` in a generated project** — run `sync_quiz_assets.py` instead
+### 16c. Path Resolution & Engines
+- **Preserve `__QUIZ_ENGINE_BASE`**: This snippet is the only thing allowing quizzes to work in deep subfolders. Never replace it with a hardcoded `../` or `/` path.
+- **Shared Assets**: The `SHARED` fallback list in the service worker is critical. If you rename a core asset (like `index-engine.css`), you MUST update the fallback logic in both the toolkit `sw.js` and the generator's `generate_sw_js`.
+
+### 16d. Data Safety (localStorage)
+- **Stable UIDs**: Never modify the `uid` of a quiz file once it has been distributed. This orphans all user progress and tracker data.
+- **Scoped Clear**: In `index-engine.js`, always use `confirmClearTrackerData()` before performing any deletion. Never call `localStorage.removeItem()` directly in a UI button without a confirmation step.
+
+### 16e. Offline Logic
+- **Toolkit vs Project Caches**: The toolkit uses `quiz-tool-` as a cache prefix. Generated projects use `quiz-cache-`. Never mix these, as it causes cross-contamination of offline data.
+- **Network-First for Hubs**: All `index.html` (hub) pages MUST use a network-first strategy in the service worker to ensure users see the latest quiz list when online.
 
 ---
 
@@ -480,7 +544,7 @@ All CSS is injected by the engines — do not add external stylesheets to quiz/b
 
 ```
 QuizTool (toolkit pages)
-  index.html → index-engine.js, index-engine.css, sw.js
+  index.html → index-engine.js, index-engine.css, sw.js (prefix: quiz-tool-)
 
   quiz-maker.html      → quiz-template.html (fetched at runtime)
   bank-maker.html      → question-bank-template.html (fetched at runtime)
