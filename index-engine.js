@@ -1176,7 +1176,9 @@
       : 'Selected Exams';
     var now = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
-    var html = '<div style="font-family:Arial,sans-serif;max-width:780px;margin:0 auto;padding:20px;color:#1c1917;">'
+    var container = document.createElement('div');
+
+    var headerHtml = '<div style="font-family:Arial,sans-serif;max-width:780px;margin:0 auto;padding:20px;color:#1c1917;">'
       + '<h1 style="font-size:22px;margin:0 0 4px;font-family:Georgia,serif;">\uD83D\uDCCA Question Tracker</h1>'
       + '<p style="color:#78716c;margin:0 0 4px;font-size:13px;">Scope: ' + scopeLabel + ' &mdash; ' + now + '</p>'
       + '<div style="background:#f8f6f1;border-radius:12px;padding:18px 20px;margin-bottom:22px;border:1px solid #d0ccc5;display:flex;gap:18px;align-items:center;flex-wrap:wrap;">'
@@ -1187,7 +1189,15 @@
       +       '<div style="background:#fff;border:1px solid #d0ccc5;border-radius:8px;padding:7px 12px;text-align:center;min-width:62px;"><div style="font-size:16px;font-weight:700;color:#16a34a;">' + data.length + '</div><div style="font-size:10px;color:#78716c;">Quizzes</div></div>'
       +     '</div>'
       +   '</div>'
-      + '</div>';
+      + '</div></div>';
+
+    var headerDiv = document.createElement('div');
+    headerDiv.innerHTML = headerHtml;
+    container.appendChild(headerDiv);
+
+    var currentChunkHtml = '';
+    var itemsCount = 0;
+    var itemsPerChunk = 15;
 
     data.sort(function (a, b) { return (b.timestamp || 0) - (a.timestamp || 0); });
 
@@ -1198,7 +1208,7 @@
       var uniqueFlagged = flaggedItems.filter(function (q) { return !wrongIdxs[q.idx]; });
       if (!wrongItems.length && !uniqueFlagged.length) return;
 
-      html += '<h3 style="font-size:14px;margin:18px 0 8px;font-family:Georgia,serif;">' + (d.title || 'Quiz') + '</h3>';
+      currentChunkHtml += '<h3 style="font-size:14px;margin:18px 0 8px;font-family:Georgia,serif;">' + (d.title || 'Quiz') + '</h3>';
 
       var allItems = [];
       wrongItems.forEach(function (q) {
@@ -1211,7 +1221,7 @@
 
       allItems.forEach(function (item) {
         var q = item.q;
-        html += '<div style="border:1.5px solid ' + item.color + ';border-radius:10px;margin-bottom:12px;overflow:hidden;page-break-inside:avoid;">'
+        currentChunkHtml += '<div style="border:1.5px solid ' + item.color + ';border-radius:10px;margin-bottom:12px;overflow:hidden;page-break-inside:avoid;">'
           + '<div style="padding:12px 15px;background:' + item.bg + ';">'
           + '<div style="display:flex;gap:10px;align-items:flex-start;">'
           + '<div style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex-shrink:0;background:rgba(0,0,0,.06);color:' + item.color + ';">' + (item.type === 'Flagged' ? '\u2691' : '\u2717') + '</div>'
@@ -1221,12 +1231,26 @@
           + '<div style="background:rgba(220,38,38,.08);border-radius:6px;padding:7px 11px;margin-bottom:7px;font-size:12px;"><span style="font-size:10px;text-transform:uppercase;font-weight:700;opacity:.6;margin-right:8px;">Your Answer</span>' + q.yourAnswer + '</div>'
           + '<div style="background:rgba(22,163,74,.08);border-radius:6px;padding:7px 11px;margin-bottom:7px;font-size:12px;"><span style="font-size:10px;text-transform:uppercase;font-weight:700;opacity:.6;margin-right:8px;">Correct Answer</span>' + q.correctAnswer + '</div>';
         if (q.explanation) {
-          html += '<div style="background:#f8f6f1;border-left:3px solid #c27803;border-radius:0 6px 6px 0;padding:9px 11px;font-size:12px;color:#44403c;line-height:1.6;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#1c1917;margin-bottom:3px;">Explanation</div>' + q.explanation + '</div>';
+          currentChunkHtml += '<div style="background:#f8f6f1;border-left:3px solid #c27803;border-radius:0 6px 6px 0;padding:9px 11px;font-size:12px;color:#44403c;line-height:1.6;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#1c1917;margin-bottom:3px;">Explanation</div>' + q.explanation + '</div>';
         }
-        html += '</div></div>';
+        currentChunkHtml += '</div></div>';
+        itemsCount++;
+        
+        if (itemsCount >= itemsPerChunk) {
+          var chunkDiv = document.createElement('div');
+          chunkDiv.innerHTML = '<div style="font-family:Arial,sans-serif;max-width:780px;margin:0 auto;padding:20px;color:#1c1917;">' + currentChunkHtml + '</div>';
+          container.appendChild(chunkDiv);
+          currentChunkHtml = '';
+          itemsCount = 0;
+        }
       });
     });
-    html += '</div>';
+    
+    if (currentChunkHtml) {
+      var chunkDiv = document.createElement('div');
+      chunkDiv.innerHTML = '<div style="font-family:Arial,sans-serif;max-width:780px;margin:0 auto;padding:20px;color:#1c1917;">' + currentChunkHtml + '</div>';
+      container.appendChild(chunkDiv);
+    }
 
     var filename = 'question_tracker_' + scopeLabel.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.pdf';
     var opt = {
@@ -1236,11 +1260,20 @@
       html2canvas: { scale: 2, useCORS: true, logging: false },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
-    var container = document.createElement('div');
-    container.innerHTML = html;
 
     function runExport() {
-      html2pdf().set(opt).from(container).save().catch(function () {});
+      var children = Array.from(container.children);
+      if (children.length === 0) return;
+      
+      var worker = html2pdf().set(opt).from(children[0]).toPdf();
+      
+      children.slice(1).forEach(function(child) {
+        worker = worker.get('pdf').then(function(pdf) {
+          pdf.addPage();
+        }).from(child).toContainer().toCanvas().toPdf();
+      });
+      
+      worker.save().catch(function () {});
     }
 
     if (typeof html2pdf !== 'undefined') {
