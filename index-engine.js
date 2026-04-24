@@ -1178,8 +1178,7 @@
 
     var container = document.createElement('div');
 
-    var headerHtml = '<div style="font-family:Arial,sans-serif;max-width:780px;margin:0 auto;padding:20px;color:#1c1917;">'
-      + '<h1 style="font-size:22px;margin:0 0 4px;font-family:Georgia,serif;">\uD83D\uDCCA Question Tracker</h1>'
+    var currentChunkHtml = '<h1 style="font-size:22px;margin:0 0 4px;font-family:Georgia,serif;">📊 Question Tracker</h1>'
       + '<p style="color:#78716c;margin:0 0 4px;font-size:13px;">Scope: ' + scopeLabel + ' &mdash; ' + now + '</p>'
       + '<div style="background:#f8f6f1;border-radius:12px;padding:18px 20px;margin-bottom:22px;border:1px solid #d0ccc5;display:flex;gap:18px;align-items:center;flex-wrap:wrap;">'
       +   '<div style="flex:1;min-width:180px;">'
@@ -1189,13 +1188,7 @@
       +       '<div style="background:#fff;border:1px solid #d0ccc5;border-radius:8px;padding:7px 12px;text-align:center;min-width:62px;"><div style="font-size:16px;font-weight:700;color:#16a34a;">' + data.length + '</div><div style="font-size:10px;color:#78716c;">Quizzes</div></div>'
       +     '</div>'
       +   '</div>'
-      + '</div></div>';
-
-    var headerDiv = document.createElement('div');
-    headerDiv.innerHTML = headerHtml;
-    container.appendChild(headerDiv);
-
-    var currentChunkHtml = '';
+      + '</div>';
     var itemsCount = 0;
     var itemsPerChunk = 15;
 
