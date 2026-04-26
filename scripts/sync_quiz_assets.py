@@ -35,16 +35,22 @@ ACRONYMS = {
     "qs": "QS",
     "stis": "STIs",
 }
+FOLDER_TITLES = {
+    "gyn": "Gynecology",
+    "cardio": "Cardiology",
+    "ai": "AI",
+    "dep": "Department",
+    "mans": "Mansoura",
+    "ped": "Paediatrics",
+    "surg": "Surgery",
+    "med": "Internal Medicine",
+    "chest": "Chest Medicine",
+    "past-years": "Past Years",
+}
 
 
 def main() -> int:
     changed_files: list[Path] = []
-
-    # Update root index.html with subfolder entries
-    root_index = REPO_ROOT / "index.html"
-    if root_index.exists():
-        if update_root_index_with_folders(root_index):
-            changed_files.append(root_index)
 
     for index_path in discover_index_files():
         if update_index_file(index_path):
@@ -63,87 +69,6 @@ def main() -> int:
     return 0
 
 
-def update_root_index_with_folders(index_path: Path) -> bool:
-    """Update root index.html with folder entries based on subfolders containing index.html"""
-    text = index_path.read_text(encoding="utf-8")
-    
-    try:
-        array_literal, start, end = extract_assigned_literal(text, "QUIZZES", "[", "]")
-    except ValueError:
-        # Root index doesn't have QUIZZES array, nothing to do
-        return False
-    
-    existing_entries = parse_js_literal(array_literal)
-
-    if not isinstance(existing_entries, list):
-        raise ValueError(f"{index_path} has a QUIZZES assignment that is not an array.")
-
-    # Track existing folder URLs to avoid duplicates
-    existing_urls = {
-        entry.get("url")
-        for entry in existing_entries
-        if isinstance(entry, dict) and isinstance(entry.get("url"), str)
-    }
-
-    # Discover subfolders that have their own index.html
-    new_entries: list[dict[str, object]] = []
-    
-    for subfolder in sorted(REPO_ROOT.iterdir(), key=lambda p: natural_key(p.name)):
-        # Skip if not a directory or in skip list
-        if not subfolder.is_dir():
-            continue
-        if subfolder.name in SKIP_DIRS or subfolder.name.startswith("."):
-            continue
-        
-        # Check if this subfolder has an index.html
-        subfolder_index = subfolder / "index.html"
-        if not subfolder_index.exists():
-            continue
-        
-        # Build the relative URL for the folder — URL-encode to handle spaces/special chars
-        import urllib.parse as _ul
-        folder_url = _ul.quote(subfolder.name, safe='') + "/index.html"
-        
-        # Skip if already exists
-        if folder_url in existing_urls:
-            continue
-        
-        # Build folder entry
-        icon = default_icon(subfolder.relative_to(REPO_ROOT))
-        folder_name = subfolder.name
-        
-        # Create better folder names based on common abbreviations
-        # Add entries here when adding new subject folders
-        folder_titles = {
-            "gyn": "Gynecology",
-            "cardio": "Cardiology",
-            "ai": "AI",
-            "dep": "Department",
-            "mans": "Mansoura",
-        }
-        
-        title = folder_titles.get(folder_name.lower(), folder_name.replace('-', ' ').replace('_', ' ').capitalize())
-        
-        # Count HTML files in the subfolder (excluding index.html)
-        html_count = len([f for f in subfolder.glob("*.html") if f.name != "index.html"])
-        
-        entry = {
-            "title": f"📁 {title}",
-            "description": f"{title} quizzes and resources",
-            "icon": icon,
-            "tags": ["Folder"],
-            "url": folder_url,
-        }
-        new_entries.append(entry)
-
-    if not new_entries:
-        return False
-
-    new_entry_literals = [serialize_quiz_entry(entry) for entry in new_entries]
-    updated_array_literal = append_entries_to_array_literal(array_literal, new_entry_literals)
-    updated_text = text[:start] + updated_array_literal + text[end:]
-    index_path.write_text(updated_text, encoding="utf-8")
-    return True
 
 
 def discover_index_files() -> list[Path]:
@@ -167,57 +92,148 @@ def discover_html_files() -> list[Path]:
 
 
 def update_index_file(index_path: Path) -> bool:
+    """Synchronize QUIZZES array in an index.html file: prune dead links, update metadata, add missing ones."""
     text = index_path.read_text(encoding="utf-8")
     
     try:
         array_literal, start, end = extract_assigned_literal(text, "QUIZZES", "[", "]")
     except ValueError:
-        # Skip index files without QUIZZES array (e.g., minimal redirect pages)
+        # Skip index files without QUIZZES array
         return False
     
     existing_entries = parse_js_literal(array_literal)
-
     if not isinstance(existing_entries, list):
         raise ValueError(f"{index_path} has a QUIZZES assignment that is not an array.")
 
-    existing_urls = {
-        entry.get("url")
-        for entry in existing_entries
-        if isinstance(entry, dict) and isinstance(entry.get("url"), str)
-    }
+    index_dir = index_path.parent
+    dir_rel = index_dir.relative_to(REPO_ROOT)
+    
+    # 1. Discover all valid local targets
+    valid_local_files = {p.name for p in index_dir.glob("*.html") if p.name != "index.html"}
+    
+    # 2. Discover valid subfolder targets (with index.html)
+    import urllib.parse as _ul
+    valid_subfolders = {}
+    for p in index_dir.iterdir():
+        if p.is_dir() and not (p.name in SKIP_DIRS or p.name.startswith(".")):
+            if (p / "index.html").exists():
+                url = _ul.quote(p.name, safe='') + "/index.html"
+                valid_subfolders[url] = p.name
 
-    existing_icon = next(
-        (
-            entry.get("icon")
-            for entry in existing_entries
-            if isinstance(entry, dict) and isinstance(entry.get("icon"), str) and entry.get("icon")
-        ),
-        default_icon(index_path.parent.relative_to(REPO_ROOT)),
-    )
+    # 3. Filter existing entries (prune dead links)
+    updated_entries = []
+    seen_urls = set()
+    
+    for entry in existing_entries:
+        if not isinstance(entry, dict): continue
+        url = entry.get("url")
+        if not url: continue
+        
+        is_valid = False
+        if url.startswith(("http://", "https://")):
+            is_valid = True
+        elif "/" in url:
+            # Subfolder or relative path (e.g. med/index.html)
+            # Check if it exists relative to the current index file
+            if (index_dir / url).exists():
+                is_valid = True
+        else:
+            # Local file in current directory
+            if url in valid_local_files:
+                is_valid = True
+        
+        if is_valid and url not in seen_urls:
+            updated_entries.append(entry)
+            seen_urls.add(url)
+    
+    # 4. Add missing local files
+    new_local_entries = []
+    # Use first existing icon or default
+    existing_icon = next((e.get("icon") for e in updated_entries if e.get("icon")), "📘")
+    
+    for filename in sorted(valid_local_files, key=natural_key):
+        if filename not in seen_urls:
+            quiz_path = index_dir / filename
+            entry = build_quiz_entry(quiz_path, dir_rel, str(existing_icon))
+            if entry:
+                new_local_entries.append(entry)
+                seen_urls.add(filename)
 
-    dir_rel = index_path.parent.relative_to(REPO_ROOT)
-    new_entries: list[dict[str, object]] = []
+    # 5. Add missing subfolders
+    new_subfolder_entries = []
+    
+    for url, folder_name in sorted(valid_subfolders.items(), key=lambda x: natural_key(x[1])):
+        if url not in seen_urls:
+            title = FOLDER_TITLES.get(folder_name.lower(), folder_name.replace('-', ' ').replace('_', ' ').capitalize())
+            entry = {
+                "title": f"📁 {title}",
+                "description": f"{title} quizzes and resources",
+                "icon": default_icon(Path(folder_name)),
+                "tags": ["Folder"],
+                "url": url,
+            }
+            new_subfolder_entries.append(entry)
+            seen_urls.add(url)
 
-    for quiz_path in sorted(index_path.parent.glob("*.html"), key=lambda item: natural_key(item.name)):
-        if quiz_path.name == "index.html":
-            continue
-
-        rel_url = quiz_path.name
-        if rel_url in existing_urls:
-            continue
-
-        entry = build_quiz_entry(quiz_path, dir_rel, str(existing_icon))
-        if entry is not None:  # Skip files without quiz config
-            new_entries.append(entry)
-
-    if not new_entries:
+    final_entries = updated_entries + new_local_entries + new_subfolder_entries
+    
+    # Serialize back
+    new_literals = [serialize_quiz_entry(e) for e in final_entries]
+    new_array_content = "[\n" + ",\n".join(new_literals) + "\n]"
+    
+    # Compare with normalized version to avoid unnecessary writes
+    # (parse_js_literal -> serialize) would be the best way to compare
+    # but for now simple string check on content
+    
+    updated_text = text[:start] + new_array_content + text[end:]
+    
+    # 6. Synchronize Titles and Labels
+    updated_text = sync_titles(index_path, updated_text)
+    
+    if updated_text == text:
         return False
-
-    new_entry_literals = [serialize_quiz_entry(entry) for entry in new_entries]
-    updated_array_literal = append_entries_to_array_literal(array_literal, new_entry_literals)
-    updated_text = text[:start] + updated_array_literal + text[end:]
+        
     index_path.write_text(updated_text, encoding="utf-8")
     return True
+
+
+def sync_titles(index_path: Path, text: str) -> str:
+    """Synchronize <title>, .topbar-title, and hero h1 based on folder path."""
+    dir_rel = index_path.parent.relative_to(REPO_ROOT)
+    parts = dir_rel.parts
+    if not parts:
+        return text  # Root index usually has manual titles
+        
+    subject_key = parts[0].lower()
+    subject_name = FOLDER_TITLES.get(subject_key, subject_key.capitalize())
+    
+    # If subfolder (e.g. med/past-years)
+    if len(parts) > 1:
+        sub_name = parts[-1].replace('-', ' ').replace('_', ' ').capitalize()
+        # Special case: past-years -> Past Years
+        if parts[-1].lower() == "past-years":
+            sub_name = "Past Years"
+        full_title = f"Quiz Site - {subject_name} {sub_name}"
+        hero_title = f"Select your <span>{subject_name} {sub_name}</span>"
+        back_label = f"Back to {subject_name}"
+    else:
+        full_title = f"Quiz Site - {subject_name}"
+        hero_title = f"Select your <span>{subject_name} exam</span>"
+        back_label = "Back to Home"
+
+    # Update <title>
+    updated = re.sub(r"<title>.*?</title>", f"<title>{full_title}</title>", text)
+    
+    # Update .topbar-title
+    updated = re.sub(r'<div class="topbar-title">.*?</div>', f'<div class="topbar-title">{full_title}</div>', updated)
+    
+    # Update hero h1
+    updated = re.sub(r'<h1>.*?</h1>', f'<h1>{hero_title}</h1>', updated)
+    
+    # Update back button title
+    updated = re.sub(r'class="icon-btn back-btn" title=".*?"', f'class="icon-btn back-btn" title="{back_label}"', updated)
+    
+    return updated
 
 
 def build_quiz_entry(quiz_path: Path, dir_rel: Path, icon: str) -> dict[str, object]:
@@ -293,6 +309,21 @@ def update_service_worker() -> bool:
 
     if updated == text:
         return False
+
+    # Update SHARED assets in sw.js (ensure icon fallbacks are present)
+    shared_assets = [
+        'quiz-engine.js', 'bank-engine.js', 'index-engine.js', 'index-engine.css',
+        'manifest.webmanifest', 'favicon.svg',
+        'icon-48.png', 'icon-72.png', 'icon-96.png', 'icon-144.png', 'icon-192.png', 'icon-512.png'
+    ]
+    
+    shared_literal = "[\n" + ",\n".join(f"          '{a}'" for a in shared_assets) + "\n        ]"
+    updated = re.sub(
+        r"var SHARED = \[.*?\];",
+        f"var SHARED = {shared_literal};",
+        updated,
+        flags=re.DOTALL
+    )
 
     SW_PATH.write_text(updated, encoding="utf-8")
     return True
@@ -472,7 +503,7 @@ def infer_description(title: str, raw_description: str, dir_rel: Path) -> str:
         return cleaned
 
     if "past years" in dir_rel.as_posix().casefold():
-        return f"Gynecology {title} Exam"
+        return f"Exam {title}"
 
     lecture_match = re.match(r"^L\d+\s+(.+)$", title, flags=re.IGNORECASE)
     if lecture_match:
@@ -542,6 +573,16 @@ def default_icon(dir_rel: Path) -> str:
         return "🤰"
     if "cardio" in lowered:
         return "🫀"
+    if "ped" in lowered:
+        return "👶"
+    if "surg" in lowered:
+        return "🔪"
+    if "med" in lowered or "medicine" in lowered:
+        return "🩺"
+    if "chest" in lowered:
+        return "🫁"
+    if "past years" in lowered or "exam" in lowered:
+        return "📚"
     return "📘"
 
 

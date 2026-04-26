@@ -254,7 +254,13 @@ function handleAsset(event, request) {
           'index-engine.js',
           'index-engine.css',
           'manifest.webmanifest',
-          'favicon.svg'
+          'favicon.svg',
+          'icon-48.png',
+          'icon-72.png',
+          'icon-96.png',
+          'icon-144.png',
+          'icon-192.png',
+          'icon-512.png'
         ];
         if (SHARED.indexOf(filename) !== -1) {
           cached = await cache.match(hrefFromScope(scope, filename));
