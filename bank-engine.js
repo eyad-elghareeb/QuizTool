@@ -8,6 +8,11 @@
   var _cs  = document.currentScript;
   var ENGINE_BASE = _cs ? _cs.src.replace(/[^\/]*$/, '') : (window.__QUIZ_ENGINE_BASE || '');
 
+  /* ── Load db-helper.js if not already present ──────────────── */
+  if (typeof QuizDB === 'undefined') {
+    document.write('<scr' + 'ipt src="' + ENGINE_BASE + 'db-helper.js"></scr' + 'ipt>');
+  }
+
   function _addLink(rel, href, extra) {
     var el = document.createElement('link');
     el.rel = rel; el.href = href;
@@ -1736,26 +1741,18 @@ function saveProgress() {
     savedAt: Date.now()
   };
 
-  try {
-    if (!isValidSaveData(saveData)) {
-      console.warn('Invalid save data, skipping save');
-      return;
-    }
+  if (!isValidSaveData(saveData)) {
+    console.warn('Invalid save data, skipping save');
+    return;
+  }
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
-    console.log('Progress saved successfully');
-  } catch (e) {
-    if (e.name === 'QuotaExceededError' || e.code === 22) {
-      console.warn('LocalStorage quota exceeded, clearing old saves...');
-      clearOldSaves();
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
-      } catch (retryError) {
-        console.error('Failed to save progress even after cleanup:', retryError);
-      }
-    } else {
-      console.error('Error saving progress:', e);
-    }
+  if (typeof QuizDB !== 'undefined') {
+    QuizDB.progressSet(STORAGE_KEY, saveData).catch(function(e) {
+      console.warn('IndexedDB progress save failed, falling back:', e);
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData)); } catch(_) {}
+    });
+  } else {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData)); } catch(_) {}
   }
 }
 
@@ -1806,80 +1803,47 @@ function clearOldSaves() {
 }
 
 function clearProgress() {
-  localStorage.removeItem(STORAGE_KEY);
+  if (typeof QuizDB !== 'undefined') {
+    QuizDB.progressDelete(STORAGE_KEY).catch(function() { localStorage.removeItem(STORAGE_KEY); });
+  } else {
+    localStorage.removeItem(STORAGE_KEY);
+  }
 }
 
 /**
  * Check for saved progress on init and show optional restore toast
  */
 function checkSavedProgress() {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (!saved) return;
-
-  try {
-    const data = JSON.parse(saved);
-
-    if (data.version !== STORAGE_VERSION) {
-      console.log('Incompatible save version, starting fresh');
-      localStorage.removeItem(STORAGE_KEY);
-      return;
-    }
-
-    if (data.quizTitle !== BANK_CONFIG.title) {
-      console.log('Save is for a different quiz, starting fresh');
-      localStorage.removeItem(STORAGE_KEY);
-      return;
-    }
-
-    // Validate basic structure before showing restore option
-    if (!isValidSaveData(data)) {
-      console.log('Invalid save data structure, starting fresh');
-      localStorage.removeItem(STORAGE_KEY);
-      return;
-    }
-
-    const maxAge = 7 * 24 * 60 * 60 * 1000;
-    if (Date.now() - data.timestamp > maxAge) {
-      console.log('Save is too old, starting fresh');
-      localStorage.removeItem(STORAGE_KEY);
-      return;
-    }
-
-    pendingRestoreData = data;
-
-    showToast("📂 Previous progress found!", [
-      {
-        label: "Restore",
-        primary: true,
-        onClick: () => {
-          clearTimeout(restoreToastTimeout);
-          doRestoreProgress(pendingRestoreData);
-        }
-      },
-      {
-        label: "Dismiss",
-        primary: false,
-        onClick: () => {
-          clearTimeout(restoreToastTimeout);
-          pendingRestoreData = null;
-          clearProgress();
-        }
-      }
-    ]);
-
-    restoreToastTimeout = setTimeout(() => {
-      console.log('Auto-dismissing restore toast after 15 seconds');
-      pendingRestoreData = null;
-      clearProgress();
-      const toast = document.getElementById('toast');
-      if (toast) {
-        toast.classList.remove('show');
-      }
-    }, 15000);
-
-  } catch(e) {
-    console.error('Error checking saved progress:', e);
-    localStorage.removeItem(STORAGE_KEY);
+  var _check = function(data) {
+    if (!data) return;
+    try {
+      if (data.version !== STORAGE_VERSION) { clearProgress(); return; }
+      if (data.quizTitle !== BANK_CONFIG.title) { clearProgress(); return; }
+      if (!isValidSaveData(data)) { clearProgress(); return; }
+      var maxAge = 7 * 24 * 60 * 60 * 1000;
+      if (Date.now() - data.timestamp > maxAge) { clearProgress(); return; }
+      pendingRestoreData = data;
+      showToast('📂 Previous progress found!', [
+        { label: 'Restore', primary: true,
+          onClick: function() { clearTimeout(restoreToastTimeout); doRestoreProgress(pendingRestoreData); } },
+        { label: 'Dismiss', primary: false,
+          onClick: function() { clearTimeout(restoreToastTimeout); pendingRestoreData = null; clearProgress(); } }
+      ]);
+      restoreToastTimeout = setTimeout(function() {
+        pendingRestoreData = null; clearProgress();
+        var t = document.getElementById('toast'); if (t) t.classList.remove('show');
+      }, 15000);
+    } catch(e) { console.error('Error restoring progress:', e); clearProgress(); }
+  };
+  if (typeof QuizDB !== 'undefined') {
+    QuizDB.progressGet(STORAGE_KEY).then(function(data) {
+      if (data) { _check(data); }
+      else { var r = localStorage.getItem(STORAGE_KEY); if (r) try { _check(JSON.parse(r)); } catch(e) {} }
+    }).catch(function() {
+      var r = localStorage.getItem(STORAGE_KEY); if (r) try { _check(JSON.parse(r)); } catch(e) {}
+    });
+  } else {
+    var r = localStorage.getItem(STORAGE_KEY); if (r) try { _check(JSON.parse(r)); } catch(e) {}
   }
 }
 
@@ -1951,31 +1915,35 @@ function doRestoreProgress(data) {
 const BANK_PROGRESS_KEY = `bank_progress_v1_${(BANK_CONFIG.uid || 'default').replace(/[^a-zA-Z0-9]/g,'_')}`;
 
 function getBankProgress() {
+  /* Synchronous fallback used at startup before QuizDB is ready */
   try {
-    const raw = localStorage.getItem(BANK_PROGRESS_KEY);
+    var raw = localStorage.getItem(BANK_PROGRESS_KEY);
     if (!raw) return { shownIndices: [], totalSessions: 0, cycleCount: 0 };
-    const p = JSON.parse(raw);
+    var p = JSON.parse(raw);
     return {
-      shownIndices:   Array.isArray(p.shownIndices)   ? p.shownIndices   : [],
-      totalSessions:  typeof p.totalSessions === 'number' ? p.totalSessions : 0,
-      cycleCount:     typeof p.cycleCount    === 'number' ? p.cycleCount    : 0,
+      shownIndices:  Array.isArray(p.shownIndices)            ? p.shownIndices  : [],
+      totalSessions: typeof p.totalSessions === 'number'      ? p.totalSessions : 0,
+      cycleCount:    typeof p.cycleCount    === 'number'      ? p.cycleCount    : 0
     };
-  } catch(e) {
-    return { shownIndices: [], totalSessions: 0, cycleCount: 0 };
-  }
+  } catch(e) { return { shownIndices: [], totalSessions: 0, cycleCount: 0 }; }
 }
 
 function saveBankProgress(progress) {
-  try {
-    localStorage.setItem(BANK_PROGRESS_KEY, JSON.stringify(progress));
-  } catch(e) {
-    console.error('Failed to save bank progress:', e);
+  if (typeof QuizDB !== 'undefined') {
+    QuizDB.progressSet(BANK_PROGRESS_KEY, progress).catch(function() {
+      try { localStorage.setItem(BANK_PROGRESS_KEY, JSON.stringify(progress)); } catch(e) {}
+    });
+    /* Keep localStorage in sync so getBankProgress() (sync) stays accurate */
+    try { localStorage.setItem(BANK_PROGRESS_KEY, JSON.stringify(progress)); } catch(e) {}
+  } else {
+    try { localStorage.setItem(BANK_PROGRESS_KEY, JSON.stringify(progress)); } catch(e) {}
   }
 }
 
 function resetBankProgress() {
   if (!confirm('Reset all bank progress? This will forget which questions you have already seen.')) return;
   localStorage.removeItem(BANK_PROGRESS_KEY);
+  if (typeof QuizDB !== 'undefined') QuizDB.progressDelete(BANK_PROGRESS_KEY).catch(function() {});
   updateStartScreenStats();
   showToast('🔄 Bank progress reset!');
 }
@@ -3264,72 +3232,56 @@ checkSavedProgress();
         if (isFlagged) flaggedQs.push(qData);
       });
 
-      var storageKey = getStorageKey(cfg.uid || location.pathname);
-      var existingRaw = localStorage.getItem(storageKey);
-      var existingData = existingRaw ? JSON.parse(existingRaw) : null;
+      var uid = cfg.uid || location.pathname;
 
-      // Merge with existing data to ensure we don't overwrite previous sessions
-      if (existingData) {
-        var oldWrong = (existingData.wrong || []).filter(function(wq) {
-          // Use appropriate tracking method based on whether we have global indices
-          if (hasGlobalIndices || wq.idx !== undefined) {
-            return !currentSessionIndices[wq.idx];
-          } else {
+      function _mergeAndSave(existingData) {
+        if (existingData) {
+          var oldWrong = (existingData.wrong || []).filter(function(wq) {
+            if (hasGlobalIndices || wq.idx !== undefined) return !currentSessionIndices[wq.idx];
             return !currentSessionTexts[wq.text];
-          }
-        });
-        var oldFlagged = (existingData.flagged || []).filter(function(fq) {
-          if (hasGlobalIndices || fq.idx !== undefined) {
-            return !currentSessionIndices[fq.idx];
-          } else {
+          });
+          var oldFlagged = (existingData.flagged || []).filter(function(fq) {
+            if (hasGlobalIndices || fq.idx !== undefined) return !currentSessionIndices[fq.idx];
             return !currentSessionTexts[fq.text];
-          }
+          });
+          wrongQs = oldWrong.concat(wrongQs);
+          flaggedQs = oldFlagged.concat(flaggedQs);
+        }
+
+        if (!wrongQs.length && !flaggedQs.length) {
+          if (typeof QuizDB !== 'undefined') QuizDB.trackerDelete(uid).catch(function() {});
+          updateDashboardBadge();
+          return;
+        }
+
+        var folderPath = computeFolderPath();
+        var data = {
+          uid:          uid,
+          title:        cfg.title || document.title,
+          timestamp:    Date.now(),
+          totalQs:      typeof QUESTION_BANK !== 'undefined' ? QUESTION_BANK.length : (existingData ? Math.max(existingData.totalQs || 0, qs.length) : qs.length),
+          wrongCount:   wrongQs.length,
+          flaggedCount: flaggedQs.length,
+          wrong:        wrongQs,
+          flagged:      flaggedQs,
+          path:         location.pathname,
+          folderPath:   folderPath
+        };
+
+        fetchAndCacheFolderTitle(folderPath).then(function(folderTitle) {
+          if (folderTitle) data.folderTitle = folderTitle;
+          if (typeof QuizDB !== 'undefined') {
+            QuizDB.trackerSet(uid, data).then(function() { updateDashboardBadge(); }).catch(function() { updateDashboardBadge(); });
+          } else { updateDashboardBadge(); }
+        }).catch(function() {
+          if (typeof QuizDB !== 'undefined') QuizDB.trackerSet(uid, data).catch(function() {});
+          updateDashboardBadge();
         });
-        wrongQs = oldWrong.concat(wrongQs);
-        flaggedQs = oldFlagged.concat(flaggedQs);
       }
 
-      if (!wrongQs.length && !flaggedQs.length) {
-         localStorage.removeItem(storageKey);
-         var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
-         localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(keys.filter(function(k) { return k !== (cfg.uid || location.pathname); })));
-         updateDashboardBadge();
-         return;
-      }
-
-      var folderPath = computeFolderPath();
-
-      var data = {
-        uid:         cfg.uid || location.pathname,
-        title:       cfg.title || document.title,
-        timestamp:   Date.now(),
-        totalQs:     typeof QUESTION_BANK !== 'undefined' ? QUESTION_BANK.length : (existingData ? Math.max(existingData.totalQs || 0, qs.length) : qs.length),
-        wrongCount:  wrongQs.length,
-        flaggedCount: flaggedQs.length,
-        wrong:       wrongQs,
-        flagged:     flaggedQs,
-        path:        location.pathname,
-        folderPath:  folderPath
-      };
-
-      // Try to fetch folder title and save it with the data
-      fetchAndCacheFolderTitle(folderPath).then(function(folderTitle) {
-        if (folderTitle) data.folderTitle = folderTitle;
-        localStorage.setItem(getStorageKey(data.uid), JSON.stringify(data));
-
-        var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
-        if (keys.indexOf(data.uid) === -1) { keys.push(data.uid); }
-        localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(keys));
-
-        updateDashboardBadge();
-      }).catch(function() {
-        // Save without folder title if fetch fails
-        localStorage.setItem(getStorageKey(data.uid), JSON.stringify(data));
-        var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
-        if (keys.indexOf(data.uid) === -1) { keys.push(data.uid); }
-        localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(keys));
-        updateDashboardBadge();
-      });
+      if (typeof QuizDB !== 'undefined') {
+        QuizDB.trackerGet(uid).then(function(ex) { _mergeAndSave(ex || null); }).catch(function() { _mergeAndSave(null); });
+      } else { _mergeAndSave(null); }
     } catch (e) { console.error('Tracker save error:', e); }
   };
 
@@ -3341,64 +3293,44 @@ checkSavedProgress();
   /* ══════════════════════════════════════════
      READ — fetch tracker entries
      ══════════════════════════════════════════ */
+  /* getAllTrackerData — async, returns Promise<Array> */
   function getAllTrackerData() {
-    try {
-      var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
-      var results = [];
-      keys.forEach(function(uid) {
-        var raw = localStorage.getItem(getStorageKey(uid));
-        if (raw) try { results.push(JSON.parse(raw)); } catch(e) {}
-      });
-      return results;
-    } catch(e) { return []; }
+    if (typeof QuizDB !== 'undefined') {
+      return QuizDB.trackerGetAll().catch(function() { return []; });
+    }
+    return Promise.resolve([]);
   }
 
   function getTrackerDataForScope(scope, scopePath) {
-    var all = getAllTrackerData();
     var cfg = getConfig();
-
-    if (scope === 'quiz') {
-      return all.filter(function(d) { return d.uid === cfg.uid; });
-    }
-
-    if (scope === 'folder' && scopePath) {
-      var target = scopePath.replace(/^\/|\/$/g, ''); // normalize: remove leading/trailing slashes
-      return all.filter(function(d) {
-        // Check stored folderPath (ENGINE_BASE-relative) and d.path (full URL, normalized)
-        var fp = (d.folderPath || '').replace(/^\/|\/$/g, '');
-        var dp = _normStoredPath(d.path);
-        // Extract folder from full path for comparison
-        var dpFolder = '';
-        if (dp) {
-          var dpParts = dp.split('/');
-          if (dpParts.length > 1) {
-            dpFolder = dpParts.slice(0, -1).join('/').replace(/^\/|\/$/g, '');
-          }
-        }
-        // Match if the quiz's folder starts with the target folder path
-        // This ensures "gyn/dep" matches when target is "gyn", but "gyn-extra" does not
-        return (fp && (fp === target || fp.indexOf(target + '/') === 0)) 
-            || (dpFolder && (dpFolder === target || dpFolder.indexOf(target + '/') === 0));
-      });
-    }
-
-    return all; // scope === 'all'
+    return getAllTrackerData().then(function(all) {
+      if (scope === 'quiz') return all.filter(function(d) { return d.uid === cfg.uid; });
+      if (scope === 'folder' && scopePath) {
+        var target = scopePath.replace(/^\/|\/$/g, '');
+        return all.filter(function(d) {
+          var fp = (d.folderPath || '').replace(/^\/|\/$/g, '');
+          var dp = _normStoredPath(d.path);
+          var dpFolder = '';
+          if (dp) { var p = dp.split('/'); if (p.length > 1) dpFolder = p.slice(0,-1).join('/').replace(/^\/|\/$/g,''); }
+          return (fp && (fp === target || fp.indexOf(target+'/') === 0))
+              || (dpFolder && (dpFolder === target || dpFolder.indexOf(target+'/') === 0));
+        });
+      }
+      return all;
+    });
   }
 
-  /* ══════════════════════════════════════════
-     BADGE — count on the dashboard button
-     ══════════════════════════════════════════ */
+  /* ══ BADGE ══ */
   window.updateDashboardBadge = function() {
-    var data = getAllTrackerData();
-    var total = 0;
-    data.forEach(function(d) { total += (d.wrong || []).length + (d.flagged || []).length; });
-    var badge = document.getElementById('tracker-badge-count');
-    if (badge) badge.textContent = total > 0 ? total : '';
+    getAllTrackerData().then(function(data) {
+      var total = 0;
+      data.forEach(function(d) { total += (d.wrong || []).length + (d.flagged || []).length; });
+      var badge = document.getElementById('tracker-badge-count');
+      if (badge) badge.textContent = total > 0 ? total : '';
+    }).catch(function() {});
   };
 
-  /* ══════════════════════════════════════════
-     CURRENT SCOPE STATE
-     ══════════════════════════════════════════ */
+  /* ══ SCOPE STATE ══ */
   var currentScope = 'quiz';
   var currentScopePath = '';
 
@@ -3420,62 +3352,45 @@ checkSavedProgress();
      RENDER DASHBOARD CONTENT
      ══════════════════════════════════════════ */
   function renderDashboard() {
-    var data = getTrackerDataForScope(currentScope, currentScopePath);
-    var totalWrong = 0, totalFlagged = 0;
-
-    data.forEach(function(d) {
-      totalWrong   += (d.wrong || []).length;
-      totalFlagged += (d.flagged || []).length;
-    });
-
-    document.getElementById('dash-total-wrong').textContent   = totalWrong;
-    document.getElementById('dash-total-flagged').textContent = totalFlagged;
-    document.getElementById('dash-total-quizzes').textContent = data.length;
-
     var body = document.getElementById('dash-body');
-
-    if (!data.length) {
-      body.innerHTML = '<div class="dash-empty"><div class="dash-empty-icon">📋</div>'
-        + '<p>No tracked questions yet.<br>Complete a quiz to start tracking wrong and flagged questions.</p></div>';
-      return;
-    }
-
-    // Sort most recent first
-    data.sort(function(a, b) { return (b.timestamp || 0) - (a.timestamp || 0); });
-
-    var html = '';
-    data.forEach(function(d) {
-      var wrongItems   = d.wrong || [];
-      var flaggedItems = d.flagged || [];
-      var wrongIdxs    = {};
-      wrongItems.forEach(function(q) { wrongIdxs[q.idx] = true; });
-      var uniqueFlagged = flaggedItems.filter(function(q) { return !wrongIdxs[q.idx]; });
-      if (!wrongItems.length && !uniqueFlagged.length) return;
-
-      var dateStr = d.timestamp
-        ? new Date(d.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-        : '';
-
-      html += '<div class="dash-quiz-group">';
-      html += '<div class="dash-quiz-title">' + (d.title || 'Unknown Quiz');
-      if (wrongItems.length)   html += ' <span class="quiz-badge wrong-badge">' + wrongItems.length + ' wrong</span>';
-      if (flaggedItems.length) html += ' <span class="quiz-badge flag-badge">' + flaggedItems.length + ' flagged</span>';
-      if (dateStr)             html += ' <span style="font-size:0.7rem;color:var(--text-muted);font-weight:400;margin-left:auto;">' + dateStr + '</span>';
-      html += '</div>';
-
-      wrongItems.forEach(function(q) {
-        var isAlsoFlagged = flaggedItems.some(function(f) { return f.idx === q.idx; });
-        html += buildDashQItem(d.uid, q, isAlsoFlagged ? 'Wrong + Flagged' : 'Wrong', 'wrong', '✗');
+    getTrackerDataForScope(currentScope, currentScopePath).then(function(data) {
+      var totalWrong = 0, totalFlagged = 0;
+      data.forEach(function(d) { totalWrong += (d.wrong || []).length; totalFlagged += (d.flagged || []).length; });
+      document.getElementById('dash-total-wrong').textContent   = totalWrong;
+      document.getElementById('dash-total-flagged').textContent = totalFlagged;
+      document.getElementById('dash-total-quizzes').textContent = data.length;
+      if (!data.length) {
+        body.innerHTML = '<div class="dash-empty"><div class="dash-empty-icon">📋</div>'
+          + '<p>No tracked questions yet.<br>Complete a quiz to start tracking wrong and flagged questions.</p></div>';
+        return;
+      }
+      data.sort(function(a, b) { return (b.timestamp || 0) - (a.timestamp || 0); });
+      var html = '';
+      data.forEach(function(d) {
+        var wrongItems   = d.wrong || [];
+        var flaggedItems = d.flagged || [];
+        var wrongIdxs    = {};
+        wrongItems.forEach(function(q) { wrongIdxs[q.idx] = true; });
+        var uniqueFlagged = flaggedItems.filter(function(q) { return !wrongIdxs[q.idx]; });
+        if (!wrongItems.length && !uniqueFlagged.length) return;
+        var dateStr = d.timestamp
+          ? new Date(d.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+          : '';
+        html += '<div class="dash-quiz-group">';
+        html += '<div class="dash-quiz-title">' + (d.title || 'Unknown Quiz');
+        if (wrongItems.length)   html += ' <span class="quiz-badge wrong-badge">' + wrongItems.length + ' wrong</span>';
+        if (flaggedItems.length) html += ' <span class="quiz-badge flag-badge">' + flaggedItems.length + ' flagged</span>';
+        if (dateStr)             html += ' <span style="font-size:0.7rem;color:var(--text-muted);font-weight:400;margin-left:auto;">' + dateStr + '</span>';
+        html += '</div>';
+        wrongItems.forEach(function(q) {
+          var isAlsoFlagged = flaggedItems.some(function(f) { return f.idx === q.idx; });
+          html += buildDashQItem(d.uid, q, isAlsoFlagged ? 'Wrong + Flagged' : 'Wrong', 'wrong', '✗');
+        });
+        uniqueFlagged.forEach(function(q) { html += buildDashQItem(d.uid, q, 'Flagged', 'flagged', '⚑'); });
+        html += '</div>';
       });
-
-      uniqueFlagged.forEach(function(q) {
-        html += buildDashQItem(d.uid, q, 'Flagged', 'flagged', '⚑');
-      });
-
-      html += '</div>';
-    });
-
-    body.innerHTML = html || '<div class="dash-empty"><div class="dash-empty-icon">✅</div><p>No wrong or flagged questions tracked. Great job!</p></div>';
+      body.innerHTML = html || '<div class="dash-empty"><div class="dash-empty-icon">✅</div><p>No wrong or flagged questions tracked. Great job!</p></div>';
+    }).catch(function() {});
   }
 
   function buildDashQItem(uid, q, typeLabel, iconClass, iconText) {
@@ -3495,36 +3410,30 @@ checkSavedProgress();
      REMOVE / CLEAR
      ══════════════════════════════════════════ */
   window.removeTrackerItem = function(uid, qIdx) {
-    try {
-      var raw = localStorage.getItem(getStorageKey(uid));
-      if (!raw) return;
-      var data = JSON.parse(raw);
+    if (typeof QuizDB === 'undefined') return;
+    QuizDB.trackerGet(uid).then(function(data) {
+      if (!data) return;
       data.wrong   = (data.wrong   || []).filter(function(q) { return q.idx !== qIdx; });
       data.flagged = (data.flagged || []).filter(function(q) { return q.idx !== qIdx; });
       data.wrongCount   = data.wrong.length;
       data.flaggedCount = data.flagged.length;
-
-      if (!data.wrong.length && !data.flagged.length) {
-        localStorage.removeItem(getStorageKey(uid));
-        var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
-        localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(keys.filter(function(k) { return k !== uid; })));
-      } else {
-        localStorage.setItem(getStorageKey(uid), JSON.stringify(data));
-      }
+      if (!data.wrong.length && !data.flagged.length) return QuizDB.trackerDelete(uid);
+      return QuizDB.trackerSet(uid, data);
+    }).then(function() {
       renderDashboard();
       updateDashboardBadge();
-    } catch(e) { console.error('Remove tracker item error:', e); }
+    }).catch(function(e) { console.error('Remove tracker item error:', e); });
   };
 
   window.clearAllTrackerData = function() {
     if (!confirm('Clear all tracked questions? This cannot be undone.')) return;
-    try {
-      var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
-      keys.forEach(function(uid) { localStorage.removeItem(getStorageKey(uid)); });
-      localStorage.removeItem(KEYS_LIST_KEY);
+    if (typeof QuizDB === 'undefined') return;
+    getAllTrackerData().then(function(all) {
+      return Promise.all(all.map(function(d) { return QuizDB.trackerDelete(d.uid); }));
+    }).then(function() {
       renderDashboard();
       updateDashboardBadge();
-    } catch(e) { console.error('Clear tracker error:', e); }
+    }).catch(function(e) { console.error('Clear tracker error:', e); });
   };
 
   /* ══════════════════════════════════════════

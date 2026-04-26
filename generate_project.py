@@ -142,6 +142,7 @@ self.addEventListener('install', function (event) {
       var cache = await caches.open(CACHE_NAME);
 
       var REQUIRED = [
+        'db-helper.js',
         'quiz-engine.js',
         'bank-engine.js',
         'index-engine.js',
@@ -249,6 +250,7 @@ function handleAsset(event, request) {
       if (url.origin === self.location.origin && url.href.indexOf(scope) === 0) {
         var filename = url.pathname.split('/').pop();
         var SHARED = [
+          'db-helper.js',
           'quiz-engine.js',
           'bank-engine.js',
           'index-engine.js',
@@ -313,6 +315,7 @@ INDEX_ENGINE_JS = read_file('index-engine.js')
 INDEX_ENGINE_CSS = read_file('index-engine.css')
 QUIZ_ENGINE_JS = read_file('quiz-engine.js')
 BANK_ENGINE_JS = read_file('bank-engine.js')
+DB_HELPER_JS = read_file('db-helper.js')
 
 # Read sync scripts from QuizTool's own scripts/ folder (self-contained, no MU61S8 dependency)
 _SCRIPTS_DIR = BASE_DIR / 'scripts'
@@ -727,6 +730,7 @@ def build_project_zip(config):
     
     # Collect all file paths for service worker precaching
     all_file_paths = [
+        'db-helper.js',
         'index-engine.js',
         'index-engine.css',
         'quiz-engine.js',
@@ -812,6 +816,7 @@ def build_project_zip(config):
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
 
         # --- Shared engines (root level) ---
+        zf.writestr('db-helper.js', DB_HELPER_JS)
         zf.writestr('index-engine.js', INDEX_ENGINE_JS)
         zf.writestr('index-engine.css', INDEX_ENGINE_CSS)
         zf.writestr('quiz-engine.js', QUIZ_ENGINE_JS)

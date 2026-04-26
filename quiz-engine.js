@@ -10,6 +10,11 @@
   var _cs  = document.currentScript;
   var ENGINE_BASE = _cs ? _cs.src.replace(/[^\/]*$/, '') : (window.__QUIZ_ENGINE_BASE || '');
 
+  /* ── Load db-helper.js if not already present ──────────────── */
+  if (typeof QuizDB === 'undefined') {
+    document.write('<scr' + 'ipt src="' + ENGINE_BASE + 'db-helper.js"></scr' + 'ipt>');
+  }
+
   /* ── Inject <head> assets ────────────────────────────────────── */
   function _addLink(rel, href, extra) {
     var el = document.createElement('link');
@@ -2507,27 +2512,18 @@ function saveProgress() {
     savedAt: Date.now() // Separate field for time calculation
   };
 
-  try {
-    // Validate data before saving
-    if (!isValidSaveData(saveData)) {
-      console.warn('Invalid save data, skipping save');
-      return;
-    }
+  if (!isValidSaveData(saveData)) {
+    console.warn('Invalid save data, skipping save');
+    return;
+  }
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
-    console.log('Progress saved successfully');
-  } catch (e) {
-    if (e.name === 'QuotaExceededError' || e.code === 22) {
-      console.warn('LocalStorage quota exceeded, clearing old saves...');
-      clearOldSaves();
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
-      } catch (retryError) {
-        console.error('Failed to save progress even after cleanup:', retryError);
-      }
-    } else {
-      console.error('Error saving progress:', e);
-    }
+  if (typeof QuizDB !== 'undefined') {
+    QuizDB.progressSet(STORAGE_KEY, saveData).catch(function(e) {
+      console.warn('IndexedDB progress save failed, falling back to localStorage:', e);
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData)); } catch(_) {}
+    });
+  } else {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData)); } catch(_) {}
   }
 }
 
@@ -2575,7 +2571,13 @@ function clearOldSaves() {
 }
 
 function clearProgress() {
-  localStorage.removeItem(STORAGE_KEY);
+  if (typeof QuizDB !== 'undefined') {
+    QuizDB.progressDelete(STORAGE_KEY).catch(function() {
+      localStorage.removeItem(STORAGE_KEY);
+    });
+  } else {
+    localStorage.removeItem(STORAGE_KEY);
+  }
 }
 
 /**
@@ -2650,77 +2652,54 @@ let restoreScreenTimeout = null;  // tracks the setTimeout inside doRestoreProgr
 let pendingTransitionTimeout = null;  // tracks screen transition timeouts to prevent race conditions
 
 function checkSavedProgress() {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (!saved) return;
+  /* Try IndexedDB first, fall back to localStorage */
+  var _check = function(data) {
+    if (!data) return;
+    try {
+      if (data.version !== STORAGE_VERSION) { clearProgress(); return; }
+      if (data.quizTitle !== QUIZ_CONFIG.title) { clearProgress(); return; }
+      if (data.totalQuestions !== QUESTIONS.length) { clearProgress(); return; }
+      var maxAge = 7 * 24 * 60 * 60 * 1000;
+      if (Date.now() - data.timestamp > maxAge) { clearProgress(); return; }
 
-  try {
-    const data = JSON.parse(saved);
-
-    // Validate the saved data
-    if (data.version !== STORAGE_VERSION) {
-      console.log('Incompatible save version, starting fresh');
-      localStorage.removeItem(STORAGE_KEY);
-      return;
-    }
-
-    if (data.quizTitle !== QUIZ_CONFIG.title) {
-      console.log('Save is for a different quiz, starting fresh');
-      localStorage.removeItem(STORAGE_KEY);
-      return;
-    }
-
-    if (data.totalQuestions !== QUESTIONS.length) {
-      console.log('Quiz structure has changed, starting fresh');
-      localStorage.removeItem(STORAGE_KEY);
-      return;
-    }
-
-    const maxAge = 7 * 24 * 60 * 60 * 1000;
-    if (Date.now() - data.timestamp > maxAge) {
-      console.log('Save is too old, starting fresh');
-      localStorage.removeItem(STORAGE_KEY);
-      return;
-    }
-
-    // Store pending restore data
-    pendingRestoreData = data;
-
-    // Show toast with optional restore button
-    showToast("📂 Previous progress found!", [
-      {
-        label: "Restore",
-        primary: true,
-        onClick: () => {
-          clearTimeout(restoreToastTimeout);
-          doRestoreProgress(pendingRestoreData);
+      pendingRestoreData = data;
+      showToast('📂 Previous progress found!', [
+        {
+          label: 'Restore',
+          primary: true,
+          onClick: function() { clearTimeout(restoreToastTimeout); doRestoreProgress(pendingRestoreData); }
+        },
+        {
+          label: 'Dismiss',
+          primary: false,
+          onClick: function() { clearTimeout(restoreToastTimeout); pendingRestoreData = null; clearProgress(); }
         }
-      },
-      {
-        label: "Dismiss",
-        primary: false,
-        onClick: () => {
-          clearTimeout(restoreToastTimeout);
-          pendingRestoreData = null;
-          clearProgress();
-        }
-      }
-    ]);
+      ]);
+      restoreToastTimeout = setTimeout(function() {
+        pendingRestoreData = null;
+        clearProgress();
+        var toast = document.getElementById('toast');
+        if (toast) toast.classList.remove('show');
+      }, 15000);
+    } catch(e) { console.error('Error restoring progress:', e); clearProgress(); }
+  };
 
-    // Auto-dismiss after 15 seconds if user hasn't interacted
-    restoreToastTimeout = setTimeout(() => {
-      console.log('Auto-dismissing restore toast after 15 seconds');
-      pendingRestoreData = null;
-      clearProgress();
-      // Hide the toast if it's still visible
-      const toast = document.getElementById('toast');
-      if (toast) {
-        toast.classList.remove('show');
+  if (typeof QuizDB !== 'undefined') {
+    QuizDB.progressGet(STORAGE_KEY).then(function(data) {
+      if (data) {
+        _check(data);
+      } else {
+        /* IndexedDB miss — try legacy localStorage */
+        var raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) { try { _check(JSON.parse(raw)); } catch(e) {} }
       }
-    }, 15000);
-
-  } catch(e) {
-    console.error('Error checking saved progress:', e);
-    localStorage.removeItem(STORAGE_KEY);
+    }).catch(function() {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) { try { _check(JSON.parse(raw)); } catch(e) {} }
+    });
+  } else {
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) { try { _check(JSON.parse(raw)); } catch(e) {} }
   }
 }
 
@@ -3117,131 +3096,113 @@ checkSavedProgress();
         if (isFlagged) flaggedQs.push(qData);
       });
 
-      var storageKey = getStorageKey(cfg.uid || location.pathname);
-      var existingRaw = localStorage.getItem(storageKey);
-      var existingData = existingRaw ? JSON.parse(existingRaw) : null;
+      var uid = cfg.uid || location.pathname;
 
-      // Merge with existing data to ensure we don't overwrite previous sessions
-      if (existingData) {
-        var oldWrong = (existingData.wrong || []).filter(function(wq) {
-          // Use appropriate tracking method based on whether we have global indices
-          if (hasGlobalIndices || wq.idx !== undefined) {
-            return !currentSessionIndices[wq.idx];
-          } else {
+      function _mergeAndSave(existingData) {
+        if (existingData) {
+          var oldWrong = (existingData.wrong || []).filter(function(wq) {
+            if (hasGlobalIndices || wq.idx !== undefined) return !currentSessionIndices[wq.idx];
             return !currentSessionTexts[wq.text];
-          }
-        });
-        var oldFlagged = (existingData.flagged || []).filter(function(fq) {
-          if (hasGlobalIndices || fq.idx !== undefined) {
-            return !currentSessionIndices[fq.idx];
-          } else {
+          });
+          var oldFlagged = (existingData.flagged || []).filter(function(fq) {
+            if (hasGlobalIndices || fq.idx !== undefined) return !currentSessionIndices[fq.idx];
             return !currentSessionTexts[fq.text];
+          });
+          wrongQs = oldWrong.concat(wrongQs);
+          flaggedQs = oldFlagged.concat(flaggedQs);
+        }
+
+        if (!wrongQs.length && !flaggedQs.length) {
+          if (typeof QuizDB !== 'undefined') { QuizDB.trackerDelete(uid); }
+          updateDashboardBadge();
+          return;
+        }
+
+        var folderPath = computeFolderPath();
+        var data = {
+          uid:          uid,
+          title:        cfg.title || document.title,
+          timestamp:    Date.now(),
+          totalQs:      typeof QUESTION_BANK !== 'undefined' ? QUESTION_BANK.length : (existingData ? Math.max(existingData.totalQs || 0, qs.length) : qs.length),
+          wrongCount:   wrongQs.length,
+          flaggedCount: flaggedQs.length,
+          wrong:        wrongQs,
+          flagged:      flaggedQs,
+          path:         location.pathname,
+          folderPath:   folderPath
+        };
+
+        fetchAndCacheFolderTitle(folderPath).then(function(folderTitle) {
+          if (folderTitle) data.folderTitle = folderTitle;
+          if (typeof QuizDB !== 'undefined') {
+            QuizDB.trackerSet(uid, data).then(function() { updateDashboardBadge(); })
+              .catch(function() { updateDashboardBadge(); });
+          } else {
+            updateDashboardBadge();
           }
+        }).catch(function() {
+          if (typeof QuizDB !== 'undefined') {
+            QuizDB.trackerSet(uid, data).catch(function() {});
+          }
+          updateDashboardBadge();
         });
-        wrongQs = oldWrong.concat(wrongQs);
-        flaggedQs = oldFlagged.concat(flaggedQs);
       }
 
-      if (!wrongQs.length && !flaggedQs.length) {
-         localStorage.removeItem(storageKey);
-         var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
-         localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(keys.filter(function(k) { return k !== (cfg.uid || location.pathname); })));
-         updateDashboardBadge();
-         return;
+      if (typeof QuizDB !== 'undefined') {
+        QuizDB.trackerGet(uid).then(function(existing) {
+          _mergeAndSave(existing || null);
+        }).catch(function() { _mergeAndSave(null); });
+      } else {
+        _mergeAndSave(null);
       }
-
-      var folderPath = computeFolderPath();
-
-      var data = {
-        uid:         cfg.uid || location.pathname,
-        title:       cfg.title || document.title,
-        timestamp:   Date.now(),
-        totalQs:     typeof QUESTION_BANK !== 'undefined' ? QUESTION_BANK.length : (existingData ? Math.max(existingData.totalQs || 0, qs.length) : qs.length),
-        wrongCount:  wrongQs.length,
-        flaggedCount: flaggedQs.length,
-        wrong:       wrongQs,
-        flagged:     flaggedQs,
-        path:        location.pathname,
-        folderPath:  folderPath
-      };
-
-      // Try to fetch folder title and save it with the data
-      fetchAndCacheFolderTitle(folderPath).then(function(folderTitle) {
-        if (folderTitle) data.folderTitle = folderTitle;
-        localStorage.setItem(getStorageKey(data.uid), JSON.stringify(data));
-
-        var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
-        if (keys.indexOf(data.uid) === -1) { keys.push(data.uid); }
-        localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(keys));
-
-        updateDashboardBadge();
-      }).catch(function() {
-        // Save without folder title if fetch fails
-        localStorage.setItem(getStorageKey(data.uid), JSON.stringify(data));
-        var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
-        if (keys.indexOf(data.uid) === -1) { keys.push(data.uid); }
-        localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(keys));
-        updateDashboardBadge();
-      });
     } catch (e) { console.error('Tracker save error:', e); }
   };
 
   /* ══════════════════════════════════════════
      READ — fetch tracker entries
      ══════════════════════════════════════════ */
+  /* getAllTrackerData — async, returns Promise<Array> */
   function getAllTrackerData() {
-    try {
-      var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
-      var results = [];
-      keys.forEach(function(uid) {
-        var raw = localStorage.getItem(getStorageKey(uid));
-        if (raw) try { results.push(JSON.parse(raw)); } catch(e) {}
-      });
-      return results;
-    } catch(e) { return []; }
+    if (typeof QuizDB !== 'undefined') {
+      return QuizDB.trackerGetAll().catch(function() { return []; });
+    }
+    return Promise.resolve([]);
   }
 
   function getTrackerDataForScope(scope, scopePath) {
-    var all = getAllTrackerData();
     var cfg = getConfig();
-
-    if (scope === 'quiz') {
-      return all.filter(function(d) { return d.uid === cfg.uid; });
-    }
-
-    if (scope === 'folder' && scopePath) {
-      var target = scopePath.replace(/^\/|\/$/g, ''); // normalize: remove leading/trailing slashes
-      return all.filter(function(d) {
-        // Check stored folderPath (ENGINE_BASE-relative) and d.path (full URL, normalized)
-        var fp = (d.folderPath || '').replace(/^\/|\/$/g, '');
-        var dp = _normStoredPath(d.path);
-        // Extract folder from full path for comparison
-        var dpFolder = '';
-        if (dp) {
-          var dpParts = dp.split('/');
-          if (dpParts.length > 1) {
-            dpFolder = dpParts.slice(0, -1).join('/').replace(/^\/|\/$/g, '');
+    return getAllTrackerData().then(function(all) {
+      if (scope === 'quiz') {
+        return all.filter(function(d) { return d.uid === cfg.uid; });
+      }
+      if (scope === 'folder' && scopePath) {
+        var target = scopePath.replace(/^\/|\/$/g, '');
+        return all.filter(function(d) {
+          var fp = (d.folderPath || '').replace(/^\/|\/$/g, '');
+          var dp = _normStoredPath(d.path);
+          var dpFolder = '';
+          if (dp) {
+            var dpParts = dp.split('/');
+            if (dpParts.length > 1) dpFolder = dpParts.slice(0, -1).join('/').replace(/^\/|\/$/g, '');
           }
-        }
-        // Match if the quiz's folder starts with the target folder path
-        // This ensures "gyn/dep" matches when target is "gyn", but "gyn-extra" does not
-        return (fp && (fp === target || fp.indexOf(target + '/') === 0)) 
-            || (dpFolder && (dpFolder === target || dpFolder.indexOf(target + '/') === 0));
-      });
-    }
-
-    return all; // scope === 'all'
+          return (fp && (fp === target || fp.indexOf(target + '/') === 0))
+              || (dpFolder && (dpFolder === target || dpFolder.indexOf(target + '/') === 0));
+        });
+      }
+      return all;
+    });
   }
 
   /* ══════════════════════════════════════════
      BADGE — count on the dashboard button
      ══════════════════════════════════════════ */
   window.updateDashboardBadge = function() {
-    var data = getAllTrackerData();
-    var total = 0;
-    data.forEach(function(d) { total += (d.wrong || []).length + (d.flagged || []).length; });
-    var badge = document.getElementById('tracker-badge-count');
-    if (badge) badge.textContent = total > 0 ? total : '';
+    getAllTrackerData().then(function(data) {
+      var total = 0;
+      data.forEach(function(d) { total += (d.wrong || []).length + (d.flagged || []).length; });
+      var badge = document.getElementById('tracker-badge-count');
+      if (badge) badge.textContent = total > 0 ? total : '';
+    }).catch(function() {});
   };
 
   /* ══════════════════════════════════════════
