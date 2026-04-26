@@ -360,8 +360,8 @@
   /* ── Extract a clean folder display name from a full HTML <title> ── */
   function cleanTitle(raw) {
     if (!raw) return '';
-    // Strip common prefixes like "QuizTool - ", "MU61 Quiz - ", "Mansoura MCQ - ", etc.
-    return raw.replace(/^(?:QuizTool|MU61\s+Quiz|Mansoura\s+MCQ)\s*[-–—]\s*/i, '').trim();
+    // Strip common prefixes like "QuizTool - ", "MU61 Quiz - ", "Quiz Site - ", etc.
+    return raw.replace(/^(?:QuizTool|MU61\s+Quiz|Mansoura\s+MCQ|Quiz\s+Site)\s*[-–—]\s*/i, '').trim();
   }
 
   window.openTrackerDashboard = function (scope, fromPopState) {
@@ -446,6 +446,32 @@
         }
       }
       tabs.push({ id: 'all', label: 'All Quizzes', path: '' });
+
+      // Step 4: Shorten titles by removing redundant parent text
+      // e.g. If parent is "Gynecology" and child is "Gynecology Department", child becomes "Department"
+      for (var j = 0; j < tabs.length; j++) {
+        var t = tabs[j];
+        if (t.id !== 'folder' || !t.label) continue;
+        
+        for (var k = 0; k < tabs.length; k++) {
+          var other = tabs[k];
+          if (j === k || other.id !== 'folder' || !other.label) continue;
+          
+          // Only strip parent text from child (parent has lower level level index)
+          if (other.level < t.level) {
+            var pLabel = other.label.trim();
+            if (pLabel.length > 3 && t.label.toLowerCase().includes(pLabel.toLowerCase())) {
+              var regex = new RegExp(pLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+              var newLabel = t.label.replace(regex, '').trim();
+              // Clean up punctuation leftovers
+              newLabel = newLabel.replace(/^[:\-–—\s]+|[:\-–—\s]+$/g, '').trim();
+              if (newLabel && newLabel.length >= 2) {
+                t.label = newLabel.charAt(0).toUpperCase() + newLabel.slice(1);
+              }
+            }
+          }
+        }
+      }
 
       var tabsContainer = document.getElementById('dash-scope-tabs');
       if (!tabsContainer) {

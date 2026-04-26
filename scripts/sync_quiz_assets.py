@@ -209,12 +209,17 @@ def sync_titles(index_path: Path, text: str) -> str:
     
     # If subfolder (e.g. med/past-years)
     if len(parts) > 1:
-        sub_name = parts[-1].replace('-', ' ').replace('_', ' ').capitalize()
-        # Special case: past-years -> Past Years
-        if parts[-1].lower() == "past-years":
-            sub_name = "Past Years"
-        full_title = f"Quiz Site - {subject_name} {sub_name}"
-        hero_title = f"Select your <span>{subject_name} {sub_name}</span>"
+        sub_key = parts[-1].lower()
+        sub_name = FOLDER_TITLES.get(sub_key, sub_key.replace('-', ' ').replace('_', ' ').capitalize())
+        
+        # Avoid redundancy if sub_name already includes subject_name
+        if sub_name.lower().startswith(subject_name.lower()):
+            full_title = f"Quiz Site - {sub_name}"
+            hero_title = f"Select your <span>{sub_name}</span>"
+        else:
+            full_title = f"Quiz Site - {subject_name} {sub_name}"
+            hero_title = f"Select your <span>{subject_name} {sub_name}</span>"
+            
         back_label = f"Back to {subject_name}"
     else:
         full_title = f"Quiz Site - {subject_name}"
