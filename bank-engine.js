@@ -1758,6 +1758,9 @@ function saveProgress() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
       } catch (retryError) {
         console.error('Failed to save progress even after cleanup:', retryError);
+        showToast('Storage full! Clear tracker data to save progress.', [
+          { label: 'Go to Menu', primary: true, onClick: navigateToIndex }
+        ]);
       }
     } else {
       console.error('Error saving progress:', e);
@@ -1977,6 +1980,11 @@ function saveBankProgress(progress) {
     localStorage.setItem(BANK_PROGRESS_KEY, JSON.stringify(progress));
   } catch(e) {
     console.error('Failed to save bank progress:', e);
+    if (e.name === 'QuotaExceededError' || e.code === 22) {
+      showToast('Storage full! Clear tracker data to save bank progress.', [
+        { label: 'Go to Menu', primary: true, onClick: navigateToIndex }
+      ]);
+    }
   }
 }
 
@@ -3384,11 +3392,19 @@ checkSavedProgress();
       var cachedTitle = _eagerFolderTitle || _folderTitleCache[folderPath] || null;
       function _persistTracker(folderTitle) {
         if (folderTitle) data.folderTitle = folderTitle;
-        localStorage.setItem(getStorageKey(data.uid), JSON.stringify(data));
-        var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
-        if (keys.indexOf(data.uid) === -1) { keys.push(data.uid); }
-        localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(keys));
-        updateDashboardBadge();
+        try {
+          localStorage.setItem(getStorageKey(data.uid), JSON.stringify(data));
+          var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
+          if (keys.indexOf(data.uid) === -1) { keys.push(data.uid); }
+          localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(keys));
+          updateDashboardBadge();
+        } catch (e) {
+          if (e.name === 'QuotaExceededError' || e.code === 22) {
+            showToast('Storage full! Clear tracker data to continue tracking mistakes.', [
+              { label: 'Go to Menu', primary: true, onClick: navigateToIndex }
+            ]);
+          }
+        }
       }
       if (cachedTitle) {
         _persistTracker(cachedTitle);
@@ -3454,9 +3470,22 @@ checkSavedProgress();
      BADGE — count on the dashboard button
      ══════════════════════════════════════════ */
   window.updateDashboardBadge = function() {
-    var data = getAllTrackerData();
+    var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
     var total = 0;
-    data.forEach(function(d) { total += (d.wrong || []).length + (d.flagged || []).length; });
+    keys.forEach(function(uid) {
+      var raw = localStorage.getItem(getStorageKey(uid));
+      if (!raw) return;
+      var wMatch = raw.match(/"wrongCount"\s*:\s*(\d+)/);
+      var fMatch = raw.match(/"flaggedCount"\s*:\s*(\d+)/);
+      if (wMatch || fMatch) {
+        total += (wMatch ? parseInt(wMatch[1], 10) : 0) + (fMatch ? parseInt(fMatch[1], 10) : 0);
+      } else {
+        try {
+          var d = JSON.parse(raw);
+          total += (d.wrong || []).length + (d.flagged || []).length;
+        } catch(e) {}
+      }
+    });
     var badge = document.getElementById('tracker-badge-count');
     if (badge) badge.textContent = total > 0 ? total : '';
   };

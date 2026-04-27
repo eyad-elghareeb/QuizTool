@@ -337,16 +337,39 @@
   function updateBadge() {
     var segments = getFolderSegments(location.pathname);
     var folderPath = segments.length > 0 ? segments[segments.length - 1] : '';
-    var data = folderPath
-      ? getAllTrackerData().filter(function (d) {
-          var fp = (d.folderPath || '').replace(/^\//, '');
-          var dp = _normStoredPath(d.path);
-          var target = folderPath.replace(/^\//, '');
-          return (fp && fp.indexOf(target) === 0) || (dp && dp.indexOf(target) === 0);
-        })
-      : getAllTrackerData();
+    var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
     var total = 0;
-    data.forEach(function (d) { total += (d.wrong || []).length + (d.flagged || []).length; });
+    var target = folderPath.replace(/^\//, '');
+
+    keys.forEach(function(uid) {
+        var raw = localStorage.getItem(getStorageKey(uid));
+        if (!raw) return;
+
+        var matchesTarget = false;
+        if (!target) {
+             matchesTarget = true;
+        } else {
+             var fpMatch = raw.match(/"folderPath"\s*:\s*"([^"]*)"/);
+             var pMatch = raw.match(/"path"\s*:\s*"([^"]*)"/);
+             var fp = fpMatch ? fpMatch[1].replace(/^\//, '') : '';
+             var dp = _normStoredPath(pMatch ? pMatch[1] : '');
+             matchesTarget = (fp && fp.indexOf(target) === 0) || (dp && dp.indexOf(target) === 0);
+        }
+
+        if (matchesTarget) {
+             var wMatch = raw.match(/"wrongCount"\s*:\s*(\d+)/);
+             var fMatch = raw.match(/"flaggedCount"\s*:\s*(\d+)/);
+             if (wMatch || fMatch) {
+                 total += (wMatch ? parseInt(wMatch[1], 10) : 0) + (fMatch ? parseInt(fMatch[1], 10) : 0);
+             } else {
+                 try {
+                     var d = JSON.parse(raw);
+                     total += (d.wrong || []).length + (d.flagged || []).length;
+                 } catch(e) {}
+             }
+        }
+    });
+
     var badge = document.getElementById('tracker-badge-count');
     if (badge) badge.textContent = total > 0 ? total : '';
   }
