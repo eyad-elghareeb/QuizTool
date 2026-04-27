@@ -342,7 +342,7 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
   color: var(--text-muted); cursor: pointer; padding: 0.45rem 0.75rem;
   border-radius: 6px; transition: all 0.2s var(--ease-out); white-space: nowrap;
   text-transform: uppercase; letter-spacing: 0.04em;
-  margin-right: 0.2rem;
+  margin-right: 0.2rem; min-width: 100px; text-align: center;
 }
 .dash-master-toggle:hover { color: var(--text); border-color: var(--accent); }
 .dash-master-toggle.active { color: var(--accent); border-color: var(--accent); background: var(--accent-dim); }

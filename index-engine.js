@@ -46,7 +46,7 @@
   _dashEl.innerHTML = '<div class="dash-modal">' +
     '<div class="dash-header">' +
       '<h2 id="dash-title-text">📊 Question Tracker</h2>' +
-      '<button id="dash-master-toggle" class="dash-master-toggle" onclick="toggleMasterSelection()"></button>' +
+      '<button id="dash-master-toggle" class="dash-master-toggle" onclick="toggleMasterSelection()">Select All</button>' +
       '<button class="dash-close-btn" onclick="closeTrackerDashboard()">✕</button>' +
     '</div>' +
     '<div class="dash-scope-bar" id="dash-scope-bar">' +
