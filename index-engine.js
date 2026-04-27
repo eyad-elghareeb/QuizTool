@@ -449,6 +449,7 @@
 
       // Step 4: Shorten titles by removing redundant parent text
       // e.g. If parent is "Gynecology" and child is "Gynecology Department", child becomes "Department"
+      // Cache busted version to ensure update
       for (var j = 0; j < tabs.length; j++) {
         var t = tabs[j];
         if (t.id !== 'folder' || !t.label) continue;
@@ -621,18 +622,22 @@
     // Selection buttons removed from here (now a single toggle in scope bar)
 
     var lastTopFolder = '__none__';
-    var folderGroups = {}; // folder -> [groups]
+    var folderGroupsMap = {}; // folder -> [groups]
+    var folderOrder = []; // maintain insertion order based on most recently updated quiz
 
     // First pass: organize groups by folder
     groups.forEach(function (g) {
       if (!g.folder) g.folder = '__root__';
-      if (!folderGroups[g.folder]) folderGroups[g.folder] = [];
-      folderGroups[g.folder].push(g);
+      if (!folderGroupsMap[g.folder]) {
+        folderGroupsMap[g.folder] = [];
+        folderOrder.push(g.folder); // push folder the first time we see it
+      }
+      folderGroupsMap[g.folder].push(g);
     });
 
     // Render each folder section
-    Object.keys(folderGroups).forEach(function (folder) {
-      var fGroups = folderGroups[folder];
+    folderOrder.forEach(function (folder) {
+      var fGroups = folderGroupsMap[folder];
       if (!fGroups.length) return;
 
       var firstGroup = fGroups[0];
@@ -1074,6 +1079,13 @@
     localStorage.removeItem('quiz_progress_v1_review_session');
     localStorage.removeItem('bank_progress_v1_review_session');
 
+    // Compute the correct ENGINE_BASE relative to the SW scope (project root)
+    // The current ENGINE_BASE might be relative to a sub-folder (e.g. "../../")
+    // But the iframe is srcdoc, so it executes in the context of the sub-folder hub page.
+    // However, we want it to act as if it's at the project root for Service Worker and asset resolution.
+    // By setting the base tag to the root, we ensure it loads the correct assets.
+    var rootAbs = new URL(ENGINE_BASE || '', window.location.href).href;
+    
     var blobHTML = '<!DOCTYPE html>\n<html lang="en" data-theme="' + currentTheme + '">\n<head>\n' +
       '<meta charset="UTF-8">\n' +
       '<meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
@@ -1083,11 +1095,11 @@
       's.textContent="html,body{background:"+(t==="light"?"#f3f0eb":"#0d1117")+";color:"+(t==="light"?"#1c1917":"#e6edf3")+";margin:0;padding:0;overflow:hidden;height:100%}";' +
       'document.head.appendChild(s);' +
       '})();</script>\n' +
-      '<base href="' + window.location.href + '">\n' +
+      '<base href="' + rootAbs + '">\n' +
       '<title>Review Session</title>\n' +
       '<script>\n' +
       '  localStorage.setItem("quiz-theme", "' + currentTheme + '");\n' +
-      '  window.__QUIZ_ENGINE_BASE = "' + (ENGINE_BASE || '') + '";\n' +
+      '  window.__QUIZ_ENGINE_BASE = "./";\n' +
       '  const QUIZ_CONFIG = { uid: "review_session", title: "Review Mode", description: "Reviewing mistakes across sections" };\n' +
       '  const BANK_CONFIG = { uid: "review_session", title: "Review Mode", description: "Reviewing mistakes across sections" };\n' +
       '  const QUESTIONS = ' + JSON.stringify(qs) + ';\n' +

@@ -1749,7 +1749,7 @@ function saveProgress() {
     }
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
-    console.log('Progress saved successfully');
+
   } catch (e) {
     if (e.name === 'QuotaExceededError' || e.code === 22) {
       console.warn('LocalStorage quota exceeded, clearing old saves...');
@@ -1826,27 +1826,27 @@ function checkSavedProgress() {
     const data = JSON.parse(saved);
 
     if (data.version !== STORAGE_VERSION) {
-      console.log('Incompatible save version, starting fresh');
+
       localStorage.removeItem(STORAGE_KEY);
       return;
     }
 
     if (data.quizTitle !== BANK_CONFIG.title) {
-      console.log('Save is for a different quiz, starting fresh');
+
       localStorage.removeItem(STORAGE_KEY);
       return;
     }
 
     // Validate basic structure before showing restore option
     if (!isValidSaveData(data)) {
-      console.log('Invalid save data structure, starting fresh');
+
       localStorage.removeItem(STORAGE_KEY);
       return;
     }
 
     const maxAge = 7 * 24 * 60 * 60 * 1000;
     if (Date.now() - data.timestamp > maxAge) {
-      console.log('Save is too old, starting fresh');
+
       localStorage.removeItem(STORAGE_KEY);
       return;
     }
@@ -1874,7 +1874,7 @@ function checkSavedProgress() {
     ]);
 
     restoreToastTimeout = setTimeout(() => {
-      console.log('Auto-dismissing restore toast after 15 seconds');
+
       pendingRestoreData = null;
       clearProgress();
       const toast = document.getElementById('toast');
@@ -1944,6 +1944,7 @@ function doRestoreProgress(data) {
     document.getElementById('timer-display').classList.remove('hidden');
     showScreen('quiz-screen');
     buildNavGrid();
+    updateNavGrid();
     renderQuestion(state.current);
     updateTimerDisplay();
     startTimer();
@@ -2338,6 +2339,7 @@ function startQuiz() {
   }
 
   buildNavGrid();
+  updateNavGrid();
   renderQuestion(0);
   startTimer();
 }
@@ -2499,7 +2501,7 @@ function renderQuestion(idx) {
       ${isLast          ? `<button class="btn-nav submit-btn" onclick="attemptSubmit()">✓ Submit</button>` : ''}
     </div>`;
 
-  updateNavGrid();
+  updateNavGrid(idx);
   updateNavStats();
   area.scrollTop = 0;
 
@@ -2512,6 +2514,7 @@ function renderQuestion(idx) {
 function selectAnswer(qIdx, optIdx) {
   if (state.mode === 'learning' && state.answers[qIdx] !== undefined) return;
   state.answers[qIdx] = optIdx;
+  debounceSaveProgress(); // persist answer immediately
   updateNavGrid(qIdx);
   updateNavStats();
   // In learning mode: re-render to show explanation and highlights
@@ -2544,6 +2547,7 @@ function toggleFlag(idx) {
   }
   updateNavGrid(idx);
   updateNavStats();
+  debounceSaveProgress(); // persist flag immediately
   showToast(state.flagged[idx] ? `⚑ Question ${idx+1} flagged` : `Question ${idx+1} unflagged`);
 }
 
@@ -3254,6 +3258,7 @@ checkSavedProgress();
   }
 
   var _folderTitleCache = {};
+  var _eagerFolderTitle = null; // pre-fetched at page load for offline-safe saves
 
   function fetchAndCacheFolderTitle(folderPath) {
     if (!folderPath || _folderTitleCache[folderPath]) {
@@ -3269,16 +3274,25 @@ checkSavedProgress();
         var match = html.match(/<title>([^<]+)<\/title>/i);
         if (match) {
           var rawTitle = match[1].trim();
-          // Cache the CLEANED title for display, but return the raw title
-          // so saveTrackerData can store it as-is (it gets cleaned again when displayed)
           var cleaned = rawTitle.replace(/^(?:QuizTool|MU61\s+Quiz|Mansoura\s+MCQ)\s*[-–—]\s*/i, '').trim();
-          if (cleaned) _folderTitleCache[folderPath] = cleaned;
+          if (cleaned) {
+            _folderTitleCache[folderPath] = cleaned;
+            _eagerFolderTitle = rawTitle; // keep raw for tracker storage
+          }
           return rawTitle;
         }
         return null;
       })
       .catch(function() { return null; });
   }
+
+  // Eagerly fetch folder title at page load so it is available offline at submit time
+  (function() {
+    try {
+      var fp = computeFolderPath();
+      if (fp) fetchAndCacheFolderTitle(fp).then(function(t) { if (t) _eagerFolderTitle = t; });
+    } catch(e) {}
+  })();
 
   window.saveTrackerData = function() {
     try {
@@ -3366,24 +3380,21 @@ checkSavedProgress();
         folderPath:  folderPath
       };
 
-      // Try to fetch folder title and save it with the data
-      fetchAndCacheFolderTitle(folderPath).then(function(folderTitle) {
+      // Use eagerly-pre-fetched title (available even offline) with fetch fallback
+      var cachedTitle = _eagerFolderTitle || _folderTitleCache[folderPath] || null;
+      function _persistTracker(folderTitle) {
         if (folderTitle) data.folderTitle = folderTitle;
         localStorage.setItem(getStorageKey(data.uid), JSON.stringify(data));
-
-        var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
-        if (keys.indexOf(data.uid) === -1) { keys.push(data.uid); }
-        localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(keys));
-
-        updateDashboardBadge();
-      }).catch(function() {
-        // Save without folder title if fetch fails
-        localStorage.setItem(getStorageKey(data.uid), JSON.stringify(data));
         var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
         if (keys.indexOf(data.uid) === -1) { keys.push(data.uid); }
         localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(keys));
         updateDashboardBadge();
-      });
+      }
+      if (cachedTitle) {
+        _persistTracker(cachedTitle);
+      } else {
+        fetchAndCacheFolderTitle(folderPath).then(_persistTracker).catch(function() { _persistTracker(null); });
+      }
     } catch (e) { console.error('Tracker save error:', e); }
   };
 
