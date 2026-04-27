@@ -346,6 +346,7 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
 }
 .dash-master-toggle:hover { color: var(--text); border-color: var(--accent); }
 .dash-master-toggle.active { color: var(--accent); border-color: var(--accent); background: var(--accent-dim); }
+.dash-master-toggle:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
 .dash-scope-tab {
   padding: 0.5rem 0.85rem;
   font-size: 0.75rem;

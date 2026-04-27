@@ -574,6 +574,7 @@
     if (!body) return;
 
     if (!data.length) {
+      updateMasterToggleState(data);
       body.innerHTML = '<div class="dash-empty"><div class="dash-empty-icon">\uD83D\uDCCB</div>'
         + '<p>No tracked questions yet.<br>Complete a quiz to start tracking wrong and flagged questions.</p></div>';
       return;
@@ -601,9 +602,11 @@
     var masterToggle = document.getElementById('dash-master-toggle');
     if (!masterToggle) return;
     
-    var allSelected = data.every(function(d) { return _selectedQuizzes[d.uid] !== false; });
+    var isEmpty = !data || data.length === 0;
+    var allSelected = !isEmpty && data.every(function(d) { return _selectedQuizzes[d.uid] !== false; });
     masterToggle.textContent = allSelected ? 'Deselect All' : 'Select All';
     masterToggle.classList.toggle('active', allSelected);
+    masterToggle.disabled = isEmpty;
   }
 
   function renderDashboardContent(body, data) {
