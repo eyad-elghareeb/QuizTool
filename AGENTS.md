@@ -528,7 +528,38 @@ To maintain the stability of the toolkit, the accuracy of the project generator,
 
 ---
 
-## 14. Adding a New Tool to QuizTool
+## 17. Performance & Offline Resilience Architecture
+
+The platform includes several optimizations to ensure high performance on mobile devices and robust offline capability:
+
+### 17a. Eager Folder Title Caching
+The tracker dashboard relies on folder titles (e.g., "Gynecology") rather than raw paths. Because fetching `index.html` fails when fully offline, the engines use an eager-fetching mechanism:
+- When a hub page loads, it fetches and caches all folder titles in memory (`_folderTitleCache`).
+- When saving tracker data, `saveTrackerData()` checks this cache or fetches it as a fallback, ensuring offline saves maintain human-readable folder names in the dashboard.
+- **Rule:** Never remove `_eagerFolderTitle` or `fetchFolderTitle` logic.
+
+### 17b. O(1) Badge Rendering
+To avoid main-thread blocking when tracking hundreds of quizzes, `updateDashboardBadge` and `updateBadge` DO NOT use `JSON.parse` to count wrong/flagged questions.
+- They use regex (`raw.match(/"wrongCount"\s*:\s*(\d+)/)`) directly on the `localStorage` string.
+- **Rule:** If you change the tracker schema, you MUST preserve `wrongCount` and `flaggedCount` as top-level string-matchable JSON properties.
+
+### 17c. Quota Exceeded Safety
+Because tracker data is stored indefinitely, heavy users may hit the 5MB `localStorage` limit.
+- All storage mutation functions (`saveProgress`, `saveTrackerData`, `saveBankProgress`) are wrapped in `try...catch` blocks.
+- If a `QuotaExceededError` (or code 22) is caught, the engine safely intercepts it and fires a toast notification instructing the user to clear tracker data, preventing silent failures.
+
+### 17d. Debounced State Persistence
+Quiz and bank states (`answers`, `flagged`) are saved *immediately* upon user interaction rather than waiting for an interval timer.
+- Handled via `debounceSaveProgress()` (500ms debounce).
+- This ensures no data is lost if the user quickly closes the browser after answering.
+
+### 17e. Resilient Navigation Fallbacks
+The service worker (`sw.js`) `handleNavigate` function intercepts `404` and `500` network responses.
+- If the network returns a bad response, the SW catches it and falls back to the cache or the root `index.html` rather than displaying the browser's default error page, keeping the user securely within the offline PWA environment.
+
+---
+
+## 18. Adding a New Tool to QuizTool
 
 1. Create `new-tool.html` in the repo root
 2. Add it to `QUIZZES` in `index.html`:
@@ -540,7 +571,7 @@ To maintain the stability of the toolkit, the accuracy of the project generator,
 
 ---
 
-## 15. Dependency Map
+## 19. Dependency Map
 
 ```
 QuizTool (toolkit pages)
