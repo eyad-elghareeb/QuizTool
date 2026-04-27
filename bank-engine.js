@@ -1490,7 +1490,7 @@ function hlApplyColor(colorNum) {
   delete _hlCache[gIdx];
   window.getSelection().removeAllRanges();
   renderQuestion(state.current);
-  saveProgress();
+  debounceSaveProgress();
 }
 
 function hlEraseSelection() {
@@ -1510,7 +1510,7 @@ function hlEraseSelection() {
   delete _hlCache[gIdx];
   window.getSelection().removeAllRanges();
   renderQuestion(state.current);
-  saveProgress();
+  debounceSaveProgress();
 }
 
 function clearAllHighlights(sessionIdx) {
@@ -1520,7 +1520,7 @@ function clearAllHighlights(sessionIdx) {
     delete _hlCache[gIdx];
   }
   renderQuestion(sessionIdx);
-  saveProgress();
+  debounceSaveProgress();
   showToast('Highlights cleared');
 }
 
@@ -1532,7 +1532,7 @@ function toggleStrikethrough(sessionIdx, optIdx) {
   state.strikethrough[gIdx][optIdx] = !state.strikethrough[gIdx][optIdx];
   if (!state.strikethrough[gIdx][optIdx]) delete state.strikethrough[gIdx][optIdx];
   renderQuestion(sessionIdx);
-  saveProgress();
+  debounceSaveProgress();
 }
 
 /* ── KEYBOARD SHORTCUTS (H, 1-4, S) ───────────────────────── */
@@ -1707,6 +1707,12 @@ let pendingTransitionTimeout = null;  // tracks screen transition timeouts to pr
  * Safely save quiz progress to localStorage
  * Handles quota errors and validates data before saving
  */
+let saveProgressTimeout = null;
+function debounceSaveProgress() {
+  if (saveProgressTimeout) clearTimeout(saveProgressTimeout);
+  saveProgressTimeout = setTimeout(saveProgress, 500);
+}
+
 function saveProgress() {
   if (state.submitted) return;
 
@@ -2506,7 +2512,7 @@ function renderQuestion(idx) {
 function selectAnswer(qIdx, optIdx) {
   if (state.mode === 'learning' && state.answers[qIdx] !== undefined) return;
   state.answers[qIdx] = optIdx;
-  updateNavGrid();
+  updateNavGrid(qIdx);
   updateNavStats();
   // In learning mode: re-render to show explanation and highlights
   if (state.mode === 'learning') {
@@ -2528,7 +2534,16 @@ function goTo(idx) { renderQuestion(idx); }
 /* ─── FLAG ───────────────────────────────────────────────────── */
 function toggleFlag(idx) {
   state.flagged[idx] = !state.flagged[idx];
-  renderQuestion(idx);
+  const btn = document.getElementById(`flag-btn-${idx}`);
+  if(btn) {
+    btn.innerHTML = `
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="${state.flagged[idx]?'currentColor':'none'}" stroke="currentColor" stroke-width="2.2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+      ${state.flagged[idx] ? 'Flagged' : 'Flag'}
+    `;
+    btn.classList.toggle('active', state.flagged[idx]);
+  }
+  updateNavGrid(idx);
+  updateNavStats();
   showToast(state.flagged[idx] ? `⚑ Question ${idx+1} flagged` : `Question ${idx+1} unflagged`);
 }
 
@@ -2540,8 +2555,11 @@ function buildNavGrid() {
   ).join('');
 }
 
-function updateNavGrid() {
-  SESSION_QUESTIONS.forEach((_, i) => {
+let lastCurrentIdx = -1;
+
+function updateNavGrid(changedIdx) {
+  const updateNode = (i) => {
+    if (i < 0 || i >= SESSION_QUESTIONS.length) return;
     const btn = document.getElementById(`nav-btn-${i}`);
     if (!btn) return;
     var isFlagged = !!state.flagged[i];
@@ -2561,7 +2579,17 @@ function updateNavGrid() {
     } else if (existingDot) {
       existingDot.remove();
     }
-  });
+  };
+
+  if (changedIdx === undefined) {
+    SESSION_QUESTIONS.forEach((_, i) => updateNode(i));
+  } else {
+    const indicesToUpdate = new Set([state.current, lastCurrentIdx]);
+    if (changedIdx !== null) indicesToUpdate.add(changedIdx);
+    indicesToUpdate.forEach(i => updateNode(i));
+  }
+  
+  lastCurrentIdx = state.current;
 }
 
 function updateNavStats() {
@@ -2668,58 +2696,84 @@ function buildResults() {
   updateExportBadges();
 }
 
+let renderResultItemsRafId = null;
+
 function renderResultItems(filter) {
   const list = document.getElementById('result-list');
   list.innerHTML = '';
-  SESSION_QUESTIONS.forEach((q, i) => {
-    const ans = state.answers[i];
-    const isCorrect = ans === q.correct;
-    const isSkipped = ans === undefined;
-    const isFlagged = state.flagged[i];
-    let statusClass = isSkipped ? 'skipped' : (isCorrect ? 'correct' : 'wrong');
-    let show = filter === 'all'
-      || (filter === 'correct' && isCorrect && !isSkipped)
-      || (filter === 'wrong'   && !isCorrect && !isSkipped)
-      || (filter === 'skipped' && isSkipped)
-      || (filter === 'flagged' && isFlagged);
-    if (!show) return;
-
-    const icon = isSkipped ? '—' : (isCorrect ? '✓' : '✗');
-    const userOpt = ans !== undefined ? q.options[ans] : 'Not answered';
-    const corrOpt = q.options[q.correct];
-
-    const el = document.createElement('div');
-    el.className = `result-item ${statusClass}`;
-    el.innerHTML = `
-      <div class="result-item-header" onclick="toggleResultItem(this)">
-        <div class="result-status-icon">${icon}</div>
-        <div class="result-q-meta">
-          <div class="result-q-num">Question ${i+1}${isFlagged?' · ⚑ Flagged':''}</div>
-          <div class="result-q-text">${q.question}</div>
-        </div>
-        <div class="expand-arrow">▼</div>
-      </div>
-      <div class="result-item-body">
-        ${!isSkipped ? `
-          <div class="answer-row your-answer ${isCorrect?'is-correct':''}">
-            <span class="ar-label">Your Answer</span>
-            <span>${KEYS[ans]}. ${userOpt}</span>
-          </div>` : ''}
-        ${!isCorrect ? `
-          <div class="answer-row correct-answer">
-            <span class="ar-label">Correct Answer</span>
-            <span>${KEYS[q.correct]}. ${corrOpt}</span>
-          </div>` : ''}
-        <div class="explanation-box">
-          <strong>Explanation</strong>
-          ${q.explanation}
-        </div>
-      </div>`;
-    list.appendChild(el);
-  });
-  if (!list.children.length) {
-    list.innerHTML = `<div style="color:var(--text-muted);font-size:0.9rem;padding:1rem 0;">No questions in this category.</div>`;
+  
+  if (renderResultItemsRafId) {
+    cancelAnimationFrame(renderResultItemsRafId);
+    renderResultItemsRafId = null;
   }
+  
+  let i = 0;
+  let itemsRendered = 0;
+  
+  function renderChunk() {
+    const chunkEnd = Math.min(i + 20, SESSION_QUESTIONS.length);
+    
+    for (; i < chunkEnd; i++) {
+      const q = SESSION_QUESTIONS[i];
+      const ans = state.answers[i];
+      const isCorrect = ans === q.correct;
+      const isSkipped = ans === undefined;
+      const isFlagged = state.flagged[i];
+      let statusClass = isSkipped ? 'skipped' : (isCorrect ? 'correct' : 'wrong');
+      let show = filter === 'all'
+        || (filter === 'correct' && isCorrect && !isSkipped)
+        || (filter === 'wrong'   && !isCorrect && !isSkipped)
+        || (filter === 'skipped' && isSkipped)
+        || (filter === 'flagged' && isFlagged);
+      if (!show) continue;
+      
+      itemsRendered++;
+
+      const icon = isSkipped ? '—' : (isCorrect ? '✓' : '✗');
+      const userOpt = ans !== undefined ? q.options[ans] : 'Not answered';
+      const corrOpt = q.options[q.correct];
+
+      const el = document.createElement('div');
+      el.className = `result-item ${statusClass}`;
+      el.innerHTML = `
+        <div class="result-item-header" onclick="toggleResultItem(this)">
+          <div class="result-status-icon">${icon}</div>
+          <div class="result-q-meta">
+            <div class="result-q-num">Question ${i+1}${isFlagged?' · ⚑ Flagged':''}</div>
+            <div class="result-q-text">${q.question}</div>
+          </div>
+          <div class="expand-arrow">▼</div>
+        </div>
+        <div class="result-item-body">
+          ${!isSkipped ? `
+            <div class="answer-row your-answer ${isCorrect?'is-correct':''}">
+              <span class="ar-label">Your Answer</span>
+              <span>${KEYS[ans]}. ${userOpt}</span>
+            </div>` : ''}
+          ${!isCorrect ? `
+            <div class="answer-row correct-answer">
+              <span class="ar-label">Correct Answer</span>
+              <span>${KEYS[q.correct]}. ${corrOpt}</span>
+            </div>` : ''}
+          <div class="explanation-box">
+            <strong>Explanation</strong>
+            ${q.explanation}
+          </div>
+        </div>`;
+      list.appendChild(el);
+    }
+    
+    if (i < SESSION_QUESTIONS.length) {
+      renderResultItemsRafId = requestAnimationFrame(renderChunk);
+    } else {
+      if (itemsRendered === 0) {
+        list.innerHTML = `<div style="color:var(--text-muted);font-size:0.9rem;padding:1rem 0;">No questions in this category.</div>`;
+      }
+      renderResultItemsRafId = null;
+    }
+  }
+  
+  renderResultItemsRafId = requestAnimationFrame(renderChunk);
 }
 
 function toggleResultItem(header) {

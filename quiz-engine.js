@@ -1645,7 +1645,7 @@ function hlApplyColor(colorNum) {
   delete _hlCache[qIdx];
   window.getSelection().removeAllRanges();
   renderQuestion(qIdx);
-  saveProgress();  // Persist immediately
+  debounceSaveProgress();  // Persist immediately
 }
 
 function hlEraseSelection() {
@@ -1664,14 +1664,14 @@ function hlEraseSelection() {
   delete _hlCache[qIdx];
   window.getSelection().removeAllRanges();
   renderQuestion(qIdx);
-  saveProgress();  // Persist immediately
+  debounceSaveProgress();  // Persist immediately
 }
 
 function clearAllHighlights(qIdx) {
   delete state.highlights[qIdx];
   delete _hlCache[qIdx];
   renderQuestion(qIdx);
-  saveProgress();  // Persist immediately
+  debounceSaveProgress();  // Persist immediately
   showToast('Highlights cleared');
 }
 
@@ -1681,7 +1681,7 @@ function toggleStrikethrough(qIdx, optIdx) {
   state.strikethrough[qIdx][optIdx] = !state.strikethrough[qIdx][optIdx];
   if (!state.strikethrough[qIdx][optIdx]) delete state.strikethrough[qIdx][optIdx];
   renderQuestion(qIdx);
-  saveProgress();  // Persist immediately
+  debounceSaveProgress();  // Persist immediately
 }
 
 /* ── KEYBOARD SHORTCUTS (H, 1-4, S) ───────────────────────── */
@@ -2108,7 +2108,7 @@ function selectAnswer(qIdx, optIdx) {
   if (state.mode === 'learning' && state.answers[qIdx] !== undefined) return;
 
   state.answers[qIdx] = optIdx;
-  updateNavGrid();
+  updateNavGrid(qIdx);
   updateNavStats();
   // In learning mode: re-render to show explanation and highlights
   if(state.mode === 'learning') {
@@ -2142,7 +2142,7 @@ function toggleFlag(idx) {
     `;
     btn.classList.toggle('active', state.flagged[idx]);
   }
-  updateNavGrid();
+  updateNavGrid(idx);
   updateNavStats();
   showToast(state.flagged[idx] ? `⚑ Question ${idx+1} flagged` : `Question ${idx+1} unflagged`);
 }
@@ -2155,8 +2155,11 @@ function buildNavGrid() {
   `).join('');
 }
 
-function updateNavGrid() {
-  QUESTIONS.forEach((_, i) => {
+let lastCurrentIdx = -1;
+
+function updateNavGrid(changedIdx) {
+  const updateNode = (i) => {
+    if (i < 0 || i >= QUESTIONS.length) return;
     const btn = document.getElementById(`nav-btn-${i}`);
     if(!btn) return;
     // Build class list efficiently — avoid resetting className which triggers reflow
@@ -2177,7 +2180,17 @@ function updateNavGrid() {
     } else if (existingDot) {
       existingDot.remove();
     }
-  });
+  };
+
+  if (changedIdx === undefined) {
+    QUESTIONS.forEach((_, i) => updateNode(i));
+  } else {
+    const indicesToUpdate = new Set([state.current, lastCurrentIdx]);
+    if (changedIdx !== null) indicesToUpdate.add(changedIdx);
+    indicesToUpdate.forEach(i => updateNode(i));
+  }
+  
+  lastCurrentIdx = state.current;
 }
 
 function updateNavStats() {
@@ -2265,66 +2278,90 @@ function buildResults() {
   updateExportBadges();
 }
 
+let renderResultItemsRafId = null;
+
 function renderResultItems(filter) {
   const list = document.getElementById('result-list');
   list.innerHTML = '';
-  QUESTIONS.forEach((q, i) => {
-    const ans = state.answers[i];
-    const isCorrect = ans === q.correct;
-    const isSkipped = ans === undefined;
-    const isFlagged = state.flagged[i];
 
-    let statusClass = isSkipped ? 'skipped' : (isCorrect ? 'correct' : 'wrong');
-    let showItem = filter === 'all'
-      || (filter === 'correct'  && isCorrect && !isSkipped)
-      || (filter === 'wrong'    && !isCorrect && !isSkipped)
-      || (filter === 'skipped'  && isSkipped)
-      || (filter === 'flagged'  && isFlagged);
-
-    if(!showItem) return;
-
-    const statusIcon = isSkipped ? '—' : (isCorrect ? '✓' : '✗');
-    const userOptText = ans !== undefined ? q.options[ans] : 'Not answered';
-    const correctOptText = q.options[q.correct];
-
-    const el = document.createElement('div');
-    el.className = `result-item ${statusClass}`;
-    el.dataset.idx = i;
-
-    el.innerHTML = `
-      <div class="result-item-header" onclick="toggleResultItem(this)">
-        <div class="result-status-icon">${statusIcon}</div>
-        <div class="result-q-meta">
-          <div class="result-q-num">Question ${i+1}${isFlagged ? ' · ⚑ Flagged' : ''}</div>
-          <div class="result-q-text">${q.question}</div>
-        </div>
-        <div class="expand-arrow">▼</div>
-      </div>
-      <div class="result-item-body">
-        ${!isSkipped ? `
-          <div class="answer-row your-answer ${isCorrect?'is-correct':''}">
-            <span class="ar-label">Your Answer</span>
-            <span>${KEYS[ans]}. ${userOptText}</span>
-          </div>
-        ` : ''}
-        ${!isCorrect ? `
-          <div class="answer-row correct-answer">
-            <span class="ar-label">Correct Answer</span>
-            <span>${KEYS[q.correct]}. ${correctOptText}</span>
-          </div>
-        ` : ''}
-        <div class="explanation-box">
-          <strong>Explanation</strong>
-          ${q.explanation}
-        </div>
-      </div>
-    `;
-    list.appendChild(el);
-  });
-
-  if(list.children.length === 0) {
-    list.innerHTML = `<div style="color:var(--text-muted);font-size:0.9rem;padding:1rem 0;">No questions in this category.</div>`;
+  if (renderResultItemsRafId) {
+    cancelAnimationFrame(renderResultItemsRafId);
+    renderResultItemsRafId = null;
   }
+
+  let i = 0;
+  let itemsRendered = 0;
+
+  function renderChunk() {
+    const chunkEnd = Math.min(i + 20, QUESTIONS.length); // 20 items per frame
+
+    for (; i < chunkEnd; i++) {
+      const q = QUESTIONS[i];
+      const ans = state.answers[i];
+      const isCorrect = ans === q.correct;
+      const isSkipped = ans === undefined;
+      const isFlagged = state.flagged[i];
+
+      let statusClass = isSkipped ? 'skipped' : (isCorrect ? 'correct' : 'wrong');
+      let showItem = filter === 'all'
+        || (filter === 'correct'  && isCorrect && !isSkipped)
+        || (filter === 'wrong'    && !isCorrect && !isSkipped)
+        || (filter === 'skipped'  && isSkipped)
+        || (filter === 'flagged'  && isFlagged);
+
+      if(!showItem) continue;
+      itemsRendered++;
+
+      const statusIcon = isSkipped ? '—' : (isCorrect ? '✓' : '✗');
+      const userOptText = ans !== undefined ? q.options[ans] : 'Not answered';
+      const correctOptText = q.options[q.correct];
+
+      const el = document.createElement('div');
+      el.className = `result-item ${statusClass}`;
+      el.dataset.idx = i;
+
+      el.innerHTML = `
+        <div class="result-item-header" onclick="toggleResultItem(this)">
+          <div class="result-status-icon">${statusIcon}</div>
+          <div class="result-q-meta">
+            <div class="result-q-num">Question ${i+1}${isFlagged ? ' · ⚑ Flagged' : ''}</div>
+            <div class="result-q-text">${q.question}</div>
+          </div>
+          <div class="expand-arrow">▼</div>
+        </div>
+        <div class="result-item-body">
+          ${!isSkipped ? `
+            <div class="answer-row your-answer ${isCorrect?'is-correct':''}">
+              <span class="ar-label">Your Answer</span>
+              <span>${KEYS[ans]}. ${userOptText}</span>
+            </div>
+          ` : ''}
+          ${!isCorrect ? `
+            <div class="answer-row correct-answer">
+              <span class="ar-label">Correct Answer</span>
+              <span>${KEYS[q.correct]}. ${correctOptText}</span>
+            </div>
+          ` : ''}
+          <div class="explanation-box">
+            <strong>Explanation</strong>
+            ${q.explanation}
+          </div>
+        </div>
+      `;
+      list.appendChild(el);
+    }
+
+    if (i < QUESTIONS.length) {
+      renderResultItemsRafId = requestAnimationFrame(renderChunk);
+    } else {
+      if(itemsRendered === 0) {
+        list.innerHTML = `<div style="color:var(--text-muted);font-size:0.9rem;padding:1rem 0;">No questions in this category.</div>`;
+      }
+      renderResultItemsRafId = null;
+    }
+  }
+
+  renderResultItemsRafId = requestAnimationFrame(renderChunk);
 }
 
 function toggleResultItem(header) {
@@ -2480,6 +2517,12 @@ const STORAGE_KEY = `quiz_progress_${STORAGE_VERSION}_${(QUIZ_CONFIG.uid || wind
  * Safely save quiz progress to localStorage
  * Handles quota errors and validates data before saving
  */
+let saveProgressTimeout = null;
+function debounceSaveProgress() {
+  if (saveProgressTimeout) clearTimeout(saveProgressTimeout);
+  saveProgressTimeout = setTimeout(saveProgress, 500);
+}
+
 function saveProgress() {
   if (state.submitted) return;
 

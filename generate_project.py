@@ -198,12 +198,16 @@ self.addEventListener('activate', function (event) {
    FETCH — routing strategy
    ══════════════════════════════════════════════════════════════ */
 
-/** Navigation requests (HTML pages): network-first with cache fallback + hub fallback. */
+/** Navigation requests (HTML pages): network-first with timeout, then cache fallback + hub fallback. */
 function handleNavigate(event, request) {
   return (async function () {
     var cache = await caches.open(CACHE_NAME);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2500);
+
     try {
-      var res = await fetch(request);
+      var res = await fetch(request, { signal: controller.signal });
+      clearTimeout(timeoutId);
       if (res && res.ok) {
         try {
           await cache.put(request, res.clone());
@@ -211,7 +215,8 @@ function handleNavigate(event, request) {
       }
       return res;
     } catch (err) {
-      /* Offline: try exact match first */
+      clearTimeout(timeoutId);
+      /* Offline or timeout: try exact match first */
       var cached = await cache.match(request);
       if (cached) return cached;
 
@@ -270,8 +275,12 @@ function handleAsset(event, request) {
 
     if (cached) return cached;
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2500);
+
     try {
-      var res = await fetch(request);
+      var res = await fetch(request, { signal: controller.signal });
+      clearTimeout(timeoutId);
       if (shouldStore(res)) {
         try {
           await cache.put(request, res.clone());
@@ -279,6 +288,7 @@ function handleAsset(event, request) {
       }
       return res;
     } catch (err) {
+      clearTimeout(timeoutId);
       /* Offline miss for asset — try matching without query string */
       var cleanUrl = request.url.split('?')[0].split('#')[0];
       var cachedClean = await cache.match(cleanUrl);
