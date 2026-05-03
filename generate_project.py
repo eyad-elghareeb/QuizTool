@@ -147,6 +147,7 @@ self.addEventListener('install', function (event) {
         'index-engine.js',
         'index-engine.css',
         'index.html',
+        'tracker-map.json',
         'manifest.webmanifest',
         'favicon.svg'
       ];
@@ -270,7 +271,8 @@ function handleAsset(event, request) {
           'icon-96.png',
           'icon-144.png',
           'icon-192.png',
-          'icon-512.png'
+          'icon-512.png',
+          'tracker-map.json'
         ];
         if (SHARED.indexOf(filename) !== -1) {
           cached = await cache.match(hrefFromScope(scope, filename));
@@ -544,8 +546,6 @@ jobs:
       - name: Update generated quiz assets
         run: python scripts/sync_quiz_assets.py
 
-      - name: Auto-index new quiz/bank files
-        run: python scripts/auto_index.py || echo "Auto-index script not found, skipping"
 
       - name: Commit generated changes
         run: |
@@ -565,7 +565,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "chore: sync and index quiz assets"
+          git commit -m "chore: sync quiz assets"
           git push
 '''
 
@@ -752,6 +752,7 @@ def build_project_zip(config):
         'index-engine.css',
         'quiz-engine.js',
         'bank-engine.js',
+        'tracker-map.json',
         'favicon.svg',
         'manifest.webmanifest'
     ]
@@ -842,6 +843,29 @@ def build_project_zip(config):
         zf.writestr('favicon.svg', FAVICON_SVG)
         zf.writestr('sw.js', sw_js_content)  # Use dynamically generated sw.js
         zf.writestr('manifest.webmanifest', MANIFEST_JSON(project_name))
+
+        # --- Tracker Map (UID mapping) ---
+        # Generate initial tracker map based on configured quizzes
+        tracker_map = {}
+        def collect_tracker_entries(folders, current_path=''):
+            for folder in folders:
+                folder_name = folder['name']
+                folder_path = f"{current_path}/{folder_name}" if current_path else folder_name
+                # Quizzes in this folder
+                for quiz in folder.get('quizzes', []):
+                    uid = quiz.get('uid')
+                    url = quiz.get('url')
+                    if uid and url:
+                        tracker_map[uid] = {
+                            "path": f"{folder_path}/{url}",
+                            "folderPath": f"{folder_path}/"
+                        }
+                # Subfolders
+                if 'subfolders' in folder and folder['subfolders']:
+                    collect_tracker_entries(folder['subfolders'], folder_path)
+        
+        collect_tracker_entries(config.get('folders', []))
+        zf.writestr('tracker-map.json', json.dumps(tracker_map, separators=(',', ':')))
 
         # --- Icon files (PNG icons for PWA) ---
         for icon_name, icon_data in ICON_FILES.items():
@@ -1005,8 +1029,6 @@ def build_project_zip(config):
             zf.writestr('scripts/sync_quiz_assets.py', SYNC_SCRIPT)
         if STANDARDIZE_SCRIPT:
             zf.writestr('scripts/standardize_quiz_files.py', STANDARDIZE_SCRIPT)
-        if AUTO_INDEX_SCRIPT:
-            zf.writestr('scripts/auto_index.py', AUTO_INDEX_SCRIPT)
 
         # --- GitHub Workflows ---
         zf.writestr('.github/workflows/sync-quiz-assets.yml', SYNC_WORKFLOW_YML)

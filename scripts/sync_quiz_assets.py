@@ -41,6 +41,8 @@ FOLDER_TITLES = {
     "ai": "AI",
     "dep": "Department",
     "mans": "Mansoura",
+    "mansoura": "Mansoura old Qs",
+    "by-chapter": "Question by chapter",
     "ped": "Paediatrics",
     "surg": "Surgery",
     "med": "Internal Medicine",
@@ -51,6 +53,30 @@ FOLDER_TITLES = {
 
 def main() -> int:
     changed_files: list[Path] = []
+    
+    global_tracker_map = {}
+    for html_path in discover_html_files():
+        text = html_path.read_text(encoding="utf-8")
+        config = extract_quiz_config(text)
+        if config and config.get("uid"):
+            uid = config["uid"]
+            rel_path = html_path.relative_to(REPO_ROOT).as_posix()
+            folder_path = html_path.parent.relative_to(REPO_ROOT).as_posix()
+            if folder_path == ".":
+                folder_path = ""
+            else:
+                folder_path += "/"
+            global_tracker_map[uid] = {
+                "path": rel_path,
+                "folderPath": folder_path
+            }
+            
+    tracker_map_path = REPO_ROOT / "tracker-map.json"
+    new_tracker_map = json.dumps(global_tracker_map, separators=(',', ':'))
+    old_tracker_map = tracker_map_path.read_text(encoding="utf-8") if tracker_map_path.exists() else ""
+    if old_tracker_map != new_tracker_map:
+        tracker_map_path.write_text(new_tracker_map, encoding="utf-8")
+        changed_files.append(tracker_map_path)
 
     for index_path in discover_index_files():
         if update_index_file(index_path):
@@ -130,19 +156,30 @@ def update_index_file(index_path: Path) -> bool:
         if not url: continue
         
         is_valid = False
+        quiz_path = None
         if url.startswith(("http://", "https://")):
             is_valid = True
         elif "/" in url:
             # Subfolder or relative path (e.g. med/index.html)
-            # Check if it exists relative to the current index file
-            if (index_dir / url).exists():
+            quiz_path = index_dir / url
+            if quiz_path.exists():
                 is_valid = True
         else:
             # Local file in current directory
             if url in valid_local_files:
+                quiz_path = index_dir / url
                 is_valid = True
         
         if is_valid and url not in seen_urls:
+            # Enrich existing entry with latest metadata from file if possible
+            if quiz_path and quiz_path.is_file() and quiz_path.name != "index.html":
+                new_meta = build_quiz_entry(quiz_path, dir_rel, entry.get("icon", "📘"))
+                if new_meta:
+                    # Update entry fields with latest from file
+                    for key in ["uid", "title", "description", "tags"]:
+                        if key in new_meta:
+                            entry[key] = new_meta[key]
+            
             updated_entries.append(entry)
             seen_urls.add(url)
     
@@ -214,15 +251,15 @@ def sync_titles(index_path: Path, text: str) -> str:
         
         # Avoid redundancy if sub_name already includes subject_name
         if sub_name.lower().startswith(subject_name.lower()):
-            full_title = f"Quiz Site - {sub_name}"
+            full_title = f"MU61 Quiz - {sub_name}"
             hero_title = f"Select your <span>{sub_name}</span>"
         else:
-            full_title = f"Quiz Site - {subject_name} {sub_name}"
+            full_title = f"MU61 Quiz - {subject_name} {sub_name}"
             hero_title = f"Select your <span>{subject_name} {sub_name}</span>"
             
         back_label = f"Back to {subject_name}"
     else:
-        full_title = f"Quiz Site - {subject_name}"
+        full_title = f"MU61 Quiz - {subject_name}"
         hero_title = f"Select your <span>{subject_name} exam</span>"
         back_label = "Back to Home"
 
@@ -255,6 +292,7 @@ def build_quiz_entry(quiz_path: Path, dir_rel: Path, icon: str) -> dict[str, obj
     primary_tag = infer_primary_tag(title, description, dir_rel, quiz_path.stem)
 
     return {
+        "uid": config.get("uid", ""),
         "title": title,
         "description": description,
         "icon": icon,
@@ -294,7 +332,7 @@ def update_service_worker() -> bool:
     # Engine files must always be first in the precache list for prioritized installation
     # Engines are specifically placed first to ensure cache robustness logic in sw.js works.
     engine_paths = []
-    for eng in ["quiz-engine.js", "bank-engine.js", "index-engine.js"]:
+    for eng in ["quiz-engine.js", "bank-engine.js", "index-engine.js", "tracker-map.json"]:
         if (REPO_ROOT / eng).exists():
             engine_paths.append(eng)
             
@@ -319,7 +357,8 @@ def update_service_worker() -> bool:
     shared_assets = [
         'quiz-engine.js', 'bank-engine.js', 'index-engine.js', 'index-engine.css',
         'manifest.webmanifest', 'favicon.svg',
-        'icon-48.png', 'icon-72.png', 'icon-96.png', 'icon-144.png', 'icon-192.png', 'icon-512.png'
+        'icon-48.png', 'icon-72.png', 'icon-96.png', 'icon-144.png', 'icon-192.png', 'icon-512.png',
+        'tracker-map.json'
     ]
     
     shared_literal = "[\n" + ",\n".join(f"          '{a}'" for a in shared_assets) + "\n        ]"
@@ -344,7 +383,7 @@ def build_cache_version(all_paths: list[str]) -> str:
         hasher.update(path.read_bytes())
         hasher.update(b"\0")
 
-    return f"quiz-cache-{hasher.hexdigest()[:12]}"
+    return f"mu61-quiz-{hasher.hexdigest()[:12]}"
 
 
 def extract_quiz_title(quiz_text: str) -> str | None:
@@ -472,6 +511,7 @@ def append_entries_to_array_literal(array_literal: str, new_entries: list[str]) 
 
 
 def serialize_quiz_entry(entry: dict[str, object]) -> str:
+    uid = json.dumps(entry.get("uid", ""), ensure_ascii=False)
     title = json.dumps(entry["title"], ensure_ascii=False)
     description = json.dumps(entry["description"], ensure_ascii=False)
     icon = json.dumps(entry["icon"], ensure_ascii=False)
@@ -480,6 +520,7 @@ def serialize_quiz_entry(entry: dict[str, object]) -> str:
 
     return (
         "  {\n"
+        f"    uid: {uid},\n"
         f"    title: {title},\n"
         f"    description: {description},\n"
         f"    icon: {icon},\n"
@@ -508,7 +549,7 @@ def infer_description(title: str, raw_description: str, dir_rel: Path) -> str:
         return cleaned
 
     if "past years" in dir_rel.as_posix().casefold():
-        return f"Exam {title}"
+        return f"Gynecology {title} Exam"
 
     lecture_match = re.match(r"^L\d+\s+(.+)$", title, flags=re.IGNORECASE)
     if lecture_match:

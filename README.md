@@ -18,6 +18,7 @@ Generate production-ready quiz sites similar to MU61S8 with a single command!
 - **MU61S8 Structure**: Generates clean quiz-only instances (no QuizTool utilities)
 - **Automated Deployment**: Includes GitHub Actions workflows for auto-deployment
 - **Asset Synchronization**: Scripts to auto-update index pages and service worker precache
+- **Tracker Map Generation**: Automatically generates `tracker-map.json` for persistent link reliability
 - **Complete PWA Support**: All icon sizes (48px-512px), manifest, and offline-capable service worker
 - **Folder Support**: Create multi-folder quiz structures with nested index pages
 - **One-Click Export**: Download ready-to-deploy ZIP with proper file structure
@@ -27,7 +28,7 @@ Generate production-ready quiz sites similar to MU61S8 with a single command!
 - ✓ Service worker with html2pdf.js precaching for offline PDF export
 - ✓ PWA manifest with all icon sizes
 - ✓ GitHub Actions workflows (sync + deploy to GitHub Pages)
-- ✓ Asset synchronization scripts from MU61S8
+- ✓ Asset synchronization scripts with Tracker Map generation
 - ✓ Quiz engine test page for diagnostics
 - ✓ .gitignore with proper exclusions
 
@@ -146,6 +147,15 @@ Pre-built quiz template for creating standardized exams with:
 - Immediate feedback on answers
 - Explanation display after answering
 - Final score summary
+- **Tracker Persistence**: Mistakes and flagged questions are saved to the long-term tracker
+- **Highlighter & Markup**: Built-in 4-color highlighter and option strikethrough system
+- **Keyboard Shortcuts**: Full keyboard interface for rapid answering (Arrows, 1-4, F, H, S)
+
+### 📊 Question Tracker & Reliability
+- **Background Tracker Healing**: Uses `tracker-map.json` to automatically update stored quiz paths in the background if files are moved or renamed.
+- **Quota Exceeded Safety**: Intercepts `localStorage` limit errors and provides recovery instructions to prevent data loss.
+- **Safe Parsing**: Robust JSON parsing for tracker data to prevent application crashes on corrupted storage entries.
+- **O(1) Badge Rendering**: High-performance regex-based badge counting for fast hub loading even with hundreds of tracked quizzes.
 
 ## 🎨 Design & Theming
 
@@ -154,10 +164,12 @@ QuizTool features a sophisticated design system with:
 - **Modern Typography**: Uses Google Fonts (Outfit for body, Playfair Display for headings)
 - **CSS Variables**: Comprehensive theming with customizable colors, spacing, and effects
 - **Smooth Transitions**: Polished animations and hover effects throughout
+  - **Single-Reflow Transitions**: Optimized screen transitions use a single reflow for smooth 60fps performance on mobile
   - **Mode Switching**: Smooth border and background animations when toggling between exam/learning modes
   - **Card Interactions**: Lift, glow, and scale effects with spring easing
   - **Modal Animations**: Scale-up entrances with overshoot curves
 - **Accessible UI**: High contrast ratios and clear visual hierarchy
+- **Performance-First Rendering**: Throttled UI timers (500ms) reduce main-thread load during active quiz sessions
 - **Custom Color Palettes**:
   - Dark Theme: Deep blues and grays with amber accent (#f0a500)
   - Light Theme: Warm neutrals with golden accent (#c27803)
@@ -270,6 +282,8 @@ QuizTool/
 ├── quiz-engine.js                # Shared quiz engine (handles quiz rendering)
 ├── bank-engine.js                # Shared bank engine (handles question banks)
 ├── index-engine.js               # Shared index engine (handles hub pages)
+├── index-engine.css              # Shared index styles
+├── tracker-map.json              # Auto-generated UID-to-Path mapping
 ├── sw.js                         # Service worker for offline support
 ├── manifest.webmanifest          # PWA manifest for installability
 ├── favicon.svg                   # SVG icon for the app

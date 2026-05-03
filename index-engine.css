@@ -141,7 +141,7 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
 }
 .quiz-card {
   transition: transform 0.3s var(--ease-out), border-color 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
-  will-change: transform, border-color;
+  will-change: transform;
 }
 .card-icon {
   width: 56px; height: 56px;
@@ -254,8 +254,7 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  will-change: opacity;
-  transform: translate3d(0,0,0);
+  transform: translate3d(0,0,0); /* GPU layer hint for backdrop blur smoothness */
 }
 .dash-overlay.open { display: flex; }
 

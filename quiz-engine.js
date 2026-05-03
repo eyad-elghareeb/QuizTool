@@ -35,7 +35,7 @@
   document.documentElement.setAttribute('data-theme', savedTheme);
   document.body.style.background = savedTheme === 'light' ? '#f3f0eb' : '#0d1117';
   document.body.style.color = savedTheme === 'light' ? '#1c1917' : '#e6edf3';
-  document.body.style.transition = 'background 0.2s ease, color 0.2s ease';
+  // Note: body theme transition is handled by the CSS, not inline style (avoids toggle jank)
   document.body.style.overflow = 'hidden';
 
   /* ── Inject CSS ──────────────────────────────────────────────── */
@@ -1101,7 +1101,7 @@ input[type=radio]:checked + .option-label .option-key {
 
   /* ── Inject Animation System v2 ────────────────────────────── */
   var _animStyle = document.createElement('style');
-  _animStyle.textContent = '/* ════════════════════════════════════════════════════════════════\n   SMOOTH ANIMATION SYSTEM  v2\n   Easing · Entrance · Hover · Press · Modal · Ripple\n════════════════════════════════════════════════════════════════ */\n\n/* ── Easing tokens ──────────────────────────────────────────── */\n:root {\n  --ease-out    : cubic-bezier(0.16, 1, 0.3, 1);\n  --ease-spring : cubic-bezier(0.34, 1.56, 0.64, 1);\n  --ease-in-out : cubic-bezier(0.65, 0, 0.35, 1);\n  --transition  : 0.22s cubic-bezier(0.16, 1, 0.3, 1);\n}\n\n/* ── Screen transitions ────────────────────────────────────── */\n@keyframes screenFadeIn {\n  from { opacity: 0; }\n  to   { opacity: 1; }\n}\n\n/* ── Start screen entrance ─────────────────────────────────── */\n@keyframes slideDown {\n  from { opacity: 0; transform: translateY(-18px); }\n  to   { opacity: 1; transform: translateY(0); }\n}\n@keyframes fadeUp {\n  from { opacity: 0; transform: translateY(24px); }\n  to   { opacity: 1; transform: translateY(0); }\n}\n@keyframes iconPop {\n  0%   { transform: scale(0.7) rotate(-8deg); opacity: 0; }\n  60%  { transform: scale(1.15) rotate(4deg); }\n  100% { transform: scale(1)    rotate(0deg); opacity: 1; }\n}\n\n.topbar { animation: slideDown 0.45s var(--ease-out) both; }\n#start-screen .start-card { animation: fadeUp 0.55s 0.1s var(--ease-out) both; }\n#start-screen .start-icon { animation: iconPop 0.5s 0.2s var(--ease-spring) both; }\n\n/* ── Card hover effects ────────────────────────────────────── */\n.start-card {\n  transition:\n    transform      0.32s var(--ease-out),\n    box-shadow     0.32s var(--ease-out),\n    border-color   0.28s var(--ease-out) !important;\n}\n.start-card:hover {\n  transform   : translateY(-5px) scale(1.008);\n  box-shadow  : 0 16px 40px rgba(0,0,0,0.45);\n}\n\n.start-icon {\n  transition: transform 0.35s var(--ease-spring) !important;\n}\n.start-card:hover .start-icon {\n  transform : scale(1.08) rotate(-4deg);\n}\n\n/* ── Button effects ────────────────────────────────────────── */\n.btn-start, .btn-nav, .btn-restart {\n  position  : relative;\n  overflow  : hidden;\n  transition:\n    opacity    0.22s var(--ease-out),\n    transform  0.22s var(--ease-out),\n    box-shadow 0.22s var(--ease-out) !important;\n}\n.btn-start:hover, .btn-nav.primary:hover, .btn-restart:hover {\n  opacity   : 0.92 !important;\n  transform : translateY(-2px) !important;\n  box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 40%, transparent);\n}\n.btn-start:active, .btn-nav:active, .btn-restart:active {\n  transform : scale(0.97) translateY(0px) !important;\n  transition-duration: 0.09s !important;\n}\n\n/* ── Ripple wave ─────────────────────────────────────────────── */\n@keyframes ripple {\n  to { transform: scale(5); opacity: 0; }\n}\n.ripple-wave {\n  position      : absolute;\n  border-radius : 50%;\n  width         : 60px;\n  height        : 60px;\n  margin-top    : -30px;\n  margin-left   : -30px;\n  background    : rgba(255, 255, 255, 0.22);\n  transform     : scale(0);\n  animation     : ripple 0.55s var(--ease-out) forwards;\n  pointer-events: none;\n}\n\n/* ── Icon buttons ───────────────────────────────────────────── */\n.icon-btn {\n  transition: all 0.22s var(--ease-out) !important;\n}\n.icon-btn:hover {\n  transform: translateY(-1px);\n  color: var(--text) !important;\n  border-color: var(--accent) !important;\n}\n.icon-btn:active {\n  transform      : scale(0.87) !important;\n  transition-duration: 0.08s !important;\n}\n\n/* ── Theme toggle spin ──────────────────────────────────────── */\n@keyframes spinPop {\n  0%   { transform: rotate(0deg)   scale(1);    }\n  40%  { transform: rotate(200deg) scale(0.85); }\n  70%  { transform: rotate(320deg) scale(1.1);  }\n  100% { transform: rotate(360deg) scale(1);    }\n}\n.theme-spinning {\n  animation: spinPop 0.5s var(--ease-spring) forwards !important;\n}\n\n/* ── Option hover effects ──────────────────────────────────── */\n.option-label {\n  transition:\n    transform    0.2s var(--ease-out),\n    border-color 0.2s var(--ease-out),\n    background   0.2s var(--ease-out) !important;\n}\n.option-label:hover {\n  transform   : translateX(4px);\n  border-color: var(--accent) !important;\n}\n\n/* ── Nav button effects ────────────────────────────────────── */\n.nav-btn {\n  transition:\n    transform    0.15s var(--ease-out),\n    border-color 0.2s var(--ease-out),\n    background   0.2s var(--ease-out) !important;\n}\n.nav-btn:hover {\n  transform   : scale(1.08);\n  border-color: var(--accent) !important;\n}\n.nav-btn:active {\n  transform      : scale(0.95) !important;\n  transition-duration: 0.08s !important;\n}\n\n/* ── Flag button pulse ─────────────────────────────────────── */\n@keyframes badgePulse {\n  0%   { transform: scale(1);    }\n  50%  { transform: scale(1.15); }\n  100% { transform: scale(1);    }\n}\n.flag-btn.active svg {\n  animation: badgePulse 0.4s var(--ease-spring);\n}\n\n/* ── Modal effects ─────────────────────────────────────────── */\n.modal-overlay {\n  transition: opacity 0.25s var(--ease-out) !important;\n}\n.modal {\n  animation: modalIn 0.38s var(--ease-spring) both !important;\n}\n@keyframes modalIn {\n  from { opacity: 0; transform: translateY(28px) scale(0.93); }\n  to   { opacity: 1; transform: translateY(0)    scale(1);    }\n}\n\n/* ── Result item animations ────────────────────────────────── */\n.result-item {\n  animation: fadeUp 0.4s var(--ease-out) both;\n}\n.result-item:nth-child(1) { animation-delay: 0.05s; }\n.result-item:nth-child(2) { animation-delay: 0.1s; }\n.result-item:nth-child(3) { animation-delay: 0.15s; }\n.result-item:nth-child(4) { animation-delay: 0.2s; }\n.result-item:nth-child(5) { animation-delay: 0.25s; }\n.result-item:nth-child(n+6) { animation-delay: 0.3s; }\n\n/* ── Timer warning pulse ───────────────────────────────────── */\n@keyframes pulse {\n  0%, 100% { opacity: 1; }\n  50%      { opacity: 0.6; }\n}\n\n/* ── Respect prefers-reduced-motion ─────────────────────────── */\n@media (prefers-reduced-motion: reduce) {\n  *, *::before, *::after {\n    animation-duration  : 0.01ms !important;\n    animation-delay     : 0ms    !important;\n    transition-duration : 0.01ms !important;\n  }\n}';
+  _animStyle.textContent = '/* ════════════════════════════════════════════════════════════════\n   SMOOTH ANIMATION SYSTEM  v2\n   Easing · Entrance · Hover · Press · Modal · Ripple\n════════════════════════════════════════════════════════════════ */\n\n/* ── Easing tokens ──────────────────────────────────────────── */\n:root {\n  --ease-out    : cubic-bezier(0.16, 1, 0.3, 1);\n  --ease-spring : cubic-bezier(0.34, 1.56, 0.64, 1);\n  --ease-in-out : cubic-bezier(0.65, 0, 0.35, 1);\n  --transition  : 0.22s cubic-bezier(0.16, 1, 0.3, 1);\n}\n\n/* ── Screen transitions ────────────────────────────────────── */\n@keyframes screenFadeIn {\n  from { opacity: 0; }\n  to   { opacity: 1; }\n}\n\n/* ── Start screen entrance ─────────────────────────────────── */\n@keyframes slideDown {\n  from { opacity: 0; transform: translateY(-18px); }\n  to   { opacity: 1; transform: translateY(0); }\n}\n@keyframes fadeUp {\n  from { opacity: 0; transform: translateY(24px); }\n  to   { opacity: 1; transform: translateY(0); }\n}\n@keyframes iconPop {\n  0%   { transform: scale(0.7) rotate(-8deg); opacity: 0; }\n  60%  { transform: scale(1.15) rotate(4deg); }\n  100% { transform: scale(1)    rotate(0deg); opacity: 1; }\n}\n\n.topbar { animation: slideDown 0.45s var(--ease-out) both; }\n#start-screen .start-card { animation: fadeUp 0.55s 0.1s var(--ease-out) both; }\n#start-screen .start-icon { animation: iconPop 0.5s 0.2s var(--ease-spring) both; }\n\n/* ── Card hover effects ────────────────────────────────────── */\n.start-card {\n  transition:\n    transform      0.32s var(--ease-out),\n    box-shadow     0.32s var(--ease-out),\n    border-color   0.28s var(--ease-out) !important;\n}\n.start-card:hover {\n  transform   : translateY(-5px) scale(1.008);\n  box-shadow  : 0 16px 40px rgba(0,0,0,0.45);\n}\n\n.start-icon {\n  transition: transform 0.35s var(--ease-spring) !important;\n}\n.start-card:hover .start-icon {\n  transform : scale(1.08) rotate(-4deg);\n}\n\n/* ── Button effects ────────────────────────────────────────── */\n.btn-start, .btn-nav, .btn-restart {\n  position  : relative;\n  overflow  : hidden;\n  transition:\n    opacity    0.22s var(--ease-out),\n    transform  0.22s var(--ease-out),\n    box-shadow 0.22s var(--ease-out) !important;\n}\n.btn-start:hover, .btn-nav.primary:hover, .btn-restart:hover {\n  opacity   : 0.92 !important;\n  transform : translateY(-2px) !important;\n  box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 40%, transparent);\n}\n.btn-start:active, .btn-nav:active, .btn-restart:active {\n  transform : scale(0.97) translateY(0px) !important;\n  transition-duration: 0.09s !important;\n}\n\n/* ── Ripple wave ─────────────────────────────────────────────── */\n@keyframes ripple {\n  to { transform: scale(5); opacity: 0; }\n}\n.ripple-wave {\n  position      : absolute;\n  border-radius : 50%;\n  width         : 60px;\n  height        : 60px;\n  margin-top    : -30px;\n  margin-left   : -30px;\n  background    : rgba(255, 255, 255, 0.22);\n  transform     : scale(0);\n  animation     : ripple 0.55s var(--ease-out) forwards;\n  pointer-events: none;\n}\n\n/* ── Icon buttons ───────────────────────────────────────────── */\n.icon-btn {\n  transition: border-color 0.22s var(--ease-out), color 0.22s var(--ease-out), transform 0.22s var(--ease-out), background 0.22s var(--ease-out) !important;\n}\n.icon-btn:hover {\n  transform: translateY(-1px);\n  color: var(--text) !important;\n  border-color: var(--accent) !important;\n}\n.icon-btn:active {\n  transform      : scale(0.87) !important;\n  transition-duration: 0.08s !important;\n}\n\n/* ── Theme toggle spin ──────────────────────────────────────── */\n@keyframes spinPop {\n  0%   { transform: rotate(0deg)   scale(1);    }\n  40%  { transform: rotate(200deg) scale(0.85); }\n  70%  { transform: rotate(320deg) scale(1.1);  }\n  100% { transform: rotate(360deg) scale(1);    }\n}\n.theme-spinning {\n  animation: spinPop 0.5s var(--ease-spring) forwards !important;\n}\n\n/* ── Option hover effects ──────────────────────────────────── */\n.option-label {\n  transition:\n    transform    0.2s var(--ease-out),\n    border-color 0.2s var(--ease-out),\n    background   0.2s var(--ease-out) !important;\n}\n.option-label:hover {\n  transform   : translateX(4px);\n  border-color: var(--accent) !important;\n}\n\n/* ── Nav button effects ────────────────────────────────────── */\n.nav-btn {\n  transition:\n    transform    0.15s var(--ease-out),\n    border-color 0.2s var(--ease-out),\n    background   0.2s var(--ease-out) !important;\n}\n.nav-btn:hover {\n  transform   : scale(1.08);\n  border-color: var(--accent) !important;\n}\n.nav-btn:active {\n  transform      : scale(0.95) !important;\n  transition-duration: 0.08s !important;\n}\n\n/* ── Flag button pulse ─────────────────────────────────────── */\n@keyframes badgePulse {\n  0%   { transform: scale(1);    }\n  50%  { transform: scale(1.15); }\n  100% { transform: scale(1);    }\n}\n.flag-btn.active svg {\n  animation: badgePulse 0.4s var(--ease-spring);\n}\n\n/* ── Modal effects ─────────────────────────────────────────── */\n.modal-overlay {\n  transition: opacity 0.25s var(--ease-out) !important;\n}\n.modal {\n  animation: modalIn 0.38s var(--ease-spring) both !important;\n}\n@keyframes modalIn {\n  from { opacity: 0; transform: translateY(28px) scale(0.93); }\n  to   { opacity: 1; transform: translateY(0)    scale(1);    }\n}\n\n/* ── Result item animations ────────────────────────────────── */\n.result-item {\n  animation: fadeUp 0.4s var(--ease-out) both;\n}\n.result-item:nth-child(1) { animation-delay: 0.05s; }\n.result-item:nth-child(2) { animation-delay: 0.1s; }\n.result-item:nth-child(3) { animation-delay: 0.15s; }\n.result-item:nth-child(4) { animation-delay: 0.2s; }\n.result-item:nth-child(5) { animation-delay: 0.25s; }\n.result-item:nth-child(n+6) { animation-delay: 0.3s; }\n\n/* ── Timer warning pulse ───────────────────────────────────── */\n@keyframes pulse {\n  0%, 100% { opacity: 1; }\n  50%      { opacity: 0.6; }\n}\n\n/* ── Respect prefers-reduced-motion ─────────────────────────── */\n@media (prefers-reduced-motion: reduce) {\n  *, *::before, *::after {\n    animation-duration  : 0.01ms !important;\n    animation-delay     : 0ms    !important;\n    transition-duration : 0.01ms !important;\n  }\n}';
   document.head.appendChild(_animStyle);
 
   /* ── Build DOM ───────────────────────────────────────────────── */
@@ -1932,41 +1932,30 @@ function startQuiz() {
   updateNavGrid();
   renderQuestion(0);
   startTimer();
+  // Start auto-save only once the quiz is actually running
+  if (saveIntervalId) clearInterval(saveIntervalId);
+  saveIntervalId = setInterval(saveProgress, 5000);
 }
 
 /* ── SCREENS ──────────────────────────────────────────────── */
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => {
     s.classList.remove('active');
-    // Clean up stale inline opacity left by the screen-transition wrapper
-    // so returning to this screen later doesn't render it invisible
     if (s.style.opacity === '0') s.style.opacity = '';
   });
   const target = document.getElementById(id);
-  // Clear any lingering inline opacity on the target screen itself
   if (target.style.opacity === '0') target.style.opacity = '';
-  // Force animation restart by removing and re-adding the class with a reflow
-  target.classList.add('active');
-  target.style.animation = 'none';
-  target.offsetHeight; /* trigger reflow */
-  target.style.animation = '';
-  
-  // Also restart animations on start-card if showing start screen
+
+  // Restart child animations with a SINGLE reflow on the container.
+  // Resetting animation on the parent forces all child CSS animations to replay too.
   if (id === 'start-screen') {
-    const startCard = target.querySelector('.start-card');
-    if (startCard) {
-      startCard.style.animation = 'none';
-      startCard.offsetHeight; /* trigger reflow */
-      startCard.style.animation = '';
-      
-      const startIcon = target.querySelector('.start-icon');
-      if (startIcon) {
-        startIcon.style.animation = 'none';
-        startIcon.offsetHeight; /* trigger reflow */
-        startIcon.style.animation = '';
-      }
-    }
+    const animEls = target.querySelectorAll('.start-card, .start-icon');
+    animEls.forEach(el => { el.style.animation = 'none'; });
+    void target.offsetHeight; // one reflow resets all children at once
+    animEls.forEach(el => { el.style.animation = ''; });
   }
+
+  target.classList.add('active');
 }
 
 /* ── TIMER ────────────────────────────────────────────────── */
@@ -1994,7 +1983,7 @@ function startTimer() {
         updateTimerDisplay();
       }
     }
-  }, 100);
+  }, 500); // 500ms is enough — display only needs updating every second
 }
 
 function stopTimer() {
@@ -2110,14 +2099,16 @@ function selectAnswer(qIdx, optIdx) {
 
   state.answers[qIdx] = optIdx;
   debounceSaveProgress(); // persist answer immediately
-  updateNavGrid(qIdx);
-  updateNavStats();
-  // In learning mode: re-render to show explanation and highlights
-  if(state.mode === 'learning') {
-    renderQuestion(qIdx);  // renderQuestion also updates progress
+
+  if (state.mode === 'learning') {
+    // renderQuestion() already calls updateNavGrid() + updateNavStats() internally
+    renderQuestion(qIdx);
     return;
   }
-  // Update progress bar (non-learning mode)
+
+  // Exam mode: update nav grid, stats, and progress bar
+  updateNavGrid(qIdx);
+  updateNavStats();
   var done = 0;
   for (var k in state.answers) { if (state.answers.hasOwnProperty(k)) done++; }
   document.getElementById('progress-fill').style.width = (done / QUESTIONS.length * 100) + '%';
@@ -2683,8 +2674,8 @@ window.addEventListener('visibilitychange', function() {
   }
 });
 
-// Auto-save every 5 seconds
-let saveIntervalId = setInterval(saveProgress, 5000);
+// Auto-save interval — started in startQuiz(), cleared in confirmSubmit()/restartQuiz()
+let saveIntervalId = null;
 
 // Save progress before page unload (tab close, refresh, navigation)
 window.addEventListener('beforeunload', function() {
@@ -2707,7 +2698,6 @@ function checkSavedProgress() {
 
     // Validate the saved data
     if (data.version !== STORAGE_VERSION) {
-
       localStorage.removeItem(STORAGE_KEY);
       return;
     }
@@ -3139,6 +3129,16 @@ checkSavedProgress();
     } catch(e) {}
   })();
 
+  function getSafeTrackerKeys() {
+    try {
+      var raw = localStorage.getItem(KEYS_LIST_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch(e) {
+      console.warn('Recovered corrupted tracker keys list');
+      return [];
+    }
+  }
+
   window.saveTrackerData = function() {
     try {
       var cfg = getConfig();
@@ -3179,7 +3179,10 @@ checkSavedProgress();
 
       var storageKey = getStorageKey(cfg.uid || location.pathname);
       var existingRaw = localStorage.getItem(storageKey);
-      var existingData = existingRaw ? JSON.parse(existingRaw) : null;
+      var existingData = null;
+      if (existingRaw) {
+        try { existingData = JSON.parse(existingRaw); } catch (e) {}
+      }
 
       // Merge with existing data to ensure we don't overwrite previous sessions
       if (existingData) {
@@ -3204,7 +3207,7 @@ checkSavedProgress();
 
       if (!wrongQs.length && !flaggedQs.length) {
          localStorage.removeItem(storageKey);
-         var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
+         var keys = getSafeTrackerKeys();
          localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(keys.filter(function(k) { return k !== (cfg.uid || location.pathname); })));
          updateDashboardBadge();
          return;
@@ -3232,7 +3235,7 @@ checkSavedProgress();
         if (folderTitle) data.folderTitle = folderTitle;
         try {
           localStorage.setItem(getStorageKey(data.uid), JSON.stringify(data));
-          var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
+          var keys = getSafeTrackerKeys();
           if (keys.indexOf(data.uid) === -1) { keys.push(data.uid); }
           localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(keys));
           updateDashboardBadge();
@@ -3257,7 +3260,7 @@ checkSavedProgress();
      ══════════════════════════════════════════ */
   function getAllTrackerData() {
     try {
-      var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
+      var keys = getSafeTrackerKeys();
       var results = [];
       keys.forEach(function(uid) {
         var raw = localStorage.getItem(getStorageKey(uid));
@@ -3303,7 +3306,7 @@ checkSavedProgress();
      BADGE — count on the dashboard button
      ══════════════════════════════════════════ */
   window.updateDashboardBadge = function() {
-    var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
+    var keys = getSafeTrackerKeys();
     var total = 0;
     keys.forEach(function(uid) {
       var raw = localStorage.getItem(getStorageKey(uid));
@@ -3433,7 +3436,7 @@ checkSavedProgress();
 
       if (!data.wrong.length && !data.flagged.length) {
         localStorage.removeItem(getStorageKey(uid));
-        var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
+        var keys = getSafeTrackerKeys();
         localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(keys.filter(function(k) { return k !== uid; })));
       } else {
         localStorage.setItem(getStorageKey(uid), JSON.stringify(data));
@@ -3446,7 +3449,7 @@ checkSavedProgress();
   window.clearAllTrackerData = function() {
     if (!confirm('Clear all tracked questions? This cannot be undone.')) return;
     try {
-      var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
+      var keys = getSafeTrackerKeys();
       keys.forEach(function(uid) { localStorage.removeItem(getStorageKey(uid)); });
       localStorage.removeItem(KEYS_LIST_KEY);
       renderDashboard();

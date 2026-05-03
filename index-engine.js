@@ -387,6 +387,8 @@
     return raw.replace(/^(?:QuizTool|MU61\s+Quiz|Mansoura\s+MCQ|Quiz\s+Site)\s*[-–—]\s*/i, '').trim();
   }
 
+  var _trackerMapPromise = null;
+
   window.openTrackerDashboard = function (scope, fromPopState) {
     if (!fromPopState) {
       history.pushState({ dash: 'tracker' }, '');
@@ -395,6 +397,46 @@
 
     // Reset review setup state when opening dashboard
     _inReviewSetup = false;
+    
+    // Trigger global tracker healing in the background (only fetch once per page load)
+    try {
+      if (!_trackerMapPromise) {
+        var rootAbs = new URL(ENGINE_BASE || '', window.location.href).href;
+        _trackerMapPromise = fetch(rootAbs + 'tracker-map.json')
+          .then(function(res) { return res.json(); })
+          .catch(function(e) { return null; });
+      }
+
+      _trackerMapPromise.then(function(map) {
+        if (!map || typeof map !== 'object') return;
+        var keys = JSON.parse(localStorage.getItem(KEYS_LIST_KEY) || '[]');
+        var didUpdate = false;
+        keys.forEach(function(uid) {
+          var correctInfo = map[uid];
+          if (correctInfo) {
+            var raw = localStorage.getItem(getStorageKey(uid));
+            if (raw) {
+              try {
+                var d = JSON.parse(raw);
+                var normPath = _normStoredPath(d.path);
+                var normFolder = _normalizeFolderPath(d.folderPath);
+                if (normPath !== correctInfo.path || normFolder !== correctInfo.folderPath) {
+                  d.path = correctInfo.path;
+                  d.folderPath = correctInfo.folderPath;
+                  localStorage.setItem(getStorageKey(uid), JSON.stringify(d));
+                  didUpdate = true;
+                }
+              } catch(e) {}
+            }
+          }
+        });
+        // Only re-render if we actually updated something and dashboard is still open
+        if (didUpdate && _activeDashboard === 'tracker') {
+          renderDashboard();
+          updateDashboardBadge();
+        }
+      });
+    } catch(e) {}
 
     // Reset selection state when opening dashboard (all folders selected by default)
     _selectedQuizzes = {};
@@ -957,7 +999,7 @@
 
   window.startReviewMode = function() {
     var data = getDataForScope(currentScope, currentScopePath);
-    
+
     data = data.filter(function(d) {
         return _selectedQuizzes[d.uid] !== false;
     });
