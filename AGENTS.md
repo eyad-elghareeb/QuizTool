@@ -52,6 +52,7 @@ QuizTool/
 │
 ├── — SCRIPTS (bundled into generated ZIPs) —
 ├── scripts/
+│   ├── admin-dashboard.py       ← Local Flask admin dashboard (bundled into generated projects)
 │   ├── sync_quiz_assets.py       ← Auto-index + SW updater for generated sites
 │   └── standardize_quiz_files.py ← One-time file formatter
 │
