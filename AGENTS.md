@@ -604,4 +604,31 @@ generate_project.py (Flask)
   → outputs: project.zip
 ```
 
-No npm. No bundler. No build step. Everything is plain static HTML/JS/CSS.
+---
+
+## 20. Local Admin Dashboard (`scripts/admin-dashboard.py`)
+
+A local Flask-based web interface for managing quiz projects. Bundled into generated ZIPs and used for development.
+
+### 20a. Features
+- **Workspace Overview**: Project stats, recent files, git cleanliness summary, and links to reusable `QuizTool` reference editors/templates.
+- **Responsive Workspace**: Fluid layout with a responsive sidebar (`minmax(380px, 24%)`) and auto-fitting grids for optimal space utilization on all screen sizes.
+- **File Browser**: Searchable/filterable tree view of all HTML files in the project.
+- **File Manager**: Create folders, create/move/rename/delete quiz or bank files.
+- **Structured Editors**:
+  - **Quiz/Bank Editor**: Edit `QUIZ_CONFIG`/`BANK_CONFIG` metadata, reorder/duplicate/remove questions, and update options/explanations.
+  - **Index Editor**: Edit `QUIZZES` array entries, reorder cards, and update page title/hero copy.
+- **Multi-Tab Viewer**:
+  - **Preview**: Live iframe preview via an admin-specific preview route that rewrites quiz/bank engine base paths correctly.
+  - **Editor**: Structured metadata and content editor (for quiz/bank/index files).
+  - **Metadata**: Parsed JSON metadata view.
+  - **Raw HTML**: Raw HTML editor for direct text editing.
+- **PDF Export**: Integrated viewer with pre-filled URLs for the current file; supports direct download or opening in a new tab.
+- **Activity Feed**: Compact recent activity panel for the latest save/sync/git results.
+- **Git Integration**: Cohesive "Sync & Push" flow (Pull -> Commit -> Push) with visual file status indicators and manual controls.
+- **Sync**: Run `sync_quiz_assets.py` to auto-update indexes, tracker map, and service worker after content changes.
+- **Conversion**: Convert quiz ↔ bank files while preserving the existing `uid`.
+
+### 20b. Path-Safe Generation
+- New folders automatically get a proper `index.html` hub page with depth-aware root asset prefixes.
+- New quiz/bank files derive **stable path-based UIDs** using the `folder_subfolder_filename` pattern.
