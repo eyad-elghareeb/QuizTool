@@ -61,6 +61,26 @@ python generate_project.py
 # Web UI opens at http://localhost:5500
 ```
 
+### 🛠️ Admin Dashboard (`scripts/admin-dashboard.py`)
+A comprehensive local management interface for your quiz projects, providing a GUI for file management and content editing.
+
+- **Workspace Overview**: Real-time project stats, file tree, and git status.
+- **Structured Editors**: Edit `QUIZ_CONFIG`, `BANK_CONFIG`, and `QUIZZES` arrays through an intuitive GUI without touching code.
+- **Path-Safe Generation**: Automatically generates stable UIDs based on folder hierarchy for new files.
+- **Multi-Tab Preview**: Live preview with dedicated routes for testing before deployment.
+- **Git Integration**: Built-in "Sync & Push" flow to commit and deploy changes easily.
+- **File Management**: Create, rename, move, and delete files/folders directly from the dashboard.
+- **Auto-Sync**: Trigger asset indexing and service worker updates with a single click.
+
+### ✏️ Quiz Editor (`quiz-editor.html`)
+Modify existing quiz or bank files without manually editing JSON arrays.
+
+- **File Upload**: Simply upload an existing quiz/bank HTML file to load its content.
+- **Metadata Management**: Update titles, descriptions, and icons through simple form fields.
+- **Question Editor**: Add, remove, reorder, and duplicate questions with ease.
+- **Marker Preservation**: Automatically respects and preserves the code markers required for the sync engine.
+- **Instant Export**: Download the updated file immediately after editing.
+
 ### 📝 Index Editor (`index-editor.html`)
 Create and manage custom index/hub pages for any project!
 
@@ -261,6 +281,19 @@ const QUIZZES = [
 ];
 ```
 
+### Running the Admin Dashboard
+
+For day-to-day management of your quiz project, use the Admin Dashboard:
+
+1. Navigate to your project folder
+2. Run the dashboard script:
+   ```bash
+   python scripts/admin-dashboard.py
+   ```
+3. The dashboard will automatically open at `http://localhost:5500/admin/`
+4. Use the sidebar to browse files and the editors to update content
+```
+
 ## 📁 Project Structure
 
 ```
@@ -268,6 +301,7 @@ QuizTool/
 ├── index.html                    # Main hub/landing page
 ├── index-template.html           # Reusable template for custom hub pages
 ├── index-editor.html             # Visual editor for creating index configurations
+├── quiz-editor.html              # Edit existing quiz/bank files
 ├── quiz-maker.html               # Visual quiz builder
 ├── quiz-maker-js.html            # JavaScript-based quiz maker
 ├── quiz-combiner.html            # Merge multiple quizzes into one bank
@@ -288,6 +322,10 @@ QuizTool/
 ├── manifest.webmanifest          # PWA manifest for installability
 ├── favicon.svg                   # SVG icon for the app
 ├── icon-*.png                    # PWA icons in multiple sizes (48-512px)
+├── scripts/                      # Management scripts
+│   ├── admin-dashboard.py       # Flask management interface
+│   ├── sync_quiz_assets.py      # Asset synchronization script
+│   └── standardize_quiz_files.py # File formatter
 ├── GENERATOR_UPDATES.md          # Documentation for generator updates
 └── README.md                     # This file
 ```
@@ -353,7 +391,16 @@ QuizTool uses a modern, maintainable architecture:
 
 ## 📝 License
 
-This project is open source and available for personal and commercial use.
+This project is licensed under a **Custom Non-Commercial License**:
+- **Free for Personal/Educational Use**: You are free to use, modify, and distribute this software for personal, academic, or non-profit educational purposes.
+- **Non-Commercial**: You may not use this software or any part of it for commercial monetization or as part of a paid service without explicit permission.
+- **Attribution Required**: Any distribution must include original authorship credit to Eyad Elghareeb.
+
+## ⚠️ Disclaimer
+
+**Medical Content Accuracy**: This platform is an authoring tool and does not provide medical advice. The accuracy, completeness, or timeliness of any quiz content (medical or otherwise) created or hosted with this tool is the sole responsibility of the content author. Users should verify medical information against authoritative sources.
+
+**Warranty**: The software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and non-infringement. In no event shall the authors be liable for any claim, damages or other liability.
 
 ---
 
