@@ -24,13 +24,14 @@ Generate production-ready quiz sites similar to MU61S8 with a single command!
 - **One-Click Export**: Download ready-to-deploy ZIP with proper file structure
 
 **Generated Project Includes:**
-- ✓ Engine files (quiz-engine.js, bank-engine.js, index-engine.js)
-- ✓ Service worker with html2pdf.js precaching for offline PDF export
-- ✓ PWA manifest with all icon sizes
-- ✓ GitHub Actions workflows (sync + deploy to GitHub Pages)
-- ✓ Asset synchronization scripts with Tracker Map generation
-- ✓ Quiz engine test page for diagnostics
-- ✓ .gitignore with proper exclusions
+- ✓ Core Engine Suite (`quiz-engine.js`, `bank-engine.js`, `index-engine.js`)
+- ✓ Intelligent Service Worker with content-hashed caching
+- ✓ PWA Manifest with all required icon sizes (48px-512px)
+- ✓ Automated GitHub Actions (Sync Assets + Jekyll Deployment)
+- ✓ Asset Management Scripts (`sync_quiz_assets.py`, `standardize_quiz_files.py`)
+- ✓ Integrated Local Management via `admin-dashboard.py`
+- ✓ Built-in Tracker Map for long-term link reliability
+- ✓ Pre-configured `.gitignore` for clean version control
 
 **Generated Project Structure:**
 ```
@@ -39,8 +40,9 @@ project-name/
 │   ├── sync-quiz-assets.yml    # Updates index pages & SW precache
 │   └── jekyll-gh-pages.yml     # Deploys to GitHub Pages
 ├── scripts/                     # Asset management scripts
+│   ├── admin-dashboard.py      # Local Flask management interface
 │   ├── sync_quiz_assets.py     # Auto-sync quiz assets
-│   └── standardize_quiz_files.py
+│   └── standardize_quiz_files.py # File formatter
 ├── [folder1]/index.html        # Folder quiz listings
 ├── [folder2]/index.html
 ├── index.html                   # Root hub page
@@ -51,7 +53,7 @@ project-name/
 ├── manifest.webmanifest         # PWA manifest
 ├── favicon.svg                  # SVG favicon
 ├── icon-*.png                   # PWA icons (48px-512px)
-├── quiz-engine-test.html        # Diagnostic page
+├── tracker-map.json              # UID-to-Path mapping
 └── .gitignore                   # Git ignore rules
 ```
 
@@ -292,102 +294,77 @@ For day-to-day management of your quiz project, use the Admin Dashboard:
    ```
 3. The dashboard will automatically open at `http://localhost:5500/admin/`
 4. Use the sidebar to browse files and the editors to update content
-```
 
 ## 📁 Project Structure
-
 ```
 QuizTool/
-├── index.html                    # Main hub/landing page
-├── index-template.html           # Reusable template for custom hub pages
-├── index-editor.html             # Visual editor for creating index configurations
-├── quiz-editor.html              # Edit existing quiz/bank files
-├── quiz-maker.html               # Visual quiz builder
-├── quiz-maker-js.html            # JavaScript-based quiz maker
-├── quiz-combiner.html            # Merge multiple quizzes into one bank
-├── bank-maker.html               # Create smart question banks with session tracking
-├── pdf-exporter.html             # Export quizzes to PDF format
-├── js-question-bank.html         # JavaScript mastery question bank (51 questions)
-├── quiz-template.html            # Base template for generated quizzes
-├── question-bank-template.html   # Template for question bank files
-├── generate_project.py           # Production-ready project generator
-├── generator_templates/          # Templates for the generator
-│   └── index.html                # Generator web UI
-├── quiz-engine.js                # Shared quiz engine (handles quiz rendering)
-├── bank-engine.js                # Shared bank engine (handles question banks)
-├── index-engine.js               # Shared index engine (handles hub pages)
-├── index-engine.css              # Shared index styles
-├── tracker-map.json              # Auto-generated UID-to-Path mapping
-├── sw.js                         # Service worker for offline support
-├── manifest.webmanifest          # PWA manifest for installability
-├── favicon.svg                   # SVG icon for the app
-├── icon-*.png                    # PWA icons in multiple sizes (48-512px)
-├── scripts/                      # Management scripts
-│   ├── admin-dashboard.py       # Flask management interface
-│   ├── sync_quiz_assets.py      # Asset synchronization script
-│   └── standardize_quiz_files.py # File formatter
-├── GENERATOR_UPDATES.md          # Documentation for generator updates
-└── README.md                     # This file
+├── .github/workflows/            # CI/CD pipelines
+│   └── jekyll-gh-pages.yml       # Automated GitHub Pages deployment
+├── generator_templates/          # Web UI assets for generate_project.py
+│   └── index.html                # Generator dashboard HTML
+├── scripts/                      # Backend utility scripts
+│   ├── admin-dashboard.py       # Comprehensive local management GUI
+│   ├── sync_quiz_assets.py      # Asset indexing & SW manifest generator
+│   └── standardize_quiz_files.py # Batch file formatter & validator
+├── index.html                    # Main tool hub & landing page
+├── index-engine.js               # Logic for hub pages & tracker dashboard
+├── index-engine.css              # Styling for hubs & navigation
+├── quiz-engine.js                # Core quiz playback & state engine
+├── bank-engine.js                # Advanced question bank logic & session management
+├── sw.js                         # Service worker for offline-first toolkit usage
+├── tracker-map.json              # Persistent UID-to-Path mapping
+├── manifest.webmanifest          # PWA configuration for installability
+├── favicon.svg                   # Vector app icon
+├── icon-*.png                    # PWA icons (48px-512px)
+├── generate_project.py           # Flask-based project generator server
+├── generate_icons.py             # Utility to rebuild PNG icons from SVG
+├── quiz-editor.html              # Visual editor for existing files
+├── quiz-maker.html               # GUI for creating new quiz files
+├── quiz-maker-js.html            # High-performance JS-array importer
+├── bank-maker.html               # GUI for building large question banks
+├── index-editor.html             # Hub page creator & manager
+├── quiz-combiner.html            # Tool to merge quizzes into banks
+├── pdf-exporter.html             # Standalone PDF generation utility
+├── js-question-bank.html         # Local JavaScript practice question pool
+├── quiz-template.html            # Prototype for generated quiz files
+├── question-bank-template.html   # Prototype for generated bank files
+├── index-template.html           # Prototype for generated hub pages
+├── AGENTS.md                     # Technical reference for LLM agents
+├── GENERATOR_UPDATES.md          # Changelog for generator features
+├── .gitignore                    # Project-wide git exclusions
+└── README.md                     # Main documentation
 ```
 
 ## 🛠️ Technical Details
 
-### Technologies Used
-- **HTML5**: Semantic markup structure
-- **CSS3**: Custom properties, Flexbox, Grid layouts
-- **Vanilla JavaScript**: No frameworks or build tools required
-- **Local Storage**: Persists theme preferences and form drafts
-- **Google Fonts**: Outfit and Playfair Display typefaces
-- **Service Worker**: Offline support and caching for PWA functionality
+### Architecture
+- **Vanilla Core**: Zero dependencies, zero build steps, zero frameworks. Runs directly in the browser.
+- **Shared Engines**: A "Single Source of Truth" approach where one JS engine powers thousands of quiz files.
+- **PWA Excellence**: Fully installable as a standalone app with a network-first service worker for hubs and cache-first for assets.
+- **Persistent State**: Automatic progress saving and long-term mistake tracking using `localStorage`.
 
-### Browser Compatibility
-Works on all modern browsers including:
-- Chrome/Edge (Chromium)
-- Firefox
-- Safari
-- Mobile browsers
+### Performance Optimizations
+- **Regex Parsing**: O(1) performance for badge counting and metadata extraction.
+- **Throttled Timers**: Reduced main-thread load on mobile devices during active sessions.
+- **Single-Reflow Transitions**: UI animations optimized for 60fps performance on low-end hardware.
 
-### No Dependencies
-QuizTool requires no external libraries, package managers, or build processes. Simply open the HTML files in any browser!
-
-### PWA Support
-QuizTool is a fully functional Progressive Web App:
-- **Installable**: Add to home screen on mobile/desktop
-- **Offline Ready**: Service worker caches all assets
-- **Multiple Icon Sizes**: Optimized icons from 48px to 512px for all devices
-- **Theme Color**: Matches app theme in browser UI
-
-### Simplified File Architecture
-QuizTool uses a modern, maintainable architecture:
-- **Shared Engines**: Single source of truth for quiz, bank, and index logic
-- **Data-Only Files**: Quiz files only contain `QUIZ_CONFIG` and `QUESTIONS` arrays
-- **Template-Based**: All quizzes use markers (`[QUIZ_CONFIG_START]`, `[QUESTIONS_START]`, etc.)
-- **Easy Updates**: Change engine once, update all quizzes automatically
-
-## 🎯 Use Cases
-
-- **Educators**: Create custom tests and assessments for students
-- **Trainers**: Build knowledge checks for training programs
-- **Content Creators**: Develop interactive quizzes for audiences
-- **Self-Learners**: Test your knowledge on various topics
-- **Event Organizers**: Create fun quiz competitions
+---
 
 ## 🌟 Key Benefits
 
-1. **No Coding Required**: Build quizzes through an intuitive visual interface
-2. **Instant Deployment**: Generated quizzes are standalone HTML files
-3. **Production-Ready Generator**: Deploy quiz sites like MU61S8 with automated workflows
-4. **Professional Design**: Polished, modern UI that looks great on any device
-5. **Fully Customizable**: Modify templates or styles to match your brand
-6. **Offline Capable**: Works without internet connection after initial load
-7. **Privacy-Focused**: All data stays local; no server required
-8. **PWA Ready**: Installable, offline-capable, optimized icons
-9. **High Performance**: Optimized parsers handle large question banks (1000+ questions)
-10. **Automated Deployment**: GitHub Actions handle asset sync and deployment
+1. **Production-Ready**: Generate deployable medical/academic quiz sites with one command.
+2. **Offline-First**: Built-in service worker ensures quizzes work without an internet connection.
+3. **Beautiful UX**: Modern design with vibrant themes, fluid animations, and high accessibility.
+4. **Authoring Freedom**: No coding required to create, edit, or merge complex question banks.
+5. **Privacy First**: All user data and progress stay strictly local on your device.
+6. **Scalable Architecture**: Engines handle massive question banks (1000+) without performance degradation.
+7. **Automated Maintenance**: CI scripts keep your project indexed and caches updated automatically.
 
 ## 🔗 Links
 
-- [View on GitHub](https://github.com/eyad-elghareeb/QuizTool)
+- **Live Demo**: [QuizTool Online](https://eyad-elghareeb.github.io/QuizTool/)
+- **GitHub Repository**: [eyad-elghareeb/QuizTool](https://github.com/eyad-elghareeb/QuizTool)
+- **Sample Site**: [MU61S8 Medicine Quizzes](https://eyad-elghareeb.github.io/MU61S8/)
 
 ## 📝 License
 
