@@ -302,6 +302,7 @@ project/
 ├── favicon.svg
 ├── icon-*.png
 ├── scripts/
+│   ├── admin-dashboard.py      ← Copied from QuizTool/scripts/
 │   ├── sync_quiz_assets.py    ← Copied from QuizTool/scripts/
 │   └── standardize_quiz_files.py
 └── .github/workflows/
@@ -324,7 +325,7 @@ The generated `sw.js` includes:
 
 ### Script self-sufficiency
 
-`generate_project.py` reads scripts from `BASE_DIR / 'scripts'` (QuizTool's own `scripts/` folder). It does **not** depend on any sibling directory (e.g., MU61S8). If `scripts/` is missing, script fields in the ZIP will be empty — always ensure `scripts/sync_quiz_assets.py` and `scripts/standardize_quiz_files.py` exist.
+`generate_project.py` reads scripts from `BASE_DIR / 'scripts'` (QuizTool's own `scripts/` folder). It does **not** depend on any sibling directory (e.g., MU61S8). If `scripts/` is missing, script fields in the ZIP will be empty — always ensure `scripts/admin-dashboard.py`, `scripts/sync_quiz_assets.py`, and `scripts/standardize_quiz_files.py` exist.
 
 ---
 

@@ -341,6 +341,7 @@ BANK_ENGINE_JS = read_file('bank-engine.js')
 _SCRIPTS_DIR = BASE_DIR / 'scripts'
 SYNC_SCRIPT = (_SCRIPTS_DIR / 'sync_quiz_assets.py').read_text(encoding='utf-8') if (_SCRIPTS_DIR / 'sync_quiz_assets.py').exists() else ''
 STANDARDIZE_SCRIPT = (_SCRIPTS_DIR / 'standardize_quiz_files.py').read_text(encoding='utf-8') if (_SCRIPTS_DIR / 'standardize_quiz_files.py').exists() else ''
+ADMIN_DASHBOARD_SCRIPT = (_SCRIPTS_DIR / 'admin-dashboard.py').read_text(encoding='utf-8') if (_SCRIPTS_DIR / 'admin-dashboard.py').exists() else ''
 
 # Auto-index script
 AUTO_INDEX_SCRIPT = '''#!/usr/bin/env python3
@@ -1024,11 +1025,13 @@ def build_project_zip(config):
                 if filename not in all_file_paths:
                     all_file_paths.append(filename)
         
-        # --- Scripts folder (for asset synchronization) ---
+        # --- Scripts folder (for asset synchronization and admin dashboard) ---
         if SYNC_SCRIPT:
             zf.writestr('scripts/sync_quiz_assets.py', SYNC_SCRIPT)
         if STANDARDIZE_SCRIPT:
             zf.writestr('scripts/standardize_quiz_files.py', STANDARDIZE_SCRIPT)
+        if ADMIN_DASHBOARD_SCRIPT:
+            zf.writestr('scripts/admin-dashboard.py', ADMIN_DASHBOARD_SCRIPT)
 
         # --- GitHub Workflows ---
         zf.writestr('.github/workflows/sync-quiz-assets.yml', SYNC_WORKFLOW_YML)
@@ -1096,7 +1099,7 @@ def preview():
         return total_folders, total_quizzes
     
     total_folders, total_quizzes = count_items(folders)
-    # engines(3) + sw + manifest + favicon + icons(6) + root index + folder indexes + scripts(2) + workflows(2) + gitignore + quiz-engine-test
+    # engines(3) + sw + manifest + favicon + icons(6) + root index + folder indexes + scripts(3) + workflows(2) + gitignore + quiz-engine-test
     estimated_files = 16 + total_folders + total_quizzes
     return jsonify({
         'project_name': config.get('project_name', ''),
