@@ -273,6 +273,51 @@ The generator follows security best practices to avoid token leaks and GitHub ba
 5. **GitHub API version header**: All API requests include `X-GitHub-Api-Version: 2022-11-28` for forward compatibility.
 6. **Pages error tolerance**: If GitHub Pages enablement fails (e.g., private repo without Pro), the generator returns a `pages_warning` message instead of failing the entire operation.
 
+### Project Directory Persistence
+
+Generated project directories **persist on disk** after creation. They are never deleted by the generator — this is critical for the admin dashboard and user-added content workflows.
+
+- **Location**: Projects are created as siblings of the QuizTool repo (from source) or next to the EXE (frozen mode).
+- **Re-runs**: ZIP extraction overwrites existing files in-place but **preserves** any extra files the user added via the admin dashboard. The project dir is never `rmtree`'d.
+- **`_get_projects_dir()`**: Returns `BASE_DIR.parent` from source, `Path(sys.executable).parent` in frozen/EXE mode.
+- **`admin-dashboard.bat`**: Every project gets a Windows batch file for double-click launch. It is gitignored so it stays local-only.
+
+### Auto-Dependency Installation (`_ensure_tool`)
+
+The generator can auto-install missing system tools via **winget** (Windows Package Manager, built into Windows 11). This makes the standalone EXE fully autonomous on a fresh system.
+
+| Feature | Dependency | winget Package ID | Auto-Install? |
+|---------|-----------|-------------------|---------------|
+| GitHub publish | `git` | `Git.Git` | ✅ Yes |
+| Admin Dashboard (EXE mode) | `python` | `Python.Python.3.12` | ✅ Yes |
+| Admin Dashboard (EXE mode) | `flask` | via `pip install flask` | ✅ Yes (post-install hook) |
+
+How it works:
+1. `_ensure_tool(name, winget_id, post_install_hook)` checks PATH for the tool
+2. If not found and winget is available, runs `winget install --id <ID> -e --accept-source-agreements --accept-package-agreements`
+3. Re-checks PATH after install; runs post-install hook if provided
+4. If winget isn't available (non-Windows or missing), returns a clear error message
+5. `_install_flask(python_exe)` runs `pip install flask --quiet` after Python is found/installed
+
+### Frozen/EXE Mode Detection
+
+```python
+_FROZEN = getattr(sys, 'frozen', False)
+```
+
+Key behaviors when `_FROZEN` is True:
+- `_get_projects_dir()` → `Path(sys.executable).parent` (next to the EXE, not temp dir)
+- Admin dashboard launch → searches PATH for `python`, auto-installs via winget if missing
+- `sys.executable` is the EXE itself, NOT Python — never pass it as the interpreter for `.py` scripts
+
+### Front-End JSON Safety
+
+All `fetch()` calls to API endpoints use `resp.text()` → `JSON.parse()` in try/catch instead of `resp.json()`. This prevents `JSON.parse: unexpected character at line 1 column 1` errors when the server returns a non-JSON response (e.g., Flask 500 HTML error page).
+
+### Dropped File Placement
+
+When a user drag-drops quiz HTML files, the generator places them in the correct folder based on exact URL matching (`quiz.get('url') == filename`). The substring `in` operator is deliberately **not** used to prevent false matches (e.g., `"heart.html"` matching `"l1-heart.html"`).
+
 ### Config schema (POST to `/api/generate`)
 
 ```json
@@ -317,6 +362,7 @@ The generator follows security best practices to avoid token leaks and GitHub ba
 ```
 project/
 ├── index.html                 ← Root hub
+├── admin-dashboard.bat        ← Local launcher (gitignored)
 ├── <FolderName>/
 │   ├── index.html             ← Folder hub
 │   └── *.html                 ← Quiz/bank files (from dropped_files)
@@ -329,6 +375,7 @@ project/
 ├── bank-engine.js             ← Copied from QuizTool
 ├── sw.js                      ← Dynamically generated with full precache list
 ├── manifest.webmanifest       ← Named after project_name
+├── tracker-map.json           ← UID-to-Path mapping
 ├── favicon.svg
 ├── icon-*.png
 ├── scripts/
@@ -547,6 +594,12 @@ To maintain the stability of the toolkit, the accuracy of the project generator,
 - **Never embed tokens in git URLs**: When pushing to GitHub, always use `GIT_ASKPASS` with an env var instead of embedding the PAT in the remote URL. Tokens in URLs persist in `.git/config` and are visible in process lists.
 - **Never auto-delete repos on push failure**: If `git push` fails after repo creation, inform the user — do not call the GitHub DELETE repo API. The user may have content they want to preserve.
 - **Validate PAT scopes before use**: Always check `X-OAuth-Scopes` header for `repo` and `workflow` before attempting any write operations. A token with only `public_repo` will fail on private repo creation.
+- **Never delete project directories**: Project dirs must persist for admin dashboard and user-added content. ZIP extraction overwrites in-place but never `rmtree`s the directory.
+- **Never use `sys.executable` as Python in frozen mode**: In EXE mode, `sys.executable` points to the EXE itself. Use `_ensure_tool('python')` or `shutil.which('python')` instead.
+- **Use exact filename matching for dropped files**: When matching dropped files to folder quiz entries, use `quiz.get('url') == filename` only. Never use substring matching (`filename in url`) — it causes false matches like `"heart.html"` matching `"l1-heart.html"`.
+- **Always return `str(project_dir)` from `_extract_and_push`**: `Path` objects are not JSON serializable. Returning a Path crashes `jsonify()` with a 500 error.
+- **Guard all `fetch()` responses with `resp.text()` → `JSON.parse()`**: Never call `resp.json()` directly — it throws `JSON.parse: unexpected character` on non-JSON server responses (e.g., Flask 500 HTML pages).
+- **Always include `dropped_files` in GitHub publish requests**: The `githubPublish()` front-end function must attach `config.dropped_files = droppedFilesContent`, otherwise uploaded quiz HTML files are missing from the pushed repo.
 
 ### 16b. Templates & Markers
 - **Never remove parsing markers**: The comments `/* [QUIZ_CONFIG_START/END] */`, `/* [QUESTIONS_START/END] */`, etc., are functional code. Removing them breaks the `sync_quiz_assets.py` script and the GUI editors (`quiz-editor.html`, etc.).
@@ -632,14 +685,40 @@ generate_project.py (Flask)
   → reads: index-engine.js, index-engine.css, quiz-engine.js, bank-engine.js
   → reads: scripts/sync_quiz_assets.py, scripts/standardize_quiz_files.py, scripts/admin-dashboard.py
   → reads: generator_templates/index.html  (the 3-step wizard UI)
-  → reads: icon-*.png
+  → reads: icon-*.png, quiz-engine-test.html (optional)
   → generates: gen_index_html() for all index pages
   → generates: generate_sw_js() for sw.js with full precache list
+  → generates: admin-dashboard.bat (gitignored local launcher)
   → GitHub API: /api/github/verify (PAT + scope check)
   → GitHub API: /api/github/publish (create repo, GIT_ASKPASS push, enable Pages)
+  → auto-installs: git (via _ensure_tool + winget) if missing
+  → auto-installs: python + flask (via _ensure_tool + winget + pip) if missing (EXE mode)
   → outputs: project.zip OR direct GitHub publish
   → can launch: admin-dashboard.py for generated project
+  → project dirs persist on disk (never rmtree'd)
 ```
+
+### Standalone EXE Compatibility (`build_exe.py`)
+
+The PyInstaller EXE is designed to run on a completely fresh Windows system:
+
+| Feature | Standalone? | Requirement |
+|---------|------------|-------------|
+| Web UI + ZIP generation | ✅ Yes | All files bundled by PyInstaller |
+| Local download | ✅ Yes | Same — all content embedded |
+| GitHub token verify | ✅ Yes | Uses `urllib.request` (stdlib), needs internet |
+| GitHub publish | ✅ Auto-installs | `git` installed via winget if missing |
+| Admin Dashboard | ✅ Auto-installs | `python` + `flask` installed via winget + pip if missing |
+| Auto-open browser | ✅ Graceful | `webbrowser.open()` silently fails if no browser |
+
+Bundled data files in `build_exe.py`:
+- `generator_templates/` — the wizard UI
+- Engine JS/CSS — `quiz-engine.js`, `bank-engine.js`, `index-engine.js`, `index-engine.css`
+- `scripts/` — admin-dashboard.py, sync_quiz_assets.py, standardize_quiz_files.py
+- Icons — `icon-*.png`
+- Optional — `quiz-engine-test.html` (if exists)
+
+**NOT bundled** (generated dynamically): `sw.js`, `manifest.webmanifest`, `tracker-map.json`, `favicon.svg`, `.gitignore`
 
 ---
 
