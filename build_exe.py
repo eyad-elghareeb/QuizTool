@@ -91,6 +91,23 @@ def build():
         print(f"  Build may have failed — EXE not found at {exe_path}")
     print(f"{'=' * 60}\n")
 
+    # Clean up build artifacts
+    artifacts = [
+        BASE_DIR / 'build',
+        BASE_DIR / 'QuizTool-Generator.spec',
+    ]
+    cleaned = []
+    for artifact in artifacts:
+        if artifact.is_dir():
+            import shutil
+            shutil.rmtree(artifact, ignore_errors=True)
+            cleaned.append(f"{artifact}/ (directory)")
+        elif artifact.is_file():
+            artifact.unlink(missing_ok=True)
+            cleaned.append(str(artifact))
+    if cleaned:
+        print(f"  Cleaned up: {', '.join(cleaned)}")
+
 
 if __name__ == '__main__':
     try:

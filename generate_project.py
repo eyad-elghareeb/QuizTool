@@ -1090,6 +1090,16 @@ def _gh_request(method, path, token, json_data=None, timeout=30):
         return 0, {'message': str(e)}
 
 
+def _get_projects_dir():
+    """Get the directory where generated projects are stored.
+
+    Uses the parent directory of the QuizTool repo, so if QuizTool is at
+    /some/path/QuizTool, projects go to /some/path/<project_name>.
+    This works regardless of where QuizTool is cloned.
+    """
+    return BASE_DIR.parent
+
+
 def _extract_and_push(config, token, repo_name, username):
     """Extract ZIP to temp dir, git init, commit, push to GitHub.
 
@@ -1099,8 +1109,8 @@ def _extract_and_push(config, token, repo_name, username):
     """
     zip_buf = build_project_zip(config)
 
-    # Create temp directory for the project
-    project_dir = os.path.join(tempfile.gettempdir(), 'quiztool-projects', repo_name)
+    # Create project directory as sibling of QuizTool
+    project_dir = _get_projects_dir() / repo_name
     if os.path.exists(project_dir):
         shutil.rmtree(project_dir)
     os.makedirs(project_dir, exist_ok=True)
@@ -1395,12 +1405,14 @@ def launch_admin():
         return jsonify({'ok': False, 'error': 'Admin dashboard script not found in project'}), 400
 
     try:
-        # Launch in a new process — admin dashboard runs on port 5501 to avoid conflict
+        # Admin dashboard runs on port 5501 to avoid conflict with generator on 5500
+        admin_port = 5501
         env = os.environ.copy()
         env['FLASK_APP'] = admin_script
+        env['QUIZTOOL_ADMIN_PORT'] = str(admin_port)
 
         proc = subprocess.Popen(
-            [sys.executable, admin_script],
+            [sys.executable, admin_script, '--port', str(admin_port)],
             cwd=project_dir,
             env=env,
             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == 'win32' else 0
@@ -1408,7 +1420,7 @@ def launch_admin():
 
         return jsonify({
             'ok': True,
-            'admin_url': 'http://localhost:5500/admin/',
+            'admin_url': f'http://localhost:{admin_port}/admin/',
             'pid': proc.pid
         })
     except Exception as e:
@@ -1424,7 +1436,7 @@ def download_local():
     project_name = config.get('project_name', 'MyQuiz')
     safe_name = re.sub(r'[^a-zA-Z0-9._-]', '-', project_name).strip('-') or 'quiz-project'
 
-    project_dir = os.path.join(tempfile.gettempdir(), 'quiztool-projects', safe_name)
+    project_dir = str(_get_projects_dir() / safe_name)
     if os.path.exists(project_dir):
         shutil.rmtree(project_dir)
     os.makedirs(project_dir, exist_ok=True)

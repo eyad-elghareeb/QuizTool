@@ -3497,6 +3497,23 @@ def open_browser() -> None:
 
 
 if __name__ == "__main__":
+    # Support --port argument and QUIZTOOL_ADMIN_PORT env var
+    # so the generator can launch the dashboard on a different port (5501)
+    _port = PORT
+    if os.environ.get("QUIZTOOL_ADMIN_PORT"):
+        try:
+            _port = int(os.environ["QUIZTOOL_ADMIN_PORT"])
+        except ValueError:
+            pass
+    if "--port" in sys.argv:
+        idx = sys.argv.index("--port")
+        if idx + 1 < len(sys.argv):
+            try:
+                _port = int(sys.argv[idx + 1])
+            except ValueError:
+                pass
+    PORT = _port
+
     print(f"Starting Admin Dashboard for {get_project_name()}")
     print(f"Opening http://{HOST}:{PORT}/admin/ in your browser")
     print("Press Ctrl+C to stop")
