@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Admin dashboard for QuizTool-generated static quiz repositories.
+Admin dashboard for MU61S8-style static quiz repositories.
 
 The dashboard is a local Flask app that helps manage quiz, bank, and hub pages
 without a build step. It intentionally follows the repository rules documented
@@ -61,45 +61,9 @@ ASSET_SUFFIXES = {
 }
 # Built-in tools served as templates
 BUILTIN_TOOLS = {
-    "quiz-maker": {
-        "label": "Quiz Maker",
-        "description": "Build quizzes from structured form inputs and export ready-to-run HTML.",
-        "path": "/quiz-maker.html",
-    },
-    "quiz-maker-js": {
-        "label": "JSON Quiz Maker",
-        "description": "Paste JSON question payloads and convert them into quiz HTML faster.",
-        "path": "/quiz-maker-js.html",
-    },
-    "bank-maker": {
-        "label": "Bank Maker",
-        "description": "Create question-bank files with the dedicated standalone builder.",
-        "path": "/bank-maker.html",
-    },
-    "quiz-editor": {
-        "label": "Quiz Editor",
-        "description": "Open the standalone quiz editor for schema-aware editing outside the dashboard.",
-        "path": "/quiz-editor.html",
-    },
-    "index-editor": {
-        "label": "Index Editor",
-        "description": "Edit hub pages and QUIZZES arrays with the dedicated index tool.",
-        "path": "/index-editor.html",
-    },
-    "quiz-combiner": {
-        "label": "Quiz Combiner",
-        "description": "Merge multiple quiz files into larger review banks.",
-        "path": "/quiz-combiner.html",
-    },
-    "js-question-bank": {
-        "label": "JS Question Bank",
-        "description": "Manage large browser-side question banks and reuse them across projects.",
-        "path": "/js-question-bank.html",
-    },
     "pdf-exporter": {
         "label": "PDF Exporter",
         "description": "Export quiz and bank pages to PDF with customizable layouts.",
-        "path": "/pdf-exporter.html",
     },
 }
 
@@ -852,8 +816,8 @@ DASHBOARD_HTML = r"""
       display: flex;
     }
     .modal-card {
-      width: min(760px, 100%);
-      max-height: min(88vh, 980px);
+      width: min(900px, 100%);
+      max-height: min(90vh, 1020px);
       overflow: auto;
       background: var(--surface);
       border: 1px solid var(--border);
@@ -915,8 +879,9 @@ DASHBOARD_HTML = r"""
     .context-menu {
       position: fixed;
       z-index: 140;
-      min-width: 220px;
-      padding: 0.45rem;
+      min-width: 160px;
+      max-width: 320px;
+      padding: 0.3rem;
       display: none;
       box-shadow: var(--shadow);
     }
@@ -924,9 +889,9 @@ DASHBOARD_HTML = r"""
       display: block;
     }
     .context-menu-title {
-      padding: 0.35rem 0.5rem 0.55rem;
+      padding: 0.3rem 0.5rem 0.4rem;
       color: var(--text-muted);
-      font-size: 0.78rem;
+      font-size: 0.72rem;
       text-transform: uppercase;
       letter-spacing: 0.08em;
     }
@@ -936,9 +901,10 @@ DASHBOARD_HTML = r"""
       border: 0;
       background: transparent;
       color: var(--text);
-      border-radius: 8px;
-      padding: 0.65rem 0.75rem;
+      border-radius: 6px;
+      padding: 0.5rem 0.65rem;
       cursor: pointer;
+      font-size: 0.88rem;
     }
     .context-menu button:hover {
       background: var(--surface3);
@@ -948,7 +914,7 @@ DASHBOARD_HTML = r"""
     }
     .context-divider {
       height: 1px;
-      margin: 0.35rem 0;
+      margin: 0.25rem 0;
       background: var(--border);
     }
     .close-btn {
@@ -1610,7 +1576,28 @@ DASHBOARD_HTML = r"""
         { divider: true },
         { label: isOpen ? 'Collapse Folder' : 'Expand Folder', onclick: `closeContextMenu(); toggleFolder('${escapeHtml(folderPath)}')` },
         { label: 'Copy Folder Path', onclick: `closeContextMenu(); copyTextValue('${escapeHtml(folderPath)}', 'Folder path')` },
+        folderPath !== '.' ? { label: 'Delete Folder', danger: true, onclick: `closeContextMenu(); deleteFolderConfirm('${escapeHtml(folderPath)}')` } : null,
       ]);
+    }
+
+    function deleteFolderConfirm(folderPath) {
+      const fileCount = state.files.filter(f => f.path.startsWith(folderPath + '/') || (folderPath === '.' ? false : false)).length;
+      const cnt = state.files.filter(f => folderPath === '.' ? false : f.path.startsWith(folderPath + '/')).length;
+      openModal({
+        title: 'Delete Folder',
+        subtitle: 'This permanently deletes the folder and all its contents.',
+        body: `
+          <div class="empty-state" style="text-align:left;">
+            <strong>${escapeHtml(folderPath)}</strong><br><br>
+            This folder contains <strong>${cnt}</strong> file(s).<br>
+            Deleting is irreversible. Run sync afterward to refresh indexes.
+          </div>
+          <div class="modal-actions">
+            <button class="btn" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-danger" onclick="closeModal(); executeDeleteFolder('${escapeHtml(folderPath)}')">Yes, Delete Folder</button>
+          </div>
+        `,
+      });
     }
 
     function openFileContextMenu(event, filePath) {
@@ -1683,7 +1670,6 @@ DASHBOARD_HTML = r"""
       const panel = document.getElementById('workspace-panel');
       const summary = state.projectState?.summary || {};
       const git = state.projectState?.git || {};
-      const builtinTools = state.projectState?.builtinTools || [];
       const recentFiles = [...state.files].sort((a, b) => (b.modified || 0) - (a.modified || 0)).slice(0, 6);
       panel.innerHTML = `
         <div class="panel-header">
@@ -1725,15 +1711,13 @@ DASHBOARD_HTML = r"""
           <div class="overview-card">
             <div class="section-title">Built-in Tools</div>
             <div class="overview-list">
-              ${builtinTools.length ? builtinTools.map(tool => `
-                <div class="overview-item">
-                  <div class="overview-dot"></div>
-                  <div>
-                    <strong><a href="${escapeHtml(tool.path || '#')}" target="_blank" rel="noopener">${escapeHtml(tool.label || 'Tool')}</a></strong>
-                    <div class="muted">${escapeHtml(tool.description || '')}</div>
-                  </div>
+              <div class="overview-item">
+                <div class="overview-dot"></div>
+                <div>
+                  <strong><a href="/admin/pdf-exporter" target="_blank" rel="noopener">PDF Exporter</a></strong>
+                  <div class="muted">Generate printable PDF versions of your quizzes and banks.</div>
                 </div>
-              `).join('') : '<div class="muted">No standalone tools available.</div>'}
+              </div>
             </div>
           </div>
           <div class="overview-card">
@@ -1923,10 +1907,8 @@ DASHBOARD_HTML = r"""
             <div class="panel-path">${escapeHtml(state.currentFile)}</div>
           </div>
           <div class="panel-actions">
-            <button class="btn" onclick="validateCurrentFile({ silent: false })">Validate</button>
-            <button class="btn btn-primary" onclick="saveFile()">Save</button>
-            <button class="btn" onclick="saveAndSync()">Save + Sync</button>
-            <button class="btn" onclick="runSync()">Sync Only</button>
+            ${(() => { const a = getPrimaryActionState(); if (a.action) return `<button class="btn ${a.tone === 'primary' ? 'btn-primary' : a.tone === 'warn' ? 'btn' : a.tone === 'error' ? 'btn btn-danger' : 'btn'}" onclick="${a.action}">${escapeHtml(a.label)}</button>`; return `<button class="btn" disabled>${escapeHtml(a.label)}</button>`; })()}
+            <button class="btn" onclick="runSync()">Sync</button>
             <button class="btn" onclick="openDuplicateModal()">Duplicate</button>
             <button class="btn" onclick="openMoveModal()">Move/Rename</button>
             <button class="btn delete" onclick="openDeleteModal()">Delete</button>
@@ -1974,37 +1956,51 @@ DASHBOARD_HTML = r"""
       return '<div class="empty-state">Structured editing is not available for this file type.</div>';
     }
 
+    function getPrimaryActionState() {
+      if (state.dirty) {
+        if (state.validation?.errors?.length) return { label: 'Validate', action: 'validateCurrentFile({ silent: false })', tone: 'warn' };
+        return { label: 'Save', action: 'saveFile()', tone: 'primary' };
+      }
+      if (state.syncState === 'needs-sync') return { label: 'Sync', action: 'runSync()', tone: 'primary' };
+      if (state.syncState === 'syncing') return { label: 'Syncing...', action: '', tone: 'info' };
+      if (state.syncState === 'sync-failed') return { label: 'Sync Failed', action: 'runSync()', tone: 'error' };
+      if (state.projectState?.git?.dirtyCount) return { label: 'Git', action: 'openGitModal()', tone: 'primary' };
+      return { label: 'Saved', action: '', tone: 'success' };
+    }
+
     function renderQuizBankEditor(meta) {
       const isBank = meta.type === 'bank';
       const questions = meta.questions || [];
-      return `
+      const topFields = `
         <div class="editor-grid">
-          <div class="field-grid">
-            <div class="field">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.9rem; align-items:start;">
+            <div class="field" style="margin:0;">
               <label>UID</label>
               <input class="text-input" id="cfg-uid" value="${escapeHtml(meta.config?.uid || '')}" oninput="syncQuizBankEditor()">
               <small>Keep this stable for deployed files to preserve progress and tracker data.</small>
             </div>
-            <div class="field">
+            <div class="field" style="margin:0;">
               <label>Title</label>
               <input class="text-input" id="cfg-title" value="${escapeHtml(meta.config?.title || '')}" oninput="syncQuizBankEditor()">
             </div>
-            <div class="field full">
-              <label>Description</label>
-              <textarea class="text-area" id="cfg-description" oninput="syncQuizBankEditor()">${escapeHtml(meta.config?.description || '')}</textarea>
-            </div>
-            ${isBank ? `
-              <div class="field">
-                <label>Icon</label>
-                <input class="text-input" id="cfg-icon" value="${escapeHtml(meta.config?.icon || '🗃️')}" oninput="syncQuizBankEditor()">
-              </div>
-            ` : ''}
           </div>
+          <div class="field full">
+            <label>Description</label>
+            <textarea class="text-area" id="cfg-description" oninput="syncQuizBankEditor()">${escapeHtml(meta.config?.description || '')}</textarea>
+          </div>
+          ${isBank ? `
+            <div class="field" style="max-width:300px;">
+              <label>Icon</label>
+              <input class="text-input" id="cfg-icon" value="${escapeHtml(meta.config?.icon || '🗃️')}" oninput="syncQuizBankEditor()">
+            </div>
+          ` : ''}
+      `;
+      return `
+        ${topFields}
           <div class="panel-grid">
             ${renderMetaCard('Questions', questions.length)}
             ${renderMetaCard('Mode', isBank ? 'Bank' : 'Quiz')}
             ${renderMetaCard('Engine', isBank ? 'bank-engine.js' : 'quiz-engine.js')}
-            ${renderMetaCard('Preview', 'Saved file output')}
           </div>
           <div class="editor-toolbar">
             <div class="muted">Collapse large banks to scan and reorder them faster.</div>
@@ -2532,9 +2528,7 @@ DASHBOARD_HTML = r"""
             </button>
           </div>
           <div class="modal-actions" style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;">
-             <a class="btn" href="/quiz-editor.html" target="_blank" rel="noopener" onclick="closeModal()">Open Quiz Editor</a>
-             <a class="btn" href="/index-editor.html" target="_blank" rel="noopener" onclick="closeModal()">Open Index Editor</a>
-             <a class="btn" href="/pdf-exporter.html" target="_blank" rel="noopener" onclick="closeModal()">Open PDF Exporter</a>
+             <a class="btn" href="/admin/pdf-exporter" target="_blank" rel="noopener" onclick="closeModal()">Open Standalone PDF Exporter</a>
              <button class="btn" onclick="closeModal()">Cancel</button>
           </div>
         `
@@ -3161,6 +3155,24 @@ DASHBOARD_HTML = r"""
       setDirty(false);
       await runSync({ silentToast: true, preserveCurrent: false });
       renderOverview();
+    }
+
+    async function executeDeleteFolder(folderPath) {
+      const result = await fetchJson('/admin/delete-folder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: folderPath }),
+      });
+      showToast(result.message || 'Folder deleted.', 'success');
+      logActivity('Deleted folder', folderPath + '\n' + (result.message || ''), 'warn');
+      if (state.currentFile && state.currentFile.startsWith(folderPath + '/')) {
+        state.currentFile = null;
+        state.currentData = null;
+        state.loadedMeta = null;
+        state.validation = null;
+        setDirty(false);
+      }
+      await runSync({ silentToast: true, preserveCurrent: false });
     }
 
     async function commitChanges() {
@@ -4265,7 +4277,6 @@ def get_builtin_tools() -> list[dict[str, str]]:
             "id": key,
             "label": meta["label"],
             "description": meta["description"],
-            "path": meta["path"],
         }
         for key, meta in BUILTIN_TOOLS.items()
     ]
@@ -4634,6 +4645,34 @@ def delete_file() -> Any:
 
     file_path.unlink()
     return jsonify({"message": f"Deleted {relative_path(file_path)}."})
+
+
+@app.post("/admin/delete-folder")
+def delete_folder() -> Any:
+    payload = request.get_json(silent=True) or {}
+    raw_path = payload.get("path", "")
+    folder_rel = normalize_rel_path(raw_path)
+    if folder_rel == ".":
+        return jsonify({"message": "Cannot delete the root folder."}), 400
+    try:
+        folder_path = resolve_project_path(folder_rel, must_exist=True)
+    except FileNotFoundError:
+        return jsonify({"message": "Folder not found."}), 404
+    except ValueError as exc:
+        return jsonify({"message": str(exc)}), 400
+    if not folder_path.is_dir():
+        return jsonify({"message": "Path is not a folder."}), 400
+
+    # Count files before deleting
+    file_count = 0
+    for root, dirs, files in os.walk(folder_path):
+        dirs[:] = [d for d in dirs if not should_skip_dir(d)]
+        for filename in files:
+            if filename.lower().endswith(".html"):
+                file_count += 1
+
+    shutil.rmtree(folder_path)
+    return jsonify({"message": f"Deleted folder '{folder_rel}' with {file_count} HTML file(s)."})
 
 
 @app.post("/admin/convert-file")

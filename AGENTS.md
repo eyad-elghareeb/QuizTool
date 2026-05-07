@@ -724,27 +724,134 @@ Bundled data files in `build_exe.py`:
 
 ## 20. Local Admin Dashboard (`scripts/admin-dashboard.py`)
 
-A local Flask-based web interface for managing quiz projects. Bundled into generated ZIPs and used for development.
+A local Flask-based web interface for managing quiz projects. Bundled into generated ZIPs and used for development. Runs on `http://localhost:5500/admin/` by default (configurable via `--port` CLI arg or `QUIZTOOL_ADMIN_PORT` env var).
 
 ### 20a. Features
 - **Workspace Overview**: Project stats, recent files, git cleanliness summary, and links to reusable `QuizTool` reference editors/templates.
 - **Responsive Workspace**: Fluid layout with a responsive sidebar (`minmax(380px, 24%)`) and auto-fitting grids for optimal space utilization on all screen sizes.
-- **File Browser**: Searchable/filterable tree view of all HTML files in the project.
-- **File Manager**: Create folders, create/move/rename/delete quiz or bank files.
+- **File Browser**: Searchable/filterable tree view of all HTML files in the project with type filters (All, Quiz, Bank, Index, Other HTML).
+- **Context Menus**: Right-click on files and folders for quick actions (new quiz/bank here, duplicate, move/rename, delete, copy path, collapse/expand).
+- **File Manager**: Create folders, create/move/rename/delete quiz or bank files, duplicate files to any folder.
+- **New File Wizard**: Multi-step guided creation (Setup → Source → Builder) with:
+  - **Presets**: Blank Quiz, Lecture MCQ, Past Paper, Quick Review, All Bank — each with tailored defaults
+  - **Source Modes**: Manual Builder, Paste JSON, Paste MCQ Text, Clone Existing Quiz/Bank
+  - **Import Helpers**: Drag-and-drop JSON files, plain-text MCQ parsing, clone from existing files
+  - **Live Summary Sidebar**: Shows derived UID, filename, target folder, and preflight validation in real time
+  - **Create & Keep Adding**: Create a file and immediately start another without closing the wizard
+- **Path-Safe Generation**:
+  - New folders automatically get a proper `index.html` hub page with depth-aware root asset prefixes.
+  - New quiz/bank files derive **stable path-based UIDs** using the `folder_subfolder_filename` pattern.
 - **Structured Editors**:
-  - **Quiz/Bank Editor**: Edit `QUIZ_CONFIG`/`BANK_CONFIG` metadata, reorder/duplicate/remove questions, and update options/explanations.
+  - **Quiz/Bank Editor**: Edit `QUIZ_CONFIG`/`BANK_CONFIG` metadata, reorder/duplicate/remove questions, add/remove options per question (not fixed at 4), and update options/explanations. Supports collapse/expand all questions for scanning large banks.
   - **Index Editor**: Edit `QUIZZES` array entries, reorder cards, and update page title/hero copy.
 - **Multi-Tab Viewer**:
   - **Preview**: Live iframe preview via an admin-specific preview route that rewrites quiz/bank engine base paths correctly.
   - **Editor**: Structured metadata and content editor (for quiz/bank/index files).
   - **Metadata**: Parsed JSON metadata view.
   - **Raw HTML**: Raw HTML editor for direct text editing.
-- **PDF Export**: Integrated viewer with pre-filled URLs for the current file; supports direct download or opening in a new tab.
+- **Validation System**: Server-side + client-side validation of file content. Displays errors and warnings in a validation strip. Preflight checks in the New File Wizard before creation.
+- **UID Change Protection**: When saving a file with a changed UID, a confirmation modal warns about orphaning learner progress. Requires explicit user confirmation to proceed.
+- **PDF Export**: Integrated viewer with pre-filled URLs for the current file; supports direct download or opening in a new tab. Also available as a standalone tool at `/admin/pdf-exporter` with multiple layouts (standard, styled, MCQ notes, two-column) and quality options.
 - **Activity Feed**: Compact recent activity panel for the latest save/sync/git results.
-- **Git Integration**: Cohesive "Sync & Push" flow (Pull -> Commit -> Push) with visual file status indicators and manual controls.
+- **Git Integration**: Cohesive "Sync & Push" flow (Pull -> Commit -> Push) with visual file status indicators and manual controls. Individual Pull, Commit Only, and Push actions also available.
 - **Sync**: Run `sync_quiz_assets.py` to auto-update indexes, tracker map, and service worker after content changes.
 - **Conversion**: Convert quiz ↔ bank files while preserving the existing `uid`.
+- **Quick Open**: `Ctrl+K` command palette for fast file navigation by path, title, or UID.
+- **Keyboard Shortcuts**: `Ctrl+S` (save), `Ctrl+K` (quick open), `/` (focus search), `Esc` (close modals/context menus).
+- **Unsaved Changes Protection**: `beforeunload` handler prevents accidental tab close. Save indicator in topbar shows current state (ready / unsaved changes / saved, sync recommended / syncing / sync failed).
+- **UI Preferences Persistence**: Filter state, search query, expanded folders, recent folders, and recent presets are saved to `localStorage` and restored on reload.
 
-### 20b. Path-Safe Generation
-- New folders automatically get a proper `index.html` hub page with depth-aware root asset prefixes.
-- New quiz/bank files derive **stable path-based UIDs** using the `folder_subfolder_filename` pattern.
+### 20b. Running the Dashboard
+
+```bash
+cd your-quiz-project/
+pip install flask
+python scripts/admin-dashboard.py
+# Opens http://localhost:5500/admin/ automatically
+
+# Custom port:
+python scripts/admin-dashboard.py --port 5501
+# Or via environment variable:
+QUIZTOOL_ADMIN_PORT=5501 python scripts/admin-dashboard.py
+```
+
+### 20c. API Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/admin/` | GET | Dashboard SPA |
+| `/admin/files` | GET | List all HTML files + folders |
+| `/admin/project-state` | GET | Project name, summary stats, git status, builtin tools |
+| `/admin/load-file?path=` | GET | Load file content + parsed metadata |
+| `/admin/preview/<path>` | GET | Preview HTML with rewritten engine base paths |
+| `/admin/save-file` | POST | Save file content (with UID change validation) |
+| `/admin/validate-file` | POST | Validate file content, return issues |
+| `/admin/create-folder` | POST | Create folder + hub index.html |
+| `/admin/create-file` | POST | Create quiz/bank file with questions |
+| `/admin/duplicate-file` | POST | Duplicate file to target folder with new UID |
+| `/admin/move-file` | POST | Move/rename file |
+| `/admin/delete-file` | POST | Delete file |
+| `/admin/delete-folder` | POST | Delete folder and all contents |
+| `/admin/convert-file` | POST | Convert quiz ↔ bank preserving UID |
+| `/admin/run-sync` | POST | Execute `sync_quiz_assets.py` |
+| `/admin/git-commit` | POST | `git add -A` + `git commit` |
+| `/admin/git-pull` | POST | `git pull --rebase --autostash` |
+| `/admin/git-push` | POST | `git push` |
+| `/admin/pdf-exporter` | GET | Standalone PDF exporter tool |
+
+### 20d. File Type Detection
+
+Files are automatically classified as:
+- **quiz**: Contains `QUIZ_CONFIG` + `QUESTIONS`
+- **bank**: Contains `BANK_CONFIG` + `QUESTION_BANK`
+- **index**: Contains `QUIZZES` array
+- **html**: Generic HTML file (raw editor only)
+
+### 20e. Validation Rules
+
+The dashboard validates files before saving:
+- **Errors** (block save): Missing question prompt, fewer than 2 options, invalid correct answer index, unparseable question data
+- **Warnings** (allow save): Empty question list, blank option text, UID change detected (requires confirmation)
+- Validation runs both server-side (on save) and client-side (on edit, debounced at 350ms)
+
+### 20f. Structured Editor Limitations
+- Quiz/bank editors automatically rebuild valid HTML when metadata or questions change
+- Index editor parses and updates the `QUIZZES` const block plus the page `<title>` and hero section
+- Existing UIDs are preserved automatically; new files generate path-based UIDs by default
+- Preview reflects the last saved version of the file, not unsaved editor changes
+- The inline preview is intended for local verification; the separate **Open Preview** action still loads the file directly from its real project path
+- Not recommended for complex custom HTML beyond the known schemas; use Raw HTML for advanced edits
+
+### 20g. Wizard Presets
+
+| Preset | Type | Starter Questions | Default Description |
+|--------|------|-------------------|---------------------|
+| Blank Quiz | quiz | 1 | — |
+| Lecture MCQ | quiz | 5 | Lecture MCQs |
+| Past Paper | quiz | 10 | Past paper MCQs |
+| Quick Review | quiz | 3 | Quick review questions |
+| All Bank | bank | 8 | All questions in one bank file |
+
+### 20h. Import Parsing
+
+The wizard's "Paste JSON" and "Paste MCQ Text" source modes use `parseImportedQuestions()` which supports:
+- Raw JSON arrays of question objects
+- JavaScript `const QUESTIONS = [...]` / `const QUESTION_BANK = [...]` blocks
+- Plain-text MCQ format: questions separated by blank lines, options prefixed with `-` or `A)`, answer lines like `Answer: C` or `Correct: 2`, explanation lines like `Explanation: ...`
+- Drag-and-drop of `.json` files onto the import textarea
+
+### 20i. Port Configuration
+
+The dashboard supports custom ports for cases where the default 5500 is occupied (e.g., when launched by the QuizTool generator):
+- CLI: `python scripts/admin-dashboard.py --port 5501`
+- Env var: `QUIZTOOL_ADMIN_PORT=5501 python scripts/admin-dashboard.py`
+- The generator uses `QUIZTOOL_ADMIN_PORT` to avoid conflicts with its own Flask server on 5500
+
+### 20j. PDF Exporter
+
+Available at `/admin/pdf-exporter` as a standalone built-in tool. Features:
+- Load any quiz/bank by URL
+- Multiple layout modes: Standard, Styled (badges + formatted), MCQ Notes (compact answer-only), Two-Column Textbook
+- Show/hide answers toggle
+- High-quality mode (2x scale rendering)
+- Direct PDF download via html2pdf.js or browser Print dialog
