@@ -1070,7 +1070,14 @@ async function githubLogin() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token })
     });
-    const data = await resp.json();
+    let data;
+    try {
+      const text = await resp.text();
+      data = JSON.parse(text);
+    } catch (parseErr) {
+      showValidation('gh-token', 'Server error — check the terminal for details');
+      return;
+    }
 
     if (data.ok) {
       ghToken = token;
@@ -1112,6 +1119,7 @@ async function githubPublish() {
   if (!ghToken || !ghUser) { showToast('❌ Sign in to GitHub first', 'error'); return; }
   const config = getConfig();
   if (!config.folders.length) { showToast('❌ Add at least one folder!', 'error'); return; }
+  config.dropped_files = droppedFilesContent;
 
   // Show progress section
   $('publish-progress-section').style.display = '';
@@ -1146,7 +1154,15 @@ async function githubPublish() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token: ghToken, config, visibility })
     });
-    const data = await resp.json();
+
+    // Guard against non-JSON responses (e.g. Flask 500 HTML error page)
+    let data;
+    try {
+      const text = await resp.text();
+      data = JSON.parse(text);
+    } catch (parseErr) {
+      throw new Error('Server returned a non-JSON response. It may have crashed — check the terminal for details.');
+    }
 
     if (data.ok) {
       // Server completed all steps — animate them in sequence
@@ -1185,6 +1201,8 @@ async function githubPublish() {
     } else {
       // Find which step failed based on error
       const error = data.error || 'Unknown error';
+      // Save project_dir even on failure so admin dashboard can still be launched
+      if (data.project_dir) lastProjectDir = data.project_dir;
       setPublishStep('ps-verify', 'done');
 
       if (error.includes('repository') || error.includes('repo')) {
@@ -1247,8 +1265,11 @@ async function downloadZip() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(config)
       });
-      const localData = await localResp.json();
-      if (localData.ok) lastProjectDir = localData.project_dir;
+      const localText = await localResp.text();
+      try {
+        const localData = JSON.parse(localText);
+        if (localData.ok) lastProjectDir = localData.project_dir;
+      } catch (_) {}
     } catch (_) {}
 
     $('download-success-section').style.display = '';
@@ -1268,7 +1289,14 @@ async function launchAdmin() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ project_dir: lastProjectDir })
     });
-    const data = await resp.json();
+    let data;
+    try {
+      const text = await resp.text();
+      data = JSON.parse(text);
+    } catch (_) {
+      showToast('❌ Server returned a non-JSON response', 'error');
+      return;
+    }
     if (data.ok) {
       showToast('✅ Admin Dashboard launching...', 'success');
       setTimeout(() => window.open(data.admin_url, '_blank'), 1000);

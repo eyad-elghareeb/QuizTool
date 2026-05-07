@@ -25,7 +25,10 @@ if templates_dir.exists():
     datas.append(str(templates_dir) + ';generator_templates')
 
 # Engine files (needed for ZIP generation)
-for name in ['quiz-engine.js', 'bank-engine.js', 'index-engine.js', 'index-engine.css']:
+# Note: sw.js is NOT needed — it's generated dynamically per-project by generate_sw_js()
+# Note: quiz-engine-test.html is optional — read_file() returns '' if missing
+for name in ['quiz-engine.js', 'bank-engine.js', 'index-engine.js', 'index-engine.css',
+             'quiz-engine-test.html']:
     p = BASE_DIR / name
     if p.exists():
         datas.append(str(p) + ';.')

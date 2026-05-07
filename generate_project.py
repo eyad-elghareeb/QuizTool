@@ -34,8 +34,13 @@ app = Flask(__name__)
 # ============================================================
 BASE_DIR = Path(__file__).parent.resolve()
 
+# When running as a PyInstaller frozen EXE, __file__ points to the
+# temp extraction directory.  Detect this so we can resolve bundled
+# assets correctly and place generated projects in a sensible location.
+_FROZEN = getattr(sys, 'frozen', False)
+
 def read_file(name):
-    """Read a file from the QuizTool directory."""
+    """Read a file from the QuizTool directory (or PyInstaller bundle)."""
     p = BASE_DIR / name
     if p.exists():
         return p.read_text(encoding='utf-8')
@@ -335,7 +340,6 @@ self.addEventListener('fetch', function (event) {
     
     return sw_content
 
-SW_JS = read_file('sw.js')
 INDEX_ENGINE_JS = read_file('index-engine.js')
 INDEX_ENGINE_CSS = read_file('index-engine.css')
 QUIZ_ENGINE_JS = read_file('quiz-engine.js')
@@ -628,32 +632,68 @@ jobs:
         uses: actions/deploy-pages@v5
 '''
 
-GITIGNORE_CONTENT = '''# OS files
+GITIGNORE_CONTENT = '''# Compiled and build artifacts
+*.pyc
+__pycache__/
+*.o
+*.obj
+*.class
+*.exe
+*.dll
+*.so
+*.a
+*.out
+
+# Dependencies
+node_modules/
+venv/
+.venv/
+.env
+.env.local
+.env.*
+
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+*.swo
+
+# Editors
+.vscode/
+.idea/
+
+# System files
 .DS_Store
 Thumbs.db
 
-# IDE
-.vscode/
-.idea/
-*.sublime-*
+# Coverage
+coverage/
+htmlcov/
+.coverage
 
-# Generated / build output
-_site/
+# Build directories
+dist/
+build/
+target/
+.gradle/
+
+# Python cache
+.mypy_cache/
+.pytest_cache/
+
+# Compressed files
 *.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-ENV/
-.venv/
-
-# Node (if using any tooling)
-node_modules/
+# Local helpers
+admin-dashboard.bat
+.qwen/
 '''
 
 # ============================================================
@@ -816,7 +856,7 @@ def build_project_zip(config):
             folder_quizzes = folder.get('quizzes', [])
             
             for quiz in folder_quizzes:
-                if quiz.get('url') == filename or filename in quiz.get('url', ''):
+                if quiz.get('url') == filename:
                     full_path = f'{folder_path}/{filename}'
                     if full_path not in all_file_paths:
                         all_file_paths.append(full_path)
@@ -998,7 +1038,7 @@ def build_project_zip(config):
 
                 # Check if any quiz in this folder references this file
                 for quiz in folder_quizzes:
-                    if quiz.get('url') == filename or filename in quiz.get('url', ''):
+                    if quiz.get('url') == filename:
                         # Optionally update the file's title tag to include project name
                         # (Only if it has a standard <title> tag)
                         import re
@@ -1043,6 +1083,15 @@ def build_project_zip(config):
 
         # --- .gitignore ---
         zf.writestr('.gitignore', GITIGNORE_CONTENT)
+
+        # --- Local admin dashboard launcher (gitignored) ---
+        admin_bat = f'''@echo off
+REM Launch the local admin dashboard for the {project_name} project.
+REM This file is intended for local use only and is gitignored.
+cd /d "%~dp0"
+python "scripts\\admin-dashboard.py"
+'''
+        zf.writestr('admin-dashboard.bat', admin_bat)
 
     buf.seek(0)
     return buf
@@ -1093,26 +1142,134 @@ def _gh_request(method, path, token, json_data=None, timeout=30):
 def _get_projects_dir():
     """Get the directory where generated projects are stored.
 
-    Uses the parent directory of the QuizTool repo, so if QuizTool is at
-    /some/path/QuizTool, projects go to /some/path/<project_name>.
-    This works regardless of where QuizTool is cloned.
+    When running from source: projects go next to the QuizTool repo.
+        e.g. /some/path/QuizTool -> /some/path/<project_name>
+
+    When running as a PyInstaller EXE: projects go next to the EXE.
+        e.g. C:/Users/Eyad/Desktop/QuizTool-Generator.exe
+             -> C:/Users/Eyad/Desktop/<project_name>
     """
+    if _FROZEN:
+        # sys.executable is the EXE path in frozen mode
+        return Path(sys.executable).parent
     return BASE_DIR.parent
 
 
+def _ensure_tool(tool_name, winget_id=None, post_install_hook=None):
+    """Ensure a CLI tool is available on PATH. If missing and running on
+    Windows with winget, offer to install it automatically.
+
+    Args:
+        tool_name: Name to search on PATH (e.g. 'git', 'python')
+        winget_id: winget package ID for auto-install (e.g. 'Git.Git')
+        post_install_hook: Optional callable after install (e.g. pip install flask)
+
+    Returns:
+        (exe_path, message) — exe_path is the full path if found, None if not.
+        message describes what happened (found, installed, or failed).
+    """
+    import shutil as _shutil
+    exe = _shutil.which(tool_name) or _shutil.which(tool_name + '.exe')
+    if exe:
+        return exe, f'{tool_name} found at {exe}'
+
+    # Not on PATH — try winget auto-install (Windows only)
+    if sys.platform == 'win32' and winget_id:
+        winget = _shutil.which('winget')
+        if winget:
+            try:
+                # Install with winget (--accept-source-agreements avoids interactive prompts)
+                result = subprocess.run(
+                    [winget, 'install', '--id', winget_id, '-e', '--accept-source-agreements',
+                     '--accept-package-agreements'],
+                    capture_output=True, text=True, timeout=300
+                )
+                if result.returncode == 0:
+                    # Re-check PATH after install
+                    exe = _shutil.which(tool_name) or _shutil.which(tool_name + '.exe')
+                    if exe:
+                        # Run post-install hook (e.g. pip install flask)
+                        if post_install_hook:
+                            try:
+                                post_install_hook(exe)
+                            except Exception:
+                                pass
+                        return exe, f'{tool_name} installed via winget'
+                    # winget may require a new shell to see the PATH change
+                    return None, (f'{tool_name} was installed via winget but requires a terminal '
+                                  f'restart to take effect. Please close and reopen this application.')
+                else:
+                    return None, f'winget install failed: {result.stderr.strip()}'
+            except Exception as e:
+                return None, f'winget install error: {e}'
+
+    return None, (f'{tool_name} is not installed and winget is not available. '
+                   f'Please install {tool_name} manually.')
+
+
+def _install_flask(python_exe):
+    """pip install flask using the given Python executable."""
+    subprocess.run(
+        [python_exe, '-m', 'pip', 'install', 'flask', '--quiet'],
+        capture_output=True, timeout=120
+    )
+
+
+def _robust_rmtree(path):
+    """Delete a directory tree, handling Windows-specific issues.
+
+    Handles two common Windows failures:
+    - Read-only files (git objects): clears the read-only bit before deletion.
+    - File-in-use errors ([WinError 32]): retries with a small delay,
+      because git or antivirus may briefly hold a handle on files.
+    """
+    if not os.path.exists(path):
+        return
+
+    def _on_error(func, path, exc_info):
+        """onerror/onexc callback: clear read-only bit and retry."""
+        import time
+        if isinstance(exc_info[1], PermissionError):
+            # Try making the file writable
+            try:
+                os.chmod(path, 0o777)
+            except OSError:
+                pass
+            # Retry up to 3 times with a short delay (file may be briefly locked)
+            for attempt in range(3):
+                try:
+                    func(path)
+                    return
+                except PermissionError:
+                    time.sleep(0.3 * (attempt + 1))
+            # Final attempt — let it raise
+            func(path)
+        else:
+            raise
+
+    shutil.rmtree(path, onexc=_on_error)
+
+
 def _extract_and_push(config, token, repo_name, username):
-    """Extract ZIP to temp dir, git init, commit, push to GitHub.
+    """Extract ZIP to project dir, git init, commit, push to GitHub.
+
+    The project directory persists after this call so the admin dashboard
+    and future content additions work.  On re-runs, existing files are
+    overwritten in-place — any user-added content is preserved.
 
     Security: Uses GIT_ASKPASS to provide the token via a temp script
     instead of embedding it in the remote URL, which avoids leaking
     the token into .git/config or the process argument list.
     """
+    # Ensure git is available (auto-install via winget if missing)
+    git_exe, git_msg = _ensure_tool('git', winget_id='Git.Git')
+    if not git_exe:
+        raise Exception(f'Git is required for publishing. {git_msg}')
+
     zip_buf = build_project_zip(config)
 
-    # Create project directory as sibling of QuizTool
+    # Create project directory as sibling of QuizTool (do NOT delete — must persist for admin dashboard)
     project_dir = _get_projects_dir() / repo_name
-    if os.path.exists(project_dir):
-        shutil.rmtree(project_dir)
     os.makedirs(project_dir, exist_ok=True)
 
     # Extract ZIP into project dir
@@ -1140,10 +1297,10 @@ def _extract_and_push(config, token, repo_name, username):
         ['git', 'init'],
         ['git', 'config', 'user.name', username],
         ['git', 'config', 'user.email', f'{username}@users.noreply.github.com'],
+        ['git', 'remote', 'add', 'origin', remote_url],
         ['git', 'add', '-A'],
         ['git', 'commit', '-m', 'Initial commit from QuizTool Generator'],
         ['git', 'branch', '-M', 'main'],
-        ['git', 'remote', 'add', 'origin', remote_url],
         ['git', 'push', '-u', 'origin', 'main'],
     ]
 
@@ -1154,7 +1311,11 @@ def _extract_and_push(config, token, repo_name, username):
             if result.returncode != 0:
                 if 'push' in cmd:
                     raise Exception(f'Git push failed: {result.stderr}')
-                elif 'init' not in cmd and 'config' not in cmd and 'branch' not in cmd and 'remote' not in cmd:
+                elif 'remote' in cmd and 'add' in cmd:
+                    # remote add may fail if origin already exists — update URL instead
+                    subprocess.run(['git', 'remote', 'set-url', 'origin', remote_url],
+                                   cwd=project_dir, capture_output=True, timeout=30)
+                elif 'init' not in cmd and 'config' not in cmd and 'branch' not in cmd:
                     raise Exception(f'Git command failed ({cmd[0]}): {result.stderr}')
     finally:
         # Clean up the askpass script immediately after use
@@ -1163,7 +1324,7 @@ def _extract_and_push(config, token, repo_name, username):
         except OSError:
             pass
 
-    return project_dir
+    return str(project_dir)
 
 
 # ============================================================
@@ -1347,10 +1508,15 @@ def github_publish():
     try:
         project_dir = _extract_and_push(config, token, repo_name, username)
     except Exception as e:
+        # Still track the extracted project directory so admin dashboard can be used
+        project_dir = _get_projects_dir() / repo_name
+        if project_dir.exists():
+            _active_projects[repo_name] = {'path': str(project_dir), 'admin_pid': None}
         # Do NOT delete the repo — it may contain user content.
         # Instead, inform the user so they can decide what to do.
         return jsonify({
             'ok': False,
+            'project_dir': str(project_dir) if project_dir.exists() else None,
             'error': f'Git push failed: {str(e)}. The repository "{repo_name}" was created on GitHub but is empty. You can push manually or delete it from GitHub settings.'
         }), 500
 
@@ -1411,8 +1577,26 @@ def launch_admin():
         env['FLASK_APP'] = admin_script
         env['QUIZTOOL_ADMIN_PORT'] = str(admin_port)
 
+        if _FROZEN:
+            # In frozen/EXE mode, sys.executable is the EXE itself, not Python.
+            # Auto-install Python + Flask via winget if missing.
+            python_exe, py_msg = _ensure_tool(
+                'python',
+                winget_id='Python.Python.3.12',
+                post_install_hook=_install_flask
+            )
+            if not python_exe:
+                return jsonify({
+                    'ok': False,
+                    'error': f'Python is required for the Admin Dashboard. {py_msg}'
+                }), 400
+            # Ensure flask is installed for the found Python
+            _install_flask(python_exe)
+        else:
+            python_exe = sys.executable
+
         proc = subprocess.Popen(
-            [sys.executable, admin_script, '--port', str(admin_port)],
+            [python_exe, admin_script, '--port', str(admin_port)],
             cwd=project_dir,
             env=env,
             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == 'win32' else 0
@@ -1437,8 +1621,8 @@ def download_local():
     safe_name = re.sub(r'[^a-zA-Z0-9._-]', '-', project_name).strip('-') or 'quiz-project'
 
     project_dir = str(_get_projects_dir() / safe_name)
-    if os.path.exists(project_dir):
-        shutil.rmtree(project_dir)
+    # Do NOT delete existing project — preserve user-added content.
+    # ZIP extraction overwrites matching files but leaves extras intact.
     os.makedirs(project_dir, exist_ok=True)
 
     try:
