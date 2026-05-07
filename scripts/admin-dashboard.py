@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Admin dashboard for MU61S8-style static quiz repositories.
+Admin dashboard for QuizTool-generated static quiz repositories.
 
 The dashboard is a local Flask app that helps manage quiz, bank, and hub pages
 without a build step. It intentionally follows the repository rules documented
@@ -61,9 +61,45 @@ ASSET_SUFFIXES = {
 }
 # Built-in tools served as templates
 BUILTIN_TOOLS = {
+    "quiz-maker": {
+        "label": "Quiz Maker",
+        "description": "Build quizzes from structured form inputs and export ready-to-run HTML.",
+        "path": "/quiz-maker.html",
+    },
+    "quiz-maker-js": {
+        "label": "JSON Quiz Maker",
+        "description": "Paste JSON question payloads and convert them into quiz HTML faster.",
+        "path": "/quiz-maker-js.html",
+    },
+    "bank-maker": {
+        "label": "Bank Maker",
+        "description": "Create question-bank files with the dedicated standalone builder.",
+        "path": "/bank-maker.html",
+    },
+    "quiz-editor": {
+        "label": "Quiz Editor",
+        "description": "Open the standalone quiz editor for schema-aware editing outside the dashboard.",
+        "path": "/quiz-editor.html",
+    },
+    "index-editor": {
+        "label": "Index Editor",
+        "description": "Edit hub pages and QUIZZES arrays with the dedicated index tool.",
+        "path": "/index-editor.html",
+    },
+    "quiz-combiner": {
+        "label": "Quiz Combiner",
+        "description": "Merge multiple quiz files into larger review banks.",
+        "path": "/quiz-combiner.html",
+    },
+    "js-question-bank": {
+        "label": "JS Question Bank",
+        "description": "Manage large browser-side question banks and reuse them across projects.",
+        "path": "/js-question-bank.html",
+    },
     "pdf-exporter": {
         "label": "PDF Exporter",
         "description": "Export quiz and bank pages to PDF with customizable layouts.",
+        "path": "/pdf-exporter.html",
     },
 }
 
@@ -432,6 +468,31 @@ DASHBOARD_HTML = r"""
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    .tree-row.folder-row {
+      padding-right: 0.45rem;
+    }
+    .tree-row .tree-actions {
+      display: flex;
+      align-items: center;
+      opacity: 0;
+      transition: opacity var(--transition);
+    }
+    .tree-row:hover .tree-actions,
+    .tree-row:focus-within .tree-actions {
+      opacity: 1;
+    }
+    .tree-add-btn {
+      width: 28px;
+      height: 28px;
+      min-height: 28px;
+      border-radius: 8px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      font-weight: 700;
+    }
     .content-stack {
       display: grid;
       gap: 1.1rem;
@@ -448,6 +509,11 @@ DASHBOARD_HTML = r"""
       justify-content: space-between;
       gap: 1rem;
       margin-bottom: 1rem;
+    }
+    .panel-header-main {
+      min-width: 0;
+      flex: 1;
+      cursor: context-menu;
     }
     .panel-path {
       margin-top: 0.35rem;
@@ -523,6 +589,78 @@ DASHBOARD_HTML = r"""
       border: 1px solid var(--border);
       border-radius: 10px;
       background: #fff;
+    }
+    .preview-toolbar,
+    .status-strip,
+    .validation-strip,
+    .wizard-summary,
+    .context-menu {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface2);
+    }
+    .preview-toolbar,
+    .status-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      align-items: center;
+      padding: 0.75rem 0.85rem;
+      margin-bottom: 0.9rem;
+    }
+    .validation-strip {
+      padding: 0.8rem 0.9rem;
+      margin-bottom: 0.9rem;
+    }
+    .validation-list {
+      display: grid;
+      gap: 0.45rem;
+      margin-top: 0.55rem;
+    }
+    .validation-item {
+      padding: 0.55rem 0.7rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface3);
+      font-size: 0.88rem;
+    }
+    .validation-item.error {
+      border-color: color-mix(in srgb, var(--wrong) 55%, var(--border));
+    }
+    .validation-item.warning {
+      border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+    }
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.65rem;
+      border-radius: 999px;
+      background: var(--surface3);
+      border: 1px solid var(--border);
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+    .editor-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.35rem;
+    }
+    .editor-toolbar-actions {
+      display: flex;
+      gap: 0.55rem;
+      flex-wrap: wrap;
+    }
+    .editor-card.collapsed .editor-card-body {
+      display: none;
+    }
+    .editor-summary {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-top: 0.1rem;
     }
     .editor-grid {
       display: grid;
@@ -741,6 +879,78 @@ DASHBOARD_HTML = r"""
       flex-wrap: wrap;
       margin-top: 1rem;
     }
+    .wizard-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 280px;
+      gap: 1rem;
+      align-items: start;
+    }
+    .wizard-summary {
+      padding: 0.95rem;
+      position: sticky;
+      top: 0;
+    }
+    .wizard-step-title {
+      margin-bottom: 0.75rem;
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+    .wizard-preset-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 0.7rem;
+    }
+    .wizard-preset {
+      text-align: left;
+      padding: 0.85rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      cursor: pointer;
+    }
+    .wizard-preset.active {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .context-menu {
+      position: fixed;
+      z-index: 140;
+      min-width: 220px;
+      padding: 0.45rem;
+      display: none;
+      box-shadow: var(--shadow);
+    }
+    .context-menu.open {
+      display: block;
+    }
+    .context-menu-title {
+      padding: 0.35rem 0.5rem 0.55rem;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .context-menu button {
+      width: 100%;
+      text-align: left;
+      border: 0;
+      background: transparent;
+      color: var(--text);
+      border-radius: 8px;
+      padding: 0.65rem 0.75rem;
+      cursor: pointer;
+    }
+    .context-menu button:hover {
+      background: var(--surface3);
+    }
+    .context-menu button.danger {
+      color: var(--wrong);
+    }
+    .context-divider {
+      height: 1px;
+      margin: 0.35rem 0;
+      background: var(--border);
+    }
     .close-btn {
       border: 1px solid var(--border);
       background: var(--surface2);
@@ -803,6 +1013,12 @@ DASHBOARD_HTML = r"""
     @media (max-width: 900px) {
       .stats-grid, .panel-grid, .field-grid, .overview-grid {
         grid-template-columns: 1fr 1fr;
+      }
+      .wizard-layout {
+        grid-template-columns: 1fr;
+      }
+      .tree-row .tree-actions {
+        opacity: 1;
       }
       .topbar {
         align-items: flex-start;
@@ -896,6 +1112,8 @@ DASHBOARD_HTML = r"""
     </div>
   </div>
 
+  <div class="context-menu" id="context-menu"></div>
+
   <div class="toast-stack" id="toast-stack"></div>
 
   <script>
@@ -903,18 +1121,37 @@ DASHBOARD_HTML = r"""
       files: [],
       folders: [],
       projectState: null,
-      filter: 'all',
-      search: '',
-      openFolders: new Set(['']),
+      filter: localStorage.getItem('admin-filter') || 'all',
+      search: localStorage.getItem('admin-search') || '',
+      openFolders: new Set(JSON.parse(localStorage.getItem('admin-open-folders') || '[""]')),
       currentFile: null,
       currentData: null,
+      loadedMeta: null,
       currentTab: 'preview',
       dirty: false,
       activity: [],
       modalOpen: false,
       modalQuestions: [],
       modalTab: 'basic',
+      syncState: 'saved',
+      syncMessage: 'Workspace ready.',
+      validation: null,
+      contextMenu: null,
+      pendingAction: null,
+      quickOpenQuery: '',
+      collapsedQuestions: new Set(),
+      recentFolders: JSON.parse(localStorage.getItem('admin-recent-folders') || '[]'),
+      recentPresets: JSON.parse(localStorage.getItem('admin-recent-presets') || '[]'),
+      wizard: null,
     };
+
+    const WIZARD_PRESETS = [
+      { key: 'blank', label: 'Blank Quiz', description: 'Start from a clean question set.', type: 'quiz', starterCount: 1, folderHint: '', bankIcon: '🗃️' },
+      { key: 'lecture', label: 'Lecture MCQ', description: 'Single lecture practice set.', type: 'quiz', starterCount: 5, defaultDescription: 'Lecture MCQs', bankIcon: '🗃️' },
+      { key: 'past-paper', label: 'Past Paper', description: 'Exam-style set for previous years.', type: 'quiz', starterCount: 10, defaultDescription: 'Past paper MCQs', bankIcon: '🗃️' },
+      { key: 'quick-review', label: 'Quick Review', description: 'Short revision-focused quiz.', type: 'quiz', starterCount: 3, defaultDescription: 'Quick review questions', bankIcon: '🗃️' },
+      { key: 'all-bank', label: 'All Bank', description: 'Large question bank with bank defaults.', type: 'bank', starterCount: 8, defaultDescription: 'All questions in one bank file', bankIcon: '🗃️' },
+    ];
 
     const FILTERS = [
       { key: 'all', label: 'All' },
@@ -937,6 +1174,23 @@ DASHBOARD_HTML = r"""
       return JSON.parse(JSON.stringify(obj));
     }
 
+    function saveUiPrefs() {
+      localStorage.setItem('admin-filter', state.filter);
+      localStorage.setItem('admin-search', state.search);
+      localStorage.setItem('admin-open-folders', JSON.stringify(Array.from(state.openFolders)));
+      localStorage.setItem('admin-recent-folders', JSON.stringify(state.recentFolders.slice(0, 8)));
+      localStorage.setItem('admin-recent-presets', JSON.stringify(state.recentPresets.slice(0, 8)));
+      if (state.currentFile) localStorage.setItem('admin-last-file', state.currentFile);
+    }
+
+    function rememberRecent(listName, value) {
+      if (!value) return;
+      const list = state[listName] || [];
+      const next = [value, ...list.filter(item => item !== value)].slice(0, 8);
+      state[listName] = next;
+      saveUiPrefs();
+    }
+
     function encodePath(path) {
       return String(path).split('/').map(encodeURIComponent).join('/');
     }
@@ -955,7 +1209,22 @@ DASHBOARD_HTML = r"""
     function setDirty(dirty) {
       state.dirty = !!dirty;
       const indicator = document.getElementById('save-indicator');
-      if (indicator) indicator.textContent = state.dirty ? 'unsaved changes' : 'ready';
+      if (indicator) indicator.textContent = state.dirty ? 'unsaved changes' : (state.syncState === 'needs-sync' ? 'saved, sync recommended' : 'ready');
+      renderStatusStrip();
+    }
+
+    function setSyncState(syncState, message = '') {
+      state.syncState = syncState;
+      state.syncMessage = message || state.syncMessage;
+      const indicator = document.getElementById('save-indicator');
+      if (indicator) {
+        if (state.dirty) indicator.textContent = 'unsaved changes';
+        else if (syncState === 'needs-sync') indicator.textContent = 'saved, sync recommended';
+        else if (syncState === 'syncing') indicator.textContent = 'syncing';
+        else if (syncState === 'sync-failed') indicator.textContent = 'sync failed';
+        else indicator.textContent = 'ready';
+      }
+      renderStatusStrip();
     }
 
     function showToast(message, tone = 'info') {
@@ -994,6 +1263,120 @@ DASHBOARD_HTML = r"""
       syncThemeButton();
     }
 
+    function slugifyClient(value, fallback = 'untitled') {
+      const slug = String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-{2,}/g, '-').replace(/^-|-$/g, '');
+      return slug || fallback;
+    }
+
+    function snakeifyClient(value, fallback = 'item') {
+      const slug = String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/_{2,}/g, '_').replace(/^_|_$/g, '');
+      return slug || fallback;
+    }
+
+    function buildDerivedUid(folder, stem) {
+      const parts = [];
+      if (folder && folder !== '.') parts.push(...String(folder).split('/').filter(Boolean));
+      parts.push(stem);
+      return snakeifyClient(parts.join('_'), 'quiz_file');
+    }
+
+    function defaultQuestion() {
+      return { question: '', options: ['', '', '', ''], correct: 0, explanation: '' };
+    }
+
+    function parseImportedQuestions(raw) {
+      const text = String(raw || '').trim();
+      if (!text) return { questions: [], issues: [] };
+      try {
+        const parsed = JSON.parse(text);
+        const list = Array.isArray(parsed) ? parsed : (parsed.questions || parsed.QUESTION_BANK || parsed.QUESTIONS || []);
+        if (Array.isArray(list)) {
+          return {
+            questions: list.map(item => ({
+              question: item.question || '',
+              options: Array.isArray(item.options) ? item.options : ['', '', '', ''],
+              correct: Number.isInteger(item.correct) ? item.correct : Number(item.correct || 0),
+              explanation: item.explanation || '',
+            })),
+            issues: [],
+          };
+        }
+      } catch (error) {
+      }
+
+      const blockMatch = text.match(/const\s+(?:QUESTION_BANK|QUESTIONS)\s*=\s*(\[[\s\S]*\]);?/);
+      if (blockMatch) {
+        return parseImportedQuestions(blockMatch[1]);
+      }
+
+      const issues = [];
+      const questions = text
+        .split(/\n\s*\n/)
+        .map(block => block.trim())
+        .filter(Boolean)
+        .map((block, index) => {
+          const lines = block.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+          const questionLine = lines.shift() || '';
+          const options = [];
+          let correct = 0;
+          let explanation = '';
+          lines.forEach(line => {
+            if (/^(answer|correct)\s*:/i.test(line)) {
+              const answerRaw = line.split(':').slice(1).join(':').trim();
+              const answerLetter = answerRaw.charAt(0).toUpperCase();
+              const fromLetter = answerLetter ? answerLetter.charCodeAt(0) - 65 : Number(answerRaw) - 1;
+              if (!Number.isNaN(fromLetter) && fromLetter >= 0) correct = fromLetter;
+              return;
+            }
+            if (/^explanation\s*:/i.test(line)) {
+              explanation = line.split(':').slice(1).join(':').trim();
+              return;
+            }
+            const optionMatch = line.match(/^(?:[-*]|\(?[A-Ha-h1-8]\)?[.)-])\s*(.+)$/);
+            if (optionMatch) {
+              options.push(optionMatch[1].trim());
+            }
+          });
+          if (!questionLine || options.length < 2) {
+            issues.push(`Block ${index + 1} could not be parsed into a full MCQ.`);
+          }
+          return {
+            question: questionLine.replace(/^\d+[\).:-]\s*/, ''),
+            options: options.length ? options : ['', '', '', ''],
+            correct,
+            explanation,
+          };
+        });
+      return { questions: questions.filter(item => item.question || item.options.some(Boolean)), issues };
+    }
+
+    function validateQuestionListClient(questions) {
+      const issues = [];
+      if (!Array.isArray(questions) || !questions.length) {
+        issues.push({ level: 'warning', message: 'No questions yet.', field: 'questions' });
+        return issues;
+      }
+      questions.forEach((question, index) => {
+        const prompt = String(question.question || '').trim();
+        const options = Array.isArray(question.options) ? question.options.map(option => String(option || '').trim()) : [];
+        const correct = Number(question.correct || 0);
+        if (!prompt) issues.push({ level: 'error', message: `Question ${index + 1} is missing its prompt.`, field: `questions.${index}.question` });
+        if (options.length < 2) issues.push({ level: 'error', message: `Question ${index + 1} needs at least 2 options.`, field: `questions.${index}.options` });
+        if (options.length >= 2 && options.some(option => !option)) issues.push({ level: 'warning', message: `Question ${index + 1} has a blank option.`, field: `questions.${index}.options` });
+        if (correct < 0 || correct >= options.length) issues.push({ level: 'error', message: `Question ${index + 1} has an invalid correct answer.`, field: `questions.${index}.correct` });
+      });
+      return issues;
+    }
+
+    function renderValidationIssues(issues, { empty = 'No validation issues right now.' } = {}) {
+      if (!issues?.length) return `<div class="muted">${escapeHtml(empty)}</div>`;
+      return `<div class="validation-list">${issues.map(issue => `
+        <div class="validation-item ${escapeHtml(issue.level || 'warning')}">
+          <strong>${escapeHtml((issue.level || 'warning').toUpperCase())}</strong> ${escapeHtml(issue.message || '')}
+        </div>
+      `).join('')}</div>`;
+    }
+
     async function fetchJson(url, options = {}) {
       const response = await fetch(url, options);
       let payload;
@@ -1003,7 +1386,9 @@ DASHBOARD_HTML = r"""
         payload = { message: 'Invalid server response' };
       }
       if (!response.ok) {
-        throw new Error(payload.message || payload.error || 'Request failed');
+        const error = new Error(payload.message || payload.error || 'Request failed');
+        error.payload = payload;
+        throw error;
       }
       return payload;
     }
@@ -1016,6 +1401,8 @@ DASHBOARD_HTML = r"""
       state.files = filePayload.files || [];
       state.folders = filePayload.folders || [];
       state.projectState = projectState;
+      const search = document.getElementById('file-search');
+      if (search && search.value !== state.search) search.value = state.search;
       renderFilters();
       renderTree();
       if (preserveCurrent && state.currentFile) {
@@ -1023,6 +1410,7 @@ DASHBOARD_HTML = r"""
         if (!stillExists) {
           state.currentFile = null;
           state.currentData = null;
+          state.loadedMeta = null;
           setDirty(false);
         }
       }
@@ -1031,7 +1419,7 @@ DASHBOARD_HTML = r"""
       } else {
         const active = state.files.find(file => file.path === state.currentFile);
         if (active) {
-          loadFile(active.path, { silent: true, keepTab: true });
+          await loadFile(active.path, { silent: true, keepTab: true, forceRefresh: true });
         } else {
           renderOverview();
         }
@@ -1051,12 +1439,14 @@ DASHBOARD_HTML = r"""
 
     function setFilter(filter) {
       state.filter = filter;
+      saveUiPrefs();
       renderFilters();
       renderTree();
     }
 
     function setSearch(value) {
       state.search = String(value || '').toLowerCase();
+      saveUiPrefs();
       renderTree();
     }
 
@@ -1122,11 +1512,14 @@ DASHBOARD_HTML = r"""
           const open = state.search ? true : state.openFolders.has(item.path);
           return `
             <li>
-              <div class="tree-row" onclick="toggleFolder('${escapeHtml(item.path)}')">
+              <div class="tree-row folder-row" onclick="toggleFolder('${escapeHtml(item.path)}')" oncontextmenu="openFolderContextMenu(event, '${escapeHtml(item.path)}')">
                 <div class="tree-icon">${open ? '📂' : '📁'}</div>
                 <div class="tree-copy">
                   <div class="tree-name">${escapeHtml(name)}</div>
                   <div class="tree-meta">${escapeHtml(item.path || 'root')}</div>
+                </div>
+                <div class="tree-actions">
+                  <button class="mini-btn tree-add-btn" onclick="openFolderQuickAdd(event, '${escapeHtml(item.path)}')" title="Add here">+</button>
                 </div>
               </div>
               <ul style="display:${open ? 'block' : 'none'}">${renderTreeLevel(item.children, item.path)}</ul>
@@ -1138,7 +1531,7 @@ DASHBOARD_HTML = r"""
         const subMeta = [file.type, file.uid || file.title || ''].filter(Boolean).join(' • ');
         return `
           <li>
-            <div class="tree-row ${active}" onclick="loadFile('${escapeHtml(file.path)}')">
+            <div class="tree-row ${active}" onclick="requestLoadFile('${escapeHtml(file.path)}')" oncontextmenu="openFileContextMenu(event, '${escapeHtml(file.path)}')">
               <div class="tree-icon">${escapeHtml(file.icon || '📄')}</div>
               <div class="tree-copy">
                 <div class="tree-name">${escapeHtml(file.name)}</div>
@@ -1154,6 +1547,103 @@ DASHBOARD_HTML = r"""
     function toggleFolder(path) {
       if (state.openFolders.has(path)) state.openFolders.delete(path);
       else state.openFolders.add(path);
+      saveUiPrefs();
+      renderTree();
+    }
+
+    function copyTextValue(value, label = 'Value') {
+      navigator.clipboard.writeText(String(value || '')).then(() => {
+        showToast(`${label} copied.`, 'success');
+      }).catch(() => {
+        showToast(`Could not copy ${label.toLowerCase()}.`, 'warn');
+      });
+    }
+
+    function closeContextMenu() {
+      state.contextMenu = null;
+      const menu = document.getElementById('context-menu');
+      if (menu) {
+        menu.classList.remove('open');
+        menu.innerHTML = '';
+      }
+    }
+
+    function openContextMenu(event, title, actions) {
+      event.preventDefault();
+      event.stopPropagation();
+      const menu = document.getElementById('context-menu');
+      if (!menu) return;
+      const validActions = (actions || []).filter(Boolean);
+      menu.innerHTML = `
+        <div class="context-menu-title">${escapeHtml(title)}</div>
+        ${validActions.map(action => action.divider ? '<div class="context-divider"></div>' : `
+          <button class="${action.danger ? 'danger' : ''}" onclick="${action.onclick}">
+            ${escapeHtml(action.label)}
+          </button>
+        `).join('')}
+      `;
+      const x = Math.min(event.clientX, window.innerWidth - 260);
+      const y = Math.min(event.clientY, window.innerHeight - 320);
+      menu.style.left = `${Math.max(10, x)}px`;
+      menu.style.top = `${Math.max(10, y)}px`;
+      menu.classList.add('open');
+      state.contextMenu = { title };
+    }
+
+    function openFolderQuickAdd(event, folderPath) {
+      event.stopPropagation();
+      openContextMenu(event, folderPath === '.' ? 'Root actions' : `${folderPath} actions`, [
+        { label: 'New Quiz Here', onclick: `closeContextMenu(); openNewFileWizard({ folder: '${escapeHtml(folderPath)}', type: 'quiz' })` },
+        { label: 'New Bank Here', onclick: `closeContextMenu(); openNewFileWizard({ folder: '${escapeHtml(folderPath)}', type: 'bank' })` },
+        { label: 'New Folder Here', onclick: `closeContextMenu(); openNewFolderModal('${escapeHtml(folderPath)}')` },
+        state.currentFile ? { label: 'Duplicate Active File Here', onclick: `closeContextMenu(); openDuplicateModal('${escapeHtml(folderPath)}')` } : null,
+      ]);
+    }
+
+    function openFolderContextMenu(event, folderPath) {
+      const isOpen = state.search ? true : state.openFolders.has(folderPath);
+      openContextMenu(event, folderPath === '.' ? 'Root folder' : folderPath, [
+        { label: 'New Quiz Here', onclick: `closeContextMenu(); openNewFileWizard({ folder: '${escapeHtml(folderPath)}', type: 'quiz' })` },
+        { label: 'New Bank Here', onclick: `closeContextMenu(); openNewFileWizard({ folder: '${escapeHtml(folderPath)}', type: 'bank' })` },
+        { label: 'New Folder Here', onclick: `closeContextMenu(); openNewFolderModal('${escapeHtml(folderPath)}')` },
+        state.currentFile ? { label: 'Duplicate Active File Here', onclick: `closeContextMenu(); openDuplicateModal('${escapeHtml(folderPath)}')` } : null,
+        { divider: true },
+        { label: isOpen ? 'Collapse Folder' : 'Expand Folder', onclick: `closeContextMenu(); toggleFolder('${escapeHtml(folderPath)}')` },
+        { label: 'Copy Folder Path', onclick: `closeContextMenu(); copyTextValue('${escapeHtml(folderPath)}', 'Folder path')` },
+      ]);
+    }
+
+    function openFileContextMenu(event, filePath) {
+      const file = state.files.find(item => item.path === filePath);
+      openContextMenu(event, file?.title || filePath, [
+        { label: 'Open', onclick: `closeContextMenu(); requestLoadFile('${escapeHtml(filePath)}')` },
+        { label: 'Preview', onclick: `closeContextMenu(); requestLoadFile('${escapeHtml(filePath)}', { tab: 'preview' })` },
+        { label: 'Open Parent Folder', onclick: `closeContextMenu(); expandFolderForFile('${escapeHtml(filePath)}')` },
+        { divider: true },
+        { label: 'Duplicate', onclick: `closeContextMenu(); openDuplicateModal('', '${escapeHtml(filePath)}')` },
+        { label: 'Move/Rename', onclick: `closeContextMenu(); requestLoadFile('${escapeHtml(filePath)}', { afterLoadAction: 'openMoveModal' })` },
+        (file?.type === 'quiz' || file?.type === 'bank') ? { label: 'Convert Quiz/Bank', onclick: `closeContextMenu(); requestLoadFile('${escapeHtml(filePath)}', { afterLoadAction: 'convertFile' })` } : null,
+        { divider: true },
+        { label: 'Copy Path', onclick: `closeContextMenu(); copyTextValue('${escapeHtml(filePath)}', 'Path')` },
+        { label: 'Delete', danger: true, onclick: `closeContextMenu(); requestLoadFile('${escapeHtml(filePath)}', { afterLoadAction: 'openDeleteModal' })` },
+      ]);
+    }
+
+    function openActiveFileContextMenu(event) {
+      if (!state.currentFile) return;
+      openFileContextMenu(event, state.currentFile);
+    }
+
+    function expandFolderForFile(filePath) {
+      const folder = filePath.includes('/') ? filePath.slice(0, filePath.lastIndexOf('/')) : '.';
+      if (folder && folder !== '.') {
+        let current = '';
+        folder.split('/').forEach(part => {
+          current = current ? `${current}/${part}` : part;
+          state.openFolders.add(current);
+        });
+      }
+      saveUiPrefs();
       renderTree();
     }
 
@@ -1193,7 +1683,8 @@ DASHBOARD_HTML = r"""
       const panel = document.getElementById('workspace-panel');
       const summary = state.projectState?.summary || {};
       const git = state.projectState?.git || {};
-      const recentFiles = state.files.slice(0, 6);
+      const builtinTools = state.projectState?.builtinTools || [];
+      const recentFiles = [...state.files].sort((a, b) => (b.modified || 0) - (a.modified || 0)).slice(0, 6);
       panel.innerHTML = `
         <div class="panel-header">
           <div>
@@ -1219,7 +1710,7 @@ DASHBOARD_HTML = r"""
             <div class="section-title">Recent Files</div>
             <div class="overview-list">
               ${recentFiles.length ? recentFiles.map(file => `
-                <a href="#" onclick="event.preventDefault(); loadFile('${escapeHtml(file.path)}')">
+                <a href="#" onclick="event.preventDefault(); requestLoadFile('${escapeHtml(file.path)}')">
                   <div class="overview-item">
                     <div class="overview-dot"></div>
                     <div>
@@ -1234,13 +1725,15 @@ DASHBOARD_HTML = r"""
           <div class="overview-card">
             <div class="section-title">Built-in Tools</div>
             <div class="overview-list">
-              <div class="overview-item">
-                <div class="overview-dot"></div>
-                <div>
-                  <strong><a href="/admin/pdf-exporter" target="_blank" rel="noopener">PDF Exporter</a></strong>
-                  <div class="muted">Generate printable PDF versions of your quizzes and banks.</div>
+              ${builtinTools.length ? builtinTools.map(tool => `
+                <div class="overview-item">
+                  <div class="overview-dot"></div>
+                  <div>
+                    <strong><a href="${escapeHtml(tool.path || '#')}" target="_blank" rel="noopener">${escapeHtml(tool.label || 'Tool')}</a></strong>
+                    <div class="muted">${escapeHtml(tool.description || '')}</div>
+                  </div>
                 </div>
-              </div>
+              `).join('') : '<div class="muted">No standalone tools available.</div>'}
             </div>
           </div>
           <div class="overview-card">
@@ -1255,20 +1748,143 @@ DASHBOARD_HTML = r"""
       `;
     }
 
-    async function loadFile(path, { silent = false, keepTab = false, tab = null } = {}) {
+    function renderStatusStrip() {
+      const host = document.getElementById('panel-status-strip');
+      if (!host) return;
+      const chips = [];
+      if (state.dirty) chips.push({ tone: 'warn', text: 'Unsaved changes' });
+      else chips.push({ tone: 'success', text: 'Saved locally' });
+      if (state.syncState === 'needs-sync') chips.push({ tone: 'warn', text: 'Sync recommended' });
+      if (state.syncState === 'syncing') chips.push({ tone: 'info', text: 'Sync running' });
+      if (state.syncState === 'sync-failed') chips.push({ tone: 'error', text: 'Sync failed' });
+      if (state.validation?.errors?.length) chips.push({ tone: 'error', text: `${state.validation.errors.length} validation error(s)` });
+      else if (state.validation?.warnings?.length) chips.push({ tone: 'warn', text: `${state.validation.warnings.length} validation warning(s)` });
+      host.innerHTML = `
+        <div class="status-strip">
+          ${chips.map(chip => `<div class="status-chip ${badgeClassForTone(chip.tone)}">${escapeHtml(chip.text)}</div>`).join('')}
+          <div class="muted" style="margin-left:auto;">${escapeHtml(state.syncMessage || 'Workspace ready.')}</div>
+        </div>
+      `;
+    }
+
+    function renderValidationPanel() {
+      const host = document.getElementById('panel-validation-host');
+      if (!host) return;
+      if (!state.validation) {
+        host.innerHTML = '';
+        return;
+      }
+      host.innerHTML = `
+        <div class="validation-strip">
+          <strong>Validation</strong>
+          ${renderValidationIssues([...(state.validation.errors || []), ...(state.validation.warnings || [])], { empty: 'No validation issues.' })}
+        </div>
+      `;
+    }
+
+    async function validateCurrentFile({ silent = true } = {}) {
+      if (!state.currentFile || !state.currentData) return null;
+      const payload = {
+        path: state.currentFile,
+        content: state.currentData.content,
+        original_uid: state.loadedMeta?.uid || '',
+      };
+      const result = await fetchJson('/admin/validate-file', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      state.validation = result.validation;
+      if (!silent) {
+        const tone = result.ok ? 'success' : 'warn';
+        showToast(result.message || 'Validation complete.', tone);
+      }
+      renderStatusStrip();
+      renderValidationPanel();
+      return result.validation;
+    }
+
+    function runNamedAction(actionName) {
+      if (actionName && typeof window[actionName] === 'function') {
+        window[actionName]();
+      }
+    }
+
+    function openUnsavedChangesModal(nextAction) {
+      state.pendingAction = nextAction;
+      openModal({
+        title: 'Unsaved Changes',
+        subtitle: 'Choose what to do before leaving this file.',
+        body: `
+          <div class="empty-state" style="text-align:left;">
+            This file has unsaved changes. You can save now, discard the edits, or stay on the current file.
+          </div>
+          <div class="modal-actions">
+            <button class="btn" onclick="closeModal(); state.pendingAction = null;">Cancel</button>
+            <button class="btn" onclick="discardPendingChanges()">Discard</button>
+            <button class="btn btn-primary" onclick="saveAndContinuePending()">Save</button>
+          </div>
+        `,
+      });
+    }
+
+    async function saveAndContinuePending() {
+      closeModal();
+      const saved = await saveFile({ quiet: true });
+      if (saved && typeof state.pendingAction === 'function') {
+        const next = state.pendingAction;
+        state.pendingAction = null;
+        await next();
+      }
+    }
+
+    function discardPendingChanges() {
+      closeModal();
+      setDirty(false);
+      if (typeof state.pendingAction === 'function') {
+        const next = state.pendingAction;
+        state.pendingAction = null;
+        next();
+      }
+    }
+
+    async function requestLoadFile(path, options = {}) {
+      const { afterLoadAction = '', ...loadOptions } = options || {};
       if (state.dirty && path !== state.currentFile) {
-        const proceed = window.confirm('You have unsaved changes. Open another file anyway?');
-        if (!proceed) return;
+        openUnsavedChangesModal(async () => {
+          await loadFile(path, loadOptions);
+          runNamedAction(afterLoadAction);
+        });
+        return;
+      }
+      const result = await loadFile(path, loadOptions);
+      runNamedAction(afterLoadAction);
+      return result;
+    }
+
+    async function loadFile(path, { silent = false, keepTab = false, tab = null, forceRefresh = false } = {}) {
+      if (!forceRefresh && state.currentFile === path && state.currentData) {
+        if (!keepTab) state.currentTab = tab || 'preview';
+        else if (tab) state.currentTab = tab;
+        renderFilePanel();
+        return state.currentData;
       }
       const data = await fetchJson(`/admin/load-file?path=${encodeURIComponent(path)}`);
       state.currentFile = path;
       state.currentData = data;
-      if (!keepTab) state.currentTab = 'preview';
+      state.loadedMeta = clone(data.meta || {});
+      state.validation = null;
+      rememberRecent('recentFolders', path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '.');
+      expandFolderForFile(path);
+      saveUiPrefs();
+      if (!keepTab) state.currentTab = tab || 'preview';
       else if (tab) state.currentTab = tab;
       setDirty(false);
+      setSyncState('saved', `Loaded ${path}`);
       renderFilePanel();
       renderTree();
       if (!silent) logActivity('Loaded file', path, 'info');
+      return data;
     }
 
     function renderFilePanel() {
@@ -1278,13 +1894,20 @@ DASHBOARD_HTML = r"""
         return;
       }
       const meta = state.currentData.meta || {};
-      const livePreviewPath = `/admin/preview/${encodePath(state.currentFile)}`;
       const previewUrl = `/admin/preview/${encodePath(state.currentFile)}?v=${Date.now()}`;
       const canStructuredEdit = ['quiz', 'bank', 'index'].includes(meta.type);
 
       let content = '';
       if (state.currentTab === 'preview') {
-        content = `<iframe class="preview-frame" src="${previewUrl}" style="flex: 1; min-height: 0;" title="Preview"></iframe>`;
+        content = `
+          <div class="preview-toolbar">
+            <button class="mini-btn" onclick="renderFilePanel()">Reload Preview</button>
+            <a class="mini-btn" href="/admin/preview/${encodePath(state.currentFile)}" target="_blank" rel="noopener">Open in New Tab</a>
+            <a class="mini-btn" href="/${encodePath(state.currentFile)}" target="_blank" rel="noopener">Open Real File</a>
+            ${state.currentFile.includes('/') ? `<a class="mini-btn" href="/${encodePath(state.currentFile.slice(0, state.currentFile.lastIndexOf('/')) + '/index.html')}" target="_blank" rel="noopener">Open Parent Index</a>` : ''}
+          </div>
+          <iframe class="preview-frame" src="${previewUrl}" style="flex: 1; min-height: 0;" title="Preview"></iframe>
+        `;
       } else if (state.currentTab === 'editor' && canStructuredEdit) {
         content = renderStructuredEditor(meta);
       } else if (state.currentTab === 'metadata') {
@@ -1295,28 +1918,37 @@ DASHBOARD_HTML = r"""
 
       panel.innerHTML = `
         <div class="panel-header">
-          <div>
+          <div class="panel-header-main" oncontextmenu="openActiveFileContextMenu(event)">
             <div class="panel-title">${meta.title || meta.filename || 'New File'}</div>
             <div class="panel-path">${escapeHtml(state.currentFile)}</div>
           </div>
           <div class="panel-actions">
-            <button class="btn btn-primary" onclick="saveFile()">Save Changes</button>
+            <button class="btn" onclick="validateCurrentFile({ silent: false })">Validate</button>
+            <button class="btn btn-primary" onclick="saveFile()">Save</button>
+            <button class="btn" onclick="saveAndSync()">Save + Sync</button>
+            <button class="btn" onclick="runSync()">Sync Only</button>
+            <button class="btn" onclick="openDuplicateModal()">Duplicate</button>
             <button class="btn" onclick="openMoveModal()">Move/Rename</button>
             <button class="btn delete" onclick="openDeleteModal()">Delete</button>
           </div>
         </div>
 
+        <div id="panel-status-strip"></div>
+        <div id="panel-validation-host"></div>
+
         <div class="tab-row">
-          <button class="tab-btn ${state.currentTab === 'preview' ? 'active' : ''}" onclick="loadFile(state.currentFile, { keepTab: true, tab: 'preview' })">Preview</button>
-          <button class="tab-btn ${state.currentTab === 'editor' ? 'active' : ''}" onclick="loadFile(state.currentFile, { keepTab: true, tab: 'editor' })">Editor</button>
-          <button class="tab-btn ${state.currentTab === 'metadata' ? 'active' : ''}" onclick="loadFile(state.currentFile, { keepTab: true, tab: 'metadata' })">Metadata</button>
-          <button class="tab-btn ${state.currentTab === 'raw' ? 'active' : ''}" onclick="loadFile(state.currentFile, { keepTab: true, tab: 'raw' })">Raw HTML</button>
+          <button class="tab-btn ${state.currentTab === 'preview' ? 'active' : ''}" onclick="setTab('preview')">Preview</button>
+          <button class="tab-btn ${state.currentTab === 'editor' ? 'active' : ''}" onclick="setTab('editor')">Editor</button>
+          <button class="tab-btn ${state.currentTab === 'metadata' ? 'active' : ''}" onclick="setTab('metadata')">Metadata</button>
+          <button class="tab-btn ${state.currentTab === 'raw' ? 'active' : ''}" onclick="setTab('raw')">Raw HTML</button>
         </div>
 
         <div class="panel-body" style="flex: 1; overflow: auto; min-height: 0; margin-top: 1rem; display: flex; flex-direction: column;">
           ${content}
         </div>
       `;
+      renderStatusStrip();
+      renderValidationPanel();
     }
 
     function renderMetaCard(label, value) {
@@ -1374,6 +2006,13 @@ DASHBOARD_HTML = r"""
             ${renderMetaCard('Engine', isBank ? 'bank-engine.js' : 'quiz-engine.js')}
             ${renderMetaCard('Preview', 'Saved file output')}
           </div>
+          <div class="editor-toolbar">
+            <div class="muted">Collapse large banks to scan and reorder them faster.</div>
+            <div class="editor-toolbar-actions">
+              <button class="mini-btn" onclick="collapseAllQuestions()">Collapse All</button>
+              <button class="mini-btn" onclick="expandAllQuestions()">Expand All</button>
+            </div>
+          </div>
           <div class="editor-list">
             ${questions.map((question, index) => renderQuestionCard(question, index)).join('')}
           </div>
@@ -1384,37 +2023,45 @@ DASHBOARD_HTML = r"""
 
     function renderQuestionCard(question, index) {
       const options = question.options || ['', '', '', ''];
+      const collapsed = state.collapsedQuestions.has(index);
+      const summary = `${(question.question || 'Untitled question').slice(0, 90)}${(question.question || '').length > 90 ? '…' : ''}`;
       return `
-        <div class="editor-card">
+        <div class="editor-card ${collapsed ? 'collapsed' : ''}">
           <div class="editor-card-header">
-            <div class="editor-card-title">Question ${index + 1}</div>
+            <div>
+              <div class="editor-card-title">Question ${index + 1}</div>
+              <div class="editor-summary">${escapeHtml(summary)}</div>
+            </div>
             <div class="mini-actions">
+              <button class="mini-btn" onclick="toggleQuestionCollapse(${index})">${collapsed ? 'Expand' : 'Collapse'}</button>
               <button class="mini-btn" onclick="moveQuestion(${index}, -1)" ${index === 0 ? 'disabled' : ''}>Up</button>
               <button class="mini-btn" onclick="moveQuestion(${index}, 1)" ${index === (state.currentData.meta.questions || []).length - 1 ? 'disabled' : ''}>Down</button>
               <button class="mini-btn" onclick="duplicateQuestion(${index})">Duplicate</button>
               <button class="mini-btn delete" onclick="removeQuestion(${index})">Remove Q</button>
             </div>
           </div>
-          <div class="field">
-            <label>Question</label>
-            <textarea class="text-area q-question" data-index="${index}" oninput="syncQuizBankEditor()">${escapeHtml(question.question || '')}</textarea>
-          </div>
-          <div class="field">
-            <label>Options</label>
-            <div class="option-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-              ${options.map((option, optionIndex) => `
-                <div class="option-row" style="display: flex; align-items: center; gap: 0.4rem;">
-                  <input type="radio" name="correct-${index}" value="${optionIndex}" ${question.correct === optionIndex ? 'checked' : ''} onchange="syncQuizBankEditor()">
-                  <input class="text-input q-option" data-index="${index}" data-option="${optionIndex}" value="${escapeHtml(option)}" oninput="syncQuizBankEditor()" placeholder="Option ${String.fromCharCode(65 + optionIndex)}" style="flex:1;">
-                  ${options.length > 2 ? `<button class="mini-btn delete" onclick="removeOption(${index}, ${optionIndex})" title="Remove Option">×</button>` : ''}
-                </div>
-              `).join('')}
-              <button class="mini-btn" onclick="addOption(${index})" style="grid-column: span 2; border-style: dashed; margin-top: 0.25rem;">+ Add Option</button>
+          <div class="editor-card-body">
+            <div class="field">
+              <label>Question</label>
+              <textarea class="text-area q-question" data-index="${index}" oninput="syncQuizBankEditor()">${escapeHtml(question.question || '')}</textarea>
             </div>
-          </div>
-          <div class="field">
-            <label>Explanation</label>
-            <textarea class="text-area q-explanation" data-index="${index}" oninput="syncQuizBankEditor()">${escapeHtml(question.explanation || '')}</textarea>
+            <div class="field">
+              <label>Options</label>
+              <div class="option-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                ${options.map((option, optionIndex) => `
+                  <div class="option-row" style="display: flex; align-items: center; gap: 0.4rem;">
+                    <input type="radio" name="correct-${index}" value="${optionIndex}" ${question.correct === optionIndex ? 'checked' : ''} onchange="syncQuizBankEditor()">
+                    <input class="text-input q-option" data-index="${index}" data-option="${optionIndex}" value="${escapeHtml(option)}" oninput="syncQuizBankEditor()" placeholder="Option ${String.fromCharCode(65 + optionIndex)}" style="flex:1;">
+                    ${options.length > 2 ? `<button class="mini-btn delete" onclick="removeOption(${index}, ${optionIndex})" title="Remove Option">×</button>` : ''}
+                  </div>
+                `).join('')}
+                <button class="mini-btn" onclick="addOption(${index})" style="grid-column: span 2; border-style: dashed; margin-top: 0.25rem;">+ Add Option</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>Explanation</label>
+              <textarea class="text-area q-explanation" data-index="${index}" oninput="syncQuizBankEditor()">${escapeHtml(question.explanation || '')}</textarea>
+            </div>
           </div>
         </div>
       `;
@@ -1489,6 +2136,8 @@ DASHBOARD_HTML = r"""
       if (!state.currentData) return;
       state.currentData.content = document.getElementById('raw-html').value;
       setDirty(true);
+      setSyncState('needs-sync', 'Raw HTML changed. Save and sync when ready.');
+      scheduleValidation();
     }
 
     function replaceAssignedBlock(html, constName, openChar, closeChar, value) {
@@ -1520,6 +2169,17 @@ DASHBOARD_HTML = r"""
       if (raw) raw.value = state.currentData.content;
       if (metadataPanel) metadataPanel.value = JSON.stringify(state.currentData.meta, null, 2);
       setDirty(true);
+      setSyncState('needs-sync', 'Local edits updated. Save when ready, then run sync for generated assets.');
+      scheduleValidation();
+    }
+
+    function scheduleValidation() {
+      window.clearTimeout(state.validationTimer);
+      state.validationTimer = window.setTimeout(() => {
+        if (state.currentFile && state.currentData) {
+          validateCurrentFile({ silent: true }).catch(() => {});
+        }
+      }, 350);
     }
 
     function syncQuizBankEditor() {
@@ -1598,6 +2258,26 @@ DASHBOARD_HTML = r"""
       }
       state.currentData.content = updated;
       updateRawAndMeta();
+    }
+
+    function toggleQuestionCollapse(index) {
+      if (state.collapsedQuestions.has(index)) state.collapsedQuestions.delete(index);
+      else state.collapsedQuestions.add(index);
+      renderFilePanel();
+      setTab('editor');
+    }
+
+    function collapseAllQuestions() {
+      const count = state.currentData?.meta?.questions?.length || 0;
+      state.collapsedQuestions = new Set(Array.from({ length: count }, (_value, index) => index));
+      renderFilePanel();
+      setTab('editor');
+    }
+
+    function expandAllQuestions() {
+      state.collapsedQuestions = new Set();
+      renderFilePanel();
+      setTab('editor');
     }
 
     function moveQuestion(index, delta) {
@@ -1697,41 +2377,100 @@ DASHBOARD_HTML = r"""
       syncIndexEditor();
     }
 
-    async function saveFile() {
+    async function saveFile({ quiet = false, confirmUidChange = false } = {}) {
       if (!state.currentFile || !state.currentData) {
         showToast('No file is loaded.', 'warn');
-        return;
+        return false;
       }
       const raw = document.getElementById('raw-html');
       const content = raw ? raw.value : state.currentData.content;
-      const result = await fetchJson('/admin/save-file', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: state.currentFile, content }),
-      });
-      state.currentData.content = content;
-      setDirty(false);
-      showToast(result.message || 'File saved.', 'success');
-      logActivity('Saved file', state.currentFile, 'success');
-      await runSync({ silentToast: true, preserveCurrent: true });
+      try {
+        const result = await fetchJson('/admin/save-file', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: state.currentFile, content, confirm_uid_change: confirmUidChange }),
+        });
+        state.currentData.content = content;
+        setDirty(false);
+        setSyncState('needs-sync', 'File saved locally. Run sync to refresh generated indexes and assets.');
+        if (!quiet) showToast(result.message || 'File saved.', 'success');
+        logActivity('Saved file', state.currentFile, 'success');
+        const validation = await validateCurrentFile({ silent: true });
+        if (validation?.meta) {
+          state.currentData.meta = clone(validation.meta);
+          state.loadedMeta = clone(validation.meta);
+        }
+        return true;
+      } catch (error) {
+        if (error.payload?.validation) {
+          state.validation = error.payload.validation;
+          renderFilePanel();
+        }
+        if (String(error.message || '').includes('UID change requires confirmation') && !confirmUidChange) {
+          openModal({
+            title: 'Confirm UID Change',
+            subtitle: 'Changing a deployed UID can orphan learner progress and tracker history.',
+            body: `
+              <div class="empty-state" style="text-align:left;">
+                Save this file anyway with the new UID?
+              </div>
+              <div class="modal-actions">
+                <button class="btn" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="closeModal(); saveFile({ confirmUidChange: true })">Save with New UID</button>
+              </div>
+            `,
+          });
+          return false;
+        }
+        showToast(error.message || 'Save failed.', 'error');
+        return false;
+      }
     }
 
     async function runSync({ silentToast = false, preserveCurrent = true } = {}) {
+      if (state.dirty) {
+        showToast('Save the current file before running sync.', 'warn');
+        return false;
+      }
+      setSyncState('syncing', 'Running sync script...');
       const result = await fetchJson('/admin/run-sync', { method: 'POST' });
+      setSyncState(result.returncode === 0 ? 'saved' : 'sync-failed', result.message || 'Sync completed.');
       if (!silentToast) showToast(result.message || 'Sync completed.', result.returncode === 0 ? 'success' : 'warn');
       logActivity('Sync completed', result.output || result.stderr || 'No output.', result.returncode === 0 ? 'success' : 'warn');
       await refreshWorkspace({ preserveCurrent });
+      return result.returncode === 0;
+    }
+
+    async function saveAndSync() {
+      const saved = await saveFile();
+      if (!saved) return;
+      await runSync({ preserveCurrent: true });
     }
 
     async function convertFile() {
       if (!state.currentFile) return;
-      const confirmMessage = 'Convert this file while keeping its UID and questions?';
-      if (!window.confirm(confirmMessage)) return;
+      openModal({
+        title: 'Convert Quiz / Bank',
+        subtitle: 'This keeps the UID and existing questions while swapping the engine type.',
+        body: `
+          <div class="empty-state" style="text-align:left;">
+            Convert <strong>${escapeHtml(state.currentFile)}</strong> now?
+          </div>
+          <div class="modal-actions">
+            <button class="btn" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="confirmConvertFile()">Convert</button>
+          </div>
+        `,
+      });
+    }
+
+    async function confirmConvertFile() {
       const result = await fetchJson('/admin/convert-file', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ path: state.currentFile }),
       });
+      closeModal();
       showToast(result.message || 'File converted.', 'success');
       logActivity('Converted file', `${state.currentFile}\n${result.message || ''}`, 'success');
       await runSync({ silentToast: true, preserveCurrent: true });
@@ -1750,6 +2489,7 @@ DASHBOARD_HTML = r"""
       state.modalOpen = false;
       document.getElementById('modal').classList.remove('open');
       document.getElementById('modal-body').innerHTML = '';
+      state.modalTab = '';
     }
     
     function openPdfModal(url) {
@@ -1780,10 +2520,10 @@ DASHBOARD_HTML = r"""
         subtitle: 'Choose what you want to add to the project.',
         body: `
           <div style="display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
-            <button class="meta-card" onclick="closeModal(); openNewFileModal()" style="text-align: left; cursor: pointer; border: 1px solid var(--border); background: var(--surface2); color: var(--text); transition: 0.2s;">
+            <button class="meta-card" onclick="closeModal(); openNewFileWizard()" style="text-align: left; cursor: pointer; border: 1px solid var(--border); background: var(--surface2); color: var(--text); transition: 0.2s;">
               <div class="meta-label">New Content</div>
               <div class="meta-value" style="font-size: 1.1rem; color: var(--accent);">Quiz or Bank</div>
-              <div class="muted" style="font-size: 0.82rem; margin-top: 0.4rem; line-height: 1.4;">Structured MCQ content with stable UIDs and automatic parent hub indexing.</div>
+              <div class="muted" style="font-size: 0.82rem; margin-top: 0.4rem; line-height: 1.4;">Preset-driven creation, import helpers, clone support, and faster folder-aware output.</div>
             </button>
             <button class="meta-card" onclick="closeModal(); openNewFolderModal()" style="text-align: left; cursor: pointer; border: 1px solid var(--border); background: var(--surface2); color: var(--text); transition: 0.2s;">
               <div class="meta-label">New Structure</div>
@@ -1792,15 +2532,18 @@ DASHBOARD_HTML = r"""
             </button>
           </div>
           <div class="modal-actions" style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;">
-             <a class="btn" href="/admin/pdf-exporter" target="_blank" rel="noopener" onclick="closeModal()">Open Standalone PDF Exporter</a>
+             <a class="btn" href="/quiz-editor.html" target="_blank" rel="noopener" onclick="closeModal()">Open Quiz Editor</a>
+             <a class="btn" href="/index-editor.html" target="_blank" rel="noopener" onclick="closeModal()">Open Index Editor</a>
+             <a class="btn" href="/pdf-exporter.html" target="_blank" rel="noopener" onclick="closeModal()">Open PDF Exporter</a>
              <button class="btn" onclick="closeModal()">Cancel</button>
           </div>
         `
       });
     }
 
-    function openNewFolderModal() {
+    function openNewFolderModal(parentFolder = '.') {
       const folderDatalist = (state.folders || []).map(f => `<option value="${escapeHtml(f)}">`).join('');
+      const defaultPath = parentFolder && parentFolder !== '.' ? `${parentFolder}/` : '';
       openModal({
         title: 'Create Folder',
         subtitle: 'Creates the folder and a matching hub index page with correct root asset prefixes.',
@@ -1808,7 +2551,7 @@ DASHBOARD_HTML = r"""
           <div class="field-grid">
             <div class="field full">
               <label>Folder Path</label>
-              <input class="text-input" id="folder-path" list="folder-suggestions" placeholder="gyn/new-topic">
+              <input class="text-input" id="folder-path" list="folder-suggestions" placeholder="gyn/new-topic" value="${escapeHtml(defaultPath)}">
               <datalist id="folder-suggestions">
                 ${folderDatalist}
               </datalist>
@@ -1830,96 +2573,199 @@ DASHBOARD_HTML = r"""
       });
     }
 
-    function openNewFileModal() {
-      state.modalQuestions = [{ question: '', options: ['', '', '', ''], correct: 0, explanation: '' }];
-      state.modalTab = 'basic';
+    function getPresetByKey(key) {
+      return WIZARD_PRESETS.find(preset => preset.key === key) || WIZARD_PRESETS[0];
+    }
+
+    function buildStarterQuestions(count) {
+      return Array.from({ length: Math.max(1, count || 1) }, () => defaultQuestion());
+    }
+
+    function collectWizardState() {
+      const previous = state.wizard || {};
+      return {
+        type: document.getElementById('file-type')?.value || previous.type || 'quiz',
+        folder: document.getElementById('file-folder')?.value || previous.folder || '.',
+        title: document.getElementById('file-title')?.value || previous.title || '',
+        description: document.getElementById('file-description')?.value || previous.description || '',
+        filename: document.getElementById('file-name')?.value || previous.filename || '',
+        icon: document.getElementById('file-icon')?.value || previous.icon || '🗃️',
+        presetKey: document.getElementById('file-preset')?.value || previous.presetKey || 'lecture',
+        sourceMode: document.getElementById('file-source-mode')?.value || previous.sourceMode || 'manual',
+        sourceRaw: document.getElementById('file-import-raw')?.value || previous.sourceRaw || '',
+        clonePath: document.getElementById('file-clone-path')?.value || previous.clonePath || '',
+      };
+    }
+
+    function renderWizardSummaryBox(wizard) {
+      const stemBase = slugifyClient(wizard.filename || wizard.title, 'untitled');
+      const stem = wizard.type === 'bank' && !wizard.filename && !stemBase.startsWith('all-') ? `all-${stemBase}` : stemBase;
+      const uid = buildDerivedUid(wizard.folder, stem);
+      const issues = [];
+      if (!wizard.title.trim()) issues.push({ level: 'error', message: 'Title is required before create.' });
+      issues.push(...validateQuestionListClient(state.modalQuestions));
+      return `
+        <div class="wizard-summary">
+          <div class="wizard-step-title">Live Summary</div>
+          ${renderMetaCard('Target Folder', wizard.folder || '.')}
+          ${renderMetaCard('Filename', `${stem}.html`)}
+          ${renderMetaCard('Derived UID', uid)}
+          ${renderMetaCard('Questions', state.modalQuestions.length)}
+          ${renderMetaCard('Source', wizard.sourceMode)}
+          <div class="validation-strip" style="margin-top:0.75rem; margin-bottom:0;">
+            <strong>Preflight</strong>
+            ${renderValidationIssues(issues, { empty: 'Ready to create.' })}
+          </div>
+        </div>
+      `;
+    }
+
+    function syncWizardSummary() {
+      state.wizard = collectWizardState();
+      const host = document.getElementById('wizard-summary');
+      if (host) host.innerHTML = renderWizardSummaryBox(state.wizard);
+    }
+
+    function openNewFileWizard(options = {}) {
+      const previous = state.wizard || {};
+      const type = options.type || previous.type || 'quiz';
+      const presetKey = previous.presetKey || (type === 'bank' ? 'all-bank' : (state.recentPresets[0] || 'lecture'));
+      state.wizard = {
+        folder: Object.prototype.hasOwnProperty.call(options, 'folder') ? options.folder : (previous.folder || state.recentFolders[0] || '.'),
+        type,
+        title: previous.title || '',
+        description: previous.description || '',
+        filename: previous.filename || '',
+        icon: previous.icon || '🗃️',
+        presetKey,
+        sourceMode: previous.sourceMode || 'manual',
+        sourceRaw: previous.sourceRaw || '',
+        clonePath: previous.clonePath || '',
+      };
+      if (!state.modalOpen || !state.modalQuestions.length) {
+        state.modalQuestions = buildStarterQuestions(getPresetByKey(presetKey).starterCount);
+      }
+      if (!state.modalTab || state.modalTab === 'basic') state.modalTab = 'setup';
       renderNewFileModal();
     }
 
     function renderNewFileModal() {
-      const isBank = document.getElementById('file-type')?.value === 'bank';
+      const wizard = collectWizardState();
+      state.wizard = wizard;
+      const isBank = wizard.type === 'bank';
+      const preset = getPresetByKey(wizard.presetKey);
+      const cloneOptions = state.files
+        .filter(file => file.type === 'quiz' || file.type === 'bank')
+        .map(file => `<option value="${escapeHtml(file.path)}" ${file.path === wizard.clonePath ? 'selected' : ''}>${escapeHtml(file.title)} (${escapeHtml(file.path)})</option>`)
+        .join('');
       const body = `
-        <div class="tab-row" style="margin-bottom: 1.5rem;">
-          <button class="tab-btn ${state.modalTab === 'basic' ? 'active' : ''}" onclick="setModalTab('basic')">1. Basic Info</button>
-          <button class="tab-btn ${state.modalTab === 'questions' ? 'active' : ''}" onclick="setModalTab('questions')">2. Questions</button>
-        </div>
-
-        <div class="modal-tab-content ${state.modalTab === 'basic' ? 'active' : ''}" id="modal-tab-basic">
-          <div class="field-grid">
-            <div class="field">
-              <label>Type</label>
-              <select class="select-input" id="file-type" onchange="onFileTypeChange()">
-                <option value="quiz" ${document.getElementById('file-type')?.value === 'quiz' ? 'selected' : ''}>Quiz</option>
-                <option value="bank" ${document.getElementById('file-type')?.value === 'bank' ? 'selected' : ''}>Question Bank</option>
-              </select>
+        <div>
+            <div class="tab-row" style="margin-bottom: 1.5rem;">
+              <button class="tab-btn ${state.modalTab === 'setup' ? 'active' : ''}" onclick="setModalTab('setup')">1. Setup</button>
+              <button class="tab-btn ${state.modalTab === 'source' ? 'active' : ''}" onclick="setModalTab('source')">2. Source</button>
+              <button class="tab-btn ${state.modalTab === 'questions' ? 'active' : ''}" onclick="setModalTab('questions')">3. Builder</button>
             </div>
-            <div class="field">
-              <label>Folder</label>
-              <select class="select-input" id="file-folder">${folderOptions(document.getElementById('file-folder')?.value || '.') }</select>
+            <div class="modal-tab-content ${state.modalTab === 'setup' ? 'active' : ''}">
+              <div class="field-grid">
+                <div class="field">
+                  <label>Starter Preset</label>
+                  <select class="select-input" id="file-preset" onchange="setWizardPreset(this.value)">
+                    ${WIZARD_PRESETS.map(item => `<option value="${escapeHtml(item.key)}" ${item.key === wizard.presetKey ? 'selected' : ''}>${escapeHtml(item.label)}</option>`).join('')}
+                  </select>
+                </div>
+                <div class="field">
+                  <label>Type</label>
+                  <select class="select-input" id="file-type" onchange="onFileTypeChange(); syncWizardSummary()">
+                    <option value="quiz" ${wizard.type === 'quiz' ? 'selected' : ''}>Quiz</option>
+                    <option value="bank" ${wizard.type === 'bank' ? 'selected' : ''}>Question Bank</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>Folder</label>
+                  <select class="select-input" id="file-folder" onchange="syncWizardSummary()">${folderOptions(wizard.folder)}</select>
+                </div>
+                <div class="field full">
+                  <label>Title</label>
+                  <input class="text-input" id="file-title" value="${escapeHtml(wizard.title)}" placeholder="L1 Anatomy" oninput="syncWizardSummary()">
+                </div>
+                <div class="field full">
+                  <label>Description</label>
+                  <textarea class="text-area" id="file-description" placeholder="${escapeHtml(preset.defaultDescription || 'Short start-screen description')}" oninput="syncWizardSummary()">${escapeHtml(wizard.description)}</textarea>
+                </div>
+                <div class="field">
+                  <label>Filename Override</label>
+                  <input class="text-input" id="file-name" value="${escapeHtml(wizard.filename)}" placeholder="Optional: l1-anatomy" oninput="syncWizardSummary()">
+                </div>
+                <div class="field" id="bank-icon-wrap" style="display:${isBank ? 'grid' : 'none'};">
+                  <label>Bank Icon</label>
+                  <input class="text-input" id="file-icon" value="${escapeHtml(wizard.icon || preset.bankIcon || '🗃️')}" oninput="syncWizardSummary()">
+                </div>
+              </div>
+              <div class="modal-actions">
+                <button class="btn btn-primary" onclick="setModalTab('source')">Next: Source →</button>
+              </div>
             </div>
-            <div class="field full">
-              <label>Title</label>
-              <input class="text-input" id="file-title" value="${escapeHtml(document.getElementById('file-title')?.value || '')}" placeholder="L1 Anatomy">
+            <div class="modal-tab-content ${state.modalTab === 'source' ? 'active' : ''}">
+              <div class="field">
+                <label>Question Source</label>
+                <select class="select-input" id="file-source-mode" onchange="state.wizard = collectWizardState(); renderNewFileModal()">
+                  <option value="manual" ${wizard.sourceMode === 'manual' ? 'selected' : ''}>Manual Builder</option>
+                  <option value="json" ${wizard.sourceMode === 'json' ? 'selected' : ''}>Paste JSON</option>
+                  <option value="text" ${wizard.sourceMode === 'text' ? 'selected' : ''}>Paste MCQ Text</option>
+                  <option value="clone" ${wizard.sourceMode === 'clone' ? 'selected' : ''}>Clone Existing Quiz/Bank</option>
+                </select>
+              </div>
+              ${wizard.sourceMode === 'clone' ? `
+                <div class="field" style="margin-top:1rem;">
+                  <label>Clone From</label>
+                  <select class="select-input" id="file-clone-path">
+                    <option value="">Choose a source file...</option>
+                    ${cloneOptions}
+                  </select>
+                  <div class="modal-actions">
+                    <button class="btn" onclick="applyCloneSource()">Load Questions</button>
+                  </div>
+                </div>
+              ` : wizard.sourceMode === 'manual' ? `
+                <div class="empty-state" style="margin-top:1rem; text-align:left;">Use the next step to edit the visual builder directly.</div>
+              ` : `
+                <div class="field" style="margin-top:1rem;">
+                  <label>${wizard.sourceMode === 'json' ? 'Paste JSON or QUESTIONS block' : 'Paste plain MCQ text'}</label>
+                  <textarea class="text-area code" id="file-import-raw" style="height: 220px;" oninput="syncWizardSummary()" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="onModalJsonDrop(event)">${escapeHtml(wizard.sourceRaw || '')}</textarea>
+                  <div class="modal-actions">
+                    <button class="btn" onclick="applyWizardImport()">Import Into Builder</button>
+                  </div>
+                </div>
+              `}
+              <div class="modal-actions" style="margin-top:2rem; border-top: 1px solid var(--border); padding-top: 1.5rem;">
+                <button class="btn" onclick="setModalTab('setup')">← Back</button>
+                <button class="btn btn-primary" onclick="setModalTab('questions')">Next: Builder →</button>
+              </div>
             </div>
-            <div class="field full">
-              <label>Description</label>
-              <textarea class="text-area" id="file-description" placeholder="Short start-screen description">${escapeHtml(document.getElementById('file-description')?.value || '')}</textarea>
+            <div class="modal-tab-content ${state.modalTab === 'questions' ? 'active' : ''}">
+              <div class="editor-list" id="modal-question-list" style="max-height: 420px; overflow-y: auto; margin-bottom: 1rem; border: 1px solid var(--border); padding: 0.5rem; border-radius: 8px;">
+                ${renderModalQuestionList()}
+              </div>
+              <div class="modal-actions" style="margin-top:2rem; border-top: 1px solid var(--border); padding-top: 1.5rem;">
+                <button class="btn" onclick="setModalTab('source')">← Back</button>
+                <button class="btn" onclick="addModalQuestion()">Add Question</button>
+                <button class="btn" onclick="createFile('keep')">Create and Keep Adding</button>
+                <button class="btn btn-primary" onclick="createFile('open')">Create and Open</button>
+              </div>
             </div>
-            <div class="field">
-              <label>Filename Override</label>
-              <input class="text-input" id="file-name" value="${escapeHtml(document.getElementById('file-name')?.value || '')}" placeholder="Optional: l1-anatomy">
-              <small>Leave blank to derive from title.</small>
-            </div>
-            <div class="field" id="bank-icon-wrap" style="display:${document.getElementById('file-type')?.value === 'bank' ? 'grid' : 'none'};">
-              <label>Bank Icon</label>
-              <input class="text-input" id="file-icon" value="${escapeHtml(document.getElementById('file-icon')?.value || '🗃️')}">
-            </div>
-          </div>
-          <div class="modal-actions" style="margin-top:2rem;">
-            <button class="btn btn-primary" onclick="setModalTab('questions')">Next: Setup Questions →</button>
-          </div>
-        </div>
-
-        <div class="modal-tab-content ${state.modalTab === 'questions' ? 'active' : ''}" id="modal-tab-questions">
-          <div class="section-title">Question Source</div>
-          <div class="field-grid" style="margin-bottom: 1rem;">
-             <div class="field full">
-               <label>Import from JSON (Optional)</label>
-               <textarea class="text-area code" id="file-import-json" style="height: 120px;" 
-                 placeholder='Paste a JSON array or drop a .json file here...' 
-                 oninput="onModalJsonInput()" 
-                 ondragover="event.preventDefault(); this.classList.add('dragover')" 
-                 ondragleave="this.classList.remove('dragover')" 
-                 ondrop="onModalJsonDrop(event)"></textarea>
-               <small>Pasting or dropping valid JSON will overwrite the visual list below.</small>
-             </div>
-          </div>
-
-          <div class="section-title">Visual Builder</div>
-          <div class="editor-list" id="modal-question-list" style="max-height: 400px; overflow-y: auto; margin-bottom: 1rem; border: 1px solid var(--border); padding: 0.5rem; border-radius: 8px;">
-            ${renderModalQuestionList()}
-          </div>
-          <button class="btn" onclick="addModalQuestion()">Add Question</button>
-
-          <div class="modal-actions" style="margin-top:2rem; border-top: 1px solid var(--border); padding-top: 1.5rem;">
-            <button class="btn" onclick="setModalTab('basic')">← Back</button>
-            <button class="btn btn-primary" onclick="createFile()">Create File with ${state.modalQuestions.length} Questions</button>
-          </div>
         </div>
       `;
-
       openModal({
         title: 'Create New Quiz or Bank',
-        subtitle: 'Setup your file and questions in one go. You can always edit more later.',
+        subtitle: 'Use presets, import helpers, and folder-aware defaults to build files faster.',
         body,
-        onOpen: () => {
-          // No-op, we handle rendering via renderNewFileModal now
-        }
+        onOpen: () => syncWizardSummary(),
       });
     }
 
     function setModalTab(tab) {
       syncModalQuestionsFromUI();
+      state.wizard = collectWizardState();
       state.modalTab = tab;
       renderNewFileModal();
     }
@@ -1928,6 +2774,20 @@ DASHBOARD_HTML = r"""
       const type = document.getElementById('file-type').value;
       const wrap = document.getElementById('bank-icon-wrap');
       if (wrap) wrap.style.display = type === 'bank' ? 'grid' : 'none';
+    }
+
+    function setWizardPreset(key) {
+      syncModalQuestionsFromUI();
+      state.wizard = collectWizardState();
+      state.wizard.presetKey = key;
+      const preset = getPresetByKey(key);
+      state.wizard.type = preset.type;
+      if (!state.wizard.description) state.wizard.description = preset.defaultDescription || '';
+      if (!state.modalQuestions.length || state.modalQuestions.every(question => !question.question && !(question.options || []).some(Boolean))) {
+        state.modalQuestions = buildStarterQuestions(preset.starterCount);
+      }
+      rememberRecent('recentPresets', key);
+      renderNewFileModal();
     }
 
     function renderModalQuestionList() {
@@ -1939,6 +2799,7 @@ DASHBOARD_HTML = r"""
              <button class="mini-btn delete" onclick="removeModalQuestion(${i})">Remove Q</button>
           </div>
           <input class="text-input mq-q" data-idx="${i}" value="${escapeHtml(q.question)}" placeholder="Question text" style="margin-bottom:0.5rem;">
+          <textarea class="text-area mq-exp" data-idx="${i}" placeholder="Explanation (optional)" style="min-height:80px; margin-bottom:0.5rem;">${escapeHtml(q.explanation || '')}</textarea>
           <div class="option-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
             ${(q.options || []).map((opt, oi) => `
               <div class="option-row" style="padding: 0.25rem; display: flex; align-items: center; gap: 0.25rem;">
@@ -1958,9 +2819,10 @@ DASHBOARD_HTML = r"""
       const rows = document.querySelectorAll('#modal-question-list .editor-card');
       rows.forEach((row, i) => {
         const question = row.querySelector('.mq-q').value;
+        const explanation = row.querySelector('.mq-exp')?.value || '';
         const options = Array.from(row.querySelectorAll('.mq-opt')).map(input => input.value);
         const correct = parseInt(row.querySelector(`input[name="mq-correct-${i}"]:checked`)?.value || '0');
-        questions.push({ question, options, correct, explanation: '' });
+        questions.push({ question, options, correct, explanation });
       });
       if (questions.length) state.modalQuestions = questions;
     }
@@ -1994,7 +2856,8 @@ DASHBOARD_HTML = r"""
 
     function onModalJsonDrop(e) {
       e.preventDefault();
-      const textarea = document.getElementById('file-import-json');
+      const textarea = document.getElementById('file-import-raw');
+      if (!textarea) return;
       textarea.classList.remove('dragover');
       const file = e.dataTransfer.files[0];
       if (!file) return;
@@ -2002,37 +2865,50 @@ DASHBOARD_HTML = r"""
       const reader = new FileReader();
       reader.onload = (event) => {
         textarea.value = event.target.result;
-        onModalJsonInput();
+        syncWizardSummary();
+        const sourceMode = document.getElementById('file-source-mode')?.value || state.wizard?.sourceMode || '';
+        if (/\.json$/i.test(file.name || '') || sourceMode === 'json') {
+          applyWizardImport();
+        }
       };
       reader.readAsText(file);
     }
 
-    function onModalJsonInput() {
-      const textarea = document.getElementById('file-import-json');
-      const val = textarea.value.trim();
-      if (!val) return;
-      try {
-        const parsed = JSON.parse(val);
-        const questions = Array.isArray(parsed) ? parsed : (parsed.questions || parsed.QUESTION_BANK || []);
-        if (Array.isArray(questions)) {
-          state.modalQuestions = questions.map(q => ({
-            question: q.question || '',
-            options: q.options || ['', '', '', ''],
-            correct: q.correct || 0,
-            explanation: q.explanation || ''
-          }));
-          renderNewFileModal();
-          showToast(`Imported ${state.modalQuestions.length} questions from JSON`, 'success');
-        }
-      } catch (e) {
-        // Silent fail while typing
+    function applyWizardImport() {
+      const raw = document.getElementById('file-import-raw')?.value || '';
+      const parsed = parseImportedQuestions(raw);
+      if (!parsed.questions.length) {
+        showToast('No questions could be parsed from the pasted content.', 'warn');
+        return;
       }
+      state.modalQuestions = parsed.questions.map(question => ({
+        question: question.question || '',
+        options: question.options || ['', '', '', ''],
+        correct: Number(question.correct || 0),
+        explanation: question.explanation || '',
+      }));
+      if (parsed.issues.length) showToast(`Imported ${state.modalQuestions.length} questions with ${parsed.issues.length} warning(s).`, 'warn');
+      else showToast(`Imported ${state.modalQuestions.length} questions.`, 'success');
+      state.modalTab = 'questions';
+      renderNewFileModal();
     }
 
-    function syncNewFileIconField() {
-      const type = document.getElementById('file-type')?.value;
-      const wrap = document.getElementById('bank-icon-wrap');
-      if (wrap) wrap.style.display = type === 'bank' ? 'grid' : 'none';
+    async function applyCloneSource() {
+      const sourcePath = document.getElementById('file-clone-path')?.value || '';
+      if (!sourcePath) {
+        showToast('Choose a source quiz or bank first.', 'warn');
+        return;
+      }
+      const payload = await fetchJson(`/admin/load-file?path=${encodeURIComponent(sourcePath)}`);
+      state.modalQuestions = clone(payload.meta?.questions || []).map(question => ({
+        question: question.question || '',
+        options: question.options || ['', '', '', ''],
+        correct: Number(question.correct || 0),
+        explanation: question.explanation || '',
+      }));
+      state.modalTab = 'questions';
+      renderNewFileModal();
+      showToast(`Loaded ${state.modalQuestions.length} questions from ${sourcePath}.`, 'success');
     }
 
     function openMoveModal() {
@@ -2078,8 +2954,39 @@ DASHBOARD_HTML = r"""
       });
     }
 
+    function openDuplicateModal(targetFolder = '', sourcePath = '') {
+      const source = sourcePath || state.currentFile;
+      if (!source) return;
+      const defaultFolder = targetFolder || (source.includes('/') ? source.slice(0, source.lastIndexOf('/')) : '.');
+      const currentStem = source.split('/').pop().replace(/\.html$/i, '');
+      openModal({
+        title: 'Duplicate File',
+        subtitle: 'Creates a new file and regenerates the UID for quiz/bank duplicates.',
+        body: `
+          <div class="field-grid">
+            <div class="field full">
+              <label>Source File</label>
+              <input class="text-input" value="${escapeHtml(source)}" readonly>
+            </div>
+            <div class="field">
+              <label>Target Folder</label>
+              <select class="select-input" id="duplicate-folder">${folderOptions(defaultFolder)}</select>
+            </div>
+            <div class="field">
+              <label>New Filename</label>
+              <input class="text-input" id="duplicate-name" value="${escapeHtml(currentStem)}-copy">
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-primary" onclick="duplicateFile('${escapeHtml(source)}')">Create Duplicate</button>
+          </div>
+        `,
+      });
+    }
+
     function openGitModal() {
       const git = state.projectState?.git || {};
+      const commitSuggestion = state.currentFile ? `Update ${state.currentFile}` : 'Update quiz content';
       const changed = (git.changedPaths || []).map(item => `
         <div class="badge" title="${escapeHtml(item.path)}">
           <span class="${item.status === 'M' ? 'status-info' : 'status-good'}">${escapeHtml(item.status)}</span> 
@@ -2106,7 +3013,7 @@ DASHBOARD_HTML = r"""
 
           <div class="field" style="margin-top: 1rem;">
             <label>Commit Message</label>
-            <input class="text-input" id="commit-message" value="Update quiz content" placeholder="e.g. Add L10 PCOS quiz">
+            <input class="text-input" id="commit-message" value="${escapeHtml(commitSuggestion)}" placeholder="e.g. Add L10 PCOS quiz">
           </div>
 
           <div class="modal-actions" style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;">
@@ -2140,23 +3047,31 @@ DASHBOARD_HTML = r"""
           current = current ? `${current}/${p}` : p;
           state.openFolders.add(current);
         }
+        saveUiPrefs();
       }
       await runSync({ silentToast: true, preserveCurrent: false });
     }
 
-    async function createFile() {
+    async function createFile(mode = 'open') {
       syncModalQuestionsFromUI();
-      const type = document.getElementById('file-type').value;
-      const folder = document.getElementById('file-folder').value;
-      const title = document.getElementById('file-title').value;
-      const description = document.getElementById('file-description').value;
-      const filename = document.getElementById('file-name').value;
-      const icon = document.getElementById('file-icon')?.value || '🗃️';
+      const wizard = collectWizardState();
+      const type = wizard.type;
+      const folder = wizard.folder;
+      const title = wizard.title;
+      const description = wizard.description;
+      const filename = wizard.filename;
+      const icon = wizard.icon || '🗃️';
       const questions = state.modalQuestions;
 
       if (!title) {
         showToast('Title is required.', 'warn');
-        setModalTab('basic');
+        setModalTab('setup');
+        return;
+      }
+
+      if (validateQuestionListClient(questions).some(issue => issue.level === 'error')) {
+        showToast('Fix the wizard validation issues before creating the file.', 'warn');
+        setModalTab('questions');
         return;
       }
 
@@ -2165,9 +3080,10 @@ DASHBOARD_HTML = r"""
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type, folder, title, description, filename, icon, questions }),
       });
-      closeModal();
       showToast(result.message || 'File created.', 'success');
       logActivity('Created file', result.path || title, 'success');
+      rememberRecent('recentFolders', folder);
+      rememberRecent('recentPresets', wizard.presetKey);
       
       // Expand target folder before refresh so it shows up
       if (folder && folder !== '.') {
@@ -2177,17 +3093,40 @@ DASHBOARD_HTML = r"""
           current = current ? `${current}/${p}` : p;
           state.openFolders.add(current);
         }
+        saveUiPrefs();
       }
       
       await runSync({ silentToast: true, preserveCurrent: false });
       if (result.path) {
-        await loadFile(result.path);
-        // Scroll sidebar to new file
-        setTimeout(() => {
-          const activeRow = document.querySelector('.tree-row.active');
-          if (activeRow) activeRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
+        if (mode === 'open') {
+          closeModal();
+          await loadFile(result.path);
+          setTimeout(() => {
+            const activeRow = document.querySelector('.tree-row.active');
+            if (activeRow) activeRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 100);
+        } else {
+          state.wizard = { ...wizard, title: '', filename: '', sourceRaw: '' };
+          state.modalQuestions = buildStarterQuestions(getPresetByKey(wizard.presetKey).starterCount);
+          renderNewFileModal();
+          setModalTab('setup');
+        }
       }
+    }
+
+    async function duplicateFile(sourcePath) {
+      const folder = document.getElementById('duplicate-folder')?.value || '.';
+      const filename = document.getElementById('duplicate-name')?.value || '';
+      const result = await fetchJson('/admin/duplicate-file', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: sourcePath, folder, filename }),
+      });
+      closeModal();
+      showToast(result.message || 'Duplicate created.', 'success');
+      logActivity('Duplicated file', `${sourcePath}\n→ ${result.path}`, 'success');
+      await runSync({ silentToast: true, preserveCurrent: false });
+      if (result.path) await loadFile(result.path);
     }
 
     async function moveFile() {
@@ -2305,6 +3244,47 @@ DASHBOARD_HTML = r"""
       }
     }
 
+    function getQuickOpenResults(query = '') {
+      const lowered = String(query || '').toLowerCase().trim();
+      const list = lowered
+        ? state.files.filter(file => [file.path, file.title, file.uid, file.description].join(' ').toLowerCase().includes(lowered))
+        : [...state.files];
+      return list.slice(0, 18);
+    }
+
+    function renderQuickOpenResults() {
+      const host = document.getElementById('quick-open-results');
+      if (!host) return;
+      const query = document.getElementById('quick-open-input')?.value || '';
+      state.quickOpenQuery = query;
+      const rows = getQuickOpenResults(query);
+      host.innerHTML = rows.length ? rows.map(file => `
+        <button class="meta-card" style="text-align:left; cursor:pointer;" onclick="closeModal(); requestLoadFile('${escapeHtml(file.path)}')">
+          <div class="meta-label">${escapeHtml(file.type)}</div>
+          <div class="meta-value">${escapeHtml(file.title || file.name)}</div>
+          <div class="muted" style="margin-top:0.35rem;">${escapeHtml(file.path)}</div>
+        </button>
+      `).join('') : '<div class="empty-state">No files match this search.</div>';
+    }
+
+    function openQuickOpenModal() {
+      openModal({
+        title: 'Quick Open',
+        subtitle: 'Jump to a file by path, title, or UID.',
+        body: `
+          <div class="field">
+            <label>Search</label>
+            <input class="text-input" id="quick-open-input" value="${escapeHtml(state.quickOpenQuery || '')}" placeholder="Type to filter files..." oninput="renderQuickOpenResults()">
+          </div>
+          <div id="quick-open-results" style="display:grid; gap:0.65rem; margin-top:1rem; max-height:60vh; overflow:auto;"></div>
+        `,
+        onOpen: () => {
+          document.getElementById('quick-open-input')?.focus();
+          renderQuickOpenResults();
+        },
+      });
+    }
+
     function setupKeyboard() {
       window.addEventListener('keydown', (event) => {
         if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
@@ -2314,8 +3294,17 @@ DASHBOARD_HTML = r"""
           }
           return;
         }
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+          event.preventDefault();
+          openQuickOpenModal();
+          return;
+        }
         if (event.key === 'Escape' && state.modalOpen) {
           closeModal();
+          return;
+        }
+        if (event.key === 'Escape' && state.contextMenu) {
+          closeContextMenu();
           return;
         }
         if (event.key === '/' && !state.modalOpen) {
@@ -2336,6 +3325,13 @@ DASHBOARD_HTML = r"""
       document.getElementById('modal').addEventListener('click', (event) => {
         if (event.target.id === 'modal') closeModal();
       });
+      document.addEventListener('click', () => closeContextMenu());
+      window.addEventListener('scroll', () => closeContextMenu(), true);
+      document.addEventListener('contextmenu', (event) => {
+        if (!event.target.closest('.tree-row') && !event.target.closest('.panel-header-main')) {
+          closeContextMenu();
+        }
+      });
     }
 
     async function boot() {
@@ -2343,7 +3339,11 @@ DASHBOARD_HTML = r"""
       setupKeyboard();
       renderActivity();
       await refreshWorkspace({ preserveCurrent: false });
-      showToast('Dashboard ready. Search files with / and save with Ctrl+S.', 'info');
+      const lastFile = localStorage.getItem('admin-last-file');
+      if (lastFile && state.files.some(file => file.path === lastFile)) {
+        await loadFile(lastFile, { silent: true });
+      }
+      showToast('Dashboard ready. Search files with /, quick-open with Ctrl+K, and save with Ctrl+S.', 'info');
     }
 
     boot().catch((error) => {
@@ -2537,6 +3537,177 @@ def parse_file_metadata(content: str) -> dict[str, Any]:
     return {"type": "html", "question_count": 0}
 
 
+def build_issue(level: str, message: str, *, field: str = "", code: str = "", index: int | None = None) -> dict[str, Any]:
+    issue: dict[str, Any] = {"level": level, "message": message}
+    if field:
+        issue["field"] = field
+    if code:
+        issue["code"] = code
+    if index is not None:
+        issue["index"] = index
+    return issue
+
+
+def normalize_question_payload(question: Any) -> dict[str, Any]:
+    if not isinstance(question, dict):
+        return {"question": "", "options": [], "correct": 0, "explanation": ""}
+    options = question.get("options")
+    if not isinstance(options, list):
+        options = []
+    return {
+        "question": str(question.get("question", "") or ""),
+        "options": [str(option or "") for option in options],
+        "correct": question.get("correct", 0),
+        "explanation": str(question.get("explanation", "") or ""),
+    }
+
+
+def validate_question_list(questions: Any, *, field_prefix: str = "questions") -> list[dict[str, Any]]:
+    issues: list[dict[str, Any]] = []
+    if not isinstance(questions, list):
+        return [build_issue("error", "Question list could not be parsed.", field=field_prefix, code="questions_invalid")]
+
+    if not questions:
+        issues.append(build_issue("warning", "This file has no questions yet.", field=field_prefix, code="questions_empty"))
+        return issues
+
+    for index, raw_question in enumerate(questions):
+        question = normalize_question_payload(raw_question)
+        question_text = question["question"].strip()
+        options = [option.strip() for option in question["options"]]
+        correct = question["correct"]
+        if not question_text:
+            issues.append(
+                build_issue(
+                    "error",
+                    f"Question {index + 1} is missing its prompt.",
+                    field=f"{field_prefix}.{index}.question",
+                    code="question_missing_text",
+                    index=index,
+                )
+            )
+        if len(options) < 2:
+            issues.append(
+                build_issue(
+                    "error",
+                    f"Question {index + 1} needs at least 2 options.",
+                    field=f"{field_prefix}.{index}.options",
+                    code="question_too_few_options",
+                    index=index,
+                )
+            )
+        elif any(not option for option in options):
+            issues.append(
+                build_issue(
+                    "warning",
+                    f"Question {index + 1} has blank option text.",
+                    field=f"{field_prefix}.{index}.options",
+                    code="question_blank_option",
+                    index=index,
+                )
+            )
+        try:
+            correct_idx = int(correct)
+        except (TypeError, ValueError):
+            correct_idx = -1
+        if correct_idx < 0 or correct_idx >= len(options):
+            issues.append(
+                build_issue(
+                    "error",
+                    f"Question {index + 1} has an invalid correct answer index.",
+                    field=f"{field_prefix}.{index}.correct",
+                    code="question_invalid_correct",
+                    index=index,
+                )
+            )
+    return issues
+
+
+def is_external_href(url: str) -> bool:
+    lowered = url.lower()
+    return lowered.startswith(("http://", "https://", "mailto:", "tel:", "javascript:", "#"))
+
+
+def resolve_index_target(base_folder: str, url: str) -> Path | None:
+    target = re.split(r"[?#]", str(url or "").strip(), maxsplit=1)[0]
+    if not target or is_external_href(target):
+        return None
+    target_path = (Path(base_folder) / target) if base_folder not in {"", "."} else Path(target)
+    if target.endswith("/"):
+        target_path = target_path / "index.html"
+    candidate = (PROJECT_ROOT / target_path).resolve()
+    if not is_relative_to(candidate, PROJECT_ROOT):
+        return None
+    if candidate.is_dir():
+        candidate = candidate / "index.html"
+    return candidate
+
+
+def detect_uid_change(original_uid: str, new_uid: str) -> bool:
+    return bool(original_uid and new_uid and original_uid != new_uid)
+
+
+def validate_dashboard_content(path: str, content: str, *, original_uid: str = "") -> dict[str, Any]:
+    normalized_path = normalize_rel_path(path or ".")
+    meta = parse_file_metadata(content)
+    issues: list[dict[str, Any]] = []
+    meta_type = meta.get("type", "html")
+
+    if meta_type == "quiz":
+        if "/* [QUIZ_CONFIG_START] */" not in content or "/* [QUIZ_CONFIG_END] */" not in content:
+            issues.append(build_issue("error", "Quiz config markers are missing.", field="config", code="quiz_config_markers"))
+        if "/* [QUESTIONS_START] */" not in content or "/* [QUESTIONS_END] */" not in content:
+            issues.append(build_issue("error", "Question markers are missing.", field="questions", code="quiz_question_markers"))
+        uid = str(meta.get("uid") or "").strip()
+        if not uid:
+            issues.append(build_issue("error", "Quiz UID is required.", field="uid", code="uid_missing"))
+        elif detect_uid_change(original_uid, uid):
+            issues.append(build_issue("warning", "UID changed from the saved file. This can orphan learner progress.", field="uid", code="uid_changed"))
+        issues.extend(validate_question_list(meta.get("questions"), field_prefix="questions"))
+    elif meta_type == "bank":
+        if "/* [BANK_CONFIG_START] */" not in content or "/* [BANK_CONFIG_END] */" not in content:
+            issues.append(build_issue("error", "Bank config markers are missing.", field="config", code="bank_config_markers"))
+        if "/* [QUESTION_BANK_START] */" not in content or "/* [QUESTION_BANK_END] */" not in content:
+            issues.append(build_issue("error", "Question bank markers are missing.", field="questions", code="bank_question_markers"))
+        uid = str(meta.get("uid") or "").strip()
+        if not uid:
+            issues.append(build_issue("error", "Bank UID is required.", field="uid", code="uid_missing"))
+        elif detect_uid_change(original_uid, uid):
+            issues.append(build_issue("warning", "UID changed from the saved file. This can orphan learner progress.", field="uid", code="uid_changed"))
+        issues.extend(validate_question_list(meta.get("questions"), field_prefix="questions"))
+    elif meta_type == "index":
+        quizzes = meta.get("quizzes")
+        if not isinstance(quizzes, list):
+            issues.append(build_issue("error", "QUIZZES could not be parsed.", field="quizzes", code="index_cards_invalid"))
+        else:
+            base_folder = "." if "/" not in normalized_path else normalized_path.rsplit("/", 1)[0]
+            for index, quiz in enumerate(quizzes):
+                if not isinstance(quiz, dict):
+                    issues.append(build_issue("error", f"Card {index + 1} is invalid.", field=f"quizzes.{index}", code="index_card_invalid", index=index))
+                    continue
+                url = str(quiz.get("url", "") or "").strip()
+                if not url:
+                    issues.append(build_issue("warning", f"Card {index + 1} is missing a URL.", field=f"quizzes.{index}.url", code="index_url_missing", index=index))
+                    continue
+                target = resolve_index_target(base_folder, url)
+                if target is None:
+                    continue
+                if not target.exists():
+                    issues.append(
+                        build_issue(
+                            "warning",
+                            f"Card {index + 1} points to a missing file: {url}",
+                            field=f"quizzes.{index}.url",
+                            code="index_url_missing_target",
+                            index=index,
+                        )
+                    )
+
+    errors = [issue for issue in issues if issue["level"] == "error"]
+    warnings = [issue for issue in issues if issue["level"] == "warning"]
+    return {"meta": meta, "errors": errors, "warnings": warnings}
+
+
 def infer_icon(meta_type: str, name: str) -> str:
     if name == "index.html" or meta_type == "index":
         return "🏠"
@@ -2572,6 +3743,25 @@ def collect_file_records() -> list[dict[str, Any]]:
         )
     records.sort(key=lambda record: record["path"].lower())
     return records
+
+
+def duplicate_file_content(source_content: str, destination_folder: str, destination_stem: str) -> tuple[str, str | None]:
+    meta = parse_file_metadata(source_content)
+    new_uid = derive_uid(destination_folder, destination_stem)
+    if meta.get("type") == "quiz":
+        config = copy.deepcopy(meta.get("config") or {})
+        config["uid"] = new_uid
+        config["title"] = config.get("title") or title_from_segment(destination_stem)
+        content = create_quiz_html(config, copy.deepcopy(meta.get("questions") or []))
+        return content, new_uid
+    if meta.get("type") == "bank":
+        config = copy.deepcopy(meta.get("config") or {})
+        config["uid"] = new_uid
+        config["title"] = config.get("title") or title_from_segment(destination_stem)
+        config["icon"] = config.get("icon") or "🗃️"
+        content = create_bank_html(config, copy.deepcopy(meta.get("questions") or []))
+        return content, new_uid
+    return source_content, None
 
 
 def find_existing_uids() -> set[str]:
@@ -3075,6 +4265,7 @@ def get_builtin_tools() -> list[dict[str, str]]:
             "id": key,
             "label": meta["label"],
             "description": meta["description"],
+            "path": meta["path"],
         }
         for key, meta in BUILTIN_TOOLS.items()
     ]
@@ -3243,6 +4434,7 @@ def save_file() -> Any:
     payload = request.get_json(silent=True) or {}
     path = payload.get("path", "")
     content = payload.get("content")
+    confirm_uid_change = bool(payload.get("confirm_uid_change"))
     if not path or content is None:
         return jsonify({"message": "Missing path or content."}), 400
     try:
@@ -3252,8 +4444,51 @@ def save_file() -> Any:
     except ValueError as exc:
         return jsonify({"message": str(exc)}), 400
 
+    original_content = read_text(file_path)
+    original_uid = str(parse_file_metadata(original_content).get("uid") or "")
+    validation = validate_dashboard_content(relative_path(file_path), str(content), original_uid=original_uid)
+    if validation["errors"]:
+        return (
+            jsonify(
+                {
+                    "message": "Validation failed. Fix the highlighted issues before saving.",
+                    "validation": validation,
+                }
+            ),
+            400,
+        )
+    if any(issue.get("code") == "uid_changed" for issue in validation["warnings"]) and not confirm_uid_change:
+        return (
+            jsonify(
+                {
+                    "message": "UID change requires confirmation because it can orphan stored progress.",
+                    "validation": validation,
+                    "requires_uid_confirmation": True,
+                }
+            ),
+            409,
+        )
+
     write_text(file_path, str(content))
     return jsonify({"message": f"Saved {relative_path(file_path)}."})
+
+
+@app.post("/admin/validate-file")
+def validate_file() -> Any:
+    payload = request.get_json(silent=True) or {}
+    path = str(payload.get("path", "") or "").strip()
+    content = payload.get("content")
+    original_uid = str(payload.get("original_uid", "") or "")
+    if not path or content is None:
+        return jsonify({"message": "Missing path or content."}), 400
+    validation = validate_dashboard_content(path, str(content), original_uid=original_uid)
+    return jsonify(
+        {
+            "message": "Validation completed.",
+            "validation": validation,
+            "ok": not validation["errors"],
+        }
+    )
 
 
 @app.post("/admin/create-folder")
@@ -3322,6 +4557,39 @@ def create_file() -> Any:
         {
             "message": f'Created {file_type} file "{file_path.name}".',
             "path": relative_path(file_path),
+            "uid": uid,
+        }
+    )
+
+
+@app.post("/admin/duplicate-file")
+def duplicate_file() -> Any:
+    payload = request.get_json(silent=True) or {}
+    raw_path = str(payload.get("path", "") or "").strip()
+    folder_rel = normalize_rel_path(payload.get("folder", "."))
+    filename_hint = str(payload.get("filename", "") or "").strip()
+    if not raw_path:
+        return jsonify({"message": "Source path is required."}), 400
+    try:
+        source = resolve_project_path(raw_path, must_exist=True, file_only=True)
+        target_folder = resolve_project_path(folder_rel, must_exist=True)
+    except FileNotFoundError:
+        return jsonify({"message": "Source or target path was not found."}), 404
+    except ValueError as exc:
+        return jsonify({"message": str(exc)}), 400
+    if not target_folder.is_dir():
+        return jsonify({"message": "Target path is not a folder."}), 400
+
+    base_stem = slugify(filename_hint or f"{source.stem}-copy", default="untitled")
+    destination = ensure_unique_html_path(target_folder, base_stem)
+    source_content = read_text(source)
+    destination_folder = normalize_rel_path(relative_path(target_folder) if target_folder != PROJECT_ROOT else ".")
+    content, uid = duplicate_file_content(source_content, destination_folder, destination.stem)
+    write_text(destination, content)
+    return jsonify(
+        {
+            "message": f'Created duplicate "{destination.name}".',
+            "path": relative_path(destination),
             "uid": uid,
         }
     )
