@@ -14,14 +14,17 @@ A modern, feature-rich quiz creation and management platform built with vanilla 
 ### 🚀 Project Generator (`generate_project.py`)
 Generate production-ready quiz sites similar to MU61S8 with a single command!
 
-- **Web UI Configuration**: Easy-to-use interface at http://localhost:5500
-- **MU61S8 Structure**: Generates clean quiz-only instances (no QuizTool utilities)
+- **3-Step Wizard UI**: Guided flow — Project Info → Structure → Publish
+- **One-Click GitHub Pages**: Sign in with a PAT, publish directly to GitHub Pages (no CLI needed)
+- **Drag-Drop Import**: Drop existing quiz/bank HTML files to auto-parse and place in folders
+- **Nested Folder Support**: Multi-level folder hierarchy with auto-generated index pages
+- **Admin Dashboard Launch**: After generating, open the admin dashboard to add content — no coding required
+- **Token-Safe Authentication**: Uses `GIT_ASKPASS` for push (never embeds tokens in URLs or `.git/config`); validates PAT scopes before use
 - **Automated Deployment**: Includes GitHub Actions workflows for auto-deployment
 - **Asset Synchronization**: Scripts to auto-update index pages and service worker precache
 - **Tracker Map Generation**: Automatically generates `tracker-map.json` for persistent link reliability
 - **Complete PWA Support**: All icon sizes (48px-512px), manifest, and offline-capable service worker
-- **Folder Support**: Create multi-folder quiz structures with nested index pages
-- **One-Click Export**: Download ready-to-deploy ZIP with proper file structure
+- **Zero-Install Launcher**: `start.bat` auto-detects Python and installs Flask; `build_exe.py` creates a standalone EXE
 
 **Generated Project Includes:**
 - ✓ Core Engine Suite (`quiz-engine.js`, `bank-engine.js`, `index-engine.js`)
@@ -235,37 +238,89 @@ Use the Index Editor to create branded hub pages for any collection of tools or 
 
 **Pro Tip**: You can also import an existing `index.html` file into the editor to modify it, or paste a JSON configuration directly.
 
-### Generating a Production-Ready Quiz Site
+### Prerequisites for Generated Quiz Sites
+
+Before generating and initializing a quiz site, ensure you have the following tools and dependencies installed:
+
+#### Install Git
+Git is required for version control and deployment.
+- **Windows**: Download from [git-scm.com](https://git-scm.com/download/win) and follow the installer.
+- **macOS**: Install via Homebrew: `brew install git`
+- **Linux**: Use your package manager, e.g., `sudo apt install git`
+
+#### Install GitHub CLI (Optional but Recommended)
+GitHub CLI simplifies repository management and deployment.
+- **Windows**: Download from [cli.github.com](https://cli.github.com/)
+- **macOS**: `brew install gh`
+- **Linux**: Follow instructions at [cli.github.com](https://cli.github.com/)
+- Authenticate with: `gh auth login`
+
+#### Install Python
+Python is needed for the project generator and admin dashboard scripts.
+- **Windows**: Download from [python.org](https://www.python.org/downloads/) (ensure "Add Python to PATH" during install)
+- **macOS**: `brew install python`
+- **Linux**: Usually pre-installed; otherwise `sudo apt install python3`
+- Verify installation: `python --version` (should be 3.6+)
+
+#### Install Admin Dashboard Dependencies
+The admin dashboard requires Flask for the web interface.
+```bash
+pip install flask
+```
+Verify installation: `python -c "import flask; print('Flask installed')"`
+
+### Generating and Initializing a Production-Ready Quiz Site
 
 Use the Project Generator to create a deployable quiz site (like MU61S8):
 
-1. Run the generator:
+1. **Launch the generator**:
    ```bash
    python generate_project.py
    ```
-2. Configure your project in the web UI (opens at http://localhost:5500):
-   - Set project name, titles, and description
-   - Add folders for different subjects/categories
-   - Add quiz entries with URLs for each folder
-3. Click **"📥 Generate & Download ZIP"**
-4. Extract the ZIP to your project folder
-5. Add your quiz HTML files to the appropriate folders
-6. Commit and push to GitHub:
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial quiz project"
-   git remote add origin https://github.com/your-username/your-repo.git
-   git push -u origin main
-   ```
-7. GitHub Actions will automatically:
-   - Sync quiz assets (update index pages and service worker)
-   - Deploy to GitHub Pages
+   Or double-click `start.bat` on Windows (auto-installs dependencies).
+   The web UI opens at http://localhost:5500.
 
-**Note**: The generated project includes `scripts/sync_quiz_assets.py` which auto-discovers quiz files and updates:
-- All `index.html` files with proper quiz listings
-- Service worker precache list with all HTML files
-- Cache version hash for automatic updates
+2. **Step 1 — Project Info**:
+   - Enter your project name (becomes the GitHub repo name)
+   - Set the site title, hero text, and default theme
+
+3. **Step 2 — Structure**:
+   - Create subject folders (e.g. Cardiology, Neurology)
+   - Add quiz entries or drag-drop existing quiz HTML files
+   - Add subfolders for deeper organization
+
+4. **Step 3 — Publish**:
+
+   **Option A: One-click GitHub Pages** (recommended)
+   - Click **"Create a token"** to generate a GitHub PAT with `repo` and `workflow` scopes
+   - Paste the token and click **Sign In** — your avatar and username appear
+   - Click **🔵 Publish to GitHub Pages**
+   - The generator creates the repo, pushes code, and enables Pages automatically
+   - Your site is live in 1–2 minutes!
+
+   **Option B: Download ZIP only**
+   - Click **📥 Download ZIP Only**
+   - Manually extract and deploy wherever you want
+
+5. **Add content**:
+   - Click **🛠️ Open Admin Dashboard** to create quizzes, banks, and edit content — no coding required
+   - The admin dashboard has built-in Git integration for pushing changes
+
+**Security note**: Your GitHub PAT is used only during the current browser session. It is never saved to disk, logged, or embedded in git config. The generator uses `GIT_ASKPASS` to securely provide the token during push.
+
+### Managing Your Quiz Site
+
+After setup, use the Admin Dashboard for day-to-day management:
+
+```bash
+cd your-project-folder
+python scripts/admin-dashboard.py
+```
+This opens a local web interface at `http://localhost:5500/admin/` for:
+- File browsing and editing
+- Structured quiz/bank editors
+- Git integration and deployment
+- PDF export and more
 
 ### Adding New Quizzes to the Hub
 
@@ -316,8 +371,13 @@ QuizTool/
 ├── manifest.webmanifest          # PWA configuration for installability
 ├── favicon.svg                   # Vector app icon
 ├── icon-*.png                    # PWA icons (48px-512px)
-├── generate_project.py           # Flask-based project generator server
+├── generate_project.py           # Flask-based project generator (with GitHub publish)
+├── generator_templates/
+│   └── index.html                # 3-step wizard UI for the generator
 ├── generate_icons.py             # Utility to rebuild PNG icons from SVG
+├── start.bat                     # Windows launcher (auto-installs dependencies)
+├── build_exe.py                  # PyInstaller build script for standalone EXE
+├── QUICKSTART.md                 # 3-step quickstart guide
 ├── quiz-editor.html              # Visual editor for existing files
 ├── quiz-maker.html               # GUI for creating new quiz files
 ├── quiz-maker-js.html            # High-performance JS-array importer

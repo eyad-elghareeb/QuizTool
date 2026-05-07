@@ -5,16 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>
 (function(){var t=localStorage.getItem('generator-theme')||'dark';var s=document.createElement('style');
-s.textContent='html,body{background:'+(t==='light'?'#f3f0eb':'#0d1117')+';color:'+(t==='light'?'#1c1917':'#e6edf3')+';margin:0;padding:0;overflow:hidden;height:100%}';
+s.textContent='html,body{background:'+(t==='light'?'#f3f0eb':'#0d1117')+';color:'+(t==='light'?'#1c1917':'#e6edf3')+';margin:0;padding:0;overflow-x:hidden;min-height:100%}';
 document.head.appendChild(s)})();
 </script>
 <title>QuizTool Project Generator</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230d1117'/><circle cx='50' cy='50' r='28' fill='none' stroke='%23f0a500' stroke-width='3.5'/><rect x='44' y='32' width='12' height='36' rx='2' fill='%23f0a500'/><rect x='32' y='44' width='36' height='12' rx='2' fill='%23f0a500'/></svg>">
 <meta name="theme-color" content="#0d1117">
-<link rel="manifest" href="../manifest.webmanifest">
-<link rel="apple-touch-icon" href="../favicon.svg">
-
-<meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 <style>
@@ -23,14 +19,34 @@ document.head.appendChild(s)})();
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{min-height:100%}
 body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;transition:background var(--transition),color var(--transition)}
+
+/* ── Topbar ── */
 .topbar{display:flex;align-items:center;padding:0.75rem 1.5rem;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
 .topbar-title{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;flex:1;color:var(--text)}
+.topbar-title span{color:var(--accent)}
 .icon-btn{width:36px;height:36px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-muted);transition:all var(--transition);font-size:1rem;cursor:pointer}
 .icon-btn:hover{color:var(--text);border-color:var(--accent)}
-.container{max-width:960px;margin:0 auto;padding:2rem 1.5rem}
-h1{font-family:'Playfair Display',serif;font-size:clamp(1.8rem,4vw,2.5rem);margin-bottom:0.5rem}
-h1 span{color:var(--accent)}
-.subtitle{color:var(--text-muted);font-size:1rem;margin-bottom:2rem}
+
+/* ── Wizard Stepper ── */
+.stepper{display:flex;align-items:center;justify-content:center;gap:0;padding:1.5rem 1rem 0.5rem;max-width:640px;margin:0 auto}
+.step-item{display:flex;align-items:center;gap:0.5rem;cursor:pointer;transition:all var(--transition);padding:0.5rem 0.75rem;border-radius:10px;position:relative}
+.step-item:hover{background:var(--accent-dim)}
+.step-num{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;border:2px solid var(--border);color:var(--text-muted);transition:all var(--transition);flex-shrink:0}
+.step-item.active .step-num{border-color:var(--accent);background:var(--accent);color:#000}
+.step-item.completed .step-num{border-color:var(--correct);background:var(--correct);color:#fff}
+.step-label{font-size:0.85rem;font-weight:500;color:var(--text-muted);transition:color var(--transition)}
+.step-item.active .step-label{color:var(--text)}
+.step-item.completed .step-label{color:var(--correct)}
+.step-connector{width:32px;height:2px;background:var(--border);margin:0 0.25rem;flex-shrink:0;transition:background var(--transition)}
+.step-connector.done{background:var(--correct)}
+
+/* ── Container ── */
+.container{max-width:960px;margin:0 auto;padding:1rem 1.5rem 3rem}
+.step-panel{display:none;animation:fadeUp .3s ease}
+.step-panel.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Section ── */
 .section{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
 .section h2{font-family:'Playfair Display',serif;font-size:1.2rem;margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:1px solid var(--border)}
 .form-group{margin-bottom:1rem}
@@ -42,9 +58,18 @@ h1 span{color:var(--accent)}
 .form-group textarea{resize:vertical;min-height:60px}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
 @media(max-width:600px){.form-row{grid-template-columns:1fr}}
-.btn{padding:0.7rem 1.4rem;border-radius:8px;font-weight:600;font-size:0.9rem;cursor:pointer;transition:all var(--transition);border:none;font-family:inherit}
+
+/* ── Tooltip ── */
+.tip{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);font-size:0.7rem;font-weight:700;cursor:help;margin-left:0.4rem;vertical-align:middle;position:relative;transition:all var(--transition)}
+.tip:hover{border-color:var(--accent);color:var(--accent)}
+.tip:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:0.5rem 0.75rem;border-radius:8px;font-size:0.78rem;font-weight:400;white-space:normal;width:max-content;max-width:260px;z-index:100;box-shadow:var(--shadow);line-height:1.4}
+.tip:hover::before{content:'';position:absolute;bottom:calc(100% + 1px);left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--border);z-index:101}
+
+/* ── Buttons ── */
+.btn{padding:0.7rem 1.4rem;border-radius:8px;font-weight:600;font-size:0.9rem;cursor:pointer;transition:all var(--transition);border:none;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;gap:0.5rem}
 .btn-primary{background:var(--accent);color:#000}
 .btn-primary:hover{opacity:0.88;transform:translateY(-1px)}
+.btn-primary:disabled{opacity:0.5;cursor:not-allowed;transform:none}
 .btn-secondary{background:var(--surface2);color:var(--text);border:1.5px solid var(--border)}
 .btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
 .btn-danger{background:var(--wrong-bg);color:var(--wrong);border:1px solid var(--wrong)}
@@ -56,21 +81,31 @@ h1 span{color:var(--accent)}
 .btn-icon.drag-handle{cursor:grab}
 .btn-icon.drag-handle:active{cursor:grabbing}
 
-/* Folder cards */
+/* ── Step Nav ── */
+.step-nav{display:flex;justify-content:space-between;align-items:center;margin-top:1.5rem;gap:1rem}
+
+/* ── Info Boxes ── */
+.info-box{border-radius:8px;padding:0.6rem 0.85rem;font-size:0.8rem;display:flex;align-items:flex-start;gap:0.5rem;margin-bottom:1rem;line-height:1.5}
+.info-box.info{background:var(--flagged-bg);border:1px solid var(--flagged);color:var(--flagged)}
+.info-box.success{background:var(--correct-bg);border:1px solid var(--correct);color:var(--correct)}
+.info-box.warn{background:var(--accent-dim);border:1px solid var(--accent);color:var(--accent)}
+.info-box.error{background:var(--wrong-bg);border:1px solid var(--wrong);color:var(--wrong)}
+
+/* ── Folder Cards ── */
 .folder-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1rem;position:relative;transition:all var(--transition)}
 .folder-card.dragging{opacity:0.5;transform:scale(0.98)}
 .folder-card.drag-over-folder{border-color:var(--accent);background:var(--accent-dim);box-shadow:0 0 0 3px var(--accent-dim)}
-.folder-card.drag-over-folder::after{content:'📝 Drop quiz here';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--accent);color:#000;padding:0.75rem 1.5rem;border-radius:8px;font-weight:700;font-size:0.9rem;z-index:10;pointer-events:none}
+.folder-card.drag-over-folder::after{content:'Drop quiz here';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--accent);color:#000;padding:0.75rem 1.5rem;border-radius:8px;font-weight:700;font-size:0.9rem;z-index:10;pointer-events:none}
 .folder-card .folder-num{position:absolute;top:-10px;left:0.75rem;background:var(--accent);color:#000;font-weight:700;font-size:0.7rem;padding:0.15rem 0.6rem;border-radius:5px}
 .folder-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem}
 .folder-header h3{font-size:1rem;font-weight:600;display:flex;align-items:center;gap:0.5rem}
 
-/* Subfolder container */
+/* ── Subfolders ── */
 .subfolder-container{margin-left:1.5rem;border-left:2px solid var(--border);padding-left:1rem;margin-top:0.75rem}
 .add-subfolder-btn{width:100%;padding:0.6rem;border:2px dashed var(--border);border-radius:8px;background:transparent;color:var(--text-muted);font-size:0.85rem;cursor:pointer;transition:all var(--transition);margin-top:0.5rem}
 .add-subfolder-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
 
-/* Quiz entries */
+/* ── Quiz Entries ── */
 .quiz-entry{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem;margin-bottom:0.75rem;position:relative;transition:all var(--transition)}
 .quiz-entry.dragging{opacity:0.5;transform:scale(0.98)}
 .quiz-entry .q-num{position:absolute;top:-8px;left:2.5rem;background:var(--flagged-bg);color:var(--flagged);font-weight:700;font-size:0.65rem;padding:0.1rem 0.5rem;border-radius:4px}
@@ -79,7 +114,6 @@ h1 span{color:var(--accent)}
 .quiz-row input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
 .quiz-row input:hover{border-color:var(--text-muted)}
 .quiz-row input::placeholder{color:var(--text-muted);opacity:0.6}
-.quiz-row .icon-input{width:60px;text-align:center;font-size:1.2rem}
 .quiz-row input.qe-icon{width:60px;text-align:center;font-size:1.2rem}
 .tags-row{display:flex;flex-wrap:wrap;gap:0.3rem;margin-top:0.5rem}
 .tag-chip{display:inline-flex;align-items:center;gap:0.25rem;padding:0.2rem 0.5rem;background:var(--accent-dim);border:1px solid var(--accent);border-radius:5px;font-size:0.75rem;color:var(--accent)}
@@ -88,7 +122,7 @@ h1 span{color:var(--accent)}
 .tag-input{border:1px solid var(--border);background:var(--surface2);color:var(--text);padding:0.2rem 0.5rem;border-radius:5px;font-size:0.75rem;width:100px;font-family:inherit}
 .tag-input:focus{outline:none;border-color:var(--accent)}
 
-/* Drag and drop zone */
+/* ── Drop Zone ── */
 .drop-zone{border:2px dashed var(--border);border-radius:12px;padding:2rem;text-align:center;transition:all var(--transition);cursor:pointer;background:var(--surface2);margin-bottom:1rem}
 .drop-zone:hover{border-color:var(--accent);background:var(--accent-dim)}
 .drop-zone.drag-over{border-color:var(--accent);background:var(--accent-dim);transform:scale(1.02)}
@@ -104,26 +138,71 @@ h1 span{color:var(--accent)}
 .drop-zone-file-remove{color:var(--text-muted);cursor:pointer;font-size:1rem;padding:0.2rem}
 .drop-zone-file-remove:hover{color:var(--wrong)}
 
-/* Preview panel */
-.preview-panel{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:1rem;max-height:300px;overflow-y:auto;font-family:monospace;font-size:0.8rem;white-space:pre-wrap;word-break:break-all;color:var(--text-muted)}
-
-/* Toast */
-.toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:0.75rem 1.5rem;font-size:0.95rem;font-weight:500;box-shadow:var(--shadow);z-index:9999;transition:transform 0.3s ease,opacity 0.3s ease;white-space:nowrap;opacity:0;pointer-events:none}
-.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
-.toast.success{border-color:var(--correct)}
-.toast.error{border-color:var(--wrong)}
-
-/* Loading spinner */
-.spinner{display:inline-block;width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.6s linear infinite;margin-right:0.5rem;vertical-align:middle}
-@keyframes spin{to{transform:rotate(360deg)}}
-
+/* ── Stats ── */
 .stat-bar{display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1.5rem}
 .stat-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:0.75rem 1.25rem;text-align:center;flex:1;min-width:100px}
 .stat-item .sv{font-size:1.5rem;font-weight:700;color:var(--accent);display:block}
 .stat-item .sl{font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em}
 
-/* Drag ghost */
+/* ── GitHub Section ── */
+.gh-user{display:flex;align-items:center;gap:1rem;padding:1rem;background:var(--surface2);border:1px solid var(--border);border-radius:12px;margin-bottom:1rem}
+.gh-avatar{width:48px;height:48px;border-radius:50%;border:2px solid var(--accent)}
+.gh-user-info{flex:1}
+.gh-username{font-weight:700;font-size:1rem}
+.gh-repos{font-size:0.8rem;color:var(--text-muted)}
+.gh-disconnect{font-size:0.75rem;color:var(--wrong);cursor:pointer;text-decoration:underline;background:none;border:none;font-family:inherit}
+.gh-disconnect:hover{color:#ff6b6b}
+
+/* ── Publish Progress ── */
+.publish-steps{margin:1rem 0}
+.publish-step{display:flex;align-items:center;gap:0.75rem;padding:0.75rem 0;border-bottom:1px solid var(--border);font-size:0.9rem}
+.publish-step:last-child{border-bottom:none}
+.publish-step .ps-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.85rem;flex-shrink:0;background:var(--surface2);border:2px solid var(--border);color:var(--text-muted);transition:all .3s ease}
+.publish-step.pending .ps-icon{opacity:0.4}
+.publish-step.running .ps-icon{border-color:var(--accent);color:var(--accent);animation:pulse 1s ease infinite}
+.publish-step.done .ps-icon{border-color:var(--correct);background:var(--correct);color:#fff}
+.publish-step.failed .ps-icon{border-color:var(--wrong);background:var(--wrong);color:#fff}
+.publish-step .ps-label{flex:1}
+.publish-step .ps-detail{font-size:0.78rem;color:var(--text-muted)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+
+/* ── Success Panel ── */
+.success-panel{text-align:center;padding:2rem 1rem}
+.success-icon{font-size:4rem;margin-bottom:1rem}
+.success-url{display:inline-block;background:var(--surface2);border:1px solid var(--accent);border-radius:8px;padding:0.75rem 1.25rem;font-family:monospace;font-size:0.95rem;color:var(--accent);text-decoration:none;transition:all var(--transition);word-break:break-all;margin:0.5rem 0}
+.success-url:hover{background:var(--accent-dim)}
+.success-actions{display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;margin-top:1.5rem}
+
+/* ── Preview ── */
+.preview-panel{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:1rem;max-height:200px;overflow-y:auto;font-family:monospace;font-size:0.8rem;white-space:pre-wrap;word-break:break-all;color:var(--text-muted)}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:0.75rem 1.5rem;font-size:0.95rem;font-weight:500;box-shadow:var(--shadow);z-index:9999;transition:transform 0.3s ease,opacity 0.3s ease;white-space:nowrap;opacity:0;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+.toast.success{border-color:var(--correct)}
+.toast.error{border-color:var(--wrong)}
+
+/* ── Spinner ── */
+.spinner{display:inline-block;width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.6s linear infinite;margin-right:0.5rem;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Drag Ghost ── */
 .drag-ghost{position:fixed;pointer-events:none;z-index:10000;background:var(--surface);border:2px solid var(--accent);border-radius:8px;padding:0.75rem 1rem;font-size:0.9rem;font-weight:600;box-shadow:var(--shadow);opacity:0.9}
+
+/* ── Validation ── */
+input.invalid,select.invalid,textarea.invalid{border-color:var(--wrong)!important;box-shadow:0 0 0 3px var(--wrong-bg)!important}
+.validation-msg{color:var(--wrong);font-size:0.78rem;margin-top:0.25rem;display:none}
+.validation-msg.show{display:block}
+
+/* ── Responsive ── */
+@media(max-width:640px){
+  .stepper{flex-wrap:wrap;gap:0.25rem}
+  .step-label{font-size:0.75rem}
+  .step-connector{width:16px}
+  .stat-bar{flex-direction:column}
+  .success-actions{flex-direction:column}
+  .success-actions .btn{width:100%}
+}
 </style>
 <script>
 if ('serviceWorker' in navigator) {
@@ -136,100 +215,261 @@ if ('serviceWorker' in navigator) {
 <body>
 
 <div class="topbar">
-  <div class="topbar-title">🚀 Project Generator</div>
+  <div class="topbar-title">🚀 QuizTool <span>Generator</span></div>
+  <button class="icon-btn" onclick="shutdownServer()" title="Stop Server & Close" style="color:var(--wrong);border-color:var(--wrong);font-size:0.85rem;width:auto;padding:0 0.6rem">⏻</button>
   <button class="icon-btn" onclick="toggleTheme()" id="theme-toggle" title="Toggle theme">☀</button>
 </div>
 
+<!-- Wizard Stepper -->
+<div class="stepper">
+  <div class="step-item active" data-step="1" onclick="goToStep(1)">
+    <span class="step-num">1</span>
+    <span class="step-label">Project Info</span>
+  </div>
+  <div class="step-connector" id="conn-1-2"></div>
+  <div class="step-item" data-step="2" onclick="goToStep(2)">
+    <span class="step-num">2</span>
+    <span class="step-label">Structure</span>
+  </div>
+  <div class="step-connector" id="conn-2-3"></div>
+  <div class="step-item" data-step="3" onclick="goToStep(3)">
+    <span class="step-num">3</span>
+    <span class="step-label">Publish</span>
+  </div>
+</div>
+
 <div class="container">
-  <h1>Create Your <span>Quiz Project</span></h1>
-  <p class="subtitle">Generate a production-ready quiz site with nested folders, drag-drop reordering, and auto-deployment</p>
 
-  <!-- Stats -->
-  <div class="stat-bar">
-    <div class="stat-item"><span class="sv" id="stat-folders">0</span><span class="sl">Folders</span></div>
-    <div class="stat-item"><span class="sv" id="stat-quizzes">0</span><span class="sl">Total Quizzes</span></div>
-    <div class="stat-item"><span class="sv" id="stat-files">0</span><span class="sl">Output Files</span></div>
-  </div>
+  <!-- ═══════ STEP 1: Project Info ═══════ -->
+  <div class="step-panel active" id="step-1">
+    <h1 style="font-family:'Playfair Display',serif;font-size:clamp(1.6rem,4vw,2.2rem);margin:1rem 0 0.3rem">Create Your <span style="color:var(--accent)">Quiz Project</span></h1>
+    <p style="color:var(--text-muted);margin-bottom:1.5rem">Configure your project name and appearance. This will be used as the site title and browser tab name.</p>
 
-  <!-- Project Config -->
-  <div class="section">
-    <h2>⚙️ Project Configuration</h2>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Project Name (folder/zip name)</label>
-        <input type="text" id="project-name" value="MyQuizProject" oninput="updatePreview()">
+    <div class="stat-bar">
+      <div class="stat-item"><span class="sv" id="stat-folders">0</span><span class="sl">Folders</span></div>
+      <div class="stat-item"><span class="sv" id="stat-quizzes">0</span><span class="sl">Quizzes</span></div>
+      <div class="stat-item"><span class="sv" id="stat-files">0</span><span class="sl">Output Files</span></div>
+    </div>
+
+    <div class="section">
+      <h2>⚙️ Project Configuration</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Project Name <span class="tip" data-tip="Used as the ZIP filename and GitHub repo name. Lowercase letters, numbers, and hyphens only.">?</span></label>
+          <input type="text" id="project-name" value="MyQuizProject" oninput="onProjectNameChange()">
+          <div class="validation-msg" id="val-project-name"></div>
+        </div>
+        <div class="form-group">
+          <label>Top Bar Title <span class="tip" data-tip="Displayed in the header bar of every page and the browser tab.">?</span></label>
+          <input type="text" id="topbar-title" value="My Quiz Hub" oninput="updateStats()">
+        </div>
       </div>
       <div class="form-group">
-        <label>Top Bar Title (shown in header & browser tab)</label>
-        <input type="text" id="topbar-title" value="My Quiz Hub" oninput="updatePreview()">
+        <label>Hero Title <span class="tip" data-tip="The main heading on the homepage. HTML tags like &lt;span&gt; are allowed for accent colors.">?</span></label>
+        <input type="text" id="hero-title" value='Select Your <span>Subject</span>' oninput="updateStats()">
+      </div>
+      <div class="form-group">
+        <label>Hero Description <span class="tip" data-tip="Subtitle text shown below the hero title on the homepage.">?</span></label>
+        <textarea id="hero-desc" rows="2" oninput="updateStats()">Test your knowledge across various subjects. Choose a subject below to begin.</textarea>
+      </div>
+      <div class="form-group">
+        <label>Default Theme <span class="tip" data-tip="The theme users see on first visit. They can toggle it later.">?</span></label>
+        <select id="default-theme" onchange="updateStats()">
+          <option value="dark">Dark</option>
+          <option value="light">Light</option>
+        </select>
+      </div>
+      <div class="info-box success">
+        ✓ PWA Ready — includes favicon, manifest, service worker, apple touch icon, and all PWA icon sizes (48–512px)
       </div>
     </div>
-    <div class="form-group">
-      <label>Hero Title (HTML supported)</label>
-      <input type="text" id="hero-title" value='Select Your <span>Subject</span>' oninput="updatePreview()">
-    </div>
-    <div class="form-group">
-      <label>Hero Description</label>
-      <textarea id="hero-desc" rows="2" oninput="updatePreview()">Test your knowledge across various subjects. Choose a subject below to begin.</textarea>
-    </div>
-    <div class="form-group">
-      <label>Default Theme</label>
-      <select id="default-theme" onchange="updatePreview()">
-        <option value="dark">Dark</option>
-        <option value="light">Light</option>
-      </select>
-    </div>
-    <div style="background:var(--correct-bg);border:1px solid var(--correct);border-radius:8px;padding:0.6rem 0.85rem;font-size:0.8rem;color:var(--correct);display:flex;align-items:center;gap:0.5rem">
-      ✓ PWA Ready — includes favicon, manifest, service worker, apple touch icon, and all PWA icon sizes (48-512px)
+
+    <div class="step-nav">
+      <div></div>
+      <button class="btn btn-primary" onclick="goToStep(2)">Next: Structure →</button>
     </div>
   </div>
 
-  <!-- Folders & Quizzes -->
-  <div class="section">
-    <h2>📁 Folders & Quizzes</h2>
-    
-    <div style="background:var(--accent-dim);border:1px solid var(--accent);border-radius:8px;padding:0.6rem 0.85rem;font-size:0.8rem;color:var(--accent);display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem">
-      💡 <strong>Tip:</strong> Drag quizzes between folders by grabbing the ⠿ handle and dropping onto another folder card
-    </div>
-    
-    <!-- Drag and Drop Zone -->
-    <div class="drop-zone" id="drop-zone">
-      <div class="drop-zone-icon">📂</div>
-      <div class="drop-zone-text">
-        <strong>Click to browse</strong> or drag & drop quiz/bank HTML files here<br>
-        <span style="font-size:0.8rem;opacity:0.7">Files will be automatically parsed and indexed</span>
+  <!-- ═══════ STEP 2: Structure ═══════ -->
+  <div class="step-panel" id="step-2">
+    <h1 style="font-family:'Playfair Display',serif;font-size:clamp(1.6rem,4vw,2.2rem);margin:1rem 0 0.3rem">Organize Your <span style="color:var(--accent)">Folders</span></h1>
+    <p style="color:var(--text-muted);margin-bottom:1.5rem">Create subject folders and add quiz files. You can drag-drop existing HTML quiz files or add placeholder entries.</p>
+
+    <div class="section">
+      <h2>📂 Import Quiz Files</h2>
+      <div class="info-box info">
+        💡 Drop quiz/bank HTML files you already have. You can also add content later using the Admin Dashboard.
       </div>
-      <div class="drop-zone-file-list" id="drop-zone-file-list"></div>
+      <div class="drop-zone" id="drop-zone">
+        <div class="drop-zone-icon">📂</div>
+        <div class="drop-zone-text">
+          <strong>Click to browse</strong> or drag & drop quiz/bank HTML files here<br>
+          <span style="font-size:0.8rem;opacity:0.7">Files will be automatically parsed and placed in folders</span>
+        </div>
+        <div class="drop-zone-file-list" id="drop-zone-file-list"></div>
+      </div>
+      <input type="file" id="file-input" accept=".html,.htm" multiple style="display:none">
     </div>
-    <input type="file" id="file-input" accept=".html,.htm" multiple style="display:none">
-    
-    <div id="folders-container"></div>
-    <button class="btn btn-secondary btn-block" onclick="addFolder()" style="margin-top:0.5rem">+ Add Folder</button>
+
+    <div class="section">
+      <h2>📁 Folders & Quizzes</h2>
+      <div class="info-box warn">
+        💡 <strong>Tip:</strong> Drag quizzes between folders by grabbing the ⠿ handle and dropping onto another folder card
+      </div>
+      <div id="folders-container"></div>
+      <button class="btn btn-secondary btn-block" onclick="addFolder()" style="margin-top:0.5rem">+ Add Folder</button>
+    </div>
+
+    <div class="step-nav">
+      <button class="btn btn-secondary" onclick="goToStep(1)">← Back</button>
+      <button class="btn btn-primary" onclick="goToStep(3)">Next: Publish →</button>
+    </div>
   </div>
 
-  <!-- Actions -->
-  <div class="section">
-    <h2>📦 Generate</h2>
-    <div class="preview-panel" id="preview-panel"></div>
-    <div style="display:flex;gap:1rem;margin-top:1rem;flex-wrap:wrap">
-      <button class="btn btn-primary" onclick="generateZip()" id="btn-generate" style="flex:1;min-width:200px">📥 Generate & Download ZIP</button>
-      <button class="btn btn-secondary" onclick="exportConfig()">📋 Export Config JSON</button>
-      <button class="btn btn-secondary" onclick="importConfig()">📂 Import Config JSON</button>
+  <!-- ═══════ STEP 3: Publish ═══════ -->
+  <div class="step-panel" id="step-3">
+    <h1 style="font-family:'Playfair Display',serif;font-size:clamp(1.6rem,4vw,2.2rem);margin:1rem 0 0.3rem">Publish Your <span style="color:var(--accent)">Site</span></h1>
+    <p style="color:var(--text-muted);margin-bottom:1.5rem">Download the project ZIP or publish directly to GitHub Pages.</p>
+
+    <!-- GitHub Auth Section -->
+    <div class="section" id="gh-auth-section">
+      <h2>🔑 Connect GitHub</h2>
+      <div id="gh-login-panel">
+        <div class="info-box info">
+          Sign in with a GitHub Personal Access Token (PAT) to publish your site in one click.
+          <a href="https://github.com/settings/tokens/new?description=QuizTool%20Generator&scopes=repo,workflow" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;text-decoration:underline">Create a token →</a>
+          <br><span style="opacity:0.8;font-size:0.75rem">Required scopes: <code>repo</code>, <code>workflow</code></span>
+        </div>
+        <div class="form-group">
+          <label>Personal Access Token <span class="tip" data-tip="Your token is used only during this session and is never saved or logged.">?</span></label>
+          <div style="display:flex;gap:0.5rem">
+            <input type="password" id="gh-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="flex:1" onkeydown="if(event.key==='Enter')githubLogin()">
+            <button class="btn btn-primary" onclick="githubLogin()" id="btn-gh-login">Sign In</button>
+          </div>
+          <div class="validation-msg" id="val-gh-token"></div>
+        </div>
+      </div>
+      <div id="gh-user-panel" style="display:none">
+        <div class="gh-user">
+          <img class="gh-avatar" id="gh-avatar" src="" alt="Avatar">
+          <div class="gh-user-info">
+            <div class="gh-username" id="gh-display-name"></div>
+            <div class="gh-repos"><span id="gh-username-text"></span> · <span id="gh-repos-count"></span> public repos</div>
+          </div>
+          <button class="gh-disconnect" onclick="githubLogout()">Disconnect</button>
+        </div>
+      </div>
     </div>
-    <input type="file" id="config-file-input" accept=".json" style="display:none" onchange="handleConfigImport(event)">
+
+    <!-- Visibility -->
+    <div class="section" id="gh-visibility-section" style="display:none">
+      <h2>📋 Repository Settings</h2>
+      <div class="form-group">
+        <label>Visibility <span class="tip" data-tip="Public repos are free on GitHub Pages. Private repos require GitHub Pro for Pages.">?</span></label>
+        <select id="gh-visibility">
+          <option value="public">Public (recommended for free GitHub Pages)</option>
+          <option value="private">Private (requires GitHub Pro for Pages)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Publish Actions -->
+    <div class="section">
+      <h2>🚀 Deploy</h2>
+      <div style="display:flex;gap:1rem;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="githubPublish()" id="btn-publish" disabled style="flex:1;min-width:200px">
+          🔵 Publish to GitHub Pages
+        </button>
+        <button class="btn btn-secondary" onclick="downloadZip()" style="flex:1;min-width:200px">
+          📥 Download ZIP Only
+        </button>
+      </div>
+      <div class="info-box warn" style="margin-top:1rem">
+        💡 After publishing, use the <strong>Admin Dashboard</strong> to add quiz content, edit questions, and manage your site — no coding required.
+      </div>
+    </div>
+
+    <!-- Publish Progress (hidden until publishing) -->
+    <div class="section" id="publish-progress-section" style="display:none">
+      <h2>📊 Publishing Progress</h2>
+      <div class="publish-steps" id="publish-steps">
+        <div class="publish-step pending" id="ps-verify">
+          <span class="ps-icon">1</span>
+          <div><div class="ps-label">Verifying GitHub account</div></div>
+        </div>
+        <div class="publish-step pending" id="ps-repo">
+          <span class="ps-icon">2</span>
+          <div><div class="ps-label">Creating repository</div></div>
+        </div>
+        <div class="publish-step pending" id="ps-push">
+          <span class="ps-icon">3</span>
+          <div><div class="ps-label">Pushing project files</div></div>
+        </div>
+        <div class="publish-step pending" id="ps-pages">
+          <span class="ps-icon">4</span>
+          <div><div class="ps-label">Enabling GitHub Pages</div></div>
+        </div>
+        <div class="publish-step pending" id="ps-done">
+          <span class="ps-icon">✓</span>
+          <div><div class="ps-label">Site goes live!</div></div>
+        </div>
+      </div>
+      <div class="validation-msg" id="publish-error"></div>
+    </div>
+
+    <!-- Success Panel (hidden until done) -->
+    <div class="section" id="success-section" style="display:none">
+      <div class="success-panel">
+        <div class="success-icon">🎉</div>
+        <h2 style="border:none;padding:0;margin-bottom:0.5rem">Your Quiz Site is Live!</h2>
+        <p style="color:var(--text-muted);margin-bottom:1rem">It may take 1–2 minutes for GitHub Pages to build and deploy.</p>
+        <div class="info-box warn" id="pages-warning" style="display:none;margin-bottom:1rem"></div>
+        <a class="success-url" id="live-url" href="#" target="_blank" rel="noopener"></a>
+        <p style="color:var(--text-muted);font-size:0.8rem;margin-top:0.25rem">Repository: <a id="repo-url" href="#" target="_blank" rel="noopener" style="color:var(--accent)"></a></p>
+        <div class="success-actions">
+          <button class="btn btn-primary" onclick="launchAdmin()">🛠️ Open Admin Dashboard</button>
+          <button class="btn btn-secondary" onclick="copyLiveUrl()">📋 Copy Live URL</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Download Success (for ZIP-only flow) -->
+    <div class="section" id="download-success-section" style="display:none">
+      <div class="success-panel">
+        <div class="success-icon">✅</div>
+        <h2 style="border:none;padding:0;margin-bottom:0.5rem">Project Downloaded!</h2>
+        <p style="color:var(--text-muted);margin-bottom:1rem">Extract the ZIP and open it to start adding content.</p>
+        <div class="success-actions">
+          <button class="btn btn-primary" onclick="launchAdminFromLocal()">🛠️ Open Admin Dashboard</button>
+          <button class="btn btn-secondary" onclick="downloadZip()">📥 Download Again</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-nav">
+      <button class="btn btn-secondary" onclick="goToStep(2)">← Back</button>
+      <div></div>
+    </div>
   </div>
+
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
+/* ═══════════════════════════════════════════
+   Core State & Utilities
+   ═══════════════════════════════════════════ */
 let folderCounter = 0;
 let quizCounters = {};
 let droppedFiles = [];
-let droppedFilesContent = {}; // Store actual file contents (filename -> content)
-let draggedElement = null;
-let draggedType = null; // 'folder' or 'quiz'
-let draggedParentId = null;
+let droppedFilesContent = {};
+let currentStep = 1;
+let ghToken = '';
+let ghUser = null;
+let lastProjectDir = '';
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 function showToast(msg, type = '') {
   const t = document.getElementById('toast');
@@ -238,7 +478,11 @@ function showToast(msg, type = '') {
   setTimeout(() => t.className = 'toast', 3000);
 }
 
-/* Theme */
+function $(id) { return document.getElementById(id); }
+
+/* ═══════════════════════════════════════════
+   Theme Toggle
+   ═══════════════════════════════════════════ */
 function toggleTheme() {
   const html = document.documentElement;
   const isDark = html.getAttribute('data-theme') === 'dark';
@@ -252,59 +496,121 @@ function toggleTheme() {
   document.getElementById('theme-toggle').textContent = s === 'light' ? '☾' : '☀';
 })();
 
-/* File Parser - Extract quiz/bank config from HTML files */
-function parseQuizFile(content, fileName) {
-  const result = {
-    type: 'unknown',
-    config: null,
-    fileName: fileName,
-    error: null
-  };
+/* ═══════════════════════════════════════════
+   Step Wizard Navigation
+   ═══════════════════════════════════════════ */
+function goToStep(step) {
+  // Validate before moving forward
+  if (step > currentStep && !validateStep(currentStep)) return;
 
+  currentStep = step;
+
+  // Update panels
+  document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+  $('step-' + step).classList.add('active');
+
+  // Update stepper indicators
+  document.querySelectorAll('.step-item').forEach(si => {
+    const s = parseInt(si.dataset.step);
+    si.classList.remove('active', 'completed');
+    if (s === step) si.classList.add('active');
+    else if (s < step) si.classList.add('completed');
+  });
+
+  // Update connectors
+  $('conn-1-2').classList.toggle('done', step >= 2);
+  $('conn-2-3').classList.toggle('done', step >= 3);
+
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function validateStep(step) {
+  if (step === 1) {
+    const name = $('project-name').value.trim();
+    if (!name) {
+      showValidation('project-name', 'Project name is required');
+      return false;
+    }
+    clearValidation('project-name');
+    return true;
+  }
+  if (step === 2) {
+    const config = getConfig();
+    if (config.folders.length === 0) {
+      showToast('Add at least one folder!', 'error');
+      return false;
+    }
+    return true;
+  }
+  return true;
+}
+
+function showValidation(inputId, msg) {
+  const el = $(inputId);
+  if (el) el.classList.add('invalid');
+  const valEl = $('val-' + inputId);
+  if (valEl) { valEl.textContent = msg; valEl.classList.add('show'); }
+}
+
+function clearValidation(inputId) {
+  const el = $(inputId);
+  if (el) el.classList.remove('invalid');
+  const valEl = $('val-' + inputId);
+  if (valEl) valEl.classList.remove('show');
+}
+
+function onProjectNameChange() {
+  const val = $('project-name').value.trim();
+  if (val) clearValidation('project-name');
+  updateStats();
+}
+
+/* ═══════════════════════════════════════════
+   Server Shutdown (for EXE / standalone use)
+   ═══════════════════════════════════════════ */
+async function shutdownServer() {
+  if (!confirm('Stop the server? This will close the generator.')) return;
   try {
-    // Try to extract QUIZ_CONFIG
-    const quizConfigMatch = content.match(/\/\*\s*\[QUIZ_CONFIG_START\]\s*\*\/[\s\S]*?const\s+QUIZ_CONFIG\s*=\s*({[\s\S]*?});[\s\S]*?\/\*\s*\[QUIZ_CONFIG_END\]\s*\*\//);
-    if (quizConfigMatch) {
+    await fetch('/api/shutdown', { method: 'POST' });
+  } catch (_) {}
+  document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:var(--text-muted);font-family:Outfit,sans-serif"><div style="text-align:center"><div style="font-size:3rem;margin-bottom:1rem">⏻</div><h2>Server stopped</h2><p>You can close this tab.</p></div></div>';
+}
+
+/* ═══════════════════════════════════════════
+   File Parser & Drag-Drop Import
+   ═══════════════════════════════════════════ */
+function parseQuizFile(content, fileName) {
+  const result = { type: 'unknown', config: null, fileName, error: null };
+  try {
+    const quizMatch = content.match(/\/\*\s*\[QUIZ_CONFIG_START\]\s*\*\/[\s\S]*?const\s+QUIZ_CONFIG\s*=\s*({[\s\S]*?});[\s\S]*?\/\*\s*\[QUIZ_CONFIG_END\]\s*\*\//);
+    if (quizMatch) {
       result.type = 'quiz';
-      const configStr = quizConfigMatch[1];
-      const parseFn = new Function('return ' + configStr);
-      result.config = parseFn();
+      result.config = new Function('return ' + quizMatch[1])();
       return result;
     }
-
-    // Try to extract BANK_CONFIG
-    const bankConfigMatch = content.match(/\/\*\s*\[BANK_CONFIG_START\]\s*\*\/[\s\S]*?const\s+BANK_CONFIG\s*=\s*({[\s\S]*?});[\s\S]*?\/\*\s*\[BANK_CONFIG_END\]\s*\*\//);
-    if (bankConfigMatch) {
+    const bankMatch = content.match(/\/\*\s*\[BANK_CONFIG_START\]\s*\*\/[\s\S]*?const\s+BANK_CONFIG\s*=\s*({[\s\S]*?});[\s\S]*?\/\*\s*\[BANK_CONFIG_END\]\s*\*\//);
+    if (bankMatch) {
       result.type = 'bank';
-      const configStr = bankConfigMatch[1];
-      const parseFn = new Function('return ' + configStr);
-      result.config = parseFn();
+      result.config = new Function('return ' + bankMatch[1])();
       return result;
     }
-
-    // Fallback: try to find any CONFIG object
-    const anyConfigMatch = content.match(/const\s+(?:QUIZ|BANK)_CONFIG\s*=\s*({[\s\S]*?title[\s\S]*?});/);
-    if (anyConfigMatch) {
-      const configStr = anyConfigMatch[1];
-      const parseFn = new Function('return ' + configStr);
-      const config = parseFn();
+    const anyMatch = content.match(/const\s+(?:QUIZ|BANK)_CONFIG\s*=\s*({[\s\S]*?title[\s\S]*?});/);
+    if (anyMatch) {
+      const config = new Function('return ' + anyMatch[1])();
       result.type = config.uid ? 'quiz' : 'bank';
       result.config = config;
       return result;
     }
-
     result.error = 'No quiz or bank configuration found in file';
   } catch (e) {
     result.error = 'Failed to parse file: ' + e.message;
   }
-
   return result;
 }
 
-/* Drag and Drop Handler for Files */
 function initDragAndDrop() {
-  const dropZone = document.getElementById('drop-zone');
-  const fileInput = document.getElementById('file-input');
+  const dropZone = $('drop-zone');
+  const fileInput = $('file-input');
 
   dropZone.addEventListener('click', (e) => {
     if (e.target.classList.contains('drop-zone-file-remove')) return;
@@ -323,9 +629,7 @@ function initDragAndDrop() {
 
   dropZone.addEventListener('dragleave', (e) => {
     e.preventDefault();
-    if (!dropZone.contains(e.relatedTarget)) {
-      dropZone.classList.remove('drag-over');
-    }
+    if (!dropZone.contains(e.relatedTarget)) dropZone.classList.remove('drag-over');
   });
 
   dropZone.addEventListener('drop', (e) => {
@@ -337,61 +641,50 @@ function initDragAndDrop() {
   function handleFiles(files) {
     Array.from(files).forEach(file => {
       if (!file.name.endsWith('.html') && !file.name.endsWith('.htm')) {
-        showToast(`❌ ${file.name} is not an HTML file`, 'error');
+        showToast('❌ ' + file.name + ' is not an HTML file', 'error');
         return;
       }
-
       if (droppedFiles.some(f => f.name === file.name && f.size === file.size)) {
-        showToast(`⚠️ ${file.name} already added`, 'error');
+        showToast('⚠️ ' + file.name + ' already added', 'error');
         return;
       }
-
       droppedFiles.push(file);
       const reader = new FileReader();
       reader.onload = (e) => {
         const content = e.target.result;
-        
-        // Store the actual file content
         droppedFilesContent[file.name] = content;
-        
         const parsed = parseQuizFile(content, file.name);
         addFileToList(file, parsed);
-        
         if (parsed.config) {
           autoImportFile(parsed, file.name);
-          showToast(`✅ ${parsed.config.title || file.name} imported!`, 'success');
+          showToast('✅ ' + (parsed.config.title || file.name) + ' imported!', 'success');
         } else {
-          showToast(`❌ ${parsed.error || 'Failed to parse file'}`, 'error');
+          showToast('❌ ' + (parsed.error || 'Failed to parse file'), 'error');
         }
       };
       reader.readAsText(file);
     });
   }
+}
 
-  function addFileToList(file, parsed) {
-    const fileList = document.getElementById('drop-zone-file-list');
-    const item = document.createElement('div');
-    item.className = 'drop-zone-file-item';
-    item.dataset.fileName = file.name;
-    
-    const icon = parsed.type === 'quiz' ? '📝' : parsed.type === 'bank' ? '🗃️' : '📄';
-    const status = parsed.config ? '✓ Parsed' : '✕ Error';
-    const statusClass = parsed.config ? '' : 'error';
-    
-    item.innerHTML = `
-      <span class="drop-zone-file-icon">${icon}</span>
-      <span class="drop-zone-file-name">${file.name}</span>
-      <span class="drop-zone-file-status ${statusClass}">${status}</span>
-      <span class="drop-zone-file-remove" onclick="removeDroppedFile('${file.name}', this)">✕</span>
-    `;
-    
-    fileList.appendChild(item);
-  }
+function addFileToList(file, parsed) {
+  const fileList = $('drop-zone-file-list');
+  const item = document.createElement('div');
+  item.className = 'drop-zone-file-item';
+  item.dataset.fileName = file.name;
+  const icon = parsed.type === 'quiz' ? '📝' : parsed.type === 'bank' ? '🗃️' : '📄';
+  const status = parsed.config ? '✓ Parsed' : '✕ Error';
+  const statusClass = parsed.config ? '' : 'error';
+  item.innerHTML = '<span class="drop-zone-file-icon">' + icon + '</span>' +
+    '<span class="drop-zone-file-name">' + esc(file.name) + '</span>' +
+    '<span class="drop-zone-file-status ' + statusClass + '">' + status + '</span>' +
+    '<span class="drop-zone-file-remove" onclick="removeDroppedFile(\'' + esc(file.name) + '\', this)">✕</span>';
+  fileList.appendChild(item);
 }
 
 function removeDroppedFile(fileName, element) {
   droppedFiles = droppedFiles.filter(f => f.name !== fileName);
-  delete droppedFilesContent[fileName]; // Remove stored content
+  delete droppedFilesContent[fileName];
   const item = element.closest('.drop-zone-file-item');
   if (item) item.remove();
 }
@@ -399,30 +692,20 @@ function removeDroppedFile(fileName, element) {
 function autoImportFile(parsed, fileName) {
   const config = parsed.config;
   if (!config) return;
-
-  // Use filename as folder name (cleaner), fallback to config title
-  const cleanName = fileName.replace('.html', '').replace('.htm', '').replace(/[-_]/g, ' ');
+  const cleanName = fileName.replace('.html','').replace('.htm','').replace(/[-_]/g,' ');
   const folderName = cleanName || config.title || 'Imported';
   const quizTitle = config.title || fileName;
   const description = config.description || '';
   const icon = config.icon || (parsed.type === 'bank' ? '🗃️' : '📝');
-  
+
   let folderCard = null;
   document.querySelectorAll('.folder-card').forEach(fc => {
     const nameInput = fc.querySelector('.folder-name');
-    if (nameInput && nameInput.value.toLowerCase() === folderName.toLowerCase()) {
-      folderCard = fc;
-    }
+    if (nameInput && nameInput.value.toLowerCase() === folderName.toLowerCase()) folderCard = fc;
   });
 
   if (!folderCard) {
-    addFolder({
-      name: folderName,
-      description: `Auto-imported from ${fileName}`,
-      icon: icon,
-      quizzes: []
-    });
-    
+    addFolder({ name: folderName, description: 'Auto-imported from ' + fileName, icon: icon, quizzes: [] });
     const folders = document.querySelectorAll('.folder-card');
     folderCard = folders[folders.length - 1];
   }
@@ -431,364 +714,116 @@ function autoImportFile(parsed, fileName) {
   if (quizzesContainer) {
     const folderId = folderCard.id.replace('folder-', '');
     addQuiz(folderId, {
-      title: quizTitle,
-      description: description,
-      icon: icon,
-      tags: [parsed.type === 'bank' ? 'Bank' : 'Quiz'],
-      url: fileName
+      title: quizTitle, description: description, icon: icon,
+      tags: [parsed.type === 'bank' ? 'Bank' : 'Quiz'], url: fileName
     });
   }
 }
 
-/* Drag and Drop Reordering */
-let dragGhost = null;
-let currentDropTarget = null;
-
-function initDragReordering() {
-  // Folder drag handlers
-  document.querySelectorAll('.folder-card').forEach(folder => {
-    makeDraggable(folder, 'folder');
-  });
-
-  // Quiz drag handlers
-  document.querySelectorAll('.quiz-entry').forEach(quiz => {
-    makeDraggable(quiz, 'quiz');
-  });
-}
-
-function makeDraggable(element, type) {
-  const handle = element.querySelector('.drag-handle');
-  if (!handle) return;
-
-  // Remove old listeners by cloning
-  const newHandle = handle.cloneNode(true);
-  handle.parentNode.replaceChild(newHandle, handle);
-  
-  newHandle.addEventListener('mousedown', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    draggedElement = element;
-    draggedType = type;
-    
-    if (type === 'folder') {
-      draggedParentId = element.parentElement.id || 'folders-container';
-    } else {
-      const container = element.closest('.quizzes-container');
-      draggedParentId = container ? container.id : null;
-    }
-    
-    // Create drag ghost
-    dragGhost = element.cloneNode(true);
-    dragGhost.classList.add('drag-ghost');
-    dragGhost.style.position = 'fixed';
-    dragGhost.style.width = element.offsetWidth + 'px';
-    dragGhost.style.pointerEvents = 'none';
-    dragGhost.style.opacity = '0.9';
-    dragGhost.style.zIndex = '10000';
-    document.body.appendChild(dragGhost);
-    
-    element.classList.add('dragging');
-    element.style.opacity = '0.3';
-    
-    document.addEventListener('mousemove', onDrag);
-    document.addEventListener('mouseup', onDrop);
-  });
-
-  function onDrag(e) {
-    if (!draggedElement || !dragGhost) return;
-    
-    // Move ghost
-    dragGhost.style.left = (e.clientX - 50) + 'px';
-    dragGhost.style.top = (e.clientY - 20) + 'px';
-    
-    if (draggedType === 'quiz') {
-      // Find folder under cursor
-      const elementUnder = document.elementFromPoint(e.clientX, e.clientY);
-      const folderUnder = elementUnder?.closest('.folder-card');
-      
-      // Remove previous highlight
-      if (currentDropTarget && currentDropTarget !== folderUnder) {
-        currentDropTarget.classList.remove('drag-over-folder');
-      }
-      
-      // Highlight new target
-      if (folderUnder && folderUnder !== draggedElement?.closest('.folder-card')) {
-        folderUnder.classList.add('drag-over-folder');
-        currentDropTarget = folderUnder;
-      } else {
-        currentDropTarget = null;
-      }
-      
-      // Reorder within same container
-      const container = draggedElement.parentElement;
-      if (container && container.classList.contains('quizzes-container')) {
-        const siblings = Array.from(container.children)
-          .filter(el => el !== draggedElement && el.classList.contains('quiz-entry'));
-        
-        const nextElement = siblings.find(sibling => {
-          const rect = sibling.getBoundingClientRect();
-          return e.clientY < rect.top + rect.height / 2;
-        });
-        
-        if (nextElement) {
-          container.insertBefore(draggedElement, nextElement);
-        } else {
-          container.appendChild(draggedElement);
-        }
-      }
-    } else if (draggedType === 'folder') {
-      // Reorder folders
-      const container = draggedElement.parentElement;
-      if (container) {
-        const siblings = Array.from(container.children)
-          .filter(el => el !== draggedElement && el.classList.contains('folder-card'));
-        
-        const nextElement = siblings.find(sibling => {
-          const rect = sibling.getBoundingClientRect();
-          return e.clientY < rect.top + rect.height / 2;
-        });
-        
-        if (nextElement) {
-          container.insertBefore(draggedElement, nextElement);
-        } else {
-          container.appendChild(draggedElement);
-        }
-      }
-    }
-  }
-
-  function onDrop(e) {
-    if (!draggedElement) return;
-    
-    // Remove ghost and styling
-    if (dragGhost) {
-      dragGhost.remove();
-      dragGhost = null;
-    }
-    
-    draggedElement.classList.remove('dragging');
-    draggedElement.style.opacity = '';
-    
-    // Check if dropped on a folder (for quiz moves)
-    if (draggedType === 'quiz' && currentDropTarget) {
-      const sourceFolder = draggedElement.closest('.folder-card');
-      const targetFolder = currentDropTarget;
-      
-      // Only move if different folder
-      if (sourceFolder !== targetFolder) {
-        const targetContainer = targetFolder.querySelector('.quizzes-container');
-        if (targetContainer) {
-          // Remove from old location
-          draggedElement.remove();
-          
-          // Add to end of target
-          targetContainer.appendChild(draggedElement);
-          
-          // Renumber both
-          const sourceQc = sourceFolder?.querySelector('.quizzes-container');
-          if (sourceQc) renumberQuizzes(sourceQc);
-          renumberQuizzes(targetContainer);
-          
-          // Update Q number
-          const qNum = targetContainer.querySelectorAll('.quiz-entry').length;
-          const numBadge = draggedElement.querySelector('.q-num');
-          if (numBadge) numBadge.textContent = `Q${qNum}`;
-          
-          const targetName = targetFolder.querySelector('.folder-name')?.value || 'folder';
-          showToast(`✅ Quiz moved to ${targetName}`, 'success');
-        }
-      }
-      
-      targetFolder.classList.remove('drag-over-folder');
-    }
-    
-    // Cleanup
-    currentDropTarget = null;
-    draggedElement = null;
-    draggedType = null;
-    draggedParentId = null;
-    
-    document.removeEventListener('mousemove', onDrag);
-    document.removeEventListener('mouseup', onDrop);
-    
-    updatePreview();
-    updateStats();
-  }
-}
-
-/* Config */
-function getConfig() {
-  const folders = [];
-  
-  function processFolderElement(folderEl, parentArray) {
-    const folderName = folderEl.querySelector('.folder-name')?.value?.trim();
-    if (!folderName) return;
-    
-    const quizzes = [];
-    folderEl.querySelectorAll(':scope > .quizzes-container > .quiz-entry').forEach(qe => {
-      const title = qe.querySelector('.qe-title')?.value?.trim();
-      const url = qe.querySelector('.qe-url')?.value?.trim();
-      if (title && url) {
-        const tags = qe.dataset.tags ? qe.dataset.tags.split(',').filter(Boolean) : [];
-        quizzes.push({
-          title: title,
-          description: qe.querySelector('.qe-desc')?.value?.trim() || '',
-          icon: qe.querySelector('.qe-icon')?.value?.trim() || '📝',
-          tags: tags,
-          url: url
-        });
-      }
-    });
-    
-    const folder = {
-      name: folderName,
-      description: folderEl.querySelector('.folder-desc')?.value?.trim() || '',
-      icon: folderEl.querySelector('.folder-icon')?.value?.trim() || '📁',
-      quizzes: quizzes,
-      subfolders: []
-    };
-    
-    // Process subfolders
-    const subfolderContainer = folderEl.querySelector('.subfolder-container');
-    if (subfolderContainer) {
-      subfolderContainer.querySelectorAll(':scope > .folder-card').forEach(subfolderEl => {
-        processFolderElement(subfolderEl, folder.subfolders);
-      });
-    }
-    
-    parentArray.push(folder);
-  }
-  
-  document.querySelectorAll('#folders-container > .folder-card').forEach(folderEl => {
-    processFolderElement(folderEl, folders);
-  });
-
-  return {
-    project_name: document.getElementById('project-name').value,
-    topbar_title: document.getElementById('topbar-title').value,
-    hero_title: document.getElementById('hero-title').value,
-    hero_description: document.getElementById('hero-desc').value,
-    default_theme: document.getElementById('default-theme').value,
-    folders: folders
-  };
-}
-
-/* Folders */
-function addFolder(data, parentContainer = null) {
+/* ═══════════════════════════════════════════
+   Folder Management
+   ═══════════════════════════════════════════ */
+function addFolder(data, parentContainer) {
   folderCounter++;
   const id = folderCounter;
   quizCounters[id] = 0;
   const d = data || {};
   const quizzes = d.quizzes || [];
-  const container = parentContainer || document.getElementById('folders-container');
+  const container = parentContainer || $('folders-container');
   const div = document.createElement('div');
   div.className = 'folder-card';
   div.id = 'folder-' + id;
-  
+
   const level = container.id === 'folders-container' ? 0 : parseInt(container.dataset.level || 0) + 1;
   div.dataset.level = level;
-  
   const subfolderId = 'subfolder-container-' + id;
-  
-  div.innerHTML = `
-    <span class="folder-num">Folder ${Array.from(container.children).filter(c => c.classList.contains('folder-card')).length + 1}</span>
-    <div class="folder-header">
-      <h3><span class="btn-icon drag-handle" title="Drag to reorder">⠿</span> 📁 Folder</h3>
-      <div style="display:flex;gap:0.5rem">
-        <button class="btn btn-sm btn-secondary" onclick="addSubfolder(${id})">+ Add Subfolder</button>
-        <button class="btn btn-sm btn-secondary" onclick="addQuiz(${id})">+ Add Quiz</button>
-        <button class="btn btn-sm btn-danger" onclick="removeFolder(${id})">✕</button>
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Folder Name (directory)</label>
-        <input type="text" class="folder-name" placeholder="e.g. Cardiology or Exams" value="${esc(d.name||'')}" oninput="updatePreview()">
-      </div>
-      <div class="form-group">
-        <label>Folder Icon (emoji)</label>
-        <input type="text" class="folder-icon" placeholder="📁" value="${esc(d.icon||'📁')}" maxlength="4" oninput="updatePreview()">
-      </div>
-    </div>
-    <div class="form-group">
-      <label>Folder Description</label>
-      <input type="text" class="folder-desc" placeholder="Brief description..." value="${esc(d.description||'')}" oninput="updatePreview()">
-    </div>
-    <div class="quizzes-container" id="quizzes-${id}"></div>
-    <div class="subfolder-container" id="${subfolderId}" data-level="${level}"></div>
-  `;
-  container.appendChild(div);
 
+  div.innerHTML =
+    '<span class="folder-num">Folder ' + (Array.from(container.children).filter(c => c.classList.contains('folder-card')).length + 1) + '</span>' +
+    '<div class="folder-header">' +
+      '<h3><span class="btn-icon drag-handle" title="Drag to reorder">⠿</span> 📁 Folder</h3>' +
+      '<div style="display:flex;gap:0.5rem">' +
+        '<button class="btn btn-sm btn-secondary" onclick="addSubfolder(' + id + ')">+ Subfolder</button>' +
+        '<button class="btn btn-sm btn-secondary" onclick="addQuiz(' + id + ')">+ Quiz</button>' +
+        '<button class="btn btn-sm btn-danger" onclick="removeFolder(' + id + ')">✕</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="form-row">' +
+      '<div class="form-group"><label>Folder Name</label>' +
+        '<input type="text" class="folder-name" placeholder="e.g. Cardiology" value="' + esc(d.name||'') + '" oninput="updateStats()"></div>' +
+      '<div class="form-group"><label>Icon</label>' +
+        '<input type="text" class="folder-icon" placeholder="📁" value="' + esc(d.icon||'📁') + '" maxlength="4" oninput="updateStats()"></div>' +
+    '</div>' +
+    '<div class="form-group"><label>Description</label>' +
+      '<input type="text" class="folder-desc" placeholder="Brief description..." value="' + esc(d.description||'') + '" oninput="updateStats()"></div>' +
+    '<div class="quizzes-container" id="quizzes-' + id + '"></div>' +
+    '<div class="subfolder-container" id="' + subfolderId + '" data-level="' + level + '"></div>';
+
+  container.appendChild(div);
   quizzes.forEach(q => addQuiz(id, q));
-  
   initDragReordering();
-  updatePreview();
   updateStats();
 }
 
 function addSubfolder(parentFolderId) {
-  const parentFolder = document.getElementById('folder-' + parentFolderId);
+  const parentFolder = $('folder-' + parentFolderId);
   if (!parentFolder) return;
-  
   const subfolderContainer = parentFolder.querySelector('.subfolder-container');
   addFolder({}, subfolderContainer);
   showToast('✅ Subfolder added', 'success');
 }
 
 function removeFolder(id) {
-  const el = document.getElementById('folder-' + id);
+  const el = $('folder-' + id);
   if (el) el.remove();
   delete quizCounters[id];
   renumberFolders();
-  updatePreview();
   updateStats();
 }
 
 function renumberFolders() {
   document.querySelectorAll('#folders-container > .folder-card').forEach((fc, i) => {
     const num = fc.querySelector('.folder-num');
-    if (num) num.textContent = `Folder ${i + 1}`;
+    if (num) num.textContent = 'Folder ' + (i + 1);
   });
 }
 
-/* Quizzes */
+/* ═══════════════════════════════════════════
+   Quiz Entry Management
+   ═══════════════════════════════════════════ */
 function addQuiz(folderId, data) {
   if (!quizCounters[folderId]) quizCounters[folderId] = 0;
   quizCounters[folderId]++;
-  const qid = quizCounters[folderId];
   const d = data || {};
   const tags = d.tags || [];
-  const qc = document.getElementById('quizzes-' + folderId);
+  const qc = $('quizzes-' + folderId);
   if (!qc) return;
   const div = document.createElement('div');
   div.className = 'quiz-entry';
   div.dataset.tags = tags.join(',');
-  div.innerHTML = `
-    <span class="q-num">Q${qc.children.length + 1}</span>
-    <div class="quiz-row">
-      <span class="btn-icon drag-handle" title="Drag to reorder">⠿</span>
-      <input type="text" class="qe-title" placeholder="Quiz title..." value="${esc(d.title||'')}" oninput="updatePreview()">
-    </div>
-    <div class="quiz-row">
-      <input type="text" class="qe-icon" placeholder="📝" value="${esc(d.icon||'📝')}" maxlength="4" oninput="updatePreview()">
-      <input type="text" class="qe-url" placeholder="path/to/quiz.html" value="${esc(d.url||'')}" oninput="updatePreview()">
-    </div>
-    <div class="quiz-row">
-      <input type="text" class="qe-desc" placeholder="Brief description..." value="${esc(d.description||'')}" oninput="updatePreview()">
-    </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.5rem">
-      <div class="tags-row">
-        ${tags.map((t, i) => `<span class="tag-chip">${esc(t)}<span class="remove-tag" onclick="removeTag(this, '${esc(t)}')">&times;</span></span>`).join('')}
-        <input type="text" class="tag-input" placeholder="+ tag" onkeydown="handleTagInput(event, this)">
-      </div>
-      <button class="btn btn-sm btn-danger" onclick="removeQuiz(this)">✕</button>
-    </div>
-  `;
+  div.innerHTML =
+    '<span class="q-num">Q' + (qc.children.length + 1) + '</span>' +
+    '<div class="quiz-row">' +
+      '<span class="btn-icon drag-handle" title="Drag to reorder">⠿</span>' +
+      '<input type="text" class="qe-title" placeholder="Quiz title..." value="' + esc(d.title||'') + '" oninput="updateStats()">' +
+    '</div>' +
+    '<div class="quiz-row">' +
+      '<input type="text" class="qe-icon" placeholder="📝" value="' + esc(d.icon||'📝') + '" maxlength="4" oninput="updateStats()">' +
+      '<input type="text" class="qe-url" placeholder="path/to/quiz.html" value="' + esc(d.url||'') + '" oninput="updateStats()">' +
+    '</div>' +
+    '<div class="quiz-row">' +
+      '<input type="text" class="qe-desc" placeholder="Brief description..." value="' + esc(d.description||'') + '" oninput="updateStats()">' +
+    '</div>' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.5rem">' +
+      '<div class="tags-row">' +
+        tags.map(t => '<span class="tag-chip">' + esc(t) + '<span class="remove-tag" onclick="removeTag(this, \'' + esc(t) + '\')">&times;</span></span>').join('') +
+        '<input type="text" class="tag-input" placeholder="+ tag" onkeydown="handleTagInput(event, this)">' +
+      '</div>' +
+      '<button class="btn btn-sm btn-danger" onclick="removeQuiz(this)">✕</button>' +
+    '</div>';
   qc.appendChild(div);
   renumberQuizzes(qc);
   initDragReordering();
-  updatePreview();
   updateStats();
 }
 
@@ -797,14 +832,13 @@ function removeQuiz(btn) {
   const qc = entry.parentElement;
   entry.remove();
   renumberQuizzes(qc);
-  updatePreview();
   updateStats();
 }
 
 function renumberQuizzes(qc) {
   qc.querySelectorAll('.quiz-entry').forEach((e, i) => {
     const num = e.querySelector('.q-num');
-    if (num) num.textContent = `Q${i + 1}`;
+    if (num) num.textContent = 'Q' + (i + 1);
   });
 }
 
@@ -819,85 +853,383 @@ function handleTagInput(e, input) {
     if (entry.dataset.tags.split(',').includes(tag)) { input.value = ''; return; }
     const chip = document.createElement('span');
     chip.className = 'tag-chip';
-    chip.innerHTML = `${esc(tag)}<span class="remove-tag" onclick="removeTag(this, '${esc(tag)}')">&times;</span>`;
+    chip.innerHTML = esc(tag) + '<span class="remove-tag" onclick="removeTag(this, \'' + esc(tag) + '\')">&times;</span>';
     tagsRow.insertBefore(chip, input);
     const currentTags = entry.dataset.tags ? entry.dataset.tags.split(',').filter(Boolean) : [];
     currentTags.push(tag);
     entry.dataset.tags = currentTags.join(',');
     input.value = '';
-    updatePreview();
+    updateStats();
   }
 }
 
 function removeTag(span, tag) {
   const entry = span.closest('.quiz-entry');
-  const chip = span.parentElement;
-  chip.remove();
+  span.parentElement.remove();
   if (entry) {
     const currentTags = entry.dataset.tags ? entry.dataset.tags.split(',').filter(Boolean) : [];
     const idx = currentTags.indexOf(tag);
     if (idx > -1) currentTags.splice(idx, 1);
     entry.dataset.tags = currentTags.join(',');
-    updatePreview();
+    updateStats();
   }
 }
 
-function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+/* ═══════════════════════════════════════════
+   Drag & Drop Reordering
+   ═══════════════════════════════════════════ */
+let draggedElement = null;
+let draggedType = null;
+let draggedParentId = null;
+let dragGhost = null;
+let currentDropTarget = null;
 
-/* Preview */
-function updatePreview() {
-  const config = getConfig();
-  const totalQuizzes = config.folders.reduce((sum, f) => sum + f.quizzes.length, 0);
-  document.getElementById('preview-panel').textContent = JSON.stringify({
-    project: config.project_name,
-    title: config.topbar_title,
-    folders: config.folders.length,
-    quizzes: totalQuizzes
-  }, null, 2);
+function initDragReordering() {
+  document.querySelectorAll('.folder-card .drag-handle').forEach(handle => {
+    const element = handle.closest('.folder-card') || handle.closest('.quiz-entry');
+    if (!element) return;
+    const type = element.classList.contains('folder-card') ? 'folder' : 'quiz';
+
+    const newHandle = handle.cloneNode(true);
+    handle.parentNode.replaceChild(newHandle, handle);
+
+    newHandle.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      draggedElement = element;
+      draggedType = type;
+
+      dragGhost = element.cloneNode(true);
+      dragGhost.classList.add('drag-ghost');
+      dragGhost.style.position = 'fixed';
+      dragGhost.style.width = element.offsetWidth + 'px';
+      dragGhost.style.pointerEvents = 'none';
+      dragGhost.style.opacity = '0.9';
+      dragGhost.style.zIndex = '10000';
+      document.body.appendChild(dragGhost);
+
+      element.classList.add('dragging');
+      element.style.opacity = '0.3';
+      document.addEventListener('mousemove', onDrag);
+      document.addEventListener('mouseup', onDrop);
+    });
+  });
+}
+
+function onDrag(e) {
+  if (!draggedElement || !dragGhost) return;
+  dragGhost.style.left = (e.clientX - 50) + 'px';
+  dragGhost.style.top = (e.clientY - 20) + 'px';
+
+  if (draggedType === 'quiz') {
+    const elementUnder = document.elementFromPoint(e.clientX, e.clientY);
+    const folderUnder = elementUnder && elementUnder.closest('.folder-card');
+    if (currentDropTarget && currentDropTarget !== folderUnder) {
+      currentDropTarget.classList.remove('drag-over-folder');
+    }
+    if (folderUnder && folderUnder !== draggedElement.closest('.folder-card')) {
+      folderUnder.classList.add('drag-over-folder');
+      currentDropTarget = folderUnder;
+    } else {
+      currentDropTarget = null;
+    }
+
+    const container = draggedElement.parentElement;
+    if (container && container.classList.contains('quizzes-container')) {
+      const siblings = Array.from(container.children).filter(el => el !== draggedElement && el.classList.contains('quiz-entry'));
+      const nextElement = siblings.find(sibling => {
+        const rect = sibling.getBoundingClientRect();
+        return e.clientY < rect.top + rect.height / 2;
+      });
+      if (nextElement) container.insertBefore(draggedElement, nextElement);
+      else container.appendChild(draggedElement);
+    }
+  } else if (draggedType === 'folder') {
+    const container = draggedElement.parentElement;
+    if (container) {
+      const siblings = Array.from(container.children).filter(el => el !== draggedElement && el.classList.contains('folder-card'));
+      const nextElement = siblings.find(sibling => {
+        const rect = sibling.getBoundingClientRect();
+        return e.clientY < rect.top + rect.height / 2;
+      });
+      if (nextElement) container.insertBefore(draggedElement, nextElement);
+      else container.appendChild(draggedElement);
+    }
+  }
+}
+
+function onDrop(e) {
+  if (!draggedElement) return;
+  if (dragGhost) { dragGhost.remove(); dragGhost = null; }
+  draggedElement.classList.remove('dragging');
+  draggedElement.style.opacity = '';
+
+  if (draggedType === 'quiz' && currentDropTarget) {
+    const sourceFolder = draggedElement.closest('.folder-card');
+    const targetFolder = currentDropTarget;
+    if (sourceFolder !== targetFolder) {
+      const targetContainer = targetFolder.querySelector('.quizzes-container');
+      if (targetContainer) {
+        draggedElement.remove();
+        targetContainer.appendChild(draggedElement);
+        const sourceQc = sourceFolder && sourceFolder.querySelector('.quizzes-container');
+        if (sourceQc) renumberQuizzes(sourceQc);
+        renumberQuizzes(targetContainer);
+        const targetName = targetFolder.querySelector('.folder-name').value || 'folder';
+        showToast('✅ Quiz moved to ' + targetName, 'success');
+      }
+    }
+    targetFolder.classList.remove('drag-over-folder');
+  }
+
+  currentDropTarget = null;
+  draggedElement = null;
+  draggedType = null;
+  document.removeEventListener('mousemove', onDrag);
+  document.removeEventListener('mouseup', onDrop);
   updateStats();
+}
+
+/* ═══════════════════════════════════════════
+   Config Builder & Stats
+   ═══════════════════════════════════════════ */
+function getConfig() {
+  const folders = [];
+  function processFolderElement(folderEl, parentArray) {
+    const folderName = folderEl.querySelector('.folder-name')?.value?.trim();
+    if (!folderName) return;
+    const quizzes = [];
+    folderEl.querySelectorAll(':scope > .quizzes-container > .quiz-entry').forEach(qe => {
+      const title = qe.querySelector('.qe-title')?.value?.trim();
+      const url = qe.querySelector('.qe-url')?.value?.trim();
+      if (title && url) {
+        const tags = qe.dataset.tags ? qe.dataset.tags.split(',').filter(Boolean) : [];
+        quizzes.push({
+          title, description: qe.querySelector('.qe-desc')?.value?.trim() || '',
+          icon: qe.querySelector('.qe-icon')?.value?.trim() || '📝', tags, url
+        });
+      }
+    });
+    const folder = { name: folderName, description: folderEl.querySelector('.folder-desc')?.value?.trim() || '',
+      icon: folderEl.querySelector('.folder-icon')?.value?.trim() || '📁', quizzes, subfolders: [] };
+    const subfolderContainer = folderEl.querySelector('.subfolder-container');
+    if (subfolderContainer) {
+      subfolderContainer.querySelectorAll(':scope > .folder-card').forEach(subfolderEl => {
+        processFolderElement(subfolderEl, folder.subfolders);
+      });
+    }
+    parentArray.push(folder);
+  }
+  document.querySelectorAll('#folders-container > .folder-card').forEach(folderEl => {
+    processFolderElement(folderEl, folders);
+  });
+  return {
+    project_name: $('project-name').value,
+    topbar_title: $('topbar-title').value,
+    hero_title: $('hero-title').value,
+    hero_description: $('hero-desc').value,
+    default_theme: $('default-theme').value,
+    folders
+  };
 }
 
 function updateStats() {
   const config = getConfig();
-  
   function countItems(folderList) {
-    let totalQuizzes = 0;
-    let totalFolders = 0;
+    let totalQuizzes = 0, totalFolders = 0;
     folderList.forEach(f => {
       totalFolders++;
       totalQuizzes += f.quizzes.length;
-      if (f.subfolders) {
-        const sub = countItems(f.subfolders);
-        totalFolders += sub.folders;
-        totalQuizzes += sub.quizzes;
-      }
+      if (f.subfolders) { const sub = countItems(f.subfolders); totalFolders += sub.folders; totalQuizzes += sub.quizzes; }
     });
     return { folders: totalFolders, quizzes: totalQuizzes };
   }
-  
   const counts = countItems(config.folders);
   const baseFiles = 16;
-  document.getElementById('stat-folders').textContent = counts.folders;
-  document.getElementById('stat-quizzes').textContent = counts.quizzes;
-  document.getElementById('stat-files').textContent = baseFiles + 1 + counts.folders + counts.quizzes;
+  $('stat-folders').textContent = counts.folders;
+  $('stat-quizzes').textContent = counts.quizzes;
+  $('stat-files').textContent = baseFiles + 1 + counts.folders + counts.quizzes;
 }
 
-/* Generate ZIP */
-async function generateZip() {
-  const config = getConfig();
-  if (!config.folders.length) { showToast('❌ Add at least one folder!', 'error'); return; }
-  
-  // Include dropped file contents in the config
-  config.dropped_files = droppedFilesContent;
-  
-  const btn = document.getElementById('btn-generate');
-  btn.innerHTML = '<span class="spinner"></span> Generating...';
+/* ═══════════════════════════════════════════
+   GitHub Login / Logout
+   ═══════════════════════════════════════════ */
+async function githubLogin() {
+  const token = $('gh-token').value.trim();
+  if (!token) {
+    showValidation('gh-token', 'Please enter your Personal Access Token');
+    return;
+  }
+  clearValidation('gh-token');
+  const btn = $('btn-gh-login');
+  btn.innerHTML = '<span class="spinner"></span> Verifying...';
   btn.disabled = true;
 
   try {
+    const resp = await fetch('/api/github/verify', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    });
+    const data = await resp.json();
+
+    if (data.ok) {
+      ghToken = token;
+      ghUser = data;
+      $('gh-login-panel').style.display = 'none';
+      $('gh-user-panel').style.display = '';
+      $('gh-avatar').src = data.avatar;
+      $('gh-display-name').textContent = data.name;
+      $('gh-username-text').textContent = '@' + data.username;
+      $('gh-repos-count').textContent = data.repos_count;
+      $('gh-visibility-section').style.display = '';
+      $('btn-publish').disabled = false;
+      showToast('✅ Connected as ' + data.username, 'success');
+    } else {
+      showValidation('gh-token', data.error || 'Invalid token');
+    }
+  } catch (err) {
+    showValidation('gh-token', 'Connection failed: ' + err.message);
+  }
+  btn.innerHTML = 'Sign In';
+  btn.disabled = false;
+}
+
+function githubLogout() {
+  ghToken = '';
+  ghUser = null;
+  $('gh-token').value = '';
+  $('gh-login-panel').style.display = '';
+  $('gh-user-panel').style.display = 'none';
+  $('gh-visibility-section').style.display = 'none';
+  $('btn-publish').disabled = true;
+  showToast('Disconnected from GitHub');
+}
+
+/* ═══════════════════════════════════════════
+   GitHub Publish (One-Click Deploy)
+   ═══════════════════════════════════════════ */
+async function githubPublish() {
+  if (!ghToken || !ghUser) { showToast('❌ Sign in to GitHub first', 'error'); return; }
+  const config = getConfig();
+  if (!config.folders.length) { showToast('❌ Add at least one folder!', 'error'); return; }
+
+  // Show progress section
+  $('publish-progress-section').style.display = '';
+  $('success-section').style.display = 'none';
+  $('download-success-section').style.display = 'none';
+  $('publish-error').classList.remove('show');
+
+  // Reset all steps to pending
+  ['ps-verify','ps-repo','ps-push','ps-pages','ps-done'].forEach(id => {
+    const el = $(id);
+    el.className = 'publish-step pending';
+  });
+
+  const btn = $('btn-publish');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Publishing...';
+
+  const visibility = $('gh-visibility').value;
+
+  // Animate step 1: Verify
+  setPublishStep('ps-verify', 'running');
+
+  try {
+    // Step 1: Verify (already done via login, just animate)
+    await sleep(500);
+    setPublishStep('ps-verify', 'done');
+
+    // Steps 2-4 are handled server-side
+    setPublishStep('ps-repo', 'running');
+
+    const resp = await fetch('/api/github/publish', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: ghToken, config, visibility })
+    });
+    const data = await resp.json();
+
+    if (data.ok) {
+      // Server completed all steps — animate them in sequence
+      await sleep(400);
+      setPublishStep('ps-repo', 'done');
+      await sleep(400);
+      setPublishStep('ps-push', 'running');
+      await sleep(600);
+      setPublishStep('ps-push', 'done');
+      await sleep(300);
+      setPublishStep('ps-pages', 'running');
+      await sleep(500);
+      setPublishStep('ps-pages', 'done');
+      await sleep(300);
+      setPublishStep('ps-done', 'done');
+
+      // Show success
+      lastProjectDir = data.project_dir;
+      $('publish-progress-section').style.display = 'none';
+      $('success-section').style.display = '';
+      $('live-url').href = data.pages_url;
+      $('live-url').textContent = data.pages_url;
+      $('repo-url').href = data.repo_url;
+      $('repo-url').textContent = data.repo_url;
+
+      // Show Pages warning if applicable
+      const pagesWarningEl = $('pages-warning');
+      if (data.pages_warning) {
+        pagesWarningEl.textContent = data.pages_warning;
+        pagesWarningEl.style.display = '';
+      } else {
+        pagesWarningEl.style.display = 'none';
+      }
+
+      showToast('🎉 Site published successfully!', 'success');
+    } else {
+      // Find which step failed based on error
+      const error = data.error || 'Unknown error';
+      setPublishStep('ps-verify', 'done');
+
+      if (error.includes('repository') || error.includes('repo')) {
+        setPublishStep('ps-repo', 'failed');
+      } else if (error.includes('push') || error.includes('git')) {
+        setPublishStep('ps-repo', 'done');
+        setPublishStep('ps-push', 'failed');
+      } else {
+        setPublishStep('ps-repo', 'done');
+        setPublishStep('ps-push', 'done');
+        setPublishStep('ps-pages', 'failed');
+      }
+      $('publish-error').textContent = error;
+      $('publish-error').classList.add('show');
+      showToast('❌ Publish failed: ' + error, 'error');
+    }
+  } catch (err) {
+    setPublishStep('ps-verify', 'failed');
+    $('publish-error').textContent = err.message;
+    $('publish-error').classList.add('show');
+    showToast('❌ Connection error', 'error');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '🔵 Publish to GitHub Pages';
+}
+
+function setPublishStep(id, state) {
+  const el = $(id);
+  if (el) el.className = 'publish-step ' + state;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+/* ═══════════════════════════════════════════
+   Download ZIP
+   ═══════════════════════════════════════════ */
+async function downloadZip() {
+  const config = getConfig();
+  if (!config.folders.length) { showToast('❌ Add at least one folder!', 'error'); return; }
+  config.dropped_files = droppedFilesContent;
+
+  try {
     const resp = await fetch('/api/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(config)
     });
     if (!resp.ok) throw new Error('Generation failed');
@@ -908,95 +1240,140 @@ async function generateZip() {
     a.download = (config.project_name || 'quiz-project') + '.zip';
     a.click();
     URL.revokeObjectURL(url);
-    showToast('✅ Project generated and downloaded!', 'success');
+
+    // Also save locally for admin dashboard
+    try {
+      const localResp = await fetch('/api/download-local', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config)
+      });
+      const localData = await localResp.json();
+      if (localData.ok) lastProjectDir = localData.project_dir;
+    } catch (_) {}
+
+    $('download-success-section').style.display = '';
+    showToast('✅ Project downloaded!', 'success');
   } catch (err) {
     showToast('❌ ' + err.message, 'error');
   }
-  btn.innerHTML = '📥 Generate & Download ZIP';
-  btn.disabled = false;
 }
 
-/* Export / Import Config */
-function exportConfig() {
-  const config = getConfig();
-  const json = JSON.stringify(config, null, 2);
-  navigator.clipboard.writeText(json).then(() => {
-    showToast('✅ Config copied to clipboard!', 'success');
+/* ═══════════════════════════════════════════
+   Launch Admin Dashboard
+   ═══════════════════════════════════════════ */
+async function launchAdmin() {
+  if (!lastProjectDir) { showToast('❌ No project directory found', 'error'); return; }
+  try {
+    const resp = await fetch('/api/launch-admin', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ project_dir: lastProjectDir })
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      showToast('✅ Admin Dashboard launching...', 'success');
+      setTimeout(() => window.open(data.admin_url, '_blank'), 1000);
+    } else {
+      showToast('❌ ' + data.error, 'error');
+    }
+  } catch (err) {
+    showToast('❌ Failed to launch admin: ' + err.message, 'error');
+  }
+}
+
+async function launchAdminFromLocal() {
+  if (!lastProjectDir) { showToast('❌ No project directory found', 'error'); return; }
+  await launchAdmin();
+}
+
+function copyLiveUrl() {
+  const url = $('live-url').textContent;
+  navigator.clipboard.writeText(url).then(() => {
+    showToast('✅ URL copied to clipboard!', 'success');
   }).catch(() => {
-    const blob = new Blob([json], {type:'application/json'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'project-config.json';
-    a.click();
-    showToast('✅ Config downloaded!', 'success');
+    showToast('❌ Failed to copy', 'error');
   });
 }
 
-function importConfig() { document.getElementById('config-file-input').click(); }
+/* ═══════════════════════════════════════════
+   Export / Import Config
+   ═══════════════════════════════════════════ */
+function exportConfig() {
+  const config = getConfig();
+  const json = JSON.stringify(config, null, 2);
+  const blob = new Blob([json], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'project-config.json';
+  a.click();
+  showToast('✅ Config downloaded!', 'success');
+}
 
-function handleConfigImport(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(ev) {
-    try {
-      const config = JSON.parse(ev.target.result);
-      loadConfig(config);
-      showToast('✅ Config imported!', 'success');
-    } catch(err) {
-      showToast('❌ Invalid JSON: ' + err.message, 'error');
-    }
+function importConfig() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const config = JSON.parse(ev.target.result);
+        loadConfig(config);
+        showToast('✅ Config imported!', 'success');
+      } catch(err) {
+        showToast('❌ Invalid JSON: ' + err.message, 'error');
+      }
+    };
+    reader.readAsText(file);
   };
-  reader.readAsText(file);
-  e.target.value = '';
+  input.click();
 }
 
 function loadConfig(config) {
-  document.getElementById('project-name').value = config.project_name || 'MyQuizProject';
-  document.getElementById('topbar-title').value = config.topbar_title || 'My Quiz Hub';
-  document.getElementById('hero-title').value = config.hero_title || 'Select Your <span>Subject</span>';
-  document.getElementById('hero-desc').value = config.hero_description || '';
-  document.getElementById('default-theme').value = config.default_theme || 'dark';
-
-  document.getElementById('folders-container').innerHTML = '';
+  $('project-name').value = config.project_name || 'MyQuizProject';
+  $('topbar-title').value = config.topbar_title || 'My Quiz Hub';
+  $('hero-title').value = config.hero_title || 'Select Your <span>Subject</span>';
+  $('hero-desc').value = config.hero_description || '';
+  $('default-theme').value = config.default_theme || 'dark';
+  $('folders-container').innerHTML = '';
   folderCounter = 0;
   quizCounters = {};
 
-  function loadFolders(folders, parentContainer = null) {
+  function loadFolders(folders, parentContainer) {
     folders.forEach(f => {
-      addFolder(f, parentContainer);
+      addFolder(f, parentContainer || null);
       if (f.subfolders && f.subfolders.length) {
-        const lastFolder = document.querySelectorAll('.folder-card')[document.querySelectorAll('.folder-card').length - 1];
-        const subfolderContainer = lastFolder.querySelector('.subfolder-container');
+        const lastFolder = document.querySelectorAll('.folder-card');
+        const target = lastFolder[lastFolder.length - 1];
+        const subfolderContainer = target.querySelector('.subfolder-container');
         loadFolders(f.subfolders, subfolderContainer);
       }
     });
   }
-
-  loadFolders(config.folders || []);
-  updatePreview();
+  loadFolders(config.folders || [], null);
+  updateStats();
 }
 
-/* Init with sample */
+/* ═══════════════════════════════════════════
+   Initialization
+   ═══════════════════════════════════════════ */
 window.addEventListener('DOMContentLoaded', () => {
   initDragAndDrop();
-  
+  // Pre-fill with sample folders
   addFolder({
-    name: 'Cardiology',
-    description: 'Cardiology quizzes and resources',
-    icon: '🫀',
+    name: 'Cardiology', description: 'Cardiology quizzes and resources', icon: '🫀',
     quizzes: [
       { title: '60th Mid', description: 'Cardiology 60th Mid Exam', icon: '📝', tags: ['Mid'], url: '60th-mid.html' }
     ]
   });
   addFolder({
-    name: 'Neurology',
-    description: 'Neurology quizzes',
-    icon: '🧠',
+    name: 'Neurology', description: 'Neurology quizzes', icon: '🧠',
     quizzes: [
       { title: 'Neuro Exam 1', description: 'First neurology exam', icon: '📝', tags: ['Exam'], url: 'neuro-1.html' }
     ]
   });
+  updateStats();
 });
 </script>
 

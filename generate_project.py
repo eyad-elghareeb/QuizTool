@@ -20,8 +20,12 @@ import zipfile
 import io
 import threading
 import webbrowser
+import tempfile
+import shutil
+import subprocess
+import re
 from pathlib import Path
-from flask import Flask, render_template_string, request, send_file, jsonify
+from flask import Flask, render_template_string, request, send_file, jsonify, send_from_directory
 
 app = Flask(__name__)
 
@@ -1052,6 +1056,114 @@ WEB_UI_HTML = read_file('generator_templates/index.html')
 
 
 # ============================================================
+#  GITHUB API HELPERS
+# ============================================================
+
+def _gh_request(method, path, token, json_data=None, timeout=30):
+    """Make an authenticated GitHub API request. Returns (status_code, json_or_None)."""
+    import urllib.request
+    import urllib.error
+
+    url = f'https://api.github.com{path}'
+    headers = {
+        'Authorization': f'token {token}',
+        'Accept': 'application/vnd.github+json',
+        'User-Agent': 'QuizTool-Generator',
+        'X-GitHub-Api-Version': '2022-11-28'
+    }
+    body = json.dumps(json_data).encode() if json_data else None
+    req = urllib.request.Request(url, data=body, headers=headers, method=method)
+    if body:
+        req.add_header('Content-Type', 'application/json')
+
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            resp_data = resp.read().decode('utf-8')
+            return resp.status, json.loads(resp_data) if resp_data else None
+    except urllib.error.HTTPError as e:
+        resp_data = e.read().decode('utf-8') if e.fp else ''
+        try:
+            return e.code, json.loads(resp_data)
+        except Exception:
+            return e.code, {'message': resp_data}
+    except Exception as e:
+        return 0, {'message': str(e)}
+
+
+def _extract_and_push(config, token, repo_name, username):
+    """Extract ZIP to temp dir, git init, commit, push to GitHub.
+
+    Security: Uses GIT_ASKPASS to provide the token via a temp script
+    instead of embedding it in the remote URL, which avoids leaking
+    the token into .git/config or the process argument list.
+    """
+    zip_buf = build_project_zip(config)
+
+    # Create temp directory for the project
+    project_dir = os.path.join(tempfile.gettempdir(), 'quiztool-projects', repo_name)
+    if os.path.exists(project_dir):
+        shutil.rmtree(project_dir)
+    os.makedirs(project_dir, exist_ok=True)
+
+    # Extract ZIP into project dir
+    with zipfile.ZipFile(zip_buf, 'r') as zf:
+        zf.extractall(project_dir)
+
+    # Create a temporary GIT_ASKPASS script to securely provide the token
+    # This avoids embedding the token in the remote URL (which persists in .git/config)
+    askpass_dir = os.path.join(tempfile.gettempdir(), 'quiztool-askpass')
+    os.makedirs(askpass_dir, exist_ok=True)
+    askpass_script = os.path.join(askpass_dir, f'askpass-{repo_name}.bat')
+    with open(askpass_script, 'w') as f:
+        f.write('@echo %GIT_PASSWORD%\n')
+
+    # Set up environment with the token
+    push_env = os.environ.copy()
+    push_env['GIT_PASSWORD'] = token
+    push_env['GIT_ASKPASS'] = askpass_script
+    push_env['GIT_TERMINAL_PROMPT'] = '0'  # Never prompt interactively
+
+    # Use a clean remote URL (no token embedded)
+    remote_url = f'https://{username}@github.com/{username}/{repo_name}.git'
+
+    git_cmds = [
+        ['git', 'init'],
+        ['git', 'config', 'user.name', username],
+        ['git', 'config', 'user.email', f'{username}@users.noreply.github.com'],
+        ['git', 'add', '-A'],
+        ['git', 'commit', '-m', 'Initial commit from QuizTool Generator'],
+        ['git', 'branch', '-M', 'main'],
+        ['git', 'remote', 'add', 'origin', remote_url],
+        ['git', 'push', '-u', 'origin', 'main'],
+    ]
+
+    try:
+        for cmd in git_cmds:
+            result = subprocess.run(cmd, cwd=project_dir, capture_output=True,
+                                    text=True, timeout=120, env=push_env)
+            if result.returncode != 0:
+                if 'push' in cmd:
+                    raise Exception(f'Git push failed: {result.stderr}')
+                elif 'init' not in cmd and 'config' not in cmd and 'branch' not in cmd and 'remote' not in cmd:
+                    raise Exception(f'Git command failed ({cmd[0]}): {result.stderr}')
+    finally:
+        # Clean up the askpass script immediately after use
+        try:
+            os.remove(askpass_script)
+        except OSError:
+            pass
+
+    return project_dir
+
+
+# ============================================================
+#  ACTIVE PROJECT TRACKING (for admin dashboard launch)
+# ============================================================
+
+_active_projects = {}  # repo_name -> {'path': str, 'admin_pid': int|None}
+
+
+# ============================================================
 #  FLASK ROUTES
 # ============================================================
 
@@ -1084,7 +1196,7 @@ def generate():
 def preview():
     config = request.json
     folders = config.get('folders', [])
-    
+
     def count_items(folder_list):
         """Recursively count quizzes and folders."""
         total_quizzes = 0
@@ -1097,7 +1209,7 @@ def preview():
                 total_folders += sub_folders
                 total_quizzes += sub_quizzes
         return total_folders, total_quizzes
-    
+
     total_folders, total_quizzes = count_items(folders)
     # engines(3) + sw + manifest + favicon + icons(6) + root index + folder indexes + scripts(3) + workflows(2) + gitignore + quiz-engine-test
     estimated_files = 16 + total_folders + total_quizzes
@@ -1109,6 +1221,230 @@ def preview():
     })
 
 
+# ── GitHub Auth ──
+
+@app.route('/api/github/verify', methods=['POST'])
+def github_verify():
+    """Verify a GitHub PAT, check scopes, and return the authenticated user info."""
+    token = request.json.get('token', '').strip()
+    if not token:
+        return jsonify({'ok': False, 'error': 'Token is required'}), 400
+
+    import urllib.request
+    import urllib.error
+
+    url = 'https://api.github.com/user'
+    headers = {
+        'Authorization': f'token {token}',
+        'Accept': 'application/vnd.github+json',
+        'User-Agent': 'QuizTool-Generator',
+        'X-GitHub-Api-Version': '2022-11-28'
+    }
+    req = urllib.request.Request(url, headers=headers)
+
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+            # Check scopes from response header
+            scopes_header = resp.headers.get('X-OAuth-Scopes', '')
+            scopes = [s.strip() for s in scopes_header.split(',') if s.strip()]
+            missing = []
+            if 'repo' not in scopes:
+                missing.append('repo')
+            if 'workflow' not in scopes:
+                missing.append('workflow')
+
+            if missing:
+                return jsonify({
+                    'ok': False,
+                    'error': f'Token is missing required scopes: {", ".join(missing)}. Please create a new token with repo and workflow scopes.',
+                    'username': data.get('login', ''),
+                }), 403
+
+            return jsonify({
+                'ok': True,
+                'username': data.get('login', ''),
+                'name': data.get('name', '') or data.get('login', ''),
+                'avatar': data.get('avatar_url', ''),
+                'repos_count': data.get('public_repos', 0)
+            })
+    except urllib.error.HTTPError as e:
+        msg = 'Invalid token'
+        try:
+            err_data = json.loads(e.read().decode('utf-8'))
+            msg = err_data.get('message', msg)
+        except Exception:
+            pass
+        return jsonify({'ok': False, 'error': msg}), 401
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+# ── GitHub Publish ──
+
+@app.route('/api/github/publish', methods=['POST'])
+def github_publish():
+    """Create a GitHub repo, push project, and enable Pages."""
+    payload = request.json
+    token = payload.get('token', '').strip()
+    config = payload.get('config', {})
+    visibility = payload.get('visibility', 'public')  # public or private
+
+    if not token:
+        return jsonify({'ok': False, 'error': 'Token is required'}), 400
+    if not config.get('project_name'):
+        return jsonify({'ok': False, 'error': 'Project name is required'}), 400
+
+    # Step 1: Verify token and get username
+    status, user_data = _gh_request('GET', '/user', token)
+    if status != 200 or not user_data:
+        return jsonify({'ok': False, 'error': 'Invalid GitHub token'}), 401
+
+    username = user_data['login']
+    repo_name = re.sub(r'[^a-zA-Z0-9._-]', '-', config['project_name']).strip('-')
+
+    if not repo_name:
+        return jsonify({'ok': False, 'error': 'Invalid project name for repo'}), 400
+
+    # Step 2: Create repository
+    create_body = {
+        'name': repo_name,
+        'description': f'{config.get("topbar_title", repo_name)} — Quiz Site powered by QuizTool',
+        'private': visibility == 'private',
+        'auto_init': False
+    }
+    status, repo_data = _gh_request('POST', '/user/repos', token, create_body)
+
+    if status == 422 and repo_data:
+        # Repo already exists — try to push to it
+        errors = repo_data.get('errors', [])
+        if any(e.get('message', '').startswith('name already exists') for e in errors):
+            # Check if user owns it
+            check_status, _ = _gh_request('GET', f'/repos/{username}/{repo_name}', token)
+            if check_status == 200:
+                pass  # Will try to push below
+            else:
+                return jsonify({'ok': False, 'error': f'Repository "{repo_name}" already exists and belongs to another user'}), 409
+        elif status != 201:
+            msg = repo_data.get('message', 'Failed to create repository') if repo_data else 'Failed to create repository'
+            return jsonify({'ok': False, 'error': msg}), status
+
+    elif status != 201:
+        msg = repo_data.get('message', 'Failed to create repository') if repo_data else 'Failed to create repository'
+        return jsonify({'ok': False, 'error': msg}), status
+
+    # Step 3: Extract and push
+    try:
+        project_dir = _extract_and_push(config, token, repo_name, username)
+    except Exception as e:
+        # Do NOT delete the repo — it may contain user content.
+        # Instead, inform the user so they can decide what to do.
+        return jsonify({
+            'ok': False,
+            'error': f'Git push failed: {str(e)}. The repository "{repo_name}" was created on GitHub but is empty. You can push manually or delete it from GitHub settings.'
+        }), 500
+
+    # Track for admin dashboard launch
+    _active_projects[repo_name] = {'path': project_dir, 'admin_pid': None}
+
+    # Step 4: Enable GitHub Pages (with Actions source)
+    # Wait a moment for GitHub to register the repo
+    import time
+    time.sleep(2)
+
+    pages_body = {
+        'build_type': 'workflow'
+    }
+    pages_status, pages_data = _gh_request('POST', f'/repos/{username}/{repo_name}/pages', token, pages_body)
+
+    pages_warning = None
+    if pages_status not in (200, 201):
+        # Pages may fail if the repo is private without Pro, or if it needs time
+        pages_warning = 'GitHub Pages could not be enabled automatically. Please enable it manually in your repository settings under Pages → Source → GitHub Actions.'
+
+    repo_url = f'https://github.com/{username}/{repo_name}'
+    pages_url = f'https://{username}.github.io/{repo_name}/'
+
+    result = {
+        'ok': True,
+        'repo_url': repo_url,
+        'pages_url': pages_url,
+        'repo_name': repo_name,
+        'username': username,
+        'project_dir': project_dir
+    }
+    if pages_warning:
+        result['pages_warning'] = pages_warning
+
+    return jsonify(result)
+
+
+# ── Launch Admin Dashboard ──
+
+@app.route('/api/launch-admin', methods=['POST'])
+def launch_admin():
+    """Launch the admin dashboard for a project directory."""
+    payload = request.json
+    project_dir = payload.get('project_dir', '').strip()
+
+    if not project_dir or not os.path.isdir(project_dir):
+        return jsonify({'ok': False, 'error': 'Invalid project directory'}), 400
+
+    admin_script = os.path.join(project_dir, 'scripts', 'admin-dashboard.py')
+    if not os.path.isfile(admin_script):
+        return jsonify({'ok': False, 'error': 'Admin dashboard script not found in project'}), 400
+
+    try:
+        # Launch in a new process — admin dashboard runs on port 5501 to avoid conflict
+        env = os.environ.copy()
+        env['FLASK_APP'] = admin_script
+
+        proc = subprocess.Popen(
+            [sys.executable, admin_script],
+            cwd=project_dir,
+            env=env,
+            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == 'win32' else 0
+        )
+
+        return jsonify({
+            'ok': True,
+            'admin_url': 'http://localhost:5500/admin/',
+            'pid': proc.pid
+        })
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+# ── Download ZIP to a local directory (for admin dashboard use) ──
+
+@app.route('/api/download-local', methods=['POST'])
+def download_local():
+    """Generate ZIP and extract it to a local directory for admin dashboard use."""
+    config = request.json
+    project_name = config.get('project_name', 'MyQuiz')
+    safe_name = re.sub(r'[^a-zA-Z0-9._-]', '-', project_name).strip('-') or 'quiz-project'
+
+    project_dir = os.path.join(tempfile.gettempdir(), 'quiztool-projects', safe_name)
+    if os.path.exists(project_dir):
+        shutil.rmtree(project_dir)
+    os.makedirs(project_dir, exist_ok=True)
+
+    try:
+        zip_buf = build_project_zip(config)
+        with zipfile.ZipFile(zip_buf, 'r') as zf:
+            zf.extractall(project_dir)
+
+        _active_projects[safe_name] = {'path': project_dir, 'admin_pid': None}
+
+        return jsonify({
+            'ok': True,
+            'project_dir': project_dir,
+            'project_name': safe_name
+        })
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
 # ============================================================
 #  MAIN
 # ============================================================
@@ -1117,6 +1453,24 @@ def open_browser(port):
     import time
     time.sleep(1.5)
     webbrowser.open(f'http://localhost:{port}')
+
+
+# Track server state for clean shutdown
+_server_shutdown = False
+
+
+@app.route('/api/shutdown', methods=['POST'])
+def shutdown():
+    """Gracefully shut down the Flask server."""
+    global _server_shutdown
+    _server_shutdown = True
+    # Use a background thread to avoid deadlocking the response
+    def do_shutdown():
+        import time
+        time.sleep(0.5)
+        os._exit(0)
+    threading.Thread(target=do_shutdown, daemon=True).start()
+    return jsonify({'ok': True, 'message': 'Server shutting down...'})
 
 
 def main():
@@ -1142,6 +1496,7 @@ def main():
         app.run(host='127.0.0.1', port=port, debug=False)
     except KeyboardInterrupt:
         print("\n  Stopped.\n")
+        os._exit(0)
 
 
 if __name__ == '__main__':

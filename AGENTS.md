@@ -1,6 +1,8 @@
 # AGENTS.md — QuizTool
 
 > **Purpose:** Complete reference for any LLM agent working on this repository. Read this before touching any file. Covers both the authoring toolkit and the project generator.
+>
+> **Generated projects:** Each generated quiz site (e.g., MU61S8) has its own `AGENTS.md` with site-specific reference. Those files focus on the quiz-site runtime (engines, file schemas, CI/CD, sync script). This file covers the QuizTool toolkit itself — the tools, the generator, and the authoring workflows.
 
 ---
 
@@ -46,9 +48,12 @@ QuizTool/
 ├── index-template.html           ← Base template for index-editor output
 │
 ├── — GENERATOR —
-├── generate_project.py           ← Flask server: full project generator
+├── generate_project.py           ← Flask server: full project generator + GitHub publish
 ├── generator_templates/
-│   └── index.html                ← Web UI for the generator (Flask serves this)
+│   └── index.html                ← 3-step wizard UI (Project Info → Structure → Publish)
+├── start.bat                     ← Windows launcher (auto-installs Python deps)
+├── build_exe.py                  ← PyInstaller build script for standalone EXE
+├── QUICKSTART.md                 ← 3-step quickstart guide
 │
 ├── — SCRIPTS (bundled into generated ZIPs) —
 ├── scripts/
@@ -231,17 +236,42 @@ python generate_project.py
 # Opens http://localhost:5500 automatically
 ```
 
+Or double-click `start.bat` on Windows (auto-installs dependencies).
+
 ### What it does
 
-Serves a web UI (`generator_templates/index.html`) where the user configures their project, then calls `/api/generate` which returns a ready-to-deploy `.zip`.
+Serves a 3-step wizard UI (`generator_templates/index.html`) where the user:
+1. **Step 1 — Project Info**: Configures name, title, hero text, theme
+2. **Step 2 — Structure**: Creates folders/subfolders, drag-drops quiz HTML files, adds quiz entries
+3. **Step 3 — Publish**: Either publishes to GitHub Pages via PAT authentication, or downloads a ZIP
 
 ### API endpoints
 
-| Endpoint | Method | Input | Output |
-|----------|--------|-------|--------|
-| `/` | GET | — | Web UI HTML |
-| `/api/generate` | POST | JSON config | ZIP download |
-| `/api/preview` | POST | JSON config | JSON stats |
+| Endpoint | Method | Input | Output | Purpose |
+|----------|--------|-------|--------|---------|
+| `/` | GET | — | HTML | 3-step wizard UI |
+| `/api/generate` | POST | JSON config | ZIP download | Generate and download project ZIP |
+| `/api/preview` | POST | JSON config | JSON stats | Preview project stats (file count, etc.) |
+| `/api/github/verify` | POST | `{token}` | JSON user info | Verify PAT + check `repo`/`workflow` scopes |
+| `/api/github/publish` | POST | `{token, config, visibility}` | JSON result | Create repo, push code, enable Pages |
+| `/api/download-local` | POST | JSON config | JSON `{project_dir}` | Save project locally for admin dashboard |
+| `/api/launch-admin` | POST | `{project_dir}` | JSON `{admin_url}` | Launch admin-dashboard.py for a project |
+
+### GitHub Security Model
+
+The generator follows security best practices to avoid token leaks and GitHub bans:
+
+1. **PAT scope validation**: `/api/github/verify` checks `X-OAuth-Scopes` header for `repo` and `workflow`. Rejects tokens with missing scopes before any write operations.
+2. **GIT_ASKPASS for push**: Instead of embedding the token in the remote URL (`https://TOKEN@github.com/...`), the generator:
+   - Creates a temp `.bat` askpass script that reads `GIT_PASSWORD` env var
+   - Sets `GIT_ASKPASS` and `GIT_PASSWORD` in the subprocess environment
+   - Uses a clean remote URL (`https://username@github.com/...`)
+   - Deletes the askpass script immediately after use
+   - This prevents the token from appearing in `.git/config` or the process argument list
+3. **No repo deletion on failure**: If `git push` fails after repo creation, the generator does NOT delete the repo. It informs the user so they can decide what to do. Auto-deleting repos is aggressive and could destroy content.
+4. **Session-only tokens**: The token is stored in a JS variable only — never persisted to `localStorage`, disk, or logs.
+5. **GitHub API version header**: All API requests include `X-GitHub-Api-Version: 2022-11-28` for forward compatibility.
+6. **Pages error tolerance**: If GitHub Pages enablement fails (e.g., private repo without Pro), the generator returns a `pages_warning` message instead of failing the entire operation.
 
 ### Config schema (POST to `/api/generate`)
 
@@ -514,6 +544,9 @@ To maintain the stability of the toolkit, the accuracy of the project generator,
 - **Never reference external directories**: The generator MUST be self-contained. It should only read from the `QuizTool` root or its own subfolders. Never reference `../MU61S8/` or other sibling repos.
 - **Never skip `generate_sw_js`**: In the `build_project_zip` function, always use the dynamic `generate_sw_js` helper instead of reading a static `sw.js`. The generated SW needs a manifest specific to the new project's files.
 - **Prioritize Engines in ZIP**: When building the precache list for a generated project, the engines (`quiz-engine.js`, `index-engine.js`, etc.) MUST be included in the `REQUIRED` list to ensure the PWA is functional even if some quiz files fail to cache.
+- **Never embed tokens in git URLs**: When pushing to GitHub, always use `GIT_ASKPASS` with an env var instead of embedding the PAT in the remote URL. Tokens in URLs persist in `.git/config` and are visible in process lists.
+- **Never auto-delete repos on push failure**: If `git push` fails after repo creation, inform the user — do not call the GitHub DELETE repo API. The user may have content they want to preserve.
+- **Validate PAT scopes before use**: Always check `X-OAuth-Scopes` header for `repo` and `workflow` before attempting any write operations. A token with only `public_repo` will fail on private repo creation.
 
 ### 16b. Templates & Markers
 - **Never remove parsing markers**: The comments `/* [QUIZ_CONFIG_START/END] */`, `/* [QUESTIONS_START/END] */`, etc., are functional code. Removing them breaks the `sync_quiz_assets.py` script and the GUI editors (`quiz-editor.html`, etc.).
@@ -597,12 +630,15 @@ QuizTool (toolkit pages)
 
 generate_project.py (Flask)
   → reads: index-engine.js, index-engine.css, quiz-engine.js, bank-engine.js
-  → reads: scripts/sync_quiz_assets.py, scripts/standardize_quiz_files.py
-  → reads: generator_templates/index.html  (the Web UI)
+  → reads: scripts/sync_quiz_assets.py, scripts/standardize_quiz_files.py, scripts/admin-dashboard.py
+  → reads: generator_templates/index.html  (the 3-step wizard UI)
   → reads: icon-*.png
   → generates: gen_index_html() for all index pages
   → generates: generate_sw_js() for sw.js with full precache list
-  → outputs: project.zip
+  → GitHub API: /api/github/verify (PAT + scope check)
+  → GitHub API: /api/github/publish (create repo, GIT_ASKPASS push, enable Pages)
+  → outputs: project.zip OR direct GitHub publish
+  → can launch: admin-dashboard.py for generated project
 ```
 
 ---
