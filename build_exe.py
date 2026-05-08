@@ -65,6 +65,7 @@ def build():
         '--onefile',
         '--console',
         '--clean',
+        '--icon=icon-512.png',
         f'--distpath={str(BASE_DIR / "dist")}',
         f'--workpath={str(BASE_DIR / "build")}',
         f'--specpath={str(BASE_DIR)}',
