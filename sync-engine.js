@@ -166,24 +166,48 @@ const SyncEngine = {
                             const mergeTracker = (a, b) => {
                                 const listA = Array.isArray(a) ? a : [];
                                 const listB = Array.isArray(b) ? b : [];
-                                const mergedMap = new Map();
-                                // Add existing
-                                listA.forEach(item => {
-                                    const id = (item.idx !== undefined && item.idx !== null) ? ('idx_' + item.idx) : 
-                                               (item.text ? ('txt_' + item.text) : ('raw_' + JSON.stringify(item)));
-                                    mergedMap.set(id, item);
+                                
+                                const remainingA = [...listA];
+                                const result = [];
+                                
+                                listB.forEach(importedItem => {
+                                    const matchIndex = remainingA.findIndex(existingItem => {
+                                        // 1. Index Match (Most reliable)
+                                        const hasIdxA = existingItem.idx !== undefined && existingItem.idx !== null;
+                                        const hasIdxB = importedItem.idx !== undefined && importedItem.idx !== null;
+                                        if (hasIdxA && hasIdxB && String(existingItem.idx) === String(importedItem.idx)) return true;
+
+                                        // 2. Text Match (Fallback)
+                                        // Only match by text if at least one is missing an index, 
+                                        // AND the text is non-empty and long enough to be unique
+                                        if (existingItem.text && importedItem.text && existingItem.text.trim().length > 5) {
+                                            if (existingItem.text.trim() === importedItem.text.trim()) {
+                                                // If one has an index and the other doesn't, it's likely a mismatch from different versions
+                                                if (!hasIdxA || !hasIdxB) return true;
+                                            }
+                                        }
+                                        return false;
+                                    });
+
+                                    if (matchIndex !== -1) {
+                                        const matched = remainingA.splice(matchIndex, 1)[0];
+                                        result.push(Object.assign({}, matched, importedItem));
+                                    } else {
+                                        result.push(importedItem);
+                                    }
                                 });
-                                // Add/Overwrite with imported
-                                listB.forEach(item => {
-                                    const id = (item.idx !== undefined && item.idx !== null) ? ('idx_' + item.idx) : 
-                                               (item.text ? ('txt_' + item.text) : ('raw_' + JSON.stringify(item)));
-                                    mergedMap.set(id, item);
-                                });
-                                return Array.from(mergedMap.values());
+                                
+                                return result.concat(remainingA);
                             };
                             
                             existingData.wrong = mergeTracker(existingData.wrong, importedVal.wrong);
                             existingData.flagged = mergeTracker(existingData.flagged, importedVal.flagged);
+                            
+                            // CRITICAL: Update derived counts so UI badges/stats don't stay stale
+                            existingData.wrongCount = (existingData.wrong || []).length;
+                            existingData.flaggedCount = (existingData.flagged || []).length;
+                            
+                            existingData.timestamp = Math.max(existingData.timestamp || 0, importedVal.timestamp || 0);
                             localStorage.setItem(key, JSON.stringify(existingData));
                         } else {
                             localStorage.setItem(key, JSON.stringify(importedVal));

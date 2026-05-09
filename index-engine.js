@@ -698,8 +698,28 @@
       var wrongItems = d.wrong || [];
       var flaggedItems = d.flagged || [];
       var wrongIdxs = {};
-      wrongItems.forEach(function (q) { wrongIdxs[q.idx] = true; });
-      var uniqueFlagged = flaggedItems.filter(function (q) { return !wrongIdxs[q.idx]; });
+      var wrongTexts = {};
+      wrongItems.forEach(function (q) { 
+        if (q.idx !== undefined && q.idx !== null) wrongIdxs[q.idx] = true;
+        if (q.text) wrongTexts[q.text.trim()] = true;
+      });
+      var uniqueFlagged = flaggedItems.filter(function (q) { 
+        // Only deduplicate if we have a very high confidence it's the same question
+        var hasIdx = (q.idx !== undefined && q.idx !== null);
+        var isWrongByIdx = hasIdx && wrongIdxs[q.idx];
+        var isWrongByText = q.text && wrongTexts[q.text.trim()];
+        
+        if (isWrongByIdx) return false;
+        
+        if (isWrongByText) {
+          if (!hasIdx) return false;
+          var matchingWrong = wrongItems.find(function(w) { return w.text && w.text.trim() === q.text.trim(); });
+          if (matchingWrong && (matchingWrong.idx === undefined || matchingWrong.idx === null || matchingWrong.idx === q.idx)) {
+            return false;
+          }
+        }
+        return true; 
+      });
       if (!wrongItems.length && !uniqueFlagged.length) return;
 
       var folder = getFolderForEntry(d);
@@ -792,7 +812,11 @@
           html += '</div>';
 
           g.wrongItems.forEach(function (q) {
-            var isAlsoFlagged = g.flaggedItemsAll.some(function (f) { return f.idx === q.idx; });
+            var isAlsoFlagged = g.flaggedItemsAll.some(function (f) { 
+              var matchByIdx = (q.idx !== undefined && q.idx !== null && f.idx !== undefined && f.idx !== null) && (f.idx === q.idx);
+              var matchByText = (q.text && f.text) && (f.text.trim() === q.text.trim());
+              return matchByIdx || matchByText;
+            });
             html += buildItem(g.uid, q, isAlsoFlagged ? 'Wrong + Flagged' : 'Wrong', 'wrong', '\u2717');
           });
           g.flaggedItems.forEach(function (q) {
