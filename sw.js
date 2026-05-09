@@ -1,6 +1,6 @@
 /* MU61 Quiz — generated precache manifest for all quiz and hub pages.
    CACHE_VERSION is content-hashed by scripts/sync_quiz_assets.py so new files activate automatically. */
-const CACHE_VERSION = 'mu61-quiz-422a6e32d8f7';
+const CACHE_VERSION = 'mu61-quiz-1218a72e88d4';
 const CACHE_NAME = 'quiz-tool-cache-' + CACHE_VERSION;
 
 const GOOGLE_FONT_CSS =
@@ -13,7 +13,6 @@ var PRECACHE_REL_PATHS = [
   'quiz-engine.js',
   'bank-engine.js',
   'index-engine.js',
-  'sync-engine.js',
   'tracker-map.json',
   'index.html',
   'bank-maker.html',
@@ -37,6 +36,8 @@ var PRECACHE_REL_PATHS = [
   'icon-512.png',
   'index-engine.css',
   'manifest.webmanifest',
+  'sync-engine.js',
+  'sync-engine.src.js',
   'tracker-map.json'
 ];
 
@@ -223,8 +224,7 @@ function handleAsset(event, request) {
           'icon-144.png',
           'icon-192.png',
           'icon-512.png',
-          'tracker-map.json',
-          'sync-engine.js'
+          'tracker-map.json'
         ];
         if (SHARED.indexOf(filename) !== -1) {
           cached = await cache.match(hrefFromScope(scope, filename));
