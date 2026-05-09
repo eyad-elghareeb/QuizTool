@@ -359,6 +359,12 @@ const SyncEngine = {
                 else if (payload.type === 'signal' && payload.target === this.deviceId) {
                     this._handleSignal(payload);
                 }
+                else if (payload.type === 'qtp-ack' && payload.target === 'all') {
+                    console.log("Received QTP Ack for part:", payload.idx);
+                    if (SyncEngine.ui.qrPage + 1 === parseInt(payload.idx)) {
+                        SyncEngine.ui.nextQR(true); // Cycle to next part on signal
+                    }
+                }
                 else if (payload.type === 'relay' && payload.target === this.deviceId) {
                     console.log("Received MQTT Relay Data");
                     SyncEngine.ui.setStatus("Receiving via Relay...", true);
@@ -542,6 +548,10 @@ const SyncEngine = {
     ui: {
         modalEl: null,
         scanner: null,
+        _qrTimer: null,
+        _qrInstance: null,
+        _scanChunks: {},
+        _scanTotal: 0,
 
         _createModalHTML: function() {
             return `
@@ -606,7 +616,13 @@ const SyncEngine = {
                             
                             <div id="sync-qr-scan-section" style="display: none;">
                                 <p style="margin-bottom: 1rem; color: var(--text-muted); font-size: 0.95rem;">Point your camera at a QR code.</p>
-                                <div id="sync-reader" style="width: 100%; max-width: 320px; margin: 0 auto; border-radius: 12px; overflow: hidden; border: 1px solid var(--border);"></div>
+                                <div id="sync-reader" style="width: 100%; max-width: 320px; margin: 0 auto; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); position: relative;"></div>
+                                <div id="sync-scan-progress" style="margin-top: 1.25rem; font-weight: 600; font-size: 0.9rem; color: var(--accent); display: none;">
+                                    Scanning: <span id="sync-scan-count">0</span> / <span id="sync-scan-total">?</span> parts
+                                    <div style="width: 100%; height: 6px; background: var(--surface2); border-radius: 3px; margin-top: 8px; overflow: hidden; border: 1px solid var(--border);">
+                                        <div id="sync-scan-bar" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s ease;"></div>
+                                    </div>
+                                </div>
                                 <div style="margin-top: 1.5rem;">
                                     <button class="btn-dash-action" onclick="SyncEngine.ui.toggleQRScanner(false)">🔙 Show My Code</button>
                                 </div>
@@ -659,7 +675,8 @@ const SyncEngine = {
                 document.body.appendChild(this.modalEl);
             }
             this.modalEl.classList.add('open');
-            this.switchTab('webrtc');
+            const activeTab = document.querySelector('.dash-scope-tab.active')?.id?.replace('sync-tab-btn-', '') || 'webrtc';
+            this.switchTab(activeTab);
             
             // Populate export text area
             this._refreshExportText();
@@ -669,6 +686,7 @@ const SyncEngine = {
             if (this.modalEl) {
                 this.modalEl.classList.remove('open');
                 this.stopScanner();
+                this.stopQRAnimation();
                 this._scanChunks = {}; // Clear any partial QR scans
             }
             // Stop heartbeat when modal is closed to avoid wasted MQTT traffic
@@ -694,6 +712,7 @@ const SyncEngine = {
 
         switchTab: function(tabId) {
             this.stopScanner(); // Always stop scanner when leaving tab
+            this.stopQRAnimation(); // Always stop animation when leaving tab
             
             ['webrtc', 'qr', 'text', 'file'].forEach(id => {
                 const btn = document.getElementById('sync-tab-btn-' + id);
@@ -709,6 +728,7 @@ const SyncEngine = {
                 this._scanChunks = {}; // Clear stale partial scans on tab switch
                 this.toggleQRScanner(false); // Default to export
                 this.renderQR();
+                this.startQRAnimation();
             }
             if (tabId === 'text') this._refreshExportText();
             if (tabId === 'webrtc') {
@@ -870,56 +890,74 @@ const SyncEngine = {
             const pageInfo = document.getElementById('sync-qr-page-info');
             const pagination = document.getElementById('sync-qr-pagination');
             
+            if (!container) return;
             container.innerHTML = '';
             const fullData = SyncEngine.exportData(this._getOptions());
             
-            // Chunking logic: 1500 chars per QR is a safe bet for most scanners
-            const CHUNK_SIZE = 1500;
+            // Lower Density: 700 chars per QR is extremely easy for most scanners to focus/decode
+            const CHUNK_SIZE = 700;
+            this._qrInstance = null; // Reset instance on new data
             if (fullData.length <= CHUNK_SIZE) {
                 // Single QR — only use when data fits comfortably
                 this.qrChunks = [fullData];
-                pagination.style.display = 'none';
+                if (pagination) pagination.style.display = 'none';
             } else {
                 this.qrChunks = [];
                 const total = Math.ceil(fullData.length / CHUNK_SIZE);
                 for (let i = 0; i < total; i++) {
                     const chunk = fullData.substr(i * CHUNK_SIZE, CHUNK_SIZE);
-                    this.qrChunks.push(`PART:${i+1}:${total}:${chunk}`);
+                    // Optimized compact prefix
+                    this.qrChunks.push(`qtp:${i+1}:${total}:${chunk}`);
                 }
-                pagination.style.display = 'block';
+                if (pagination) pagination.style.display = 'block';
                 this.qrPage = 0;
             }
 
             this._drawCurrentQR();
         },
 
+        startQRAnimation: function() {
+            this.stopQRAnimation();
+            if (this.qrChunks.length <= 1) return;
+            // No auto-cycling. We wait for MQTT signals (qtp-ack) or manual navigation.
+        },
+
+        stopQRAnimation: function() {
+            // No timer to stop
+        },
+
         _drawCurrentQR: function() {
             const container = document.getElementById('sync-qr-container');
             const pageInfo = document.getElementById('sync-qr-page-info');
-            container.innerHTML = '';
+            if (!container) return;
             
             const data = this.qrChunks[this.qrPage];
-            pageInfo.innerText = `${this.qrPage + 1} / ${this.qrChunks.length}`;
+            if (pageInfo) pageInfo.innerText = `${this.qrPage + 1} / ${this.qrChunks.length}`;
 
             try {
-                new QRCode(container, {
-                    text: data,
-                    width: 256,
-                    height: 256,
-                    colorDark : "#000000",
-                    colorLight : "#ffffff",
-                    correctLevel : QRCode.CorrectLevel.L
-                });
+                if (!this._qrInstance) {
+                    container.innerHTML = '';
+                    this._qrInstance = new QRCode(container, {
+                        text: data,
+                        width: 256,
+                        height: 256,
+                        colorDark : "#000000",
+                        colorLight : "#ffffff",
+                        correctLevel : QRCode.CorrectLevel.L
+                    });
+                } else {
+                    this._qrInstance.makeCode(data);
+                }
             } catch (e) {
-                container.innerHTML = '<span style="color:red">QR Generation failed. Data too large.</span>';
+                container.innerHTML = '<span style="color:red">QR Generation failed.</span>';
             }
         },
 
-        nextQR: function() {
-            if (this.qrPage < this.qrChunks.length - 1) {
-                this.qrPage++;
-                this._drawCurrentQR();
-            }
+        nextQR: function(fromSignal = false) {
+            if (this.qrChunks.length <= 1) return;
+            
+            this.qrPage = (this.qrPage + 1) % this.qrChunks.length;
+            this._drawCurrentQR();
         },
 
         prevQR: function() {
@@ -930,6 +968,18 @@ const SyncEngine = {
         },
 
         _scanChunks: {}, // Storage for incoming partial scans
+
+        _updateScanProgress: function(current, total) {
+            const progSec = document.getElementById('sync-scan-progress');
+            const countEl = document.getElementById('sync-scan-count');
+            const totalEl = document.getElementById('sync-scan-total');
+            const barEl = document.getElementById('sync-scan-bar');
+            
+            if (progSec) progSec.style.display = 'block';
+            if (countEl) countEl.innerText = current;
+            if (totalEl) totalEl.innerText = total;
+            if (barEl) barEl.style.width = (current / total * 100) + '%';
+        },
 
         startScanner: function() {
             if (this.scanner) return;
@@ -954,30 +1004,61 @@ const SyncEngine = {
                 { facingMode: "environment" },
                 { fps: 10, qrbox: { width: 250, height: 250 } },
                 (decodedText) => {
-                    // Check if multi-part (Format: PART:idx:total:hash:data)
-                    if (decodedText.startsWith('PART:')) {
+                    // Check if multi-part (Format: qtp:idx:total:data)
+                    if (decodedText.startsWith('qtp:')) {
                         const parts = decodedText.split(':');
                         const idx = parts[1];
                         const total = parts[2];
                         const data = parts.slice(3).join(':');
                         
-                        // Scope by total count to prevent simple collisions
                         if (!this._scanChunks[total]) this._scanChunks[total] = {};
                         this._scanChunks[total][idx] = data;
                         
                         const currentCount = Object.keys(this._scanChunks[total]).length;
-                        if (window.showToast) window.showToast(`Scanned part ${currentCount}/${total}`);
+                        this._updateScanProgress(currentCount, total);
+
+                        // Signal acknowledgment back to displayer if possible
+                        if (SyncEngine.webrtc.mqttClient && SyncEngine.webrtc.roomHash) {
+                            try {
+                                const PahoMsg = (window.Paho && Paho.MQTT) ? Paho.MQTT.Message : (window.Paho ? Paho.Message : null);
+                                const ack = new PahoMsg(JSON.stringify({ 
+                                    type: 'qtp-ack', 
+                                    idx: idx, 
+                                    total: total, 
+                                    target: 'all' // Ideally we'd target the sender, but 'all' works for room discovery
+                                }));
+                                ack.destinationName = "quiztool/sync/v2/" + SyncEngine.webrtc.roomHash + "/signal/all";
+                                SyncEngine.webrtc.mqttClient.send(ack);
+                            } catch(e) {}
+                        }
                         
                         if (currentCount >= parseInt(total)) {
                             let full = '';
-                            // Use string keys to match how _scanChunks[total][idx] was stored
                             for (let i = 1; i <= parseInt(total); i++) full += (this._scanChunks[total][String(i)] || '');
                             delete this._scanChunks[total];
                             this.stopScanner();
                             if (SyncEngine.importData(full, 'merge')) {
                                 if (window.showToast) window.showToast("Multi-part QR Sync complete!");
                                 this.closeModal();
-                                if (window.renderQuizzes) window.renderQuizzes();
+                            }
+                        }
+                    } else if (decodedText.startsWith('PART:')) {
+                        // Legacy support for older engine versions
+                        const parts = decodedText.split(':');
+                        const idx = parts[1];
+                        const total = parts[2];
+                        const data = parts.slice(3).join(':');
+                        if (!this._scanChunks[total]) this._scanChunks[total] = {};
+                        this._scanChunks[total][idx] = data;
+                        const currentCount = Object.keys(this._scanChunks[total]).length;
+                        this._updateScanProgress(currentCount, total);
+                        if (currentCount >= parseInt(total)) {
+                            let full = '';
+                            for (let i = 1; i <= parseInt(total); i++) full += (this._scanChunks[total][String(i)] || '');
+                            delete this._scanChunks[total];
+                            this.stopScanner();
+                            if (SyncEngine.importData(full, 'merge')) {
+                                this.closeModal();
                             }
                         }
                     } else {
