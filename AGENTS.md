@@ -506,7 +506,7 @@ The tracker is a persistence layer that aggregates mistakes and flagged items ac
 ### 11b. Dashboard Features
 - **Scoped View**: Hub pages automatically filter the dashboard to the current folder's quizzes.
 - **Review Mode**: Users can select specific quizzes or folders and click "Start Review" to launch a dynamic session containing only those tracked questions.
-- **Deduplication**: The tracker identifies questions by text to prevent duplicates if the same question appears in multiple quizzes.
+- **Deduplication**: The dashboard identifies questions by text + index to prevent duplicates. It only "hides" a flagged item into a wrong item's entry if it's a confirmed match (same index or missing index with identical text).
 - **Tracker Healing**: If a quiz is moved to a different folder or renamed, the tracker uses `tracker-map.json` to automatically update the stored paths in the background when the dashboard is opened.
 - **Selective Clearing**: `confirmClearTrackerData()` only deletes data for the currently visible scope (Current Folder, All, or This Quiz).
 
@@ -876,10 +876,11 @@ The synchronization system is a high-performance, P2P-first engine designed for 
     3. **Multi-Page QR**: Visual fallback. Splits large datasets into chunks with on-screen pagination.
     4. **Text/File**: Manual fallback. Copy/paste or backup file import.
 
-### 21b. Data Integrity & Merging
-To prevent data loss, the engine uses "Smart Merge" logic instead of simple replacement:
-- **Tracker Merge (v2)**: Performs a **Union** of all mistakes and flagged items. If Device A has mistakes [1,2] and Device B has [2,3], the result is [1,2,3].
-- **Tracker Index**: Automatically reconstructs the `quiz_tracker_keys` index after every sync to ensure imported quizzes are immediately visible.
+### 21b. Data Integrity & Merging (v2.1)
+To prevent data loss and squashing, the engine uses a high-fidelity merge strategy:
+- **Hybrid Deduplication**: Uses a combination of `idx` (index) and `text` (question prompt). If a question is missing an index on one device but has it on another, it uses the text as a stable anchor for matching.
+- **1-to-1 Matching**: During sync, imported questions are matched to existing local questions exactly once. Once an existing question is "consumed" by a merge, it is no longer available for further merges. This prevents "squashing" different questions with generic text (like "Select the correct statement") into a single entry.
+- **Recalculated Counts**: The `wrongCount` and `flaggedCount` properties are automatically recalculated from the merged lists after every sync. This ensures that topbar badges and summary stats immediately reflect the new data without requiring a quiz reload.
 - **Progress Merging**: Uses `timestamp` comparison. If the incoming active session is newer than the local one, it replaces; otherwise, it preserves the local state.
 - **Safety**: Wrapped in `try...catch` per key. Corrupted keys are skipped to protect the rest of the database.
 
@@ -906,8 +907,10 @@ Bundled into `sync-engine.js` via `scripts/build_sync_engine.ps1`:
 ### 21f. Critical Rules for Sync
 - **Topic Versioning**: Always use `v2` topic prefix to avoid "ghost" messages from older versions.
 - **sessionStorage Identity**: `deviceId` must be stored in `sessionStorage` to remain stable across refreshes while clearing on tab close.
+- **Auto-Disconnect**: MQTT connections automatically time out after 60 seconds of inactivity to save battery and reduce server load.
 - **No Retention**: Presence messages MUST NOT be "retained" in MQTT to prevent the "Flooded List" bug.
 - **Secure Contexts**: Camera scanning (`getUserMedia`) is restricted to **HTTPS** or **Localhost**.
+- **QR Multi-part Integrity**: Chunks must be prefixed with their part index and UID to prevent cross-contamination if scanning multiple codes in sequence.
 
 ---
 

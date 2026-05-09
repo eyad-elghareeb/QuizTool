@@ -814,7 +814,7 @@
           g.wrongItems.forEach(function (q) {
             var isAlsoFlagged = g.flaggedItemsAll.some(function (f) { 
               var matchByIdx = (q.idx !== undefined && q.idx !== null && f.idx !== undefined && f.idx !== null) && (f.idx === q.idx);
-              var matchByText = (q.text && f.text) && (f.text.trim() === q.text.trim());
+              var matchByText = (q.text && f.text && q.text.trim().length > 5) && (f.text.trim() === q.text.trim());
               return matchByIdx || matchByText;
             });
             html += buildItem(g.uid, q, isAlsoFlagged ? 'Wrong + Flagged' : 'Wrong', 'wrong', '\u2717');
