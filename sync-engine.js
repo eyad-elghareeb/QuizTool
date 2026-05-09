@@ -1102,87 +1102,104 @@ const SyncEngine = {
                 return;
             }
 
-            const updateCameras = () => {
-                Html5Qrcode.getCameras().then(cameras => {
-                    this._cameras = cameras;
-                    if (cameras && cameras.length > 1) {
-                        if (switchBtn) switchBtn.style.display = 'block';
-                    }
-                }).catch(e => console.warn("Cam list failed:", e));
-            };
+            const startWithCamera = (cameraIdOrConfig) => {
+                if (this.scanner) {
+                    this.scanner.stop().then(() => {
+                        this.scanner = null;
+                        this.startScanner(); // Recursively start with new config
+                    }).catch(() => {});
+                    return;
+                }
+                
+                this.scanner = new Html5Qrcode("sync-reader");
+                this.scanner.start(
+                    cameraIdOrConfig,
+                    { fps: 15, qrbox: { width: 250, height: 250 } },
+                    (decodedText) => {
+                        // Multi-part logic
+                        if (decodedText.startsWith('qtp:')) {
+                            const parts = decodedText.split(':');
+                            const idx = parts[1];
+                            const total = parts[2];
+                            const data = parts.slice(3).join(':');
+                            if (!this._scanChunks[total]) this._scanChunks[total] = {};
+                            this._scanChunks[total][idx] = data;
+                            const currentCount = Object.keys(this._scanChunks[total]).length;
+                            this._updateScanProgress(currentCount, total);
+                            
+                            // Send Ack
+                            if (SyncEngine.webrtc.mqttClient && SyncEngine.webrtc.roomHash) {
+                                try {
+                                    const PahoMsg = (window.Paho && Paho.MQTT) ? Paho.MQTT.Message : (window.Paho ? Paho.Message : null);
+                                    const ack = new PahoMsg(JSON.stringify({ type: 'qtp-ack', idx: idx, total: total, target: 'all' }));
+                                    ack.destinationName = "quiztool/sync/v2/" + SyncEngine.webrtc.roomHash + "/signal/all";
+                                    SyncEngine.webrtc.mqttClient.send(ack);
+                                } catch(e) {}
+                            }
 
-            // Try immediately
-            updateCameras();
-
-            const selectedCameraId = (this._cameras && this._cameras.length > 0) 
-                ? this._cameras[this._currentCameraIndex].id 
-                : { facingMode: "environment" };
-
-            this.scanner = new Html5Qrcode("sync-reader");
-            this.scanner.start(
-                selectedCameraId,
-                { fps: 15, qrbox: { width: 250, height: 250 } },
-                (decodedText) => {
-                    // ... scan logic ...
-                    // Check if multi-part (Format: qtp:idx:total:data)
-                    if (decodedText.startsWith('qtp:')) {
-                        const parts = decodedText.split(':');
-                        const idx = parts[1];
-                        const total = parts[2];
-                        const data = parts.slice(3).join(':');
-                        if (!this._scanChunks[total]) this._scanChunks[total] = {};
-                        this._scanChunks[total][idx] = data;
-                        const currentCount = Object.keys(this._scanChunks[total]).length;
-                        this._updateScanProgress(currentCount, total);
-                        if (SyncEngine.webrtc.mqttClient && SyncEngine.webrtc.roomHash) {
-                            try {
-                                const PahoMsg = (window.Paho && Paho.MQTT) ? Paho.MQTT.Message : (window.Paho ? Paho.Message : null);
-                                const ack = new PahoMsg(JSON.stringify({ type: 'qtp-ack', idx: idx, total: total, target: 'all' }));
-                                ack.destinationName = "quiztool/sync/v2/" + SyncEngine.webrtc.roomHash + "/signal/all";
-                                SyncEngine.webrtc.mqttClient.send(ack);
-                            } catch(e) {}
-                        }
-                        if (currentCount >= parseInt(total)) {
-                            let full = '';
-                            for (let i = 1; i <= parseInt(total); i++) full += (this._scanChunks[total][String(i)] || '');
-                            delete this._scanChunks[total];
+                            if (currentCount >= parseInt(total)) {
+                                let full = '';
+                                for (let i = 1; i <= parseInt(total); i++) full += (this._scanChunks[total][String(i)] || '');
+                                delete this._scanChunks[total];
+                                this.stopScanner();
+                                if (SyncEngine.importData(full, 'merge')) {
+                                    if (window.showToast) window.showToast("Multi-part QR Sync complete!");
+                                    this.closeModal();
+                                }
+                            }
+                        } else {
                             this.stopScanner();
-                            if (SyncEngine.importData(full, 'merge')) {
-                                if (window.showToast) window.showToast("Multi-part QR Sync complete!");
+                            if (SyncEngine.importData(decodedText, 'merge')) {
+                                if (window.showToast) window.showToast("QR Scan Sync successful!");
                                 this.closeModal();
                             }
                         }
-                    } else if (decodedText.startsWith('PART:')) {
-                        const parts = decodedText.split(':');
-                        const idx = parts[1];
-                        const total = parts[2];
-                        const data = parts.slice(3).join(':');
-                        if (!this._scanChunks[total]) this._scanChunks[total] = {};
-                        this._scanChunks[total][idx] = data;
-                        const currentCount = Object.keys(this._scanChunks[total]).length;
-                        this._updateScanProgress(currentCount, total);
-                        if (currentCount >= parseInt(total)) {
-                            let full = '';
-                            for (let i = 1; i <= parseInt(total); i++) full += (this._scanChunks[total][String(i)] || '');
-                            delete this._scanChunks[total];
-                            this.stopScanner();
-                            if (SyncEngine.importData(full, 'merge')) this.closeModal();
-                        }
-                    } else {
-                        this.stopScanner();
-                        if (SyncEngine.importData(decodedText, 'merge')) {
-                            if (window.showToast) window.showToast("QR Scan Sync successful!");
-                            this.closeModal();
+                    },
+                    (errorMessage) => {}
+                ).catch(err => {
+                    console.error("Scanner start error:", err);
+                    readerEl.innerHTML = `<div style="padding: 1rem; color: var(--wrong);">Scanner error: ${err}</div>`;
+                });
+            };
+
+            // First, try to get cameras
+            Html5Qrcode.getCameras().then(cameras => {
+                this._cameras = cameras;
+                if (cameras && cameras.length > 0) {
+                    if (switchBtn) switchBtn.style.display = 'block';
+                    
+                    // Priority 1: Pick a camera that looks like a 'main' back camera (not wide)
+                    let bestIdx = -1;
+                    if (this._cameras.length > 1) {
+                        // Find "back" or "environment" but NOT "wide" or "ultra"
+                        bestIdx = this._cameras.findIndex(c => {
+                            const l = c.label.toLowerCase();
+                            return (l.includes('back') || l.includes('rear') || l.includes('environment')) && 
+                                   !l.includes('wide') && !l.includes('ultra');
+                        });
+                        
+                        // Fallback: any back camera
+                        if (bestIdx === -1) {
+                            bestIdx = this._cameras.findIndex(c => {
+                                const l = c.label.toLowerCase();
+                                return l.includes('back') || l.includes('rear') || l.includes('environment');
+                            });
                         }
                     }
-                },
-                (errorMessage) => {}
-            ).then(() => {
-                // Success! Now we definitely have permission, try getting cameras again
-                updateCameras();
+                    
+                    if (bestIdx !== -1 && this._currentCameraIndex === 0) {
+                        this._currentCameraIndex = bestIdx;
+                    }
+
+                    const selectedCameraId = this._cameras[this._currentCameraIndex].id;
+                    startWithCamera(selectedCameraId);
+                } else {
+                    // No cameras listed? Try default facingMode
+                    startWithCamera({ facingMode: "environment" });
+                }
             }).catch(err => {
-                console.error("Scanner start error:", err);
-                readerEl.innerHTML = `<div style="padding: 1rem; color: var(--wrong);">Scanner error: ${err}</div>`;
+                console.warn("getCameras failed, using facingMode fallback", err);
+                startWithCamera({ facingMode: "environment" });
             });
         },
 
