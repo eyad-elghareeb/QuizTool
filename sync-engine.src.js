@@ -550,6 +550,8 @@ const SyncEngine = {
         scanner: null,
         _qrTimer: null,
         _qrInstance: null,
+        _cameras: [],
+        _currentCameraIndex: 0,
         _scanChunks: {},
         _scanTotal: 0,
 
@@ -617,6 +619,9 @@ const SyncEngine = {
                             <div id="sync-qr-scan-section" style="display: none;">
                                 <p style="margin-bottom: 1rem; color: var(--text-muted); font-size: 0.95rem;">Point your camera at a QR code.</p>
                                 <div id="sync-reader" style="width: 100%; max-width: 320px; margin: 0 auto; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); position: relative;"></div>
+                                <div id="sync-camera-controls" style="margin-top: 10px; display: none;">
+                                    <button class="btn-dash-action" id="sync-switch-camera-btn" onclick="SyncEngine.ui.switchCamera()" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">🔄 Switch Camera</button>
+                                </div>
                                 <div id="sync-scan-progress" style="margin-top: 1.25rem; font-weight: 600; font-size: 0.9rem; color: var(--accent); display: none;">
                                     Scanning: <span id="sync-scan-count">0</span> / <span id="sync-scan-total">?</span> parts
                                     <div style="width: 100%; height: 6px; background: var(--surface2); border-radius: 3px; margin-top: 8px; overflow: hidden; border: 1px solid var(--border);">
@@ -981,106 +986,105 @@ const SyncEngine = {
             if (barEl) barEl.style.width = (current / total * 100) + '%';
         },
 
+        switchCamera: function() {
+            if (this._cameras.length <= 1) return;
+            this._currentCameraIndex = (this._currentCameraIndex + 1) % this._cameras.length;
+            this.stopScanner();
+            this.startScanner();
+        },
+
+
+
         startScanner: function() {
             if (this.scanner) return;
             
             const readerEl = document.getElementById('sync-reader');
+            const switchBtn = document.getElementById('sync-camera-controls');
             if (!readerEl) return;
-            
-            // Check for secure context
+
+            // Secure Context Check
             if (!window.isSecureContext && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-                readerEl.innerHTML = `
-                    <div style="padding: 2rem 1rem; color: var(--wrong); font-size: 0.9rem;">
-                        <div style="font-size: 2rem; margin-bottom: 1rem;">⚠️</div>
-                        <b>Camera blocked by browser.</b><br><br>
-                        Browsers only allow camera access on <b>HTTPS</b> or <b>Localhost</b>.<br><br>
-                        Since you are on a local network, please use the <b>Copy/Paste</b> tab instead.
-                    </div>`;
+                readerEl.innerHTML = `<div style="padding: 2rem 1rem; color: var(--wrong);">⚠️ Camera requires HTTPS. Use Copy/Paste.</div>`;
                 return;
             }
 
-            this.scanner = new Html5Qrcode("sync-reader");
-            this.scanner.start(
-                { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 250, height: 250 } },
-                (decodedText) => {
-                    // Check if multi-part (Format: qtp:idx:total:data)
-                    if (decodedText.startsWith('qtp:')) {
-                        const parts = decodedText.split(':');
-                        const idx = parts[1];
-                        const total = parts[2];
-                        const data = parts.slice(3).join(':');
-                        
-                        if (!this._scanChunks[total]) this._scanChunks[total] = {};
-                        this._scanChunks[total][idx] = data;
-                        
-                        const currentCount = Object.keys(this._scanChunks[total]).length;
-                        this._updateScanProgress(currentCount, total);
+            Html5Qrcode.getCameras().then(cameras => {
+                this._cameras = cameras;
+                if (cameras && cameras.length > 1) {
+                    if (switchBtn) switchBtn.style.display = 'block';
+                }
+                
+                const selectedCameraId = (cameras && cameras.length > 0) 
+                    ? cameras[this._currentCameraIndex].id 
+                    : { facingMode: "environment" };
 
-                        // Signal acknowledgment back to displayer if possible
-                        if (SyncEngine.webrtc.mqttClient && SyncEngine.webrtc.roomHash) {
-                            try {
-                                const PahoMsg = (window.Paho && Paho.MQTT) ? Paho.MQTT.Message : (window.Paho ? Paho.Message : null);
-                                const ack = new PahoMsg(JSON.stringify({ 
-                                    type: 'qtp-ack', 
-                                    idx: idx, 
-                                    total: total, 
-                                    target: 'all' // Ideally we'd target the sender, but 'all' works for room discovery
-                                }));
-                                ack.destinationName = "quiztool/sync/v2/" + SyncEngine.webrtc.roomHash + "/signal/all";
-                                SyncEngine.webrtc.mqttClient.send(ack);
-                            } catch(e) {}
-                        }
-                        
-                        if (currentCount >= parseInt(total)) {
-                            let full = '';
-                            for (let i = 1; i <= parseInt(total); i++) full += (this._scanChunks[total][String(i)] || '');
-                            delete this._scanChunks[total];
-                            this.stopScanner();
-                            if (SyncEngine.importData(full, 'merge')) {
-                                if (window.showToast) window.showToast("Multi-part QR Sync complete!");
-                                this.closeModal();
+                this.scanner = new Html5Qrcode("sync-reader");
+                this.scanner.start(
+                    selectedCameraId,
+                    { fps: 15, qrbox: { width: 250, height: 250 } },
+                    (decodedText) => {
+                        // Multi-part logic
+                        if (decodedText.startsWith('qtp:')) {
+                            const parts = decodedText.split(':');
+                            const idx = parts[1];
+                            const total = parts[2];
+                            const data = parts.slice(3).join(':');
+                            if (!this._scanChunks[total]) this._scanChunks[total] = {};
+                            this._scanChunks[total][idx] = data;
+                            const currentCount = Object.keys(this._scanChunks[total]).length;
+                            this._updateScanProgress(currentCount, total);
+                            if (SyncEngine.webrtc.mqttClient && SyncEngine.webrtc.roomHash) {
+                                try {
+                                    const PahoMsg = (window.Paho && Paho.MQTT) ? Paho.MQTT.Message : (window.Paho ? Paho.Message : null);
+                                    const ack = new PahoMsg(JSON.stringify({ type: 'qtp-ack', idx: idx, total: total, target: 'all' }));
+                                    ack.destinationName = "quiztool/sync/v2/" + SyncEngine.webrtc.roomHash + "/signal/all";
+                                    SyncEngine.webrtc.mqttClient.send(ack);
+                                } catch(e) {}
                             }
-                        }
-                    } else if (decodedText.startsWith('PART:')) {
-                        // Legacy support for older engine versions
-                        const parts = decodedText.split(':');
-                        const idx = parts[1];
-                        const total = parts[2];
-                        const data = parts.slice(3).join(':');
-                        if (!this._scanChunks[total]) this._scanChunks[total] = {};
-                        this._scanChunks[total][idx] = data;
-                        const currentCount = Object.keys(this._scanChunks[total]).length;
-                        this._updateScanProgress(currentCount, total);
-                        if (currentCount >= parseInt(total)) {
-                            let full = '';
-                            for (let i = 1; i <= parseInt(total); i++) full += (this._scanChunks[total][String(i)] || '');
-                            delete this._scanChunks[total];
-                            this.stopScanner();
-                            if (SyncEngine.importData(full, 'merge')) {
-                                this.closeModal();
+                            if (currentCount >= parseInt(total)) {
+                                let full = '';
+                                for (let i = 1; i <= parseInt(total); i++) full += (this._scanChunks[total][String(i)] || '');
+                                delete this._scanChunks[total];
+                                this.stopScanner();
+                                if (SyncEngine.importData(full, 'merge')) {
+                                    if (window.showToast) window.showToast("Multi-part QR Sync complete!");
+                                    this.closeModal();
+                                }
                             }
-                        }
-                    } else {
-                        // Single part — only stop scanner on success
-                        const text = decodedText;
-                        this.stopScanner();
-                        if (SyncEngine.importData(text, 'merge')) {
-                            if (window.showToast) window.showToast("QR Scan Sync successful!");
-                            this.closeModal();
-                            if (window.renderQuizzes) window.renderQuizzes();
+                        } else if (decodedText.startsWith('PART:')) {
+                            const parts = decodedText.split(':');
+                            const idx = parts[1];
+                            const total = parts[2];
+                            const data = parts.slice(3).join(':');
+                            if (!this._scanChunks[total]) this._scanChunks[total] = {};
+                            this._scanChunks[total][idx] = data;
+                            const currentCount = Object.keys(this._scanChunks[total]).length;
+                            this._updateScanProgress(currentCount, total);
+                            if (currentCount >= parseInt(total)) {
+                                let full = '';
+                                for (let i = 1; i <= parseInt(total); i++) full += (this._scanChunks[total][String(i)] || '');
+                                delete this._scanChunks[total];
+                                this.stopScanner();
+                                if (SyncEngine.importData(full, 'merge')) this.closeModal();
+                            }
                         } else {
-                            if (window.showToast) window.showToast("QR import failed. Try Copy/Paste instead.");
-                            // Restart scanner so user can try again
-                            this.scanner = null;
-                            this.startScanner();
+                            this.stopScanner();
+                            if (SyncEngine.importData(decodedText, 'merge')) {
+                                if (window.showToast) window.showToast("QR Scan Sync successful!");
+                                this.closeModal();
+                            }
                         }
-                    }
-                },
-                (errorMessage) => {} // ignore scan errors
-            ).catch(err => {
-                console.error(err);
-                readerEl.innerHTML = `<div style="padding: 2rem 1rem; color: var(--wrong);">Camera error: ${err}<br><br>Try using <b>Copy/Paste</b>.</div>`;
+                    },
+                    (errorMessage) => {}
+                ).catch(err => {
+                    console.error("Scanner start error:", err);
+                    readerEl.innerHTML = `<div style="padding: 1rem; color: var(--wrong);">Scanner error: ${err}</div>`;
+                });
+            }).catch(err => {
+                console.error("GetCameras error:", err);
+                // Fallback to default facingMode
+                this.scanner = new Html5Qrcode("sync-reader");
+                this.scanner.start({ facingMode: "environment" }, { fps: 15, qrbox: { width: 250, height: 250 } }, (text) => { /* ... same logic ... */ });
             });
         },
 
