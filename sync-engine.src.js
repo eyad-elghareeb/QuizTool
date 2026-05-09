@@ -988,8 +988,9 @@ const SyncEngine = {
         },
 
         switchCamera: function() {
-            if (this._cameras.length > 1) {
+            if (this._cameras && this._cameras.length > 1) {
                 this._currentCameraIndex = (this._currentCameraIndex + 1) % this._cameras.length;
+                this._useFront = false;
             } else {
                 // Mobile Fallback: if getCameras() returned nothing, toggle between front/back
                 this._useFront = !this._useFront;
@@ -1011,6 +1012,12 @@ const SyncEngine = {
             if (!window.isSecureContext && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
                 readerEl.innerHTML = `<div style="padding: 2rem 1rem; color: var(--wrong);">⚠️ Camera requires HTTPS. Use Copy/Paste.</div>`;
                 return;
+            }
+
+            // ALWAYS show the switch button on mobile instantly (before any promises resolve/reject)
+            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            if (switchBtn && isMobile) {
+                switchBtn.style.display = 'block';
             }
 
             const startWithCamera = (cameraIdOrConfig) => {
@@ -1066,11 +1073,11 @@ const SyncEngine = {
                     },
                     (errorMessage) => {}
                 ).then(() => {
-                    // SUCCESS: We have permission. Rescan cameras to show toggle button on mobile.
+                    // SUCCESS: We have permission. Rescan cameras.
                     Html5Qrcode.getCameras().then(cameras => {
-                        this._cameras = cameras;
-                        if (cameras && cameras.length > 1) {
-                            if (switchBtn) switchBtn.style.display = 'block';
+                        this._cameras = cameras || [];
+                        if (switchBtn && (isMobile || this._cameras.length > 1)) {
+                            switchBtn.style.display = 'block';
                         }
                     }).catch(() => {});
                 }).catch(err => {
@@ -1079,19 +1086,30 @@ const SyncEngine = {
                 });
             };
 
-            // First, try to get cameras
+            // If we manually toggled to front via generic fallback, force it.
+            if (this._useFront) {
+                startWithCamera({ facingMode: "user" });
+                return;
+            }
+
+            // If we have a cached populated list of cameras (from previous permission grant)
+            if (this._cameras && this._cameras.length > 0) {
+                if (this._currentCameraIndex >= this._cameras.length) this._currentCameraIndex = 0;
+                startWithCamera(this._cameras[this._currentCameraIndex].id);
+                return;
+            }
+
+            // Otherwise, attempt to get cameras (might fail if no permission yet)
             Html5Qrcode.getCameras().then(cameras => {
-                this._cameras = cameras;
+                this._cameras = cameras || [];
                 
-                // If on mobile, ALWAYS show the switch button as a hint that switching is possible
-                const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-                if (switchBtn && (isMobile || cameras.length > 1)) {
+                if (switchBtn && (isMobile || this._cameras.length > 1)) {
                     switchBtn.style.display = 'block';
                 }
 
-                if (cameras && cameras.length > 0) {
+                if (this._cameras.length > 0) {
                     let bestIdx = -1;
-                    if (this._cameras.length > 1) {
+                    if (this._cameras.length > 1 && this._currentCameraIndex === 0) {
                         bestIdx = this._cameras.findIndex(c => {
                             const l = c.label.toLowerCase();
                             return (l.includes('back') || l.includes('rear') || l.includes('environment')) && 
@@ -1103,19 +1121,18 @@ const SyncEngine = {
                                 return l.includes('back') || l.includes('rear') || l.includes('environment');
                             });
                         }
+                        if (bestIdx !== -1) {
+                            this._currentCameraIndex = bestIdx;
+                        }
                     }
                     
-                    if (bestIdx !== -1 && this._currentCameraIndex === 0) {
-                        this._currentCameraIndex = bestIdx;
-                    }
                     startWithCamera(this._cameras[this._currentCameraIndex].id);
                 } else {
-                    // No camera list yet? Start with facingMode
-                    startWithCamera({ facingMode: this._useFront ? "user" : "environment" });
+                    startWithCamera({ facingMode: "environment" });
                 }
             }).catch(err => {
                 console.warn("getCameras failed, using facingMode fallback", err);
-                startWithCamera({ facingMode: this._useFront ? "user" : "environment" });
+                startWithCamera({ facingMode: "environment" });
             });
         },
 
