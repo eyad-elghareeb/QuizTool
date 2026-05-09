@@ -230,6 +230,7 @@ button, a { cursor: pointer; font-family: inherit; border: none; outline: none; 
   position: relative;
   margin-right: 0.5rem;
 }
+.btn-sync { margin-right: 0.5rem; }
 .btn-tracker:hover { color: var(--accent); border-color: var(--accent); }
 .btn-tracker .tracker-badge {
   position: absolute; top: -3px; right: -3px;
