@@ -100,8 +100,10 @@ const SyncEngine = {
     exportData: function(options = { tracker: true, progress: true }) {
         const payload = { timestamp: Date.now(), data: {} };
         
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
+        const keys = [];
+        for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+
+        for (const key of keys) {
             try {
                 const val = localStorage.getItem(key);
                 if (!val) continue;
@@ -157,15 +159,31 @@ const SyncEngine = {
                 }
                 
                 // For tracker data, merge questions
-                // For tracker data, merge questions
                 if (key.startsWith('quiz_tracker_v2_')) {
                     try {
                         const existingData = JSON.parse(existing);
                         if (existingData && typeof existingData === 'object') {
-                            const mergeArray = (a, b) => [...new Set([...(Array.isArray(a) ? a : []), ...(Array.isArray(b) ? b : [])])];
+                            const mergeTracker = (a, b) => {
+                                const listA = Array.isArray(a) ? a : [];
+                                const listB = Array.isArray(b) ? b : [];
+                                const mergedMap = new Map();
+                                // Add existing
+                                listA.forEach(item => {
+                                    const id = (item.idx !== undefined && item.idx !== null) ? ('idx_' + item.idx) : 
+                                               (item.text ? ('txt_' + item.text) : ('raw_' + JSON.stringify(item)));
+                                    mergedMap.set(id, item);
+                                });
+                                // Add/Overwrite with imported
+                                listB.forEach(item => {
+                                    const id = (item.idx !== undefined && item.idx !== null) ? ('idx_' + item.idx) : 
+                                               (item.text ? ('txt_' + item.text) : ('raw_' + JSON.stringify(item)));
+                                    mergedMap.set(id, item);
+                                });
+                                return Array.from(mergedMap.values());
+                            };
                             
-                            existingData.wrong = mergeArray(existingData.wrong, importedVal.wrong);
-                            existingData.flagged = mergeArray(existingData.flagged, importedVal.flagged);
+                            existingData.wrong = mergeTracker(existingData.wrong, importedVal.wrong);
+                            existingData.flagged = mergeTracker(existingData.flagged, importedVal.flagged);
                             localStorage.setItem(key, JSON.stringify(existingData));
                         } else {
                             localStorage.setItem(key, JSON.stringify(importedVal));
@@ -221,15 +239,31 @@ const SyncEngine = {
             }
             return id;
         })(),
-        deviceName: "Device " + Math.floor(Math.random() * 1000),
+        deviceName: (function() {
+            let name = sessionStorage.getItem('quiztool-sync-device-name');
+            if (!name) {
+                const adjectives = ['Red','Blue','Gold','Swift','Calm','Bold','Wise','Keen'];
+                const nouns = ['Owl','Fox','Bear','Wolf','Hawk','Lion','Stag','Lynx'];
+                name = adjectives[Math.floor(Math.random()*adjectives.length)] + ' ' + nouns[Math.floor(Math.random()*nouns.length)];
+                sessionStorage.setItem('quiztool-sync-device-name', name);
+            }
+            return name;
+        })(),
         roomHash: null,
         mqttClient: null,
         peers: {}, // Remote peer RTCPeerConnections
         devices: {}, // Discovered devices
         heartbeatInterval: null,
+        disconnectTimeout: null,
+        _discovering: false, // Guard against async race in initDiscovery
 
         initDiscovery: function() {
-            if (this.mqttClient) return; // Already initialized
+            if (this.disconnectTimeout) {
+                clearTimeout(this.disconnectTimeout);
+                this.disconnectTimeout = null;
+            }
+            if (this.mqttClient || this._discovering) return; // Already initialized or in progress
+            this._discovering = true;
 
             SyncEngine.ui.setStatus("Initializing discovery...");
 
@@ -323,8 +357,15 @@ const SyncEngine = {
                 
                 this.mqttClient.onConnectionLost = (responseObject) => {
                     if (responseObject.errorCode !== 0) {
-                        SyncEngine.ui.setStatus("Network lost. Reconnecting...");
+                        SyncEngine.ui.setStatus("Network lost. Will retry on next open.");
                         console.log("MQTT Lost:", responseObject.errorMessage);
+                        // Reset so initDiscovery can re-run on next modal open
+                        this.mqttClient = null;
+                        this._discovering = false;
+                        if (this.heartbeatInterval) {
+                            clearInterval(this.heartbeatInterval);
+                            this.heartbeatInterval = null;
+                        }
                     }
                 };
                 
@@ -337,9 +378,9 @@ const SyncEngine = {
                     onSuccess: () => {
                         console.log("MQTT Connected. Room:", this.roomHash);
                         this.mqttClient.subscribe("quiztool/sync/v2/" + this.roomHash + "/#");
+                        this._discovering = false; // Allow re-entry if MQTT drops and reconnects
                         this.broadcastPresence();
-                        if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
-                        this.heartbeatInterval = setInterval(() => this.broadcastPresence(), 5000);
+                        this._startHeartbeat();
                         SyncEngine.ui.setStatus("Scanning for devices...");
                     },
                     onFailure: (e) => {
@@ -353,6 +394,11 @@ const SyncEngine = {
                 console.error("MQTT Client Setup Error:", e);
                 SyncEngine.ui.setStatus("Critical Error: " + e.message, false);
             }
+        },
+
+        _startHeartbeat: function() {
+            if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+            this.heartbeatInterval = setInterval(() => this.broadcastPresence(), 5000);
         },
 
         broadcastPresence: function() {
@@ -406,21 +452,39 @@ const SyncEngine = {
         connectToDevice: function(targetId) {
             SyncEngine.ui.setStatus("Connecting to " + (this.devices[targetId]?.name || targetId) + "...");
             
+            // Close and remove any existing stale peer for this target
+            if (this.peers[targetId]) {
+                try { this.peers[targetId].close(); } catch(e) {}
+                delete this.peers[targetId];
+            }
+
             // Try WebRTC first
             const pc = this._createPeerConnection(targetId);
             const channel = pc.createDataChannel("sync");
             this._setupChannel(channel);
+
+            let relayFired = false;
+
+            // Cancel relay fallback if P2P succeeds
+            pc.onconnectionstatechange = () => {
+                console.log("Conn State:", pc.connectionState);
+                if (pc.connectionState === 'connected') {
+                    relayFired = true; // Prevent relay from firing
+                    SyncEngine.ui.setStatus("P2P Established!", true);
+                }
+            };
 
             pc.createOffer().then(offer => {
                 pc.setLocalDescription(offer);
                 this._sendSignal(targetId, { sdp: offer });
             });
 
-            // Set a timeout for Relay fallback
+            // Set a timeout for Relay fallback — only fires if P2P hasn't connected
             setTimeout(() => {
-                if (pc.connectionState !== 'connected' && pc.iceConnectionState !== 'connected') {
+                if (!relayFired && pc.connectionState !== 'connected' && pc.iceConnectionState !== 'connected') {
                     console.log("P2P hanging, falling back to MQTT Relay...");
                     SyncEngine.ui.setStatus("P2P slow, using Relay Sync...");
+                    relayFired = true;
                     const opts = SyncEngine.ui._getOptions();
                     const data = SyncEngine.exportData(opts);
                     this._sendRelay(targetId, data);
@@ -442,13 +506,9 @@ const SyncEngine = {
                 console.log("ICE State:", pc.iceConnectionState);
                 if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
                     SyncEngine.ui.setStatus("P2P Failed. Use QR Sync instead.", false);
-                }
-            };
-
-            pc.onconnectionstatechange = () => {
-                console.log("Conn State:", pc.connectionState);
-                if (pc.connectionState === 'connected') {
-                    SyncEngine.ui.setStatus("P2P Established!", true);
+                    // Clean up failed connection
+                    try { pc.close(); } catch(e) {}
+                    delete SyncEngine.webrtc.peers[Object.keys(SyncEngine.webrtc.peers).find(k => SyncEngine.webrtc.peers[k] === pc)];
                 }
             };
 
@@ -504,6 +564,13 @@ const SyncEngine = {
             if (!this.mqttClient) return;
             try {
                 const PahoMsg = (window.Paho && Paho.MQTT) ? Paho.MQTT.Message : (window.Paho ? Paho.Message : null);
+                
+                // Alert if payload is very large (> 128KB)
+                if (data.length > 131072) {
+                    console.warn("Relay payload very large:", data.length);
+                    SyncEngine.ui.setStatus("Large data: Relay may be slow...");
+                }
+
                 const msg = new PahoMsg(JSON.stringify({
                     type: 'relay',
                     sender: this.deviceId,
@@ -672,6 +739,26 @@ const SyncEngine = {
             if (this.modalEl) {
                 this.modalEl.classList.remove('open');
                 this.stopScanner();
+                this._scanChunks = {}; // Clear any partial QR scans
+            }
+            // Stop heartbeat when modal is closed to avoid wasted MQTT traffic
+            if (SyncEngine.webrtc.heartbeatInterval) {
+                clearInterval(SyncEngine.webrtc.heartbeatInterval);
+                SyncEngine.webrtc.heartbeatInterval = null;
+            }
+
+            // Auto-disconnect MQTT after 60s of inactivity to save battery/data
+            if (SyncEngine.webrtc.mqttClient) {
+                if (SyncEngine.webrtc.disconnectTimeout) clearTimeout(SyncEngine.webrtc.disconnectTimeout);
+                SyncEngine.webrtc.disconnectTimeout = setTimeout(() => {
+                    if (SyncEngine.webrtc.mqttClient) {
+                        console.log("Auto-disconnecting MQTT due to inactivity");
+                        try { SyncEngine.webrtc.mqttClient.disconnect(); } catch(e) {}
+                        SyncEngine.webrtc.mqttClient = null;
+                        SyncEngine.webrtc._discovering = false;
+                    }
+                    SyncEngine.webrtc.disconnectTimeout = null;
+                }, 60000);
             }
         },
 
@@ -689,12 +776,18 @@ const SyncEngine = {
             });
 
             if (tabId === 'qr') {
+                this._scanChunks = {}; // Clear stale partial scans on tab switch
                 this.toggleQRScanner(false); // Default to export
                 this.renderQR();
             }
             if (tabId === 'text') this._refreshExportText();
             if (tabId === 'webrtc') {
                 SyncEngine.webrtc.initDiscovery();
+                // If already connected (e.g. modal re-opened), ensure heartbeat is running
+                if (SyncEngine.webrtc.mqttClient) {
+                    SyncEngine.webrtc.broadcastPresence(); // Announce immediately
+                    SyncEngine.webrtc._startHeartbeat();
+                }
                 this.updateDeviceList();
             }
             if (tabId === 'file') document.getElementById('sync-file-restore-options').style.display = 'none';
@@ -764,9 +857,11 @@ const SyncEngine = {
         },
 
         _getOptions: function() {
+            const trackerEl  = document.getElementById('sync-scope-tracker');
+            const progressEl = document.getElementById('sync-scope-progress');
             return {
-                tracker: document.getElementById('sync-scope-tracker').checked,
-                progress: document.getElementById('sync-scope-progress').checked
+                tracker:  trackerEl  ? trackerEl.checked  : true,
+                progress: progressEl ? progressEl.checked : true
             };
         },
 
@@ -783,14 +878,14 @@ const SyncEngine = {
         },
 
         importText: function(mode) {
-            const data = document.getElementById('sync-import-text').value;
+            const data = document.getElementById('sync-import-text').value.trim();
             if (!data) return;
             if (SyncEngine.importData(data, mode)) {
                 if (window.showToast) window.showToast("Sync successful!");
                 this.closeModal();
-                if (window.renderQuizzes) window.renderQuizzes(); // Refresh UI if on hub
+                if (window.renderQuizzes) window.renderQuizzes();
             } else {
-                alert("Failed to import. Invalid or corrupted code.");
+                if (window.showToast) window.showToast("Import failed: Invalid or corrupted code.");
             }
         },
 
@@ -831,7 +926,7 @@ const SyncEngine = {
                 this.closeModal();
                 if (window.renderQuizzes) window.renderQuizzes();
             } else {
-                alert("Failed to import. File may be corrupted or invalid.");
+                if (window.showToast) window.showToast("Import failed: File may be corrupted or invalid.");
             }
             this._pendingFileContent = null;
             document.getElementById('sync-file-restore-options').style.display = 'none';
@@ -850,7 +945,8 @@ const SyncEngine = {
             
             // Chunking logic: 1500 chars per QR is a safe bet for most scanners
             const CHUNK_SIZE = 1500;
-            if (fullData.length <= 2500) {
+            if (fullData.length <= CHUNK_SIZE) {
+                // Single QR — only use when data fits comfortably
                 this.qrChunks = [fullData];
                 pagination.style.display = 'none';
             } else {
@@ -944,7 +1040,8 @@ const SyncEngine = {
                         
                         if (currentCount >= parseInt(total)) {
                             let full = '';
-                            for (let i = 1; i <= total; i++) full += this._scanChunks[total][i];
+                            // Use string keys to match how _scanChunks[total][idx] was stored
+                            for (let i = 1; i <= parseInt(total); i++) full += (this._scanChunks[total][String(i)] || '');
                             delete this._scanChunks[total];
                             this.stopScanner();
                             if (SyncEngine.importData(full, 'merge')) {
@@ -954,14 +1051,18 @@ const SyncEngine = {
                             }
                         }
                     } else {
-                        // Single part
+                        // Single part — only stop scanner on success
+                        const text = decodedText;
                         this.stopScanner();
-                        if (SyncEngine.importData(decodedText, 'merge')) {
+                        if (SyncEngine.importData(text, 'merge')) {
                             if (window.showToast) window.showToast("QR Scan Sync successful!");
                             this.closeModal();
                             if (window.renderQuizzes) window.renderQuizzes();
                         } else {
-                            alert("Failed to import from QR.");
+                            if (window.showToast) window.showToast("QR import failed. Try Copy/Paste instead.");
+                            // Restart scanner so user can try again
+                            this.scanner = null;
+                            this.startScanner();
                         }
                     }
                 },
