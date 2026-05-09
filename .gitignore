@@ -754,3 +754,5 @@ Thumbs.db
 # *.sanity/default-storage.json
 # *.sanity/default-theming.json
 # *.sanity/default-ui.json
+# Local Dev Server
+serve.py

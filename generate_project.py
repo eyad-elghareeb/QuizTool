@@ -154,6 +154,7 @@ self.addEventListener('install', function (event) {
         'quiz-engine.js',
         'bank-engine.js',
         'index-engine.js',
+        'sync-engine.js',
         'index-engine.css',
         'index.html',
         'tracker-map.json',
@@ -272,6 +273,7 @@ function handleAsset(event, request) {
           'quiz-engine.js',
           'bank-engine.js',
           'index-engine.js',
+          'sync-engine.js',
           'index-engine.css',
           'manifest.webmanifest',
           'favicon.svg',
@@ -344,6 +346,7 @@ INDEX_ENGINE_JS = read_file('index-engine.js')
 INDEX_ENGINE_CSS = read_file('index-engine.css')
 QUIZ_ENGINE_JS = read_file('quiz-engine.js')
 BANK_ENGINE_JS = read_file('bank-engine.js')
+SYNC_ENGINE_JS = read_file('sync-engine.js')
 
 # Read sync scripts from QuizTool's own scripts/ folder (self-contained, no MU61S8 dependency)
 _SCRIPTS_DIR = BASE_DIR / 'scripts'
@@ -747,6 +750,9 @@ def gen_index_html(topbar_title, hero_title, hero_desc, quizzes,
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 5-9"/></svg>
       <span class="tracker-badge" id="tracker-badge-count"></span>
     </button>
+    <button class="icon-btn btn-sync" onclick="openSyncModal()" title="Sync Progress">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path><path d="M3 22v-6h6"></path><path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path></svg>
+    </button>
     <button class="icon-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">\u2600</button>
   </div>
 
@@ -791,12 +797,12 @@ def build_project_zip(config):
     buf = io.BytesIO()
     project_name = config.get('project_name', 'MyQuiz')
     
-    # Collect all file paths for service worker precaching
     all_file_paths = [
         'index-engine.js',
         'index-engine.css',
         'quiz-engine.js',
         'bank-engine.js',
+        'sync-engine.js',
         'tracker-map.json',
         'favicon.svg',
         'manifest.webmanifest'
@@ -883,6 +889,7 @@ def build_project_zip(config):
         zf.writestr('index-engine.css', INDEX_ENGINE_CSS)
         zf.writestr('quiz-engine.js', QUIZ_ENGINE_JS)
         zf.writestr('bank-engine.js', BANK_ENGINE_JS)
+        zf.writestr('sync-engine.js', SYNC_ENGINE_JS)
 
         # --- Static assets ---
         zf.writestr('favicon.svg', FAVICON_SVG)
@@ -1677,13 +1684,13 @@ def main():
     print(f"\n  Starting web UI on http://localhost:{port}")
     print(f"  Configure your project and generate a ready-to-deploy ZIP.")
     print(f"\n  Generated project structure (similar to MU61S8):")
-    print(f"    ✓ Engine files (quiz, bank, index)")
-    print(f"    ✓ Service worker with offline support")
-    print(f"    ✓ PWA manifest with all icon sizes")
-    print(f"    ✓ GitHub Actions workflows (sync + deploy)")
-    print(f"    ✓ Asset synchronization scripts")
-    print(f"    ✓ Quiz engine test page")
-    print(f"    ✗ No QuizTool utilities (quiz-maker, bank-maker, etc.)")
+    print(f"    [v] Engine files (quiz, bank, index)")
+    print(f"    [v] Service worker with offline support")
+    print(f"    [v] PWA manifest with all icon sizes")
+    print(f"    [v] GitHub Actions workflows (sync + deploy)")
+    print(f"    [v] Asset synchronization scripts")
+    print(f"    [v] Quiz engine test page")
+    print(f"    [x] No QuizTool utilities (quiz-maker, bank-maker, etc.)")
     print(f"\n  Press Ctrl+C to stop.\n")
 
     threading.Thread(target=open_browser, args=(port,), daemon=True).start()

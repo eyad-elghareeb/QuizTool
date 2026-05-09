@@ -19,6 +19,7 @@ ROOT_CACHE_ASSETS = (
     "icon-192.png",
     "icon-512.png",
     "index-engine.css",
+    "sync-engine.js",
 )
 SKIP_DIRS = {".git", ".github", "__pycache__", "_site", "scripts", "node_modules"}
 GENERIC_DESCRIPTIONS = {"past years exams", "department book mcqs", "quiz loading..."}

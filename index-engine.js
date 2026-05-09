@@ -66,6 +66,43 @@
   '</div>';
   document.body.appendChild(_dashEl);
 
+  // Backward compatibility: inject Sync button into topbar if missing
+  var topbar = document.querySelector('.topbar');
+  var trackerBtn = document.querySelector('.btn-tracker');
+  if (topbar && trackerBtn && !document.querySelector('.btn-sync')) {
+    var syncBtn = document.createElement('button');
+    syncBtn.className = 'icon-btn btn-sync';
+    syncBtn.setAttribute('onclick', 'openSyncModal()');
+    syncBtn.title = 'Sync Progress';
+    syncBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path><path d="M3 22v-6h6"></path><path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path></svg>';
+    trackerBtn.parentNode.insertBefore(syncBtn, trackerBtn.nextSibling);
+  }
+
+  /* ── Sync Engine Loader ───────────────────────────────────── */
+  window.openSyncModal = function() {
+    if (window.SyncEngine) {
+      window.SyncEngine.ui.openModal();
+      return;
+    }
+    
+    // Resolve the correct path to sync-engine.js from the current index file
+    // Engine base path is computed dynamically based on the current depth
+    var depth = Math.max(0, location.pathname.split('/').filter(Boolean).length - 2);
+    var engineBase = depth > 0 ? '../'.repeat(depth) : './';
+    // If it's a subfolder like gyn/index.html (depth=1), base is ../
+    // If it's root index.html (depth=0), base is ./
+    var s = document.createElement('script');
+    s.src = engineBase + 'sync-engine.js';
+    s.onload = function() {
+      if (window.SyncEngine) window.SyncEngine.ui.openModal();
+    };
+    s.onerror = function() {
+      showToast('Error loading sync engine');
+    };
+    document.body.appendChild(s);
+  };
+
+
   /* ── Toast Function ───────────────────────────────────────── */
   var toastTimer;
   window.showToast = function(msg) {
