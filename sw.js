@@ -13,6 +13,7 @@ var PRECACHE_REL_PATHS = [
   'quiz-engine.js',
   'bank-engine.js',
   'index-engine.js',
+  'sync-engine.js',
   'tracker-map.json',
   'index.html',
   'bank-maker.html',
@@ -222,7 +223,8 @@ function handleAsset(event, request) {
           'icon-144.png',
           'icon-192.png',
           'icon-512.png',
-          'tracker-map.json'
+          'tracker-map.json',
+          'sync-engine.js'
         ];
         if (SHARED.indexOf(filename) !== -1) {
           cached = await cache.match(hrefFromScope(scope, filename));
