@@ -27,7 +27,7 @@ if templates_dir.exists():
 # Engine files (needed for ZIP generation)
 # Note: sw.js is NOT needed — it's generated dynamically per-project by generate_sw_js()
 # Note: quiz-engine-test.html is optional — read_file() returns '' if missing
-for name in ['quiz-engine.js', 'bank-engine.js', 'index-engine.js', 'index-engine.css',
+for name in ['quiz-engine.js', 'bank-engine.js', 'index-engine.js', 'sync-engine.js', 'index-engine.css',
              'quiz-engine-test.html']:
     p = BASE_DIR / name
     if p.exists():
