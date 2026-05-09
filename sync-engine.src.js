@@ -552,6 +552,7 @@ const SyncEngine = {
         _qrInstance: null,
         _cameras: [],
         _currentCameraIndex: 0,
+        _useFront: false,
         _scanChunks: {},
         _scanTotal: 0,
 
@@ -987,8 +988,12 @@ const SyncEngine = {
         },
 
         switchCamera: function() {
-            if (this._cameras.length <= 1) return;
-            this._currentCameraIndex = (this._currentCameraIndex + 1) % this._cameras.length;
+            if (this._cameras.length > 1) {
+                this._currentCameraIndex = (this._currentCameraIndex + 1) % this._cameras.length;
+            } else {
+                // Mobile Fallback: if getCameras() returned nothing, toggle between front/back
+                this._useFront = !this._useFront;
+            }
             this.stopScanner();
             this.startScanner();
         },
@@ -1012,7 +1017,7 @@ const SyncEngine = {
                 if (this.scanner) {
                     this.scanner.stop().then(() => {
                         this.scanner = null;
-                        this.startScanner(); // Recursively start with new config
+                        this.startScanner(); 
                     }).catch(() => {});
                     return;
                 }
@@ -1022,7 +1027,6 @@ const SyncEngine = {
                     cameraIdOrConfig,
                     { fps: 15, qrbox: { width: 250, height: 250 } },
                     (decodedText) => {
-                        // Multi-part logic
                         if (decodedText.startsWith('qtp:')) {
                             const parts = decodedText.split(':');
                             const idx = parts[1];
@@ -1033,7 +1037,6 @@ const SyncEngine = {
                             const currentCount = Object.keys(this._scanChunks[total]).length;
                             this._updateScanProgress(currentCount, total);
                             
-                            // Send Ack
                             if (SyncEngine.webrtc.mqttClient && SyncEngine.webrtc.roomHash) {
                                 try {
                                     const PahoMsg = (window.Paho && Paho.MQTT) ? Paho.MQTT.Message : (window.Paho ? Paho.Message : null);
@@ -1062,7 +1065,15 @@ const SyncEngine = {
                         }
                     },
                     (errorMessage) => {}
-                ).catch(err => {
+                ).then(() => {
+                    // SUCCESS: We have permission. Rescan cameras to show toggle button on mobile.
+                    Html5Qrcode.getCameras().then(cameras => {
+                        this._cameras = cameras;
+                        if (cameras && cameras.length > 1) {
+                            if (switchBtn) switchBtn.style.display = 'block';
+                        }
+                    }).catch(() => {});
+                }).catch(err => {
                     console.error("Scanner start error:", err);
                     readerEl.innerHTML = `<div style="padding: 1rem; color: var(--wrong);">Scanner error: ${err}</div>`;
                 });
@@ -1071,20 +1082,21 @@ const SyncEngine = {
             // First, try to get cameras
             Html5Qrcode.getCameras().then(cameras => {
                 this._cameras = cameras;
+                
+                // If on mobile, ALWAYS show the switch button as a hint that switching is possible
+                const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+                if (switchBtn && (isMobile || cameras.length > 1)) {
+                    switchBtn.style.display = 'block';
+                }
+
                 if (cameras && cameras.length > 0) {
-                    if (switchBtn) switchBtn.style.display = 'block';
-                    
-                    // Priority 1: Pick a camera that looks like a 'main' back camera (not wide)
                     let bestIdx = -1;
                     if (this._cameras.length > 1) {
-                        // Find "back" or "environment" but NOT "wide" or "ultra"
                         bestIdx = this._cameras.findIndex(c => {
                             const l = c.label.toLowerCase();
                             return (l.includes('back') || l.includes('rear') || l.includes('environment')) && 
                                    !l.includes('wide') && !l.includes('ultra');
                         });
-                        
-                        // Fallback: any back camera
                         if (bestIdx === -1) {
                             bestIdx = this._cameras.findIndex(c => {
                                 const l = c.label.toLowerCase();
@@ -1096,16 +1108,14 @@ const SyncEngine = {
                     if (bestIdx !== -1 && this._currentCameraIndex === 0) {
                         this._currentCameraIndex = bestIdx;
                     }
-
-                    const selectedCameraId = this._cameras[this._currentCameraIndex].id;
-                    startWithCamera(selectedCameraId);
+                    startWithCamera(this._cameras[this._currentCameraIndex].id);
                 } else {
-                    // No cameras listed? Try default facingMode
-                    startWithCamera({ facingMode: "environment" });
+                    // No camera list yet? Start with facingMode
+                    startWithCamera({ facingMode: this._useFront ? "user" : "environment" });
                 }
             }).catch(err => {
                 console.warn("getCameras failed, using facingMode fallback", err);
-                startWithCamera({ facingMode: "environment" });
+                startWithCamera({ facingMode: this._useFront ? "user" : "environment" });
             });
         },
 
