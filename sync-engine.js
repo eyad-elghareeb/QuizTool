@@ -1156,7 +1156,7 @@ const SyncEngine = {
             var subjects = this._getSubjectList();
             var saved = this._getSavedScope();
             var savedSubjects = saved.subjects || [];
-            var html = '<div style="position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:20;display:flex;align-items:flex-start;justify-content:center;padding-top:15vh;" onclick="if(event.target===this)SyncEngine.ui.closeScopeModal()">'
+            var html = '<div style="position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:2200;display:flex;align-items:flex-start;justify-content:center;padding-top:15vh;" onclick="if(event.target===this)SyncEngine.ui.closeScopeModal()">'
                 + '<div style="background:var(--surface1);border:1px solid var(--border);border-radius:16px;max-width:380px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.3);overflow:hidden;">'
                 + '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1.25rem;border-bottom:1px solid var(--border);"><h3 style="font-size:1rem;margin:0;color:var(--text);">⚙ Sync Scope</h3><button onclick="SyncEngine.ui.closeScopeModal()" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer;">✕</button></div>'
                 + '<div style="padding:0.75rem 1.25rem;max-height:320px;overflow-y:auto;">';
