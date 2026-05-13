@@ -141,12 +141,33 @@ const SyncEngine = {
         );
     },
 
+    // --- Trusted Devices (persisted in localStorage) ---
+    _getTrustedDevices: function() {
+        try { return JSON.parse(localStorage.getItem('quiztool_trusted_devices') || '[]'); } catch(e) { return []; }
+    },
+    _addTrustedDevice: function(deviceId, deviceName) {
+        const trusted = this._getTrustedDevices();
+        if (!trusted.find(d => d.id === deviceId)) {
+            trusted.push({ id: deviceId, name: deviceName, trustedAt: Date.now() });
+            localStorage.setItem('quiztool_trusted_devices', JSON.stringify(trusted));
+        }
+    },
+    _removeTrustedDevice: function(deviceId) {
+        const trusted = this._getTrustedDevices().filter(d => d.id !== deviceId);
+        localStorage.setItem('quiztool_trusted_devices', JSON.stringify(trusted));
+    },
+    _isTrustedDevice: function(deviceId) {
+        return this._getTrustedDevices().some(d => d.id === deviceId);
+    },
+
     // --- Data Management ---
     exportData: function(options = { tracker: true, progress: true }) {
-        const payload = { timestamp: Date.now(), data: {} };
+        const payload = { timestamp: Date.now(), senderName: SyncEngine.webrtc.deviceName, data: {} };
         
         const keys = [];
         for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+
+        const subjectSet = new Set(options.subjects || []);
 
         for (const key of keys) {
             try {
@@ -155,6 +176,10 @@ const SyncEngine = {
 
                 // Tracker Data (v2 only)
                 if (options.tracker && key.startsWith('quiz_tracker_v2_')) {
+                    if (subjectSet.size > 0) {
+                        const uid = key.replace('quiz_tracker_v2_', '');
+                        if (!subjectSet.has(uid)) continue;
+                    }
                     payload.data[key] = JSON.parse(val);
                 }
                 // Tracker Index
@@ -163,6 +188,11 @@ const SyncEngine = {
                 }
                 // Progress Data
                 if (options.progress && (key.startsWith('quiz_progress_') || key.startsWith('bank_progress_'))) {
+                    if (subjectSet.size > 0) {
+                        let matched = false;
+                        for (const subj of subjectSet) { if (key.includes(subj)) { matched = true; break; } }
+                        if (!matched) continue;
+                    }
                     payload.data[key] = JSON.parse(val);
                 }
             } catch(e) { console.warn("Export skip (invalid JSON):", key); }
@@ -172,6 +202,30 @@ const SyncEngine = {
         const jsonStr = JSON.stringify(payload);
         const compressed = LZString.compressToBase64(jsonStr);
         return compressed;
+    },
+
+    _previewImportData: function(compressedStr) {
+        try {
+            const jsonStr = LZString.decompressFromBase64(compressedStr);
+            if (!jsonStr) return null;
+            const payload = JSON.parse(jsonStr);
+            if (!payload || !payload.data) return null;
+            const summary = { senderName: payload.senderName || 'Unknown', trackerCount: 0, progressCount: 0, subjects: [] };
+            const subjectNames = {};
+            for (const key of Object.keys(payload.data)) {
+                if (key.startsWith('quiz_tracker_v2_')) {
+                    summary.trackerCount++;
+                    const uid = key.replace('quiz_tracker_v2_', '');
+                    try {
+                        const d = payload.data[key];
+                        subjectNames[uid] = { name: d.title || d.name || uid, wrong: (d.wrong||[]).length, flagged: (d.flagged||[]).length };
+                    } catch(e) { subjectNames[uid] = { name: uid, wrong: 0, flagged: 0 }; }
+                }
+                if (key.startsWith('quiz_progress_') || key.startsWith('bank_progress_')) summary.progressCount++;
+            }
+            summary.subjects = Object.values(subjectNames);
+            return summary;
+        } catch(e) { return null; }
     },
 
     importData: function(compressedStr, mode = 'merge') {
@@ -322,6 +376,17 @@ const SyncEngine = {
         heartbeatInterval: null,
         disconnectTimeout: null,
         _discovering: false, // Guard against async race in initDiscovery
+        _pendingSyncs: {}, // deviceId -> { type, payload/data }
+        pullOnly: (function() { try { return localStorage.getItem('quiztool_sync_pull_only') === 'true'; } catch(e) { return false; } })(),
+
+        setPullOnly: function(val) {
+            this.pullOnly = val;
+            try { localStorage.setItem('quiztool_sync_pull_only', val ? 'true' : 'false'); } catch(e) {}
+            const toggle = document.getElementById('sync-pull-only-toggle');
+            if (toggle) toggle.checked = val;
+            SyncEngine.ui.updateDeviceList();
+            this.broadcastPresence();
+        },
 
         initDiscovery: function() {
             if (this.disconnectTimeout) {
@@ -472,7 +537,8 @@ const SyncEngine = {
                 const msg = new PahoMsg(JSON.stringify({
                     type: 'presence',
                     id: this.deviceId,
-                    name: this.deviceName
+                    name: this.deviceName,
+                    pullOnly: this.pullOnly
                 }));
                 msg.destinationName = "quiztool/sync/v2/" + this.roomHash + "/presence/" + this.deviceId;
                 this.mqttClient.send(msg);
@@ -484,7 +550,7 @@ const SyncEngine = {
                 const payload = JSON.parse(msg.payloadString);
                 
                 if (payload.type === 'presence' && payload.id !== this.deviceId) {
-                    this.devices[payload.id] = { name: payload.name, lastSeen: Date.now() };
+                    this.devices[payload.id] = { name: payload.name, lastSeen: Date.now(), pullOnly: !!payload.pullOnly };
                     SyncEngine.ui.updateDeviceList();
                 }
                 else if (payload.type === 'signal' && payload.target === this.deviceId) {
@@ -498,24 +564,64 @@ const SyncEngine = {
                 }
                 else if (payload.type === 'relay' && payload.target === this.deviceId) {
                     console.log("Received MQTT Relay Data");
-                    SyncEngine.ui.setStatus("Receiving via Relay...", true);
-                    if (SyncEngine.importData(payload.data, 'merge')) {
-                        SyncEngine.ui.setStatus("Relay Sync complete!", true);
-                        if (window.showToast) window.showToast("Sync complete (via Relay)");
-                        if (window.renderQuizzes) window.renderQuizzes();
-                        
-                        if (!payload.isResponse) {
-                            console.log("Sending Relay response...");
-                            this._sendRelay(payload.sender, SyncEngine.exportData(SyncEngine.ui._getOptions()), true);
-                        }
+                    var fromId = payload.sender;
+                    if (SyncEngine._isTrustedDevice(fromId)) {
+                        this._importRelay(payload);
                     } else {
-                        SyncEngine.ui.setStatus("Relay data import failed.", false);
+                        var preview = SyncEngine._previewImportData(payload.data);
+                        this._pendingSyncs[fromId] = { type: 'relay', payload: payload };
+                        SyncEngine.ui.showConfirmToast(fromId, this.devices[fromId]?.name || 'Unknown', preview);
                     }
                 }
             } catch(e) { console.error("MQTT Message Error:", e); }
         },
 
+        _importRelay: function(payload) {
+            SyncEngine.ui.setStatus("Receiving via Relay...", true);
+            if (SyncEngine.importData(payload.data, 'merge')) {
+                SyncEngine.ui.setStatus("Relay Sync complete!", true);
+                if (window.showToast) window.showToast("Sync complete (via Relay)");
+                if (window.renderQuizzes) window.renderQuizzes();
+                if (!payload.isResponse && !this.pullOnly) {
+                    this._sendRelay(payload.sender, SyncEngine.exportData(SyncEngine.ui._getOptions()), true);
+                }
+            } else {
+                SyncEngine.ui.setStatus("Relay data import failed.", false);
+            }
+        },
+
+        acceptSync: function(fromId, trustAlways) {
+            var pending = this._pendingSyncs[fromId];
+            if (!pending) return;
+            if (trustAlways) {
+                SyncEngine._addTrustedDevice(fromId, this.devices[fromId]?.name || 'Unknown');
+                SyncEngine.ui.updateDeviceList();
+            }
+            if (pending.type === 'relay') {
+                this._importRelay(pending.payload);
+            } else if (pending.type === 'p2p-data') {
+                SyncEngine.ui.setStatus("Receiving data...", true);
+                if (SyncEngine.importData(pending.data, 'merge')) {
+                    SyncEngine.ui.setStatus("Data received and merged!", true);
+                    if (window.showToast) window.showToast("P2P Sync complete!");
+                    if (window.renderQuizzes) window.renderQuizzes();
+                } else { SyncEngine.ui.setStatus("Import failed.", false); }
+            }
+            delete this._pendingSyncs[fromId];
+            SyncEngine.ui.hideConfirmToast(fromId);
+        },
+
+        declineSync: function(fromId) {
+            delete this._pendingSyncs[fromId];
+            SyncEngine.ui.hideConfirmToast(fromId);
+            SyncEngine.ui.setStatus("Sync declined.", false);
+        },
+
         connectToDevice: function(targetId) {
+            if (this.pullOnly) {
+                if (window.showToast) window.showToast("Pull-Only mode: You can only receive data.");
+                return;
+            }
             SyncEngine.ui.setStatus("Connecting to " + (this.devices[targetId]?.name || targetId) + "...");
             
             if (this.peers[targetId]) {
@@ -647,14 +753,47 @@ const SyncEngine = {
         _setupChannel: function(channel) {
             channel.onopen = () => {
                 console.log("DataChannel Open!");
+                if (this.pullOnly) {
+                    SyncEngine.ui.setStatus("Pull-Only: Receiving only.", true);
+                    return;
+                }
                 SyncEngine.ui.setStatus("Connected! Transferring data...", true);
                 const opts = SyncEngine.ui._getOptions();
                 const data = SyncEngine.exportData(opts);
-                channel.send(data);
-                SyncEngine.ui.setStatus("Data sent successfully!", true);
+                var totalBytes = data.length;
+                var CHUNK_SIZE = 16384;
+                if (data.length <= CHUNK_SIZE) {
+                    channel.send(data);
+                    SyncEngine.ui.updateTransferProgress(totalBytes, totalBytes);
+                    SyncEngine.ui.setStatus("Data sent successfully!", true);
+                } else {
+                    var offset = 0;
+                    var sendNext = function() {
+                        if (offset >= data.length) {
+                            SyncEngine.ui.updateTransferProgress(totalBytes, totalBytes);
+                            SyncEngine.ui.setStatus("Data sent successfully!", true);
+                            return;
+                        }
+                        var chunk = data.substr(offset, CHUNK_SIZE);
+                        channel.send(chunk);
+                        offset += chunk.length;
+                        SyncEngine.ui.updateTransferProgress(offset, totalBytes);
+                        if (channel.bufferedAmount > 1048576) setTimeout(sendNext, 50);
+                        else setTimeout(sendNext, 0);
+                    };
+                    sendNext();
+                }
             };
             channel.onmessage = (e) => {
                 console.log("Data Received (" + e.data.length + " bytes)");
+                var fromId = Object.keys(this.peers).find(k => this.peers[k] === channel);
+                var isTrusted = fromId ? SyncEngine._isTrustedDevice(fromId) : false;
+                if (!isTrusted && fromId && !this._pendingSyncs[fromId]) {
+                    var preview = SyncEngine._previewImportData(e.data);
+                    this._pendingSyncs[fromId] = { type: 'p2p-data', data: e.data };
+                    SyncEngine.ui.showConfirmToast(fromId, this.devices[fromId]?.name || 'Unknown', preview);
+                    return;
+                }
                 SyncEngine.ui.setStatus("Receiving data...", true);
                 const success = SyncEngine.importData(e.data, 'merge');
                 if (success) {
@@ -678,7 +817,7 @@ const SyncEngine = {
         _currentCameraIndex: 0,
         _useFront: false,
         _scanChunks: {},
-        _scanTotal: 0,
+        _scopeModalEl: null,
 
         _createModalHTML: function() {
             return `
@@ -692,15 +831,10 @@ const SyncEngine = {
                     <div class="dash-scope-bar" style="display:flex; overflow-x:auto;">
                         <button class="dash-scope-tab active" id="sync-tab-btn-webrtc" onclick="SyncEngine.ui.switchTab('webrtc')">📡 Nearby Devices</button>
                         <button class="dash-scope-tab" id="sync-tab-btn-qr" onclick="SyncEngine.ui.switchTab('qr')">📷 QR Sync</button>
-                        <button class="dash-scope-tab" id="sync-tab-btn-text" onclick="SyncEngine.ui.switchTab('text')">Copy/Paste</button>
-                        <button class="dash-scope-tab" id="sync-tab-btn-file" onclick="SyncEngine.ui.switchTab('file')">File</button>
+                        <button class="dash-scope-tab" id="sync-tab-btn-file" onclick="SyncEngine.ui.switchTab('file')">📁 File</button>
                     </div>
 
-                    <div class="dash-scope-bar" style="padding: 0.6rem 1.25rem; font-size: 0.85rem; color: var(--text-muted); background: var(--surface2); border-bottom: 1px solid var(--border);">
-                        <span style="margin-right: 15px; font-weight: 600; text-transform: uppercase; font-size: 0.7rem;">Sync Scope:</span>
-                        <label style="margin-right: 15px; cursor:pointer;"><input type="checkbox" id="sync-scope-tracker" checked style="accent-color: var(--accent);"> Tracker Data</label>
-                        <label style="cursor:pointer;"><input type="checkbox" id="sync-scope-progress" checked style="accent-color: var(--accent);"> Active Progress</label>
-                    </div>
+                    <!-- Scope bar removed — use Configure Scope button in WebRTC tab -->
 
                     <div class="dash-body" style="min-height: 280px; position: relative;">
                         <div id="sync-tab-webrtc" style="display: block; overflow: hidden;">
@@ -709,6 +843,10 @@ const SyncEngine = {
                                     <div id="sync-webrtc-radar" style="font-size: 2.5rem; animation: pulse 2s infinite; transform-origin: center;">📡</div>
                                 </div>
                                 <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 0.5rem;">Looking for devices on the same network...</p>
+                            <div style="display: flex; align-items: center; justify-content: center; gap: 1.5rem; margin-bottom: 0.75rem; padding: 0.4rem 1rem;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.9rem; color: var(--text);"><span>🔒</span> Pull Only <input type="checkbox" id="sync-pull-only-toggle" ${SyncEngine.webrtc.pullOnly ? 'checked' : ''} onchange="SyncEngine.webrtc.setPullOnly(this.checked)" style="accent-color: var(--accent); transform: scale(1.1);"></label>
+                                <button class="btn-dash-action" onclick="SyncEngine.ui.openScopeModal()" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">⚙ Configure Scope</button>
+                            </div>
                                 <div style="display: flex; justify-content: center; gap: 15px; margin-top: 4px;">
                                     <div id="sync-room-id" style="font-size: 0.7rem; color: var(--text-muted); opacity: 0.6;">Room ID: Identifying...</div>
                                     <div id="sync-local-name" style="font-size: 0.7rem; color: var(--accent); font-weight: 600; opacity: 0.8;">My Name: ...</div>
@@ -718,8 +856,19 @@ const SyncEngine = {
                                 <!-- Devices populated dynamically -->
                             </div>
                             <div id="sync-webrtc-status" style="margin-top: 1rem; text-align: center; font-size: 0.8rem; font-weight: 600; min-height: 1.2em;"></div>
+                            <div id="sync-confirm-toast-container" style="position: absolute; bottom: 0; left: 0; right: 0; z-index: 10;"></div>
+                            <div id="sync-transfer-progress" style="display: none; margin-bottom: 0.75rem; padding: 0 1rem;">
+                                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">
+                                    <span id="sync-transfer-label">Transferring...</span>
+                                    <span id="sync-transfer-percent">0%</span>
+                                </div>
+                                <div style="width: 100%; height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; border: 1px solid var(--border);">
+                                    <div id="sync-transfer-bar" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s ease; border-radius: 3px;"></div>
+                                </div>
+                            </div>
                             <style>
                                 @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.15); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
+                                @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
                                 .device-item { display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.25rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; transition: border-color 0.2s; }
                                 .device-item:hover { border-color: var(--accent); }
                                 .device-name { font-weight: 600; font-size: 1rem; color: var(--text); }
@@ -759,18 +908,6 @@ const SyncEngine = {
                             </div>
                         </div>
 
-                        <!-- Text Tab -->
-                        <div id="sync-tab-text" style="display: none;">
-                            <p style="margin-bottom: 0.5rem; font-weight: 600; font-size: 0.95rem; color: var(--text);">Export Data</p>
-                            <textarea id="sync-export-text" readonly style="width: 100%; height: 75px; margin-bottom: 1.25rem; background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; font-family: monospace; font-size: 0.85rem;" onclick="this.select(); document.execCommand('copy'); if(window.showToast) window.showToast('Copied to clipboard!');"></textarea>
-                            <p style="margin-bottom: 0.5rem; font-weight: 600; font-size: 0.95rem; color: var(--text);">Import Data</p>
-                            <textarea id="sync-import-text" placeholder="Paste sync data here..." style="width: 100%; height: 75px; background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; font-family: monospace; font-size: 0.85rem;"></textarea>
-                            <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1rem;">
-                                <button class="btn-dash-action" onclick="SyncEngine.ui.importText('merge')">Merge</button>
-                                <button class="btn-dash-action btn-dash-danger" onclick="SyncEngine.ui.importText('replace')">Replace</button>
-                            </div>
-                        </div>
-
                         <!-- File Tab -->
                         <div id="sync-tab-file" style="display: none; text-align: center;">
                             <div style="padding: 1.5rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 1rem;">
@@ -807,9 +944,6 @@ const SyncEngine = {
             this.modalEl.classList.add('open');
             const activeTab = document.querySelector('.dash-scope-tab.active')?.id?.replace('sync-tab-btn-', '') || 'webrtc';
             this.switchTab(activeTab);
-            
-            // Populate export text area
-            this._refreshExportText();
         },
 
         closeModal: function() {
@@ -819,6 +953,7 @@ const SyncEngine = {
                 this.stopQRAnimation();
                 this._scanChunks = {};
             }
+            this.closeScopeModal();
             if (SyncEngine.webrtc.heartbeatInterval) {
                 clearInterval(SyncEngine.webrtc.heartbeatInterval);
                 SyncEngine.webrtc.heartbeatInterval = null;
@@ -842,7 +977,7 @@ const SyncEngine = {
             this.stopScanner();
             this.stopQRAnimation();
             
-            ['webrtc', 'qr', 'text', 'file'].forEach(id => {
+            ['webrtc', 'qr', 'file'].forEach(id => {
                 const btn = document.getElementById('sync-tab-btn-' + id);
                 const content = document.getElementById('sync-tab-' + id);
                 if (btn) {
@@ -864,7 +999,6 @@ const SyncEngine = {
                         '<span style="color:var(--wrong)">Failed to load QR library. Check your internet connection.</span>';
                 });
             }
-            if (tabId === 'text') this._refreshExportText();
             if (tabId === 'webrtc') {
                 SyncEngine.webrtc.initDiscovery();
                 if (SyncEngine.webrtc.mqttClient) {
@@ -911,10 +1045,13 @@ const SyncEngine = {
                     continue;
                 }
                 count++;
+                const isTrusted = SyncEngine._isTrustedDevice(id);
+                const trustedBadge = isTrusted ? '<span style="font-size:0.7rem;padding:2px 6px;border-radius:6px;font-weight:600;margin-left:6px;background:rgba(255,193,7,0.15);color:#ffc107;">⭐ Trusted</span>' : '';
+                const pullOnlyBadge = dev.pullOnly ? '<span style="font-size:0.7rem;padding:2px 6px;border-radius:6px;font-weight:600;margin-left:6px;background:rgba(33,150,243,0.15);color:#2196f3;">🔒 Pull Only</span>' : '';
                 html += `
                 <div class="device-item">
                     <div class="device-info">
-                        <div class="device-name">📱 ${dev.name}</div>
+                        <div class="device-name">📱 ${dev.name}${trustedBadge}${pullOnlyBadge}</div>
                         <div style="font-size: 0.75rem; color: var(--text-muted);">Local Network Device</div>
                     </div>
                     <button class="btn-dash-action" onclick="SyncEngine.webrtc.connectToDevice('${id}')">Sync</button>
@@ -926,6 +1063,53 @@ const SyncEngine = {
             }
             
             listEl.innerHTML = html;
+        },
+
+        showConfirmToast: function(fromId, fromName, preview) {
+            var container = document.getElementById('sync-confirm-toast-container');
+            if (!container) return;
+            var existing = document.getElementById('sync-confirm-' + fromId);
+            if (existing) existing.remove();
+            var previewHTML = '';
+            if (preview) {
+                previewHTML = '<div style="margin:0.5rem 0;padding:0.5rem;background:var(--surface1);border-radius:8px;font-size:0.8rem;color:var(--text-muted);">'
+                    + '<div style="font-weight:600;margin-bottom:4px;color:var(--text);">Import Preview:</div>'
+                    + (preview.trackerCount > 0 ? '<div>📊 ' + preview.trackerCount + ' tracker(s)</div>' : '')
+                    + (preview.progressCount > 0 ? '<div>📈 ' + preview.progressCount + ' progress record(s)</div>' : '')
+                    + (preview.subjects.length > 0 ? '<div style="margin-top:4px;">Subjects: ' + preview.subjects.map(function(s){return s.name;}).join(', ') + '</div>' : '')
+                    + '</div>';
+            }
+            var el = document.createElement('div');
+            el.id = 'sync-confirm-' + fromId;
+            el.style.cssText = 'background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:1rem;margin:0.5rem;box-shadow:0 -2px 12px rgba(0,0,0,0.2);animation:slideUp 0.3s ease;';
+            el.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;"><div style="font-weight:600;color:var(--text);font-size:0.95rem;">📱 Incoming Sync</div><div style="font-size:0.8rem;color:var(--accent);">from <strong>' + fromName + '</strong></div></div>'
+                + previewHTML
+                + '<label style="display:flex;align-items:center;gap:0.4rem;font-size:0.8rem;color:var(--text-muted);margin:0.5rem 0;cursor:pointer;"><input type="checkbox" id="sync-trust-' + fromId + '" style="accent-color:var(--accent);"> Always trust this device</label>'
+                + '<div style="display:flex;gap:0.5rem;justify-content:flex-end;">'
+                + '<button class="btn-dash-action btn-dash-danger" onclick="SyncEngine.webrtc.declineSync(\'' + fromId + '\')" style="font-size:0.85rem;padding:0.4rem 1rem;">Decline</button>'
+                + '<button class="btn-dash-action" onclick="SyncEngine.webrtc.acceptSync(\'' + fromId + '\', document.getElementById(\'sync-trust-' + fromId + '\').checked)" style="font-size:0.85rem;padding:0.4rem 1rem;background:var(--correct);color:#fff;">Accept</button>'
+                + '</div>';
+            container.appendChild(el);
+        },
+
+        updateTransferProgress: function(bytesTransferred, totalBytes) {
+            var container = document.getElementById('sync-transfer-progress');
+            var bar = document.getElementById('sync-transfer-bar');
+            var label = document.getElementById('sync-transfer-label');
+            var percent = document.getElementById('sync-transfer-percent');
+            if (!container || !bar) return;
+            container.style.display = 'block';
+            var pct = totalBytes > 0 ? Math.round((bytesTransferred / totalBytes) * 100) : 0;
+            bar.style.width = pct + '%';
+            if (percent) percent.textContent = pct + '%';
+            var fmt = function(b) { return b < 1024 ? b + ' B' : b < 1048576 ? (b/1024).toFixed(1) + ' KB' : (b/1048576).toFixed(1) + ' MB'; };
+            if (label) label.textContent = fmt(bytesTransferred) + ' / ' + fmt(totalBytes);
+            if (bytesTransferred >= totalBytes) setTimeout(function(){ container.style.display = 'none'; }, 2000);
+        },
+
+        hideConfirmToast: function(fromId) {
+            var el = document.getElementById('sync-confirm-' + fromId);
+            if (el) el.remove();
         },
 
         setStatus: function(msg, isSuccess = null) {
@@ -944,37 +1128,86 @@ const SyncEngine = {
             if (nameEl) nameEl.innerText = "My Name: " + SyncEngine.webrtc.deviceName;
         },
 
-        _getOptions: function() {
-            const trackerEl  = document.getElementById('sync-scope-tracker');
-            const progressEl = document.getElementById('sync-scope-progress');
-            return {
-                tracker:  trackerEl  ? trackerEl.checked  : true,
-                progress: progressEl ? progressEl.checked : true
-            };
+        _getSubjectList: function() {
+            var subjects = [];
+            try {
+                var keys = JSON.parse(localStorage.getItem('quiz_tracker_keys') || '[]');
+                for (var i = 0; i < keys.length; i++) {
+                    var uid = keys[i];
+                    var raw = localStorage.getItem('quiz_tracker_v2_' + uid);
+                    if (!raw) continue;
+                    try {
+                        var d = JSON.parse(raw);
+                        subjects.push({ uid: uid, name: d.title || d.name || uid, trackedCount: (d.wrong||[]).length + (d.flagged||[]).length });
+                    } catch(e) { subjects.push({ uid: uid, name: uid, trackedCount: 0 }); }
+                }
+            } catch(e) {}
+            return subjects;
+        },
+        _getSavedScope: function() {
+            try { return JSON.parse(localStorage.getItem('quiztool_sync_scope') || '{}'); } catch(e) { return {}; }
+        },
+        _saveScope: function(scope) {
+            try { localStorage.setItem('quiztool_sync_scope', JSON.stringify(scope)); } catch(e) {}
         },
 
-        _refreshExportText: function() {
-            const el = document.getElementById('sync-export-text');
-            if (el) el.value = SyncEngine.exportData(this._getOptions());
-        },
-
-        copyText: function() {
-            const el = document.getElementById('sync-export-text');
-            el.select();
-            document.execCommand('copy');
-            if (window.showToast) window.showToast("Copied to clipboard!");
-        },
-
-        importText: function(mode) {
-            const data = document.getElementById('sync-import-text').value.trim();
-            if (!data) return;
-            if (SyncEngine.importData(data, mode)) {
-                if (window.showToast) window.showToast("Sync successful!");
-                this.closeModal();
-                if (window.renderQuizzes) window.renderQuizzes();
-            } else {
-                if (window.showToast) window.showToast("Import failed: Invalid or corrupted code.");
+        openScopeModal: function() {
+            this.closeScopeModal();
+            var subjects = this._getSubjectList();
+            var saved = this._getSavedScope();
+            var savedSubjects = saved.subjects || [];
+            var html = '<div style="position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:20;display:flex;align-items:flex-start;justify-content:center;padding-top:15vh;" onclick="if(event.target===this)SyncEngine.ui.closeScopeModal()">'
+                + '<div style="background:var(--surface1);border:1px solid var(--border);border-radius:16px;max-width:380px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.3);overflow:hidden;">'
+                + '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1.25rem;border-bottom:1px solid var(--border);"><h3 style="font-size:1rem;margin:0;color:var(--text);">⚙ Sync Scope</h3><button onclick="SyncEngine.ui.closeScopeModal()" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer;">✕</button></div>'
+                + '<div style="padding:0.75rem 1.25rem;max-height:320px;overflow-y:auto;">';
+            for (var i = 0; i < subjects.length; i++) {
+                var s = subjects[i];
+                var chk = savedSubjects.length === 0 || savedSubjects.indexOf(s.uid) !== -1 ? 'checked' : '';
+                html += '<label style="display:flex;align-items:center;gap:0.5rem;padding:0.6rem 0;cursor:pointer;font-size:0.9rem;color:var(--text);border-bottom:1px solid var(--border);"><input type="checkbox" class="sync-scope-subject-cb" data-uid="' + s.uid + '" ' + chk + ' style="accent-color:var(--accent);"> <span style="flex:1;">' + s.name + '</span><span style="font-size:0.75rem;color:var(--text-muted);">' + s.trackedCount + ' tracked</span></label>';
             }
+            if (subjects.length === 0) html += '<p style="color:var(--text-muted);font-size:0.85rem;padding:1rem 0;text-align:center;">No subjects with tracker data found.</p>';
+            var progChk = saved.progress !== false ? 'checked' : '';
+            html += '<div style="border-top:2px solid var(--border);margin-top:0.5rem;padding-top:0.5rem;">'
+                + '<label style="display:flex;align-items:center;gap:0.5rem;padding:0.6rem 0;cursor:pointer;font-size:0.9rem;color:var(--text);"><input type="checkbox" id="sync-scope-progress-cb" ' + progChk + ' style="accent-color:var(--accent);"> Active Progress</label></div></div>'
+                + '<div style="display:flex;gap:0.5rem;padding:0.75rem 1.25rem;border-top:1px solid var(--border);justify-content:space-between;">'
+                + '<button class="btn-dash-action" onclick="SyncEngine.ui.toggleAllSubjects()" style="font-size:0.8rem;padding:0.4rem 0.7rem;">Select All</button>'
+                + '<button class="btn-dash-action" onclick="SyncEngine.ui.applyScopeAndClose()" style="font-size:0.8rem;padding:0.4rem 0.7rem;">Done</button></div></div></div>';
+            var wrap = document.createElement('div');
+            wrap.innerHTML = html;
+            this._scopeModalEl = wrap.firstElementChild;
+            document.body.appendChild(this._scopeModalEl);
+        },
+
+        closeScopeModal: function() {
+            if (this._scopeModalEl) { this._scopeModalEl.remove(); this._scopeModalEl = null; }
+        },
+
+        toggleAllSubjects: function() {
+            var cbs = document.querySelectorAll('.sync-scope-subject-cb');
+            var allChecked = Array.from(cbs).every(function(cb){return cb.checked;});
+            cbs.forEach(function(cb){cb.checked = !allChecked;});
+        },
+
+        applyScopeAndClose: function() {
+            var subjects = [];
+            var cbs = document.querySelectorAll('.sync-scope-subject-cb');
+            cbs.forEach(function(cb){ if (cb.checked) subjects.push(cb.dataset.uid); });
+            var progressEl = document.getElementById('sync-scope-progress-cb');
+            var allSubjects = this._getSubjectList();
+            // If all selected, save empty (means all)
+            var scopeSubjects = subjects.length === allSubjects.length ? [] : subjects;
+            this._saveScope({ subjects: scopeSubjects, progress: progressEl ? progressEl.checked : true });
+            this.closeScopeModal();
+            if (window.showToast) window.showToast("Sync scope updated!");
+        },
+
+        _getOptions: function() {
+            var scope = this._getSavedScope();
+            return {
+                tracker: true,
+                progress: scope.progress !== false,
+                subjects: scope.subjects || []
+            };
         },
 
         downloadBackup: function() {
@@ -1100,7 +1333,6 @@ const SyncEngine = {
             }
         },
 
-        _scanChunks: {},
 
         _updateScanProgress: function(current, total) {
             const progSec = document.getElementById('sync-scan-progress');
