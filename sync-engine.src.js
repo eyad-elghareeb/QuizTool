@@ -1,7 +1,55 @@
 // sync-engine.src.js
 // Core logic for Progress Synchronization (WebRTC, QR, Text)
+// QRCode.js and Html5Qrcode are lazy-loaded from CDN when needed.
 
 const SyncEngine = {
+    // --- Library Loading (CDN Lazy-Load) ---
+    _libLoaded: {},
+    _libQueue: {},
+
+    _loadScript: function(url, globalName) {
+        return new Promise((resolve, reject) => {
+            if (this._libLoaded[url]) {
+                resolve(window[globalName]);
+                return;
+            }
+            if (this._libQueue[url]) {
+                this._libQueue[url].push({ resolve, reject });
+                return;
+            }
+            this._libQueue[url] = [{ resolve, reject }];
+            const script = document.createElement('script');
+            script.src = url;
+            script.async = true;
+            script.onload = () => {
+                this._libLoaded[url] = true;
+                const queue = this._libQueue[url] || [];
+                delete this._libQueue[url];
+                queue.forEach(q => q.resolve(window[globalName]));
+            };
+            script.onerror = () => {
+                const queue = this._libQueue[url] || [];
+                delete this._libQueue[url];
+                queue.forEach(q => q.reject(new Error('Failed to load: ' + url)));
+            };
+            document.head.appendChild(script);
+        });
+    },
+
+    _ensureQRCode: function() {
+        return this._loadScript(
+            'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js',
+            'QRCode'
+        );
+    },
+
+    _ensureHtml5Qrcode: function() {
+        return this._loadScript(
+            'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js',
+            'Html5Qrcode'
+        );
+    },
+
     // --- Data Management ---
     exportData: function(options = { tracker: true, progress: true }) {
         const payload = { timestamp: Date.now(), data: {} };
@@ -84,11 +132,8 @@ const SyncEngine = {
                                         if (hasIdxA && hasIdxB && String(existingItem.idx) === String(importedItem.idx)) return true;
 
                                         // 2. Text Match (Fallback)
-                                        // Only match by text if at least one is missing an index, 
-                                        // AND the text is non-empty and long enough to be unique
                                         if (existingItem.text && importedItem.text && existingItem.text.trim().length > 5) {
                                             if (existingItem.text.trim() === importedItem.text.trim()) {
-                                                // If one has an index and the other doesn't, it's likely a mismatch from different versions
                                                 if (!hasIdxA || !hasIdxB) return true;
                                             }
                                         }
@@ -211,7 +256,6 @@ const SyncEngine = {
 
         _getPublicIP: function(callback) {
             try {
-                // Try to get public IP via STUN
                 const pc = new RTCPeerConnection({iceServers: [{urls: "stun:stun.l.google.com:19302"}]});
                 pc.createDataChannel("");
                 pc.createOffer().then(offer => pc.setLocalDescription(offer));
@@ -253,11 +297,10 @@ const SyncEngine = {
                 }
             } catch(e) { console.warn("Crypto hash failed, using fallback"); }
             
-            // Simple robust hash fallback for non-secure contexts
             let hash = 0;
             for (let i = 0; i < str.length; i++) {
                 hash = ((hash << 5) - hash) + str.charCodeAt(i);
-                hash |= 0; // Convert to 32bit integer
+                hash |= 0;
             }
             return Math.abs(hash).toString(16).padStart(8, '0');
         },
@@ -271,7 +314,6 @@ const SyncEngine = {
                 
                 SyncEngine.ui.setStatus("Connecting to signaling network...");
                 
-                // Use a stable public broker
                 const clientId = "qt-" + (this.deviceId || "UNK") + "-" + Math.floor(Math.random()*10000);
                 
                 try {
@@ -289,7 +331,6 @@ const SyncEngine = {
                     if (responseObject.errorCode !== 0) {
                         SyncEngine.ui.setStatus("Network lost. Will retry on next open.");
                         console.log("MQTT Lost:", responseObject.errorMessage);
-                        // Reset so initDiscovery can re-run on next modal open
                         this.mqttClient = null;
                         this._discovering = false;
                         if (this.heartbeatInterval) {
@@ -308,7 +349,7 @@ const SyncEngine = {
                     onSuccess: () => {
                         console.log("MQTT Connected. Room:", this.roomHash);
                         this.mqttClient.subscribe("quiztool/sync/v2/" + this.roomHash + "/#");
-                        this._discovering = false; // Allow re-entry if MQTT drops and reconnects
+                        this._discovering = false;
                         this.broadcastPresence();
                         this._startHeartbeat();
                         SyncEngine.ui.setStatus("Scanning for devices...");
@@ -343,7 +384,6 @@ const SyncEngine = {
                     name: this.deviceName
                 }));
                 msg.destinationName = "quiztool/sync/v2/" + this.roomHash + "/presence/" + this.deviceId;
-                // DO NOT use retained messages for presence to avoid "ghost" devices
                 this.mqttClient.send(msg);
             } catch (e) { console.warn("Presence broadcast failed:", e); }
         },
@@ -362,7 +402,7 @@ const SyncEngine = {
                 else if (payload.type === 'qtp-ack' && payload.target === 'all') {
                     console.log("Received QTP Ack for part:", payload.idx);
                     if (SyncEngine.ui.qrPage + 1 === parseInt(payload.idx)) {
-                        SyncEngine.ui.nextQR(true); // Cycle to next part on signal
+                        SyncEngine.ui.nextQR(true);
                     }
                 }
                 else if (payload.type === 'relay' && payload.target === this.deviceId) {
@@ -373,7 +413,6 @@ const SyncEngine = {
                         if (window.showToast) window.showToast("Sync complete (via Relay)");
                         if (window.renderQuizzes) window.renderQuizzes();
                         
-                        // Bidirectional: if we received a relay but haven't sent one, send ours back
                         if (!payload.isResponse) {
                             console.log("Sending Relay response...");
                             this._sendRelay(payload.sender, SyncEngine.exportData(SyncEngine.ui._getOptions()), true);
@@ -388,24 +427,21 @@ const SyncEngine = {
         connectToDevice: function(targetId) {
             SyncEngine.ui.setStatus("Connecting to " + (this.devices[targetId]?.name || targetId) + "...");
             
-            // Close and remove any existing stale peer for this target
             if (this.peers[targetId]) {
                 try { this.peers[targetId].close(); } catch(e) {}
                 delete this.peers[targetId];
             }
 
-            // Try WebRTC first
             const pc = this._createPeerConnection(targetId);
             const channel = pc.createDataChannel("sync");
             this._setupChannel(channel);
 
             let relayFired = false;
 
-            // Cancel relay fallback if P2P succeeds
             pc.onconnectionstatechange = () => {
                 console.log("Conn State:", pc.connectionState);
                 if (pc.connectionState === 'connected') {
-                    relayFired = true; // Prevent relay from firing
+                    relayFired = true;
                     SyncEngine.ui.setStatus("P2P Established!", true);
                 }
             };
@@ -415,7 +451,6 @@ const SyncEngine = {
                 this._sendSignal(targetId, { sdp: offer });
             });
 
-            // Set a timeout for Relay fallback — only fires if P2P hasn't connected
             setTimeout(() => {
                 if (!relayFired && pc.connectionState !== 'connected' && pc.iceConnectionState !== 'connected') {
                     console.log("P2P hanging, falling back to MQTT Relay...");
@@ -442,7 +477,6 @@ const SyncEngine = {
                 console.log("ICE State:", pc.iceConnectionState);
                 if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
                     SyncEngine.ui.setStatus("P2P Failed. Use QR Sync instead.", false);
-                    // Clean up failed connection
                     try { pc.close(); } catch(e) {}
                     delete SyncEngine.webrtc.peers[Object.keys(SyncEngine.webrtc.peers).find(k => SyncEngine.webrtc.peers[k] === pc)];
                 }
@@ -501,7 +535,6 @@ const SyncEngine = {
             try {
                 const PahoMsg = (window.Paho && Paho.MQTT) ? Paho.MQTT.Message : (window.Paho ? Paho.Message : null);
                 
-                // Alert if payload is very large (> 128KB)
                 if (data.length > 131072) {
                     console.warn("Relay payload very large:", data.length);
                     SyncEngine.ui.setStatus("Large data: Relay may be slow...");
@@ -608,9 +641,9 @@ const SyncEngine = {
                                 <p style="margin-bottom: 1rem; color: var(--text-muted); font-size: 0.95rem;">Scan this code from another device.</p>
                                 <div id="sync-qr-container" style="display: inline-block; padding: 1.25rem; background: #fff; border-radius: 12px; margin-bottom: 1rem;"></div>
                                 <div id="sync-qr-pagination" style="margin-top: 10px; font-size: 0.85rem; display: none; margin-bottom: 15px;">
-                                    <button class="btn-dash-action" onclick="SyncEngine.ui.prevQR()" style="padding: 0.3rem 0.6rem;">&lt;</button>
+                                    <button class="btn-dash-action" onclick="SyncEngine.ui.prevQR()" style="padding: 0.3rem 0.6rem;"><</button>
                                     <span id="sync-qr-page-info" style="margin: 0 10px; font-weight: 600;">1 / 1</span>
-                                    <button class="btn-dash-action" onclick="SyncEngine.ui.nextQR()" style="padding: 0.3rem 0.6rem;">&gt;</button>
+                                    <button class="btn-dash-action" onclick="SyncEngine.ui.nextQR()" style="padding: 0.3rem 0.6rem;">></button>
                                 </div>
                                 <div style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1.5rem;">
                                     <button class="btn-dash-action" onclick="SyncEngine.ui.toggleQRScanner(true)">📷 Scan Another Device</button>
@@ -693,15 +726,13 @@ const SyncEngine = {
                 this.modalEl.classList.remove('open');
                 this.stopScanner();
                 this.stopQRAnimation();
-                this._scanChunks = {}; // Clear any partial QR scans
+                this._scanChunks = {};
             }
-            // Stop heartbeat when modal is closed to avoid wasted MQTT traffic
             if (SyncEngine.webrtc.heartbeatInterval) {
                 clearInterval(SyncEngine.webrtc.heartbeatInterval);
                 SyncEngine.webrtc.heartbeatInterval = null;
             }
 
-            // Auto-disconnect MQTT after 60s of inactivity to save battery/data
             if (SyncEngine.webrtc.mqttClient) {
                 if (SyncEngine.webrtc.disconnectTimeout) clearTimeout(SyncEngine.webrtc.disconnectTimeout);
                 SyncEngine.webrtc.disconnectTimeout = setTimeout(() => {
@@ -717,8 +748,8 @@ const SyncEngine = {
         },
 
         switchTab: function(tabId) {
-            this.stopScanner(); // Always stop scanner when leaving tab
-            this.stopQRAnimation(); // Always stop animation when leaving tab
+            this.stopScanner();
+            this.stopQRAnimation();
             
             ['webrtc', 'qr', 'text', 'file'].forEach(id => {
                 const btn = document.getElementById('sync-tab-btn-' + id);
@@ -731,17 +762,22 @@ const SyncEngine = {
             });
 
             if (tabId === 'qr') {
-                this._scanChunks = {}; // Clear stale partial scans on tab switch
-                this.toggleQRScanner(false); // Default to export
-                this.renderQR();
-                this.startQRAnimation();
+                this._scanChunks = {};
+                this.toggleQRScanner(false);
+                // Lazy-load QRCode library before rendering
+                SyncEngine._ensureQRCode().then(() => {
+                    this.renderQR();
+                    this.startQRAnimation();
+                }).catch(() => {
+                    document.getElementById('sync-qr-container').innerHTML = 
+                        '<span style="color:var(--wrong)">Failed to load QR library. Check your internet connection.</span>';
+                });
             }
             if (tabId === 'text') this._refreshExportText();
             if (tabId === 'webrtc') {
                 SyncEngine.webrtc.initDiscovery();
-                // If already connected (e.g. modal re-opened), ensure heartbeat is running
                 if (SyncEngine.webrtc.mqttClient) {
-                    SyncEngine.webrtc.broadcastPresence(); // Announce immediately
+                    SyncEngine.webrtc.broadcastPresence();
                     SyncEngine.webrtc._startHeartbeat();
                 }
                 this.updateDeviceList();
@@ -755,7 +791,13 @@ const SyncEngine = {
             if (show) {
                 exportSec.style.display = 'none';
                 scanSec.style.display = 'block';
-                this.startScanner();
+                // Lazy-load Html5Qrcode before starting scanner
+                SyncEngine._ensureHtml5Qrcode().then(() => {
+                    this.startScanner();
+                }).catch(() => {
+                    document.getElementById('sync-reader').innerHTML = 
+                        '<div style="padding: 1rem; color: var(--wrong);">Failed to load QR scanner. Check your internet connection.</div>';
+                });
             } else {
                 this.stopScanner();
                 exportSec.style.display = 'block';
@@ -773,7 +815,6 @@ const SyncEngine = {
             
             for (const id in SyncEngine.webrtc.devices) {
                 const dev = SyncEngine.webrtc.devices[id];
-                // Be more aggressive with clearing old devices
                 if (now - dev.lastSeen > 15000) {
                     delete SyncEngine.webrtc.devices[id];
                     continue;
@@ -871,7 +912,6 @@ const SyncEngine = {
                 if (window.showToast) window.showToast("File loaded. Choose restore method.");
             };
             reader.readAsText(file);
-            // Reset input so the same file can be selected again
             event.target.value = '';
         },
 
@@ -900,11 +940,9 @@ const SyncEngine = {
             container.innerHTML = '';
             const fullData = SyncEngine.exportData(this._getOptions());
             
-            // Lower Density: 700 chars per QR is extremely easy for most scanners to focus/decode
             const CHUNK_SIZE = 700;
-            this._qrInstance = null; // Reset instance on new data
+            this._qrInstance = null;
             if (fullData.length <= CHUNK_SIZE) {
-                // Single QR — only use when data fits comfortably
                 this.qrChunks = [fullData];
                 if (pagination) pagination.style.display = 'none';
             } else {
@@ -912,7 +950,6 @@ const SyncEngine = {
                 const total = Math.ceil(fullData.length / CHUNK_SIZE);
                 for (let i = 0; i < total; i++) {
                     const chunk = fullData.substr(i * CHUNK_SIZE, CHUNK_SIZE);
-                    // Optimized compact prefix
                     this.qrChunks.push(`qtp:${i+1}:${total}:${chunk}`);
                 }
                 if (pagination) pagination.style.display = 'block';
@@ -925,7 +962,6 @@ const SyncEngine = {
         startQRAnimation: function() {
             this.stopQRAnimation();
             if (this.qrChunks.length <= 1) return;
-            // No auto-cycling. We wait for MQTT signals (qtp-ack) or manual navigation.
         },
 
         stopQRAnimation: function() {
@@ -973,7 +1009,7 @@ const SyncEngine = {
             }
         },
 
-        _scanChunks: {}, // Storage for incoming partial scans
+        _scanChunks: {},
 
         _updateScanProgress: function(current, total) {
             const progSec = document.getElementById('sync-scan-progress');
@@ -992,14 +1028,11 @@ const SyncEngine = {
                 this._currentCameraIndex = (this._currentCameraIndex + 1) % this._cameras.length;
                 this._useFront = false;
             } else {
-                // Mobile Fallback: if getCameras() returned nothing, toggle between front/back
                 this._useFront = !this._useFront;
             }
             this.stopScanner();
             this.startScanner();
         },
-
-
 
         startScanner: function() {
             if (this.scanner) return;
@@ -1008,13 +1041,11 @@ const SyncEngine = {
             const switchBtn = document.getElementById('sync-camera-controls');
             if (!readerEl) return;
 
-            // Secure Context Check
             if (!window.isSecureContext && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
                 readerEl.innerHTML = `<div style="padding: 2rem 1rem; color: var(--wrong);">⚠️ Camera requires HTTPS. Use Copy/Paste.</div>`;
                 return;
             }
 
-            // ALWAYS show the switch button on mobile instantly (before any promises resolve/reject)
             const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
             if (switchBtn && isMobile) {
                 switchBtn.style.display = 'block';
@@ -1073,7 +1104,6 @@ const SyncEngine = {
                     },
                     (errorMessage) => {}
                 ).then(() => {
-                    // SUCCESS: We have permission. Rescan cameras.
                     Html5Qrcode.getCameras().then(cameras => {
                         this._cameras = cameras || [];
                         if (switchBtn && (isMobile || this._cameras.length > 1)) {
@@ -1086,20 +1116,17 @@ const SyncEngine = {
                 });
             };
 
-            // If we manually toggled to front via generic fallback, force it.
             if (this._useFront) {
                 startWithCamera({ facingMode: "user" });
                 return;
             }
 
-            // If we have a cached populated list of cameras (from previous permission grant)
             if (this._cameras && this._cameras.length > 0) {
                 if (this._currentCameraIndex >= this._cameras.length) this._currentCameraIndex = 0;
                 startWithCamera(this._cameras[this._currentCameraIndex].id);
                 return;
             }
 
-            // Otherwise, attempt to get cameras (might fail if no permission yet)
             Html5Qrcode.getCameras().then(cameras => {
                 this._cameras = cameras || [];
                 

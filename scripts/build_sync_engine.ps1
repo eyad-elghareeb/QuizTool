@@ -1,8 +1,9 @@
-
 # build_sync_engine.ps1
 # Run from the repo root: .\scripts\build_sync_engine.ps1
-# Assembles sync-engine.js by downloading/loading the three libraries and
+# Assembles sync-engine.js by downloading/loading libraries and
 # prepending them to the hand-written engine source.
+# Note: QRCode.js and Html5Qrcode are lazy-loaded from CDN at runtime,
+# so they are NOT bundled here (saves ~450 KB from the bundle).
 
 param(
     [string]$RepoRoot = (Split-Path $PSScriptRoot -Parent)
@@ -14,8 +15,6 @@ $outputFile = Join-Path $RepoRoot "sync-engine.js"
 Write-Host "Building sync-engine.js ..."
 
 $lzUrl      = "https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"
-$qrUrl      = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
-$h5qrUrl    = "https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"
 $mqttUrl    = "https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/paho-mqtt.min.js"
 
 function Fetch($url, $label) {
@@ -24,8 +23,6 @@ function Fetch($url, $label) {
 }
 
 $lzSrc    = Fetch $lzUrl    "lz-string"
-$qrSrc    = Fetch $qrUrl    "qrcode.js"
-$h5qrSrc  = Fetch $h5qrUrl  "html5-qrcode"
 $mqttSrc  = Fetch $mqttUrl  "paho-mqtt"
 $engineJs = Get-Content $engineSrc -Raw -Encoding UTF8
 
@@ -36,16 +33,15 @@ $banner = @"
    Edit sync-engine.src.js then re-run the build script.
    Bundled libraries:
      - lz-string 1.5.0  (MIT) -- data compression
+     - paho-mqtt 1.1.0 (EPL-1.0) -- MQTT for P2P signaling
+   Lazy-loaded from CDN when needed:
      - qrcode.js 1.0.0  (MIT) -- QR code generation
      - html5-qrcode 2.3.8 (Apache-2.0) -- QR scanning
-     - paho-mqtt 1.1.0 (EPL-1.0) -- MQTT for P2P signaling
    ================================================================ */
 "@
 
 $output = $banner + "`r`n" +
           "/* === LZ-STRING === */`r`n" + $lzSrc + "`r`n" +
-          "/* === QRCODE.JS === */`r`n" + $qrSrc + "`r`n" +
-          "/* === HTML5-QRCODE === */`r`n" + $h5qrSrc + "`r`n" +
           "/* === PAHO-MQTT === */`r`n" + $mqttSrc + "`r`n" +
           "/* === SYNC ENGINE === */`r`n" + $engineJs
 

@@ -308,6 +308,8 @@ def discover_asset_files() -> list[Path]:
     paths: list[Path] = []
     # Known engines are handled separately to ensure they are at the top of the list
     engines = {"quiz-engine.js", "bank-engine.js", "index-engine.js"}
+    # Source files that should not be precached
+    skip_files = {"sw.js", "sync-engine.js", "sync-engine.src.js"}
     
     for path in REPO_ROOT.rglob("*"):
         if not path.is_file():
@@ -317,7 +319,7 @@ def discover_asset_files() -> list[Path]:
             continue
         if path.suffix.lower() not in extensions:
             continue
-        if path.name in engines or path.name == "sw.js":
+        if path.name in engines or path.name in skip_files:
             continue
         paths.append(path)
     return sorted(paths, key=lambda item: natural_key(item.relative_to(REPO_ROOT).as_posix()))
