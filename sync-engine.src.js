@@ -1065,10 +1065,10 @@ const SyncEngine = {
             var subjects = this._getSubjectList();
             var saved = this._getSavedScope();
             var savedSubjects = saved.subjects || [];
-            var html = '<div style="position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:2200;display:flex;align-items:flex-start;justify-content:center;padding-top:15vh;" onclick="if(event.target===this)SyncEngine.ui.closeScopeModal()">'
-                + '<div style="background:var(--surface1);border:1px solid var(--border);border-radius:16px;max-width:380px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.3);overflow:hidden;">'
-                + '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1.25rem;border-bottom:1px solid var(--border);"><h3 style="font-size:1rem;margin:0;color:var(--text);">⚙ Sync Scope</h3><button onclick="SyncEngine.ui.closeScopeModal()" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer;">✕</button></div>'
-                + '<div style="padding:0.75rem 1.25rem;max-height:320px;overflow-y:auto;">';
+            var html = '<div class="dash-overlay open" style="z-index:2200;" onclick="if(event.target===this)SyncEngine.ui.closeScopeModal()">'
+                + '<div class="dash-modal" style="max-width:380px;">'
+                + '<div class="dash-header"><h2>⚙ Sync Scope</h2><button class="dash-close-btn" onclick="SyncEngine.ui.closeScopeModal()">✕</button></div>'
+                + '<div class="dash-body" style="padding:0.75rem 1.25rem;">';
             for (var i = 0; i < subjects.length; i++) {
                 var s = subjects[i];
                 var chk = savedSubjects.length === 0 || savedSubjects.indexOf(s.uid) !== -1 ? 'checked' : '';
@@ -1077,10 +1077,12 @@ const SyncEngine = {
             if (subjects.length === 0) html += '<p style="color:var(--text-muted);font-size:0.85rem;padding:1rem 0;text-align:center;">No subjects with tracker data found.</p>';
             var progChk = saved.progress !== false ? 'checked' : '';
             html += '<div style="border-top:2px solid var(--border);margin-top:0.5rem;padding-top:0.5rem;">'
-                + '<label style="display:flex;align-items:center;gap:0.5rem;padding:0.6rem 0;cursor:pointer;font-size:0.9rem;color:var(--text);"><input type="checkbox" id="sync-scope-progress-cb" ' + progChk + ' style="accent-color:var(--accent);"> Active Progress</label></div></div>'
+                + '<label style="display:flex;align-items:center;gap:0.5rem;padding:0.6rem 0;cursor:pointer;font-size:0.9rem;color:var(--text);"><input type="checkbox" id="sync-scope-progress-cb" ' + progChk + ' style="accent-color:var(--accent);"> Active Progress</label></div>'
+                + '</div>'
                 + '<div style="display:flex;gap:0.5rem;padding:0.75rem 1.25rem;border-top:1px solid var(--border);justify-content:space-between;">'
-                + '<button class="btn-dash-action" onclick="SyncEngine.ui.toggleAllSubjects()" style="font-size:0.8rem;padding:0.4rem 0.7rem;">Select All</button>'
-                + '<button class="btn-dash-action" onclick="SyncEngine.ui.applyScopeAndClose()" style="font-size:0.8rem;padding:0.4rem 0.7rem;">Done</button></div></div></div>';
+                + '<button class="btn-dash-action" onclick="SyncEngine.ui.toggleAllSubjects()">Select All</button>'
+                + '<button class="btn-dash-action" onclick="SyncEngine.ui.applyScopeAndClose()">Done</button></div>'
+                + '</div></div>';
             var wrap = document.createElement('div');
             wrap.innerHTML = html;
             this._scopeModalEl = wrap.firstElementChild;
