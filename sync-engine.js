@@ -230,11 +230,29 @@ const SyncEngine = {
 
     importData: function(compressedStr, mode = 'merge') {
         try {
+            // Validate input is a non-empty string
+            if (!compressedStr || typeof compressedStr !== 'string' || compressedStr.trim().length === 0) {
+                throw new Error("Empty or invalid sync data received");
+            }
+
+            // Quick sanity check: valid base64 only contains A-Za-z0-9+/=
+            if (!/^[A-Za-z0-9+/=]+$/.test(compressedStr.trim())) {
+                throw new Error("Sync data contains invalid characters (not base64)");
+            }
+
             const jsonStr = LZString.decompressFromBase64(compressedStr);
-            if (!jsonStr) throw new Error("Invalid or corrupted sync data");
+            if (!jsonStr) throw new Error("Invalid or corrupted sync data (decompression failed)");
             
+            // Validate decompressed result looks like JSON
+            var trimmed = jsonStr.trim();
+            if (!trimmed.startsWith('{') || !trimmed.endsWith('}')) {
+                throw new Error("Decompressed data is not valid JSON (garbage data)");
+            }
+
             const payload = JSON.parse(jsonStr);
-            if (!payload || !payload.data) throw new Error("Invalid data format");
+            if (!payload || !payload.data || typeof payload.data !== 'object') {
+                throw new Error("Invalid data format (missing payload.data)");
+            }
 
             this._processImport(payload.data, mode);
             return true;
@@ -629,9 +647,12 @@ const SyncEngine = {
                 delete this.peers[targetId];
             }
 
+            // Clear any stale chunk buffer for this target
+            delete this._chunkBuffers[targetId];
+
             const pc = this._createPeerConnection(targetId);
             const channel = pc.createDataChannel("sync");
-            this._setupChannel(channel);
+            this._setupChannel(channel, targetId);
 
             let relayFired = false;
 
@@ -686,9 +707,9 @@ const SyncEngine = {
             };
             
             pc.ondatachannel = (e) => {
-                console.log("Received DataChannel");
+                console.log("Received DataChannel from", targetId);
                 if (window.showToast) window.showToast("📱 Sync connection from " + (this.devices[targetId]?.name || "another device"));
-                this._setupChannel(e.channel);
+                this._setupChannel(e.channel, targetId);
             };
             
             return pc;
@@ -750,7 +771,10 @@ const SyncEngine = {
             } catch (e) { console.error("Relay failed:", e); }
         },
 
-        _setupChannel: function(channel) {
+        // Chunk reassembly buffers: targetId -> accumulated string
+        _chunkBuffers: {},
+
+        _setupChannel: function(channel, targetId) {
             channel.onopen = () => {
                 console.log("DataChannel Open!");
                 if (this.pullOnly) {
@@ -770,6 +794,8 @@ const SyncEngine = {
                     var offset = 0;
                     var sendNext = function() {
                         if (offset >= data.length) {
+                            // Send end-of-stream marker so receiver knows to reassemble
+                            channel.send('__EOS__');
                             SyncEngine.ui.updateTransferProgress(totalBytes, totalBytes);
                             SyncEngine.ui.setStatus("Data sent successfully!", true);
                             return;
@@ -785,25 +811,85 @@ const SyncEngine = {
                 }
             };
             channel.onmessage = (e) => {
-                console.log("Data Received (" + e.data.length + " bytes)");
-                var fromId = Object.keys(this.peers).find(k => this.peers[k] === channel);
-                var isTrusted = fromId ? SyncEngine._isTrustedDevice(fromId) : false;
-                if (!isTrusted && fromId && !this._pendingSyncs[fromId]) {
-                    var preview = SyncEngine._previewImportData(e.data);
-                    this._pendingSyncs[fromId] = { type: 'p2p-data', data: e.data };
-                    SyncEngine.ui.showConfirmToast(fromId, this.devices[fromId]?.name || 'Unknown', preview);
+                console.log("DataChannel message received (" + e.data.length + " bytes)");
+                var fromId = targetId;
+                // Fallback: try to resolve fromId from peers if not passed explicitly
+                if (!fromId) {
+                    fromId = Object.keys(this.peers).find(k => {
+                        try { return this.peers[k] === channel; } catch(ex) { return false; }
+                    });
+                }
+
+                // Check for end-of-stream marker (chunked transfer complete)
+                if (e.data === '__EOS__') {
+                    var fullData = this._chunkBuffers[fromId] || '';
+                    delete this._chunkBuffers[fromId];
+                    if (!fullData) {
+                        console.warn("EOS received but no buffered chunks for", fromId);
+                        return;
+                    }
+                    console.log("Chunked transfer complete, reassembled " + fullData.length + " bytes");
+                    this._processIncomingP2PData(fromId, fullData);
                     return;
                 }
-                SyncEngine.ui.setStatus("Receiving data...", true);
-                const success = SyncEngine.importData(e.data, 'merge');
-                if (success) {
-                    SyncEngine.ui.setStatus("Data received and merged successfully!", true);
-                    if (window.showToast) window.showToast("P2P Sync complete!");
-                    if (window.renderQuizzes) window.renderQuizzes();
-                } else {
-                    SyncEngine.ui.setStatus("Failed to import received data.", false);
+
+                // If we have an existing buffer for this sender, we're in chunked mode
+                if (this._chunkBuffers[fromId] !== undefined) {
+                    this._chunkBuffers[fromId] += e.data;
+                    return;
                 }
+
+                // Single-chunk message (no EOS needed) — process immediately
+                // But first check: could this be the start of a multi-chunk transfer?
+                // Heuristic: if data looks like base64 and is exactly CHUNK_SIZE (16384), buffer it
+                // and wait for more chunks or EOS. Otherwise process immediately.
+                if (e.data.length === 16384) {
+                    // Likely first chunk of a multi-chunk transfer
+                    this._chunkBuffers[fromId] = e.data;
+                    // Set a safety timeout: if no EOS arrives within 30s, process what we have
+                    var bufKey = fromId;
+                    var safetyTimeout = setTimeout(function() {
+                        var buffered = SyncEngine.webrtc._chunkBuffers[bufKey];
+                        if (buffered !== undefined) {
+                            console.warn("Chunk safety timeout — processing " + buffered.length + " bytes as-is");
+                            delete SyncEngine.webrtc._chunkBuffers[bufKey];
+                            SyncEngine.webrtc._processIncomingP2PData(bufKey, buffered);
+                        }
+                    }, 30000);
+                    // Store timeout ID so we can clear it on EOS
+                    this._chunkBuffers['_timeout_' + fromId] = safetyTimeout;
+                    return;
+                }
+
+                this._processIncomingP2PData(fromId, e.data);
             };
+        },
+
+        _processIncomingP2PData: function(fromId, data) {
+            // Clear any safety timeout
+            var timeoutKey = '_timeout_' + fromId;
+            if (this._chunkBuffers[timeoutKey]) {
+                clearTimeout(this._chunkBuffers[timeoutKey]);
+                delete this._chunkBuffers[timeoutKey];
+            }
+            delete this._chunkBuffers[fromId];
+
+            var isTrusted = fromId ? SyncEngine._isTrustedDevice(fromId) : false;
+            if (!isTrusted && fromId && !this._pendingSyncs[fromId]) {
+                var preview = SyncEngine._previewImportData(data);
+                this._pendingSyncs[fromId] = { type: 'p2p-data', data: data };
+                SyncEngine.ui.showConfirmToast(fromId, this.devices[fromId]?.name || 'Unknown', preview);
+                return;
+            }
+            SyncEngine.ui.setStatus("Receiving data...", true);
+            const success = SyncEngine.importData(data, 'merge');
+            if (success) {
+                SyncEngine.ui.setStatus("Data received and merged successfully!", true);
+                if (window.showToast) window.showToast("P2P Sync complete!");
+                if (window.renderQuizzes) window.renderQuizzes();
+            } else {
+                SyncEngine.ui.setStatus("Failed to import received data.", false);
+            }
         }
     },
 
