@@ -51,7 +51,7 @@ QuizTool/
 ├── index-template.html           ← Base template for index-editor output
 │
 ├── — GENERATOR —
-├── generate_project.py           ← Flask server: full project generator + GitHub publish
+├── generate_project.py           ← Flask server: full project generator + GitHub/Netlify/Vercel publish
 ├── generator_templates/
 │   └── index.html                ← 3-step wizard UI (Project Info → Structure → Publish)
 ├── start.bat                     ← Windows launcher (auto-installs Python deps)
@@ -247,7 +247,7 @@ Or double-click `start.bat` on Windows (auto-installs dependencies).
 Serves a 3-step wizard UI (`generator_templates/index.html`) where the user:
 1. **Step 1 — Project Info**: Configures name, title, hero text, theme
 2. **Step 2 — Structure**: Creates folders/subfolders, drag-drops quiz HTML files, adds quiz entries
-3. **Step 3 — Publish**: Either publishes to GitHub Pages via PAT authentication, or downloads a ZIP
+3. **Step 3 — Publish**: Publishes to GitHub Pages, Netlify, or Vercel via session-only provider tokens, or downloads a ZIP
 
 ### API endpoints
 
@@ -258,6 +258,10 @@ Serves a 3-step wizard UI (`generator_templates/index.html`) where the user:
 | `/api/preview` | POST | JSON config | JSON stats | Preview project stats (file count, etc.) |
 | `/api/github/verify` | POST | `{token}` | JSON user info | Verify PAT + check `repo`/`workflow` scopes |
 | `/api/github/publish` | POST | `{token, config, visibility}` | JSON result | Create repo, push code, enable Pages |
+| `/api/netlify/verify` | POST | `{token}` | JSON user info | Verify Netlify PAT |
+| `/api/netlify/publish` | POST | `{token, config}` | JSON result | Create Netlify site + ZIP deploy |
+| `/api/vercel/verify` | POST | `{token}` | JSON user info | Verify Vercel access token |
+| `/api/vercel/publish` | POST | `{token, config}` | JSON result | Create production Vercel file deployment |
 | `/api/download-local` | POST | JSON config | JSON `{project_dir}` | Save project locally for admin dashboard |
 | `/api/launch-admin` | POST | `{project_dir}` | JSON `{admin_url}` | Launch admin-dashboard.py for a project |
 
@@ -277,6 +281,16 @@ The generator follows security best practices to avoid token leaks and GitHub ba
 5. **GitHub API version header**: All API requests include `X-GitHub-Api-Version: 2022-11-28` for forward compatibility.
 6. **Pages error tolerance**: If GitHub Pages enablement fails (e.g., private repo without Pro), the generator returns a `pages_warning` message instead of failing the entire operation.
 
+### Multi-Provider Publishing
+
+- **GitHub Pages**: Uses GitHub REST APIs plus local `git` with `GIT_ASKPASS`; creates/updates a repository, pushes to `main`, and enables Pages with GitHub Actions.
+- **Netlify**: Uses Netlify's HTTPS API only; creates a site, uploads the generated project ZIP with `Content-Type: application/zip`, polls deploy state, and returns the live Netlify URL.
+- **Vercel**: Uses Vercel's HTTPS API only; converts ZIP entries into inline base64 deployment files, creates a production deployment, polls readiness, and returns the deployment URL.
+- **GUI only**: Users authenticate and publish only through `generator_templates/index.html`. Do not add CLI-only Netlify/Vercel flows as the primary path.
+- **Session-only provider tokens**: Netlify and Vercel tokens follow the same no-persistence rule as GitHub tokens. Do not write them to disk, logs, localStorage, generated projects, subprocess args, or config files.
+- **Persistent local project copy**: Successful Netlify/Vercel publishes also extract the generated ZIP to the local project directory so the Admin Dashboard can open just like the GitHub and ZIP flows.
+- **Admin Dashboard redeploy**: First publish writes non-secret `.quiztool/deploy.json` metadata. The Admin Dashboard uses this to offer one provider-aware Deploy flow for GitHub Pages, Netlify, and Vercel; tokens are still session-only.
+
 ### Project Directory Persistence
 
 Generated project directories **persist on disk** after creation. They are never deleted by the generator — this is critical for the admin dashboard and user-added content workflows.
@@ -293,6 +307,8 @@ The generator can auto-install missing system tools via **winget** (Windows Pack
 | Feature | Dependency | winget Package ID | Auto-Install? |
 |---------|-----------|-------------------|---------------|
 | GitHub publish | `git` | `Git.Git` | ✅ Yes |
+| Netlify publish | none | — | Not needed — HTTPS API only |
+| Vercel publish | none | — | Not needed — HTTPS API only |
 | Admin Dashboard (EXE mode) | `python` | `Python.Python.3.12` | ✅ Yes |
 | Admin Dashboard (EXE mode) | `flask` | via `pip install flask` | ✅ Yes (post-install hook) |
 
@@ -380,6 +396,9 @@ project/
 ├── sync-engine.js             ← Copied from QuizTool
 ├── sw.js                      ← Dynamically generated with full precache list
 ├── manifest.webmanifest       ← Named after project_name
+├── netlify.toml                ← Static hosting config for Netlify ZIP/Git deploys
+├── vercel.json                 ← Static hosting headers for Vercel deployments
+├── .quiztool/deploy.json       ← Local, gitignored provider redeploy metadata (created after provider publish)
 ├── tracker-map.json           ← UID-to-Path mapping
 ├── favicon.svg
 ├── icon-*.png
@@ -398,6 +417,9 @@ project/
 | `gen_index_html(...)` | Produces hub pages linking to `index-engine.css`. |
 | `build_project_zip(config)` | Full pipeline: ensures engines are prioritized in precache list. |
 | `read_file(name)` | Read from QuizTool root. |
+| `_netlify_request(...)` | Netlify API helper using bearer-token HTTPS requests. |
+| `_vercel_request(...)` | Vercel API helper using bearer-token HTTPS requests. |
+| `_save_zip_to_project_dir(...)` | Extracts generated ZIPs into persistent local project dirs for Admin Dashboard use. |
 
 ### 6a. Robust SW Logic in Generator
 The generated `sw.js` includes:
@@ -604,7 +626,7 @@ To maintain the stability of the toolkit, the accuracy of the project generator,
 - **Use exact filename matching for dropped files**: When matching dropped files to folder quiz entries, use `quiz.get('url') == filename` only. Never use substring matching (`filename in url`) — it causes false matches like `"heart.html"` matching `"l1-heart.html"`.
 - **Always return `str(project_dir)` from `_extract_and_push`**: `Path` objects are not JSON serializable. Returning a Path crashes `jsonify()` with a 500 error.
 - **Guard all `fetch()` responses with `resp.text()` → `JSON.parse()`**: Never call `resp.json()` directly — it throws `JSON.parse: unexpected character` on non-JSON server responses (e.g., Flask 500 HTML pages).
-- **Always include `dropped_files` in GitHub publish requests**: The `githubPublish()` front-end function must attach `config.dropped_files = droppedFilesContent`, otherwise uploaded quiz HTML files are missing from the pushed repo.
+- **Always include `dropped_files` in provider publish requests**: The front-end provider publish functions must attach `config.dropped_files = droppedFilesContent`, otherwise uploaded quiz HTML files are missing from the deployed project.
 
 ### 16b. Templates & Markers
 - **Never remove parsing markers**: The comments `/* [QUIZ_CONFIG_START/END] */`, `/* [QUESTIONS_START/END] */`, etc., are functional code. Removing them breaks the `sync_quiz_assets.py` script and the GUI editors (`quiz-editor.html`, etc.).
@@ -696,9 +718,11 @@ generate_project.py (Flask)
   → generates: admin-dashboard.bat (gitignored local launcher)
   → GitHub API: /api/github/verify (PAT + scope check)
   → GitHub API: /api/github/publish (create repo, GIT_ASKPASS push, enable Pages)
+  → Netlify API: /api/netlify/verify + /api/netlify/publish (site + ZIP deploy)
+  → Vercel API: /api/vercel/verify + /api/vercel/publish (production file deploy)
   → auto-installs: git (via _ensure_tool + winget) if missing
   → auto-installs: python + flask (via _ensure_tool + winget + pip) if missing (EXE mode)
-  → outputs: project.zip OR direct GitHub publish
+  → outputs: project.zip OR direct provider publish
   → can launch: admin-dashboard.py for generated project
   → project dirs persist on disk (never rmtree'd)
 ```
@@ -713,6 +737,8 @@ The PyInstaller EXE is designed to run on a completely fresh Windows system:
 | Local download | ✅ Yes | Same — all content embedded |
 | GitHub token verify | ✅ Yes | Uses `urllib.request` (stdlib), needs internet |
 | GitHub publish | ✅ Auto-installs | `git` installed via winget if missing |
+| Netlify publish | ✅ Yes | Uses `urllib.request` (stdlib), needs internet |
+| Vercel publish | ✅ Yes | Uses `urllib.request` (stdlib), needs internet |
 | Admin Dashboard | ✅ Auto-installs | `python` + `flask` installed via winget + pip if missing |
 | Auto-open browser | ✅ Graceful | `webbrowser.open()` silently fails if no browser |
 
@@ -757,8 +783,8 @@ A local Flask-based web interface for managing quiz projects. Bundled into gener
 - **Validation System**: Server-side + client-side validation of file content. Displays errors and warnings in a validation strip. Preflight checks in the New File Wizard before creation.
 - **UID Change Protection**: When saving a file with a changed UID, a confirmation modal warns about orphaning learner progress. Requires explicit user confirmation to proceed.
 - **PDF Export**: Integrated viewer with pre-filled URLs for the current file; supports direct download or opening in a new tab. Also available as a standalone tool at `/admin/pdf-exporter` with multiple layouts (standard, styled, MCQ notes, two-column) and quality options.
-- **Activity Feed**: Compact recent activity panel for the latest save/sync/git results.
-- **Git Integration**: Cohesive "Sync & Push" flow (Pull -> Commit -> Push) with visual file status indicators and manual controls. Individual Pull, Commit Only, and Push actions also available.
+- **Activity Feed**: Compact recent activity panel for the latest save/sync/deploy results.
+- **Provider-Aware Deploy**: Unified Deploy flow for GitHub Pages, Netlify, and Vercel. GitHub uses sync + pull + commit + token-safe push; Netlify/Vercel package the current project and deploy through HTTPS APIs. Individual Git commit/pull/push routes remain available for manual controls.
 - **Sync**: Run `sync_quiz_assets.py` to auto-update indexes, tracker map, and service worker after content changes.
 - **Conversion**: Convert quiz ↔ bank files while preserving the existing `uid`.
 - **Quick Open**: `Ctrl+K` command palette for fast file navigation by path, title, or UID.
@@ -786,7 +812,10 @@ QUIZTOOL_ADMIN_PORT=5501 python scripts/admin-dashboard.py
 |----------|--------|---------|
 | `/admin/` | GET | Dashboard SPA |
 | `/admin/files` | GET | List all HTML files + folders |
-| `/admin/project-state` | GET | Project name, summary stats, git status, builtin tools |
+| `/admin/project-state` | GET | Project name, summary stats, git status, deploy metadata, builtin tools |
+| `/admin/deploy-info` | GET | Current provider deploy metadata + git status |
+| `/admin/provider-verify` | POST | Verify session-only provider token |
+| `/admin/provider-deploy` | POST | Run sync and deploy to GitHub Pages, Netlify, or Vercel |
 | `/admin/load-file?path=` | GET | Load file content + parsed metadata |
 | `/admin/preview/<path>` | GET | Preview HTML with rewritten engine base paths |
 | `/admin/save-file` | POST | Save file content (with UID change validation) |

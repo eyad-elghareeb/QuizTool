@@ -27,7 +27,7 @@ Then open **http://localhost:5500** in your browser.
 The generator has a 3-step wizard:
 
 ### Step 1 — Project Info
-- Enter your project name (this becomes the GitHub repo name)
+- Enter your project name (this becomes the repo/site/project name)
 - Set the site title and hero text
 - Choose dark or light default theme
 
@@ -37,11 +37,12 @@ The generator has a 3-step wizard:
 - Add subfolders for deeper organization
 
 ### Step 3 — Publish
-**Option A: One-click GitHub Pages** (recommended)
+**Option A: One-click hosting provider** (recommended)
 1. Click **"Create a token"** to generate a GitHub PAT (scopes: `repo`, `workflow`)
-2. Paste the token and click **Sign In**
-3. Click **🔵 Publish to GitHub Pages**
-4. Done! Your site will be live in 1–2 minutes
+2. Or use the Netlify/Vercel provider card to create that provider's access token
+3. Paste the token and click **Sign In**
+4. Click **Publish to GitHub Pages**, **Publish to Netlify**, or **Publish to Vercel**
+5. Done! Your site will be live after the provider finishes deploying
 
 **Option B: Download ZIP only**
 1. Click **📥 Download ZIP Only**
@@ -56,7 +57,7 @@ After publishing, click **🛠️ Open Admin Dashboard** to:
 - Edit existing questions, options, and explanations
 - Move/rename files and folders
 - Run the sync script to update indexes automatically
-- Git push from the admin UI
+- Use **Deploy** to update GitHub Pages, Netlify, or Vercel from the admin UI
 
 No coding needed — the admin dashboard handles everything.
 
@@ -65,16 +66,16 @@ No coding needed — the admin dashboard handles everything.
 ## FAQ
 
 **Q: What is a Personal Access Token (PAT)?**
-A: A GitHub password replacement that lets the generator create a repo and push code on your behalf. Create one at https://github.com/settings/tokens/new with `repo` and `workflow` scopes.
+A: A provider password replacement that lets the generator deploy on your behalf. GitHub tokens need `repo` and `workflow` scopes; Netlify and Vercel tokens can be created from their provider cards in the Publish step.
 
 **Q: Is my token saved?**
 A: No. The token is used only during the current browser session and is never stored on disk or logged.
 
 **Q: How do I update my site after publishing?**
-A: Open the Admin Dashboard, edit your content, then use the "Sync & Push" button. The CI/CD workflow automatically redeploys.
+A: Open the Admin Dashboard, edit your content, then click **Deploy**. It syncs generated assets and redeploys to GitHub Pages, Netlify, or Vercel using a session-only token.
 
 **Q: Do I need to know Git?**
-A: No! The Admin Dashboard has a built-in Git integration — just click "Sync & Push".
+A: No! The Admin Dashboard has a provider-aware deploy flow — just click **Deploy**.
 
 **Q: Can I add more quizzes later?**
 A: Yes. Use the Admin Dashboard to create new quiz files. The sync script automatically updates all index pages and the service worker.

@@ -27,6 +27,8 @@ if templates_dir.exists():
 # Engine files (needed for ZIP generation)
 # Note: sw.js is NOT needed — it's generated dynamically per-project by generate_sw_js()
 # Note: quiz-engine-test.html is optional — read_file() returns '' if missing
+# Note: Netlify/Vercel publishing uses stdlib HTTPS APIs in generate_project.py,
+# so the EXE does not need to bundle provider CLIs or extra Python packages.
 for name in ['quiz-engine.js', 'bank-engine.js', 'index-engine.js', 'sync-engine.js', 'index-engine.css',
              'quiz-engine-test.html']:
     p = BASE_DIR / name

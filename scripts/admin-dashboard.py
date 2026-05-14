@@ -17,15 +17,20 @@ keeping the workflow inside one local dashboard.
 
 from __future__ import annotations
 
+import base64
 import copy
+import io
 import json
 import os
 import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
+import time
 import webbrowser
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -42,8 +47,11 @@ PROJECT_ROOT = SCRIPTS_DIR.parent.resolve()
 SYNC_SCRIPT = SCRIPTS_DIR / "sync_quiz_assets.py"
 HOST = "127.0.0.1"
 PORT = 5500
+DEPLOY_DIR = PROJECT_ROOT / ".quiztool"
+DEPLOY_METADATA_PATH = DEPLOY_DIR / "deploy.json"
 
-SKIP_DIRS = {".git", ".github", "__pycache__"}
+SKIP_DIRS = {".git", ".github", ".quiztool", "__pycache__"}
+DEPLOY_SKIP_DIRS = {".git", ".github", ".quiztool", "__pycache__", "_site", "node_modules"}
 EDITABLE_SUFFIXES = {".html"}
 ASSET_SUFFIXES = {
     ".html",
@@ -1027,7 +1035,7 @@ DASHBOARD_HTML = r"""
       </div>
       <div class="topbar-actions">
         <button class="btn" onclick="openActivityModal()">Activity Log</button>
-        <button class="btn" onclick="openGitModal()">Git & Sync</button>
+        <button class="btn" onclick="openDeployModal()">Deploy</button>
         <button class="icon-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">☀</button>
       </div>
     </div>
@@ -1964,7 +1972,7 @@ DASHBOARD_HTML = r"""
       if (state.syncState === 'needs-sync') return { label: 'Sync', action: 'runSync()', tone: 'primary' };
       if (state.syncState === 'syncing') return { label: 'Syncing...', action: '', tone: 'info' };
       if (state.syncState === 'sync-failed') return { label: 'Sync Failed', action: 'runSync()', tone: 'error' };
-      if (state.projectState?.git?.dirtyCount) return { label: 'Git', action: 'openGitModal()', tone: 'primary' };
+      if (state.projectState?.git?.dirtyCount) return { label: 'Deploy', action: 'openDeployModal()', tone: 'primary' };
       return { label: 'Saved', action: '', tone: 'success' };
     }
 
@@ -2978,8 +2986,18 @@ DASHBOARD_HTML = r"""
       });
     }
 
-    function openGitModal() {
+    function providerDisplayName(provider) {
+      return ({ github: 'GitHub Pages', netlify: 'Netlify', vercel: 'Vercel' })[provider] || 'Not configured';
+    }
+
+    function deployTokenPlaceholder(provider) {
+      return ({ github: 'ghp_xxxxxxxxxxxxxxxxxxxx', netlify: 'nfp_xxxxxxxxxxxxxxxxxxxx', vercel: 'Vercel access token' })[provider] || 'Provider token';
+    }
+
+    function openDeployModal() {
       const git = state.projectState?.git || {};
+      const deploy = state.projectState?.deploy || {};
+      const provider = deploy.provider || 'github';
       const commitSuggestion = state.currentFile ? `Update ${state.currentFile}` : 'Update quiz content';
       const changed = (git.changedPaths || []).map(item => `
         <div class="badge" title="${escapeHtml(item.path)}">
@@ -2989,14 +3007,28 @@ DASHBOARD_HTML = r"""
       `).join('') || '<div class="muted">No changed paths.</div>';
       
       openModal({
-        title: 'Git Repository',
-        subtitle: git.available ? `On branch: ${git.branch}` : 'Not a git repository',
+        title: 'Deploy Project',
+        subtitle: deploy.provider ? `${providerDisplayName(deploy.provider)}${deploy.inferred ? ' (inferred from Git remote)' : ''}` : 'Choose a provider for this project',
         body: `
           <div class="panel-grid">
+            ${renderMetaCard('Provider', providerDisplayName(provider))}
             ${renderMetaCard('Status', git.dirtyCount ? `${git.dirtyCount} changes` : 'Clean')}
-            ${renderMetaCard('Ahead', git.ahead ?? 0)}
-            ${renderMetaCard('Behind', git.behind ?? 0)}
+            ${renderMetaCard('Live URL', deploy.liveUrl || 'Not published yet')}
           </div>
+
+          ${deploy.provider ? `
+            <input type="hidden" id="deploy-provider" value="${escapeHtml(provider)}">
+          ` : `
+            <div class="field" style="margin-top:1rem;">
+              <label>Provider</label>
+              <select class="select-input" id="deploy-provider" onchange="renderDeployProviderFields()">
+                <option value="github">GitHub Pages</option>
+                <option value="netlify">Netlify</option>
+                <option value="vercel">Vercel</option>
+              </select>
+            </div>
+            <div id="deploy-provider-fields"></div>
+          `}
           
           <div class="field" style="margin-top: 1rem;">
             <label>Changed Files</label>
@@ -3008,18 +3040,131 @@ DASHBOARD_HTML = r"""
           <div class="field" style="margin-top: 1rem;">
             <label>Commit Message</label>
             <input class="text-input" id="commit-message" value="${escapeHtml(commitSuggestion)}" placeholder="e.g. Add L10 PCOS quiz">
+            <small>Used for GitHub Pages commits. Netlify and Vercel deploy the current files directly.</small>
+          </div>
+
+          <div class="field" style="margin-top: 1rem;">
+            <label id="provider-token-label">${escapeHtml(providerDisplayName(provider))} Token</label>
+            <input class="text-input" type="password" id="provider-token" placeholder="${escapeHtml(deployTokenPlaceholder(provider))}" autocomplete="off">
+            <small>Session only. The dashboard sends this token to the provider API and never saves it.</small>
           </div>
 
           <div class="modal-actions" style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;">
             <div style="flex: 1; display: flex; gap: 0.5rem; flex-wrap: wrap;">
-              <button class="ghost-btn" onclick="pullChanges()">Pull</button>
+              <button class="ghost-btn" onclick="verifyProviderToken()">Verify Token</button>
               <button class="ghost-btn" onclick="commitChanges()">Commit Only</button>
               <button class="ghost-btn" onclick="runSync()" style="border-color: var(--accent); color: var(--accent);">Run Sync Now</button>
             </div>
-            <button class="btn btn-primary" onclick="gitSync()">Sync & Push</button>
+            <button class="btn btn-primary" onclick="providerDeploy()">Sync & Deploy</button>
           </div>
         `,
+        onOpen: () => {
+          if (!deploy.provider) renderDeployProviderFields();
+        },
       });
+    }
+
+    function openGitModal() {
+      openDeployModal();
+    }
+
+    function renderDeployProviderFields() {
+      const provider = document.getElementById('deploy-provider')?.value || 'github';
+      const host = document.getElementById('deploy-provider-fields');
+      if (!host) return;
+      if (provider === 'github') {
+        host.innerHTML = `
+          <div class="field-grid" style="margin-top:1rem;">
+            <div class="field"><label>GitHub Owner</label><input class="text-input" id="deploy-gh-owner" placeholder="username or org"></div>
+            <div class="field"><label>Repository</label><input class="text-input" id="deploy-gh-repo" value="${escapeHtml((state.projectState?.projectName || '').replace(/ Quiz$/, ''))}"></div>
+            <div class="field"><label>Branch</label><input class="text-input" id="deploy-gh-branch" value="${escapeHtml(state.projectState?.git?.branch || 'main')}"></div>
+          </div>
+        `;
+      } else if (provider === 'netlify') {
+        host.innerHTML = `
+          <div class="field-grid" style="margin-top:1rem;">
+            <div class="field"><label>Netlify Site ID</label><input class="text-input" id="deploy-netlify-site-id" placeholder="site UUID or site name"></div>
+            <div class="field"><label>Site Name</label><input class="text-input" id="deploy-netlify-site-name" value="${escapeHtml(state.projectState?.projectName || '')}"></div>
+          </div>
+        `;
+      } else {
+        host.innerHTML = `
+          <div class="field-grid" style="margin-top:1rem;">
+            <div class="field"><label>Vercel Project Name</label><input class="text-input" id="deploy-vercel-project-name" value="${escapeHtml(slugifyClient(state.projectState?.projectName || 'quiz-project'))}"></div>
+          </div>
+        `;
+      }
+      const tokenLabel = document.getElementById('provider-token-label');
+      const token = document.getElementById('provider-token');
+      if (tokenLabel) tokenLabel.textContent = providerDisplayName(provider) + ' Token';
+      if (token) token.placeholder = deployTokenPlaceholder(provider);
+    }
+
+    function collectDeployMetadata() {
+      const existing = state.projectState?.deploy || {};
+      const provider = document.getElementById('deploy-provider')?.value || existing.provider || 'github';
+      if (existing.provider === provider) return { ...existing };
+      if (provider === 'github') {
+        const owner = document.getElementById('deploy-gh-owner')?.value.trim();
+        const repo = document.getElementById('deploy-gh-repo')?.value.trim();
+        const branch = document.getElementById('deploy-gh-branch')?.value.trim() || 'main';
+        return {
+          provider, projectName: repo, liveUrl: owner && repo ? `https://${owner}.github.io/${repo}/` : '',
+          providerUrl: owner && repo ? `https://github.com/${owner}/${repo}` : '',
+          github: { owner, repo, branch },
+        };
+      }
+      if (provider === 'netlify') {
+        const siteId = document.getElementById('deploy-netlify-site-id')?.value.trim();
+        const siteName = document.getElementById('deploy-netlify-site-name')?.value.trim();
+        return {
+          provider, projectName: siteName || siteId, liveUrl: siteName ? `https://${siteName}.netlify.app` : '',
+          providerUrl: siteName ? `https://app.netlify.com/sites/${siteName}/overview` : '',
+          netlify: { siteId, siteName },
+        };
+      }
+      const projectName = document.getElementById('deploy-vercel-project-name')?.value.trim();
+      return {
+        provider, projectName, liveUrl: '', providerUrl: '',
+        vercel: { projectName, deploymentUrl: '' },
+      };
+    }
+
+    async function verifyProviderToken() {
+      const provider = document.getElementById('deploy-provider')?.value || state.projectState?.deploy?.provider || 'github';
+      const token = document.getElementById('provider-token')?.value.trim();
+      if (!token) { showToast('Provider token is required.', 'warn'); return; }
+      const result = await fetchJson('/admin/provider-verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider, token }),
+      });
+      showToast(result.message || 'Token verified.', 'success');
+      logActivity('Provider token verified', provider, 'success');
+    }
+
+    async function providerDeploy() {
+      const provider = document.getElementById('deploy-provider')?.value || state.projectState?.deploy?.provider || 'github';
+      const token = document.getElementById('provider-token')?.value.trim();
+      const message = document.getElementById('commit-message')?.value.trim() || 'Update quiz project files';
+      if (!token) { showToast('Provider token is required.', 'warn'); return; }
+      const metadata = collectDeployMetadata();
+      showToast('Starting provider deploy...', 'info');
+      logActivity('Deploy started', providerDisplayName(provider), 'info');
+      try {
+        const result = await fetchJson('/admin/provider-deploy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ provider, token, message, metadata }),
+        });
+        showToast(result.message || 'Deploy completed.', 'success');
+        logActivity('Deploy completed', `${result.liveUrl || ''}\n${result.syncOutput || ''}`, 'success');
+        await refreshWorkspace({ preserveCurrent: true });
+        closeModal();
+      } catch (err) {
+        showToast('Deploy failed. Check activity log.', 'error');
+        logActivity('Deploy failed', err.message || String(err), 'error');
+      }
     }
 
     async function createFolder() {
@@ -4282,10 +4427,11 @@ def get_builtin_tools() -> list[dict[str, str]]:
     ]
 
 
-def run_subprocess(args: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+def run_subprocess(args: list[str], cwd: Path | None = None, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         args,
         cwd=str(cwd or PROJECT_ROOT),
+        env=env,
         capture_output=True,
         text=True,
         encoding="utf-8",
@@ -4347,6 +4493,375 @@ def get_git_status() -> dict[str, Any]:
     }
 
 
+def parse_github_remote(remote: str) -> dict[str, str] | None:
+    remote = (remote or "").strip()
+    patterns = [
+        r"github\.com[:/](?P<owner>[^/]+)/(?P<repo>[^/.]+)(?:\.git)?/?$",
+        r"https?://[^@/]+@github\.com/(?P<owner>[^/]+)/(?P<repo>[^/.]+)(?:\.git)?/?$",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, remote)
+        if match:
+            return {"owner": match.group("owner"), "repo": match.group("repo")}
+    return None
+
+
+def get_git_remote_url() -> str:
+    if not git_available():
+        return ""
+    result = run_subprocess(["git", "remote", "get-url", "origin"])
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
+def read_deploy_metadata() -> dict[str, Any] | None:
+    if not DEPLOY_METADATA_PATH.exists():
+        return None
+    try:
+        data = json.loads(read_text(DEPLOY_METADATA_PATH))
+        return data if isinstance(data, dict) else None
+    except Exception:
+        return None
+
+
+def ensure_local_gitignore_entry() -> None:
+    gitignore = PROJECT_ROOT / ".gitignore"
+    entry = ".quiztool/"
+    if not gitignore.exists():
+        write_text(gitignore, f"{entry}\n")
+        return
+    content = read_text(gitignore)
+    if entry not in content.splitlines():
+        suffix = "" if content.endswith("\n") else "\n"
+        write_text(gitignore, f"{content}{suffix}{entry}\n")
+
+
+def write_deploy_metadata(metadata: dict[str, Any]) -> None:
+    ensure_local_gitignore_entry()
+    DEPLOY_DIR.mkdir(parents=True, exist_ok=True)
+    write_text(DEPLOY_METADATA_PATH, json.dumps(metadata, indent=2))
+
+
+def inferred_github_metadata() -> dict[str, Any] | None:
+    remote = get_git_remote_url()
+    parsed = parse_github_remote(remote)
+    if not parsed:
+        return None
+    branch_result = run_subprocess(["git", "rev-parse", "--abbrev-ref", "HEAD"])
+    branch = branch_result.stdout.strip() if branch_result.returncode == 0 else "main"
+    owner = parsed["owner"]
+    repo = parsed["repo"]
+    return {
+        "provider": "github",
+        "projectName": repo,
+        "liveUrl": f"https://{owner}.github.io/{repo}/",
+        "providerUrl": f"https://github.com/{owner}/{repo}",
+        "github": {"owner": owner, "repo": repo, "branch": branch or "main"},
+        "inferred": True,
+    }
+
+
+def get_deploy_metadata() -> dict[str, Any] | None:
+    return read_deploy_metadata() or inferred_github_metadata()
+
+
+def http_json_request(method: str, url: str, token: str | None = None, json_data: Any = None,
+                      body: bytes | None = None, headers: dict[str, str] | None = None,
+                      timeout: int = 60) -> tuple[int, Any]:
+    import urllib.error
+    import urllib.request
+
+    req_headers = {"User-Agent": "QuizTool-Admin-Dashboard"}
+    if token:
+        req_headers["Authorization"] = f"Bearer {token}"
+    if headers:
+        req_headers.update(headers)
+    req_body = body
+    if json_data is not None:
+        req_body = json.dumps(json_data).encode("utf-8")
+        req_headers["Content-Type"] = "application/json"
+
+    req = urllib.request.Request(url, data=req_body, headers=req_headers, method=method)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            raw = resp.read()
+            text = raw.decode("utf-8") if raw else ""
+            try:
+                payload = json.loads(text) if text else None
+            except Exception:
+                payload = {"message": text}
+            return resp.status, payload
+    except urllib.error.HTTPError as exc:
+        text = exc.read().decode("utf-8") if exc.fp else ""
+        try:
+            return exc.code, json.loads(text)
+        except Exception:
+            return exc.code, {"message": text}
+    except Exception as exc:
+        return 0, {"message": str(exc)}
+
+
+def github_request(method: str, path: str, token: str, timeout: int = 30) -> tuple[int, Any]:
+    return http_json_request(
+        method,
+        f"https://api.github.com{path}",
+        token=None,
+        headers={
+            "Authorization": f"token {token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+        timeout=timeout,
+    )
+
+
+def netlify_request(method: str, path: str, token: str, json_data: Any = None,
+                    body: bytes | None = None, content_type: str | None = None,
+                    timeout: int = 60) -> tuple[int, Any]:
+    headers = {"Content-Type": content_type} if content_type else None
+    return http_json_request(
+        method,
+        f"https://api.netlify.com/api/v1{path}",
+        token=token,
+        json_data=json_data,
+        body=body,
+        headers=headers,
+        timeout=timeout,
+    )
+
+
+def vercel_request(method: str, path: str, token: str, json_data: Any = None,
+                   timeout: int = 60) -> tuple[int, Any]:
+    return http_json_request(method, f"https://api.vercel.com{path}", token=token, json_data=json_data, timeout=timeout)
+
+
+def should_skip_deploy_dir(name: str) -> bool:
+    return name in DEPLOY_SKIP_DIRS or name.startswith(".")
+
+
+def build_project_zip_for_deploy() -> bytes:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for root, dirs, files in os.walk(PROJECT_ROOT):
+            dirs[:] = [d for d in dirs if not should_skip_deploy_dir(d)]
+            root_path = Path(root)
+            for filename in files:
+                path = root_path / filename
+                rel = relative_path(path)
+                if rel == "admin-dashboard.bat":
+                    continue
+                zf.write(path, rel)
+    return buf.getvalue()
+
+
+def vercel_files_from_zip(zip_bytes: bytes) -> list[dict[str, str]]:
+    files = []
+    with zipfile.ZipFile(io.BytesIO(zip_bytes), "r") as zf:
+        for info in zf.infolist():
+            if info.is_dir():
+                continue
+            files.append({
+                "file": info.filename.replace("\\", "/"),
+                "data": base64.b64encode(zf.read(info.filename)).decode("ascii"),
+                "encoding": "base64",
+            })
+    return files
+
+
+def verify_provider_token(provider: str, token: str) -> tuple[bool, str]:
+    if provider == "github":
+        status, data = github_request("GET", "/user", token, timeout=15)
+        return status == 200, (data or {}).get("message", "Invalid GitHub token")
+    if provider == "netlify":
+        status, data = netlify_request("GET", "/user", token, timeout=15)
+        return status == 200, (data or {}).get("message", "Invalid Netlify token")
+    if provider == "vercel":
+        status, data = vercel_request("GET", "/v2/user", token, timeout=15)
+        msg = ((data or {}).get("error") or {}).get("message") or (data or {}).get("message", "Invalid Vercel token")
+        return status == 200, msg
+    return False, "Unknown provider."
+
+
+def deploy_to_github(metadata: dict[str, Any], token: str, commit_message: str) -> dict[str, Any]:
+    if not git_available():
+        raise RuntimeError("Git is not available for this repository.")
+    github = metadata.get("github") or {}
+    owner = github.get("owner")
+    repo = github.get("repo")
+    branch = github.get("branch") or "main"
+    if not owner or not repo:
+        raise RuntimeError("GitHub deployment metadata is missing owner or repo.")
+
+    ensure_local_gitignore_entry()
+    pull_result = run_subprocess(["git", "pull", "--rebase", "--autostash"])
+    if pull_result.returncode != 0:
+        raise RuntimeError((pull_result.stdout or pull_result.stderr).strip() or "Git pull failed.")
+
+    add_result = run_subprocess(["git", "add", "-A"])
+    if add_result.returncode != 0:
+        raise RuntimeError(add_result.stderr.strip() or "Git add failed.")
+
+    changed = run_subprocess(["git", "diff", "--cached", "--quiet"])
+    committed = False
+    if changed.returncode != 0:
+        commit_result = run_subprocess(["git", "commit", "-m", commit_message or "Update quiz project files"])
+        if commit_result.returncode != 0:
+            raise RuntimeError((commit_result.stdout or commit_result.stderr).strip() or "Git commit failed.")
+        committed = True
+
+    remote_url = f"https://{owner}@github.com/{owner}/{repo}.git"
+    run_subprocess(["git", "remote", "set-url", "origin", remote_url])
+
+    askpass_dir = Path(tempfile.gettempdir()) / "quiztool-admin-askpass"
+    askpass_dir.mkdir(parents=True, exist_ok=True)
+    if sys.platform == "win32":
+        askpass_script = askpass_dir / "askpass-github.bat"
+        askpass_script.write_text(
+            '@echo off\n'
+            'echo %1 | findstr /i "Username" >nul\n'
+            'if %errorlevel%==0 (echo %GIT_USERNAME%) else (echo %GIT_PASSWORD%)\n',
+            encoding="utf-8",
+        )
+    else:
+        askpass_script = askpass_dir / "askpass-github.sh"
+        askpass_script.write_text(
+            '#!/bin/sh\n'
+            'case "$1" in *Username*) printf "%s\\n" "$GIT_USERNAME" ;; *) printf "%s\\n" "$GIT_PASSWORD" ;; esac\n',
+            encoding="utf-8",
+        )
+        askpass_script.chmod(0o700)
+
+    env = os.environ.copy()
+    env["GIT_USERNAME"] = owner
+    env["GIT_PASSWORD"] = token
+    env["GIT_ASKPASS"] = str(askpass_script)
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    try:
+        push_result = run_subprocess(["git", "push", "origin", branch], env=env)
+        if push_result.returncode != 0:
+            raise RuntimeError(push_result.stderr.strip() or "Git push failed.")
+    finally:
+        try:
+            askpass_script.unlink()
+        except OSError:
+            pass
+
+    return {
+        "provider": "github",
+        "liveUrl": metadata.get("liveUrl") or f"https://{owner}.github.io/{repo}/",
+        "providerUrl": metadata.get("providerUrl") or f"https://github.com/{owner}/{repo}",
+        "message": "GitHub Pages deploy pushed successfully." if committed else "No file changes to commit; pushed current branch.",
+    }
+
+
+def deploy_to_netlify(metadata: dict[str, Any], token: str) -> dict[str, Any]:
+    site = metadata.get("netlify") or {}
+    site_id = site.get("siteId")
+    if not site_id:
+        raise RuntimeError("Netlify deployment metadata is missing siteId.")
+
+    zip_bytes = build_project_zip_for_deploy()
+    status, deploy_data = netlify_request(
+        "POST",
+        f"/sites/{site_id}/deploys",
+        token,
+        body=zip_bytes,
+        content_type="application/zip",
+        timeout=120,
+    )
+    if status not in (200, 201) or not deploy_data:
+        raise RuntimeError((deploy_data or {}).get("message", "Failed to upload Netlify deploy."))
+
+    deploy_id = deploy_data.get("id")
+    deploy_state = deploy_data.get("state")
+    if deploy_id and deploy_state != "ready":
+        deadline = time.time() + 90
+        while time.time() < deadline:
+            time.sleep(2)
+            poll_status, poll_data = netlify_request("GET", f"/deploys/{deploy_id}", token, timeout=20)
+            if poll_status == 200 and poll_data:
+                deploy_data = poll_data
+                deploy_state = poll_data.get("state")
+                if deploy_state == "ready":
+                    break
+                if deploy_state in {"error", "failed"}:
+                    raise RuntimeError(poll_data.get("error_message") or poll_data.get("message") or "Netlify deploy failed.")
+
+    live_url = deploy_data.get("ssl_url") or deploy_data.get("deploy_ssl_url") or metadata.get("liveUrl")
+    metadata["liveUrl"] = live_url
+    metadata["providerUrl"] = metadata.get("providerUrl") or live_url
+    write_deploy_metadata(metadata)
+    return {
+        "provider": "netlify",
+        "liveUrl": live_url,
+        "providerUrl": metadata.get("providerUrl") or live_url,
+        "message": "Netlify deploy completed." if deploy_state == "ready" else "Netlify accepted the deploy and is still processing.",
+    }
+
+
+def deploy_to_vercel(metadata: dict[str, Any], token: str) -> dict[str, Any]:
+    vercel = metadata.get("vercel") or {}
+    project_name = vercel.get("projectName") or metadata.get("projectName")
+    if not project_name:
+        raise RuntimeError("Vercel deployment metadata is missing projectName.")
+
+    zip_bytes = build_project_zip_for_deploy()
+    deploy_body = {
+        "name": project_name,
+        "project": project_name,
+        "target": "production",
+        "files": vercel_files_from_zip(zip_bytes),
+        "projectSettings": {
+            "framework": None,
+            "buildCommand": None,
+            "devCommand": None,
+            "installCommand": None,
+            "outputDirectory": None,
+        },
+        "meta": {"source": "quiztool-admin-dashboard"},
+    }
+    status, deploy_data = vercel_request(
+        "POST",
+        "/v13/deployments?forceNew=1&skipAutoDetectionConfirmation=1",
+        token,
+        json_data=deploy_body,
+        timeout=180,
+    )
+    if status not in (200, 201) or not deploy_data:
+        err = (deploy_data or {}).get("error") or {}
+        raise RuntimeError(err.get("message") or (deploy_data or {}).get("message", "Failed to create Vercel deployment."))
+
+    deployment_id = deploy_data.get("id")
+    ready_state = deploy_data.get("readyState") or deploy_data.get("status")
+    if deployment_id and ready_state not in {"READY", "ERROR", "CANCELED"}:
+        deadline = time.time() + 90
+        while time.time() < deadline:
+            time.sleep(2)
+            poll_status, poll_data = vercel_request("GET", f"/v13/deployments/{deployment_id}", token, timeout=20)
+            if poll_status == 200 and poll_data:
+                deploy_data = poll_data
+                ready_state = poll_data.get("readyState") or poll_data.get("status")
+                if ready_state in {"READY", "ERROR", "CANCELED"}:
+                    break
+    if ready_state == "ERROR":
+        raise RuntimeError(deploy_data.get("errorMessage") or deploy_data.get("errorCode") or "Vercel deployment failed.")
+    if ready_state == "CANCELED":
+        raise RuntimeError("Vercel deployment was canceled.")
+
+    raw_url = deploy_data.get("url") or deploy_data.get("aliasFinal") or ""
+    live_url = raw_url if raw_url.startswith("http") else f"https://{raw_url}"
+    provider_url = deploy_data.get("inspectorUrl") or live_url
+    metadata["liveUrl"] = live_url
+    metadata["providerUrl"] = provider_url
+    metadata.setdefault("vercel", {})["deploymentUrl"] = live_url
+    write_deploy_metadata(metadata)
+    return {
+        "provider": "vercel",
+        "liveUrl": live_url,
+        "providerUrl": provider_url,
+        "message": "Vercel deploy completed." if ready_state == "READY" else "Vercel accepted the deployment and is still building.",
+    }
+
+
 def build_summary() -> dict[str, Any]:
     files = collect_file_records()
     quiz_count = sum(1 for file in files if file["type"] == "quiz")
@@ -4380,9 +4895,82 @@ def get_project_state() -> Any:
             "projectName": get_project_name(),
             "summary": build_summary(),
             "git": get_git_status(),
+            "deploy": get_deploy_metadata(),
             "builtinTools": get_builtin_tools(),
         }
     )
+
+
+@app.get("/admin/deploy-info")
+def deploy_info() -> Any:
+    metadata = get_deploy_metadata()
+    return jsonify({
+        "configured": bool(metadata),
+        "deploy": metadata,
+        "git": get_git_status(),
+    })
+
+
+@app.post("/admin/provider-verify")
+def provider_verify() -> Any:
+    payload = request.get_json(silent=True) or {}
+    provider = str(payload.get("provider", "")).strip().lower()
+    token = str(payload.get("token", "")).strip()
+    if provider not in {"github", "netlify", "vercel"}:
+        return jsonify({"message": "Provider must be github, netlify, or vercel."}), 400
+    if not token:
+        return jsonify({"message": "Token is required."}), 400
+    ok, message = verify_provider_token(provider, token)
+    if not ok:
+        return jsonify({"message": message}), 401
+    return jsonify({"message": f"{provider.title()} token verified.", "provider": provider})
+
+
+@app.post("/admin/provider-deploy")
+def provider_deploy() -> Any:
+    payload = request.get_json(silent=True) or {}
+    provider = str(payload.get("provider", "")).strip().lower()
+    token = str(payload.get("token", "")).strip()
+    commit_message = str(payload.get("message", "")).strip() or "Update quiz project files"
+    metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else get_deploy_metadata()
+
+    if provider not in {"github", "netlify", "vercel"}:
+        return jsonify({"message": "Provider must be github, netlify, or vercel."}), 400
+    if not token:
+        return jsonify({"message": "Token is required."}), 400
+    if not metadata:
+        return jsonify({"message": "Deployment metadata is missing. Configure a provider before deploying."}), 400
+    metadata["provider"] = provider
+
+    ok, verify_message = verify_provider_token(provider, token)
+    if not ok:
+        return jsonify({"message": verify_message}), 401
+
+    sync_result = run_subprocess([sys.executable, str(SYNC_SCRIPT)], cwd=PROJECT_ROOT) if SYNC_SCRIPT.exists() else None
+    if sync_result and sync_result.returncode != 0:
+        return jsonify({
+            "message": "Sync failed before deploy.",
+            "output": (sync_result.stdout or sync_result.stderr).strip(),
+        }), 500
+
+    try:
+        if provider == "github":
+            result = deploy_to_github(metadata, token, commit_message)
+            write_deploy_metadata(metadata)
+        elif provider == "netlify":
+            result = deploy_to_netlify(metadata, token)
+        else:
+            result = deploy_to_vercel(metadata, token)
+    except Exception as exc:
+        return jsonify({"message": str(exc)}), 500
+
+    return jsonify({
+        "message": result.get("message", "Deploy completed."),
+        "provider": provider,
+        "liveUrl": result.get("liveUrl"),
+        "providerUrl": result.get("providerUrl"),
+        "syncOutput": sync_result.stdout.strip() if sync_result else "",
+    })
 
 
 @app.get("/admin/load-file")
@@ -4789,6 +5377,9 @@ def root_index() -> Any:
 
 @app.get("/<path:filename>")
 def static_files(filename: str) -> Any:
+    normalized = normalize_rel_path(filename)
+    if any(part.startswith(".") or part in SKIP_DIRS for part in Path(normalized).parts):
+        return jsonify({"message": "Unsupported asset type."}), 404
     candidate = (PROJECT_ROOT / filename).resolve()
     if not is_relative_to(candidate, PROJECT_ROOT):
         return jsonify({"message": "Invalid path."}), 400

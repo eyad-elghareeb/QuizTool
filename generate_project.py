@@ -24,6 +24,7 @@ import tempfile
 import shutil
 import subprocess
 import re
+import base64
 from pathlib import Path
 from flask import Flask, render_template_string, request, send_file, jsonify, send_from_directory
 
@@ -635,6 +636,42 @@ jobs:
         uses: actions/deploy-pages@v5
 '''
 
+NETLIFY_TOML = '''# Netlify static deploy configuration for QuizTool-generated sites.
+# The generator deploys the project root directly, with no build step.
+[build]
+  publish = "."
+  command = ""
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+'''
+
+VERCEL_JSON = '''{
+  "version": 2,
+  "headers": [
+    {
+      "source": "/sw.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache" }
+      ]
+    },
+    {
+      "source": "/manifest.webmanifest",
+      "headers": [
+        { "key": "Content-Type", "value": "application/manifest+json" }
+      ]
+    }
+  ]
+}
+'''
+
 GITIGNORE_CONTENT = '''# Compiled and build artifacts
 *.pyc
 __pycache__/
@@ -696,6 +733,7 @@ target/
 
 # Local helpers
 admin-dashboard.bat
+.quiztool/
 .qwen/
 '''
 
@@ -805,7 +843,9 @@ def build_project_zip(config):
         'sync-engine.js',
         'tracker-map.json',
         'favicon.svg',
-        'manifest.webmanifest'
+        'manifest.webmanifest',
+        'netlify.toml',
+        'vercel.json'
     ]
     
     # Add icon files
@@ -895,6 +935,8 @@ def build_project_zip(config):
         zf.writestr('favicon.svg', FAVICON_SVG)
         zf.writestr('sw.js', sw_js_content)  # Use dynamically generated sw.js
         zf.writestr('manifest.webmanifest', MANIFEST_JSON(project_name))
+        zf.writestr('netlify.toml', NETLIFY_TOML)
+        zf.writestr('vercel.json', VERCEL_JSON)
 
         # --- Tracker Map (UID mapping) ---
         # Generate initial tracker map based on configured quizzes
@@ -1146,6 +1188,116 @@ def _gh_request(method, path, token, json_data=None, timeout=30):
         return 0, {'message': str(e)}
 
 
+def _http_json_request(method, url, token=None, json_data=None, body=None, headers=None, timeout=60):
+    """Make a JSON-oriented HTTPS request with optional bearer token auth."""
+    import urllib.request
+    import urllib.error
+
+    req_headers = {
+        'User-Agent': 'QuizTool-Generator'
+    }
+    if token:
+        req_headers['Authorization'] = f'Bearer {token}'
+    if headers:
+        req_headers.update(headers)
+
+    req_body = body
+    if json_data is not None:
+        req_body = json.dumps(json_data).encode('utf-8')
+        req_headers['Content-Type'] = 'application/json'
+
+    req = urllib.request.Request(url, data=req_body, headers=req_headers, method=method)
+
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            resp_data = resp.read()
+            text = resp_data.decode('utf-8') if resp_data else ''
+            try:
+                parsed = json.loads(text) if text else None
+            except Exception:
+                parsed = {'message': text}
+            return resp.status, parsed
+    except urllib.error.HTTPError as e:
+        resp_data = e.read().decode('utf-8') if e.fp else ''
+        try:
+            return e.code, json.loads(resp_data)
+        except Exception:
+            return e.code, {'message': resp_data}
+    except Exception as e:
+        return 0, {'message': str(e)}
+
+
+def _netlify_request(method, path, token, json_data=None, body=None, content_type=None, timeout=60):
+    headers = {}
+    if content_type:
+        headers['Content-Type'] = content_type
+    return _http_json_request(
+        method,
+        f'https://api.netlify.com/api/v1{path}',
+        token=token,
+        json_data=json_data,
+        body=body,
+        headers=headers,
+        timeout=timeout
+    )
+
+
+def _vercel_request(method, path, token, json_data=None, timeout=60):
+    return _http_json_request(
+        method,
+        f'https://api.vercel.com{path}',
+        token=token,
+        json_data=json_data,
+        timeout=timeout
+    )
+
+
+def _safe_project_slug(project_name, fallback='quiz-project'):
+    """Create a hosting-safe slug while preserving readable project names."""
+    slug = re.sub(r'[^a-zA-Z0-9._-]', '-', project_name or '').strip('-._').lower()
+    slug = re.sub(r'-{2,}', '-', slug)
+    return slug or fallback
+
+
+def _write_deploy_metadata(project_dir, metadata):
+    """Persist non-secret provider deployment metadata for the admin dashboard."""
+    deploy_dir = Path(project_dir) / '.quiztool'
+    deploy_dir.mkdir(parents=True, exist_ok=True)
+    deploy_path = deploy_dir / 'deploy.json'
+    deploy_path.write_text(json.dumps(metadata, indent=2), encoding='utf-8')
+
+
+def _save_zip_to_project_dir(zip_buf, project_name):
+    """Extract an already-built ZIP into the persistent local project directory."""
+    safe_name = _safe_project_slug(project_name)
+    project_dir = _get_projects_dir() / safe_name
+    os.makedirs(project_dir, exist_ok=True)
+
+    zip_buf.seek(0)
+    with zipfile.ZipFile(zip_buf, 'r') as zf:
+        zf.extractall(project_dir)
+
+    _active_projects[safe_name] = {'path': str(project_dir), 'admin_pid': None}
+    return str(project_dir)
+
+
+def _zip_entries_for_vercel(zip_buf):
+    """Convert a generated project ZIP into Vercel's inline file payload."""
+    files = []
+    zip_buf.seek(0)
+    with zipfile.ZipFile(zip_buf, 'r') as zf:
+        for info in zf.infolist():
+            if info.is_dir():
+                continue
+            content = zf.read(info.filename)
+            files.append({
+                'file': info.filename.replace('\\', '/'),
+                'data': base64.b64encode(content).decode('ascii'),
+                'encoding': 'base64'
+            })
+    return files
+
+
 def _get_projects_dir():
     """Get the directory where generated projects are stored.
 
@@ -1389,8 +1541,8 @@ def preview():
         return total_folders, total_quizzes
 
     total_folders, total_quizzes = count_items(folders)
-    # engines(3) + sw + manifest + favicon + icons(6) + root index + folder indexes + scripts(3) + workflows(2) + gitignore + quiz-engine-test
-    estimated_files = 16 + total_folders + total_quizzes
+    # engines/styles + sw + manifest + favicon + icons + provider configs + root index + folder indexes + scripts + workflows + gitignore + optional test page
+    estimated_files = 18 + total_folders + total_quizzes
     return jsonify({
         'project_name': config.get('project_name', ''),
         'total_folders': total_folders,
@@ -1548,6 +1700,18 @@ def github_publish():
     repo_url = f'https://github.com/{username}/{repo_name}'
     pages_url = f'https://{username}.github.io/{repo_name}/'
 
+    _write_deploy_metadata(project_dir, {
+        'provider': 'github',
+        'projectName': repo_name,
+        'liveUrl': pages_url,
+        'providerUrl': repo_url,
+        'github': {
+            'owner': username,
+            'repo': repo_name,
+            'branch': 'main'
+        }
+    })
+
     result = {
         'ok': True,
         'repo_url': repo_url,
@@ -1559,6 +1723,275 @@ def github_publish():
     if pages_warning:
         result['pages_warning'] = pages_warning
 
+    return jsonify(result)
+
+
+# ── Netlify Auth / Publish ──
+
+@app.route('/api/netlify/verify', methods=['POST'])
+def netlify_verify():
+    """Verify a Netlify personal access token and return user info."""
+    token = request.json.get('token', '').strip()
+    if not token:
+        return jsonify({'ok': False, 'error': 'Token is required'}), 400
+
+    status, data = _netlify_request('GET', '/user', token, timeout=15)
+    if status != 200 or not data:
+        msg = data.get('message', 'Invalid Netlify token') if data else 'Invalid Netlify token'
+        return jsonify({'ok': False, 'error': msg}), 401
+
+    display_name = data.get('full_name') or data.get('name') or data.get('email') or data.get('slug') or 'Netlify user'
+    username = data.get('slug') or data.get('email') or display_name
+
+    return jsonify({
+        'ok': True,
+        'username': username,
+        'name': display_name,
+        'avatar': data.get('avatar_url', ''),
+        'email': data.get('email', '')
+    })
+
+
+@app.route('/api/netlify/publish', methods=['POST'])
+def netlify_publish():
+    """Create a Netlify site and deploy the generated project ZIP through the API."""
+    payload = request.json
+    token = payload.get('token', '').strip()
+    config = payload.get('config', {})
+
+    if not token:
+        return jsonify({'ok': False, 'error': 'Token is required'}), 400
+    if not config.get('project_name'):
+        return jsonify({'ok': False, 'error': 'Project name is required'}), 400
+
+    # Verify token first so provider errors are clearer.
+    status, user_data = _netlify_request('GET', '/user', token, timeout=15)
+    if status != 200 or not user_data:
+        return jsonify({'ok': False, 'error': 'Invalid Netlify token'}), 401
+
+    import secrets
+    import time
+
+    requested_name = _safe_project_slug(config.get('project_name'))
+    site_name = requested_name
+    create_body = {'name': site_name}
+    status, site_data = _netlify_request('POST', '/sites', token, json_data=create_body, timeout=30)
+
+    if status in (400, 409, 422):
+        # Netlify site names are global. Keep the flow seamless by retrying once
+        # with a short suffix instead of making the user rename the project.
+        site_name = f'{requested_name}-{secrets.token_hex(3)}'
+        status, site_data = _netlify_request('POST', '/sites', token, json_data={'name': site_name}, timeout=30)
+
+    if status not in (200, 201) or not site_data:
+        msg = site_data.get('message', 'Failed to create Netlify site') if site_data else 'Failed to create Netlify site'
+        return jsonify({'ok': False, 'error': msg}), status if status else 500
+
+    site_id = site_data.get('id') or site_data.get('site_id') or site_data.get('name')
+    if not site_id:
+        return jsonify({'ok': False, 'error': 'Netlify did not return a site ID'}), 500
+
+    zip_buf = build_project_zip(config)
+    project_dir = _save_zip_to_project_dir(zip_buf, config.get('project_name', site_name))
+
+    zip_bytes = zip_buf.getvalue()
+    deploy_status, deploy_data = _netlify_request(
+        'POST',
+        f'/sites/{site_id}/deploys',
+        token,
+        body=zip_bytes,
+        content_type='application/zip',
+        timeout=120
+    )
+
+    if deploy_status not in (200, 201) or not deploy_data:
+        msg = deploy_data.get('message', 'Failed to upload ZIP deploy to Netlify') if deploy_data else 'Failed to upload ZIP deploy to Netlify'
+        return jsonify({'ok': False, 'project_dir': project_dir, 'error': msg}), deploy_status if deploy_status else 500
+
+    deploy_id = deploy_data.get('id')
+    deploy_state = deploy_data.get('state')
+    publish_warning = None
+
+    if deploy_id and deploy_state != 'ready':
+        deadline = time.time() + 90
+        while time.time() < deadline:
+            time.sleep(2)
+            poll_status, poll_data = _netlify_request('GET', f'/deploys/{deploy_id}', token, timeout=20)
+            if poll_status == 200 and poll_data:
+                deploy_data = poll_data
+                deploy_state = poll_data.get('state')
+                if deploy_state == 'ready':
+                    break
+                if deploy_state in ('error', 'failed'):
+                    msg = poll_data.get('error_message') or poll_data.get('message') or 'Netlify deploy failed'
+                    return jsonify({'ok': False, 'project_dir': project_dir, 'error': msg}), 500
+        if deploy_state != 'ready':
+            publish_warning = 'Netlify accepted the deploy, but it is still processing. The live URL should start working shortly.'
+
+    live_url = (
+        deploy_data.get('ssl_url') or
+        deploy_data.get('deploy_ssl_url') or
+        site_data.get('ssl_url') or
+        site_data.get('url') or
+        f'https://{site_name}.netlify.app'
+    )
+    admin_url = site_data.get('admin_url') or f'https://app.netlify.com/sites/{site_name}/overview'
+
+    _write_deploy_metadata(project_dir, {
+        'provider': 'netlify',
+        'projectName': site_name,
+        'liveUrl': live_url,
+        'providerUrl': admin_url,
+        'netlify': {
+            'siteId': site_id,
+            'siteName': site_name
+        }
+    })
+
+    result = {
+        'ok': True,
+        'provider': 'netlify',
+        'site_name': site_name,
+        'live_url': live_url,
+        'provider_url': admin_url,
+        'provider_label': 'Netlify Site',
+        'project_dir': project_dir
+    }
+    if publish_warning:
+        result['publish_warning'] = publish_warning
+    return jsonify(result)
+
+
+# ── Vercel Auth / Publish ──
+
+@app.route('/api/vercel/verify', methods=['POST'])
+def vercel_verify():
+    """Verify a Vercel access token and return user info."""
+    token = request.json.get('token', '').strip()
+    if not token:
+        return jsonify({'ok': False, 'error': 'Token is required'}), 400
+
+    status, data = _vercel_request('GET', '/v2/user', token, timeout=15)
+    if status != 200 or not data:
+        msg = data.get('error', {}).get('message') or data.get('message', 'Invalid Vercel token') if data else 'Invalid Vercel token'
+        return jsonify({'ok': False, 'error': msg}), 401
+
+    user = data.get('user', data)
+    avatar = user.get('avatar', '')
+    if avatar and not avatar.startswith('http'):
+        avatar = f'https://vercel.com/api/www/avatar/{avatar}'
+
+    return jsonify({
+        'ok': True,
+        'username': user.get('username') or user.get('email') or user.get('id', ''),
+        'name': user.get('name') or user.get('username') or user.get('email') or 'Vercel user',
+        'avatar': avatar,
+        'email': user.get('email', '')
+    })
+
+
+@app.route('/api/vercel/publish', methods=['POST'])
+def vercel_publish():
+    """Create a production Vercel deployment directly from generated files."""
+    payload = request.json
+    token = payload.get('token', '').strip()
+    config = payload.get('config', {})
+
+    if not token:
+        return jsonify({'ok': False, 'error': 'Token is required'}), 400
+    if not config.get('project_name'):
+        return jsonify({'ok': False, 'error': 'Project name is required'}), 400
+
+    status, user_data = _vercel_request('GET', '/v2/user', token, timeout=15)
+    if status != 200 or not user_data:
+        return jsonify({'ok': False, 'error': 'Invalid Vercel token'}), 401
+
+    import time
+
+    project_name = _safe_project_slug(config.get('project_name'))
+    zip_buf = build_project_zip(config)
+    project_dir = _save_zip_to_project_dir(zip_buf, config.get('project_name', project_name))
+    vercel_files = _zip_entries_for_vercel(zip_buf)
+
+    deploy_body = {
+        'name': project_name,
+        'project': project_name,
+        'target': 'production',
+        'files': vercel_files,
+        'projectSettings': {
+            'framework': None,
+            'buildCommand': None,
+            'devCommand': None,
+            'installCommand': None,
+            'outputDirectory': None
+        },
+        'meta': {
+            'source': 'quiztool-generator'
+        }
+    }
+
+    deploy_status, deploy_data = _vercel_request(
+        'POST',
+        '/v13/deployments?forceNew=1&skipAutoDetectionConfirmation=1',
+        token,
+        json_data=deploy_body,
+        timeout=180
+    )
+
+    if deploy_status not in (200, 201) or not deploy_data:
+        err = deploy_data.get('error', {}) if deploy_data else {}
+        msg = err.get('message') or deploy_data.get('message', 'Failed to create Vercel deployment') if deploy_data else 'Failed to create Vercel deployment'
+        return jsonify({'ok': False, 'project_dir': project_dir, 'error': msg}), deploy_status if deploy_status else 500
+
+    deployment_id = deploy_data.get('id')
+    ready_state = deploy_data.get('readyState') or deploy_data.get('status')
+    publish_warning = None
+
+    if deployment_id and ready_state not in ('READY', 'ERROR', 'CANCELED'):
+        deadline = time.time() + 90
+        while time.time() < deadline:
+            time.sleep(2)
+            poll_status, poll_data = _vercel_request('GET', f'/v13/deployments/{deployment_id}', token, timeout=20)
+            if poll_status == 200 and poll_data:
+                deploy_data = poll_data
+                ready_state = poll_data.get('readyState') or poll_data.get('status')
+                if ready_state in ('READY', 'ERROR', 'CANCELED'):
+                    break
+
+    if ready_state == 'ERROR':
+        msg = deploy_data.get('errorMessage') or deploy_data.get('errorCode') or 'Vercel deployment failed'
+        return jsonify({'ok': False, 'project_dir': project_dir, 'error': msg}), 500
+    if ready_state == 'CANCELED':
+        return jsonify({'ok': False, 'project_dir': project_dir, 'error': 'Vercel deployment was canceled'}), 500
+    if ready_state != 'READY':
+        publish_warning = 'Vercel accepted the deployment, but it is still building. The live URL should start working shortly.'
+
+    raw_url = deploy_data.get('url') or deploy_data.get('aliasFinal') or ''
+    live_url = raw_url if raw_url.startswith('http') else f'https://{raw_url}'
+    provider_url = deploy_data.get('inspectorUrl') or live_url
+
+    _write_deploy_metadata(project_dir, {
+        'provider': 'vercel',
+        'projectName': project_name,
+        'liveUrl': live_url,
+        'providerUrl': provider_url,
+        'vercel': {
+            'projectName': project_name,
+            'deploymentUrl': live_url
+        }
+    })
+
+    result = {
+        'ok': True,
+        'provider': 'vercel',
+        'site_name': project_name,
+        'live_url': live_url,
+        'provider_url': provider_url,
+        'provider_label': 'Vercel Deployment',
+        'project_dir': project_dir
+    }
+    if publish_warning:
+        result['publish_warning'] = publish_warning
     return jsonify(result)
 
 

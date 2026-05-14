@@ -17,6 +17,7 @@ document.head.appendChild(s)})();
 :root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2330;--border:#30363d;--text:#e6edf3;--text-muted:#8b949e;--accent:#f0a500;--accent-dim:rgba(240,165,0,0.12);--correct:#2ea043;--correct-bg:rgba(46,160,67,0.12);--wrong:#da3633;--wrong-bg:rgba(218,54,51,0.12);--flagged:#58a6ff;--flagged-bg:rgba(88,166,255,0.12);--radius:12px;--shadow:0 4px 24px rgba(0,0,0,0.4);--transition:0.2s ease-out}
 [data-theme="light"]{--bg:#f3f0eb;--surface:#fff;--surface2:#f8f6f1;--border:#d0ccc5;--text:#1c1917;--text-muted:#78716c;--accent:#c27803;--accent-dim:rgba(194,120,3,0.10);--shadow:0 4px 24px rgba(0,0,0,0.10)}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
 html,body{min-height:100%}
 body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;transition:background var(--transition),color var(--transition)}
 
@@ -145,6 +146,11 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);line
 .stat-item .sl{font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em}
 
 /* ── GitHub Section ── */
+.provider-grid{display:block}
+.provider-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:1rem}
+.provider-card[hidden]{display:none}
+.provider-card h3{font-size:1rem;margin-bottom:0.5rem}
+.provider-card p{font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem;line-height:1.5}
 .gh-user{display:flex;align-items:center;gap:1rem;padding:1rem;background:var(--surface2);border:1px solid var(--border);border-radius:12px;margin-bottom:1rem}
 .gh-avatar{width:48px;height:48px;border-radius:50%;border:2px solid var(--accent)}
 .gh-user-info{flex:1}
@@ -255,7 +261,7 @@ if ('serviceWorker' in navigator) {
       <h2>⚙️ Project Configuration</h2>
       <div class="form-row">
         <div class="form-group">
-          <label>Project Name <span class="tip" data-tip="Used as the ZIP filename and GitHub repo name. Lowercase letters, numbers, and hyphens only.">?</span></label>
+          <label>Project Name <span class="tip" data-tip="Used as the ZIP filename and hosting project name. Lowercase letters, numbers, and hyphens only.">?</span></label>
           <input type="text" id="project-name" value="MyQuizProject" oninput="onProjectNameChange()">
           <div class="validation-msg" id="val-project-name"></div>
         </div>
@@ -329,34 +335,106 @@ if ('serviceWorker' in navigator) {
   <!-- ═══════ STEP 3: Publish ═══════ -->
   <div class="step-panel" id="step-3">
     <h1 style="font-family:'Playfair Display',serif;font-size:clamp(1.6rem,4vw,2.2rem);margin:1rem 0 0.3rem">Publish Your <span style="color:var(--accent)">Site</span></h1>
-    <p style="color:var(--text-muted);margin-bottom:1.5rem">Download the project ZIP or publish directly to GitHub Pages.</p>
+    <p style="color:var(--text-muted);margin-bottom:1.5rem">Download the project ZIP or publish directly to GitHub Pages, Netlify, or Vercel from this GUI.</p>
 
-    <!-- GitHub Auth Section -->
-    <div class="section" id="gh-auth-section">
-      <h2>🔑 Connect GitHub</h2>
-      <div id="gh-login-panel">
-        <div class="info-box info">
-          Sign in with a GitHub Personal Access Token (PAT) to publish your site in one click.
-          <a href="https://github.com/settings/tokens/new?description=QuizTool%20Generator&scopes=repo,workflow" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;text-decoration:underline">Create a token →</a>
-          <br><span style="opacity:0.8;font-size:0.75rem">Required scopes: <code>repo</code>, <code>workflow</code></span>
-        </div>
-        <div class="form-group">
-          <label>Personal Access Token <span class="tip" data-tip="Your token is used only during this session and is never saved or logged.">?</span></label>
-          <div style="display:flex;gap:0.5rem">
-            <input type="password" id="gh-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="flex:1" onkeydown="if(event.key==='Enter')githubLogin()">
-            <button class="btn btn-primary" onclick="githubLogin()" id="btn-gh-login">Sign In</button>
-          </div>
-          <div class="validation-msg" id="val-gh-token"></div>
-        </div>
+    <!-- Provider Auth Section -->
+    <div class="section" id="provider-auth-section">
+      <h2>🔑 Choose Provider</h2>
+      <div class="info-box info">
+        Pick one publish target to keep this step focused. Only the selected provider's sign-in and deploy action will be shown.
       </div>
-      <div id="gh-user-panel" style="display:none">
-        <div class="gh-user">
-          <img class="gh-avatar" id="gh-avatar" src="" alt="Avatar">
-          <div class="gh-user-info">
-            <div class="gh-username" id="gh-display-name"></div>
-            <div class="gh-repos"><span id="gh-username-text"></span> · <span id="gh-repos-count"></span> public repos</div>
+      <div class="form-group">
+        <label>Deploy Provider <span class="tip" data-tip="Pick one provider for this publish flow. You can still download a ZIP anytime.">?</span></label>
+        <select id="deploy-provider-select" onchange="setSelectedProvider(this.value)">
+          <option value="github">GitHub Pages</option>
+          <option value="netlify">Netlify</option>
+          <option value="vercel">Vercel</option>
+        </select>
+      </div>
+      <div class="provider-grid">
+        <div class="provider-card" id="gh-auth-section">
+          <h3>🔵 GitHub Pages</h3>
+          <p>Creates a repo, pushes the generated project, and enables GitHub Pages through Actions.</p>
+          <div id="gh-login-panel">
+            <div class="info-box info">
+              <a href="https://github.com/settings/tokens/new?description=QuizTool%20Generator&scopes=repo,workflow" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;text-decoration:underline">Create a GitHub token →</a>
+              <br><span style="opacity:0.8;font-size:0.75rem">Required scopes: <code>repo</code>, <code>workflow</code></span>
+            </div>
+            <div class="form-group">
+              <label>GitHub PAT <span class="tip" data-tip="Your token is used only during this session and is never saved or logged.">?</span></label>
+              <div style="display:flex;gap:0.5rem">
+                <input type="password" id="gh-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="flex:1" onkeydown="if(event.key==='Enter')githubLogin()">
+                <button class="btn btn-primary" onclick="githubLogin()" id="btn-gh-login">Sign In</button>
+              </div>
+              <div class="validation-msg" id="val-gh-token"></div>
+            </div>
           </div>
-          <button class="gh-disconnect" onclick="githubLogout()">Disconnect</button>
+          <div id="gh-user-panel" style="display:none">
+            <div class="gh-user">
+              <img class="gh-avatar" id="gh-avatar" src="" alt="Avatar">
+              <div class="gh-user-info">
+                <div class="gh-username" id="gh-display-name"></div>
+                <div class="gh-repos"><span id="gh-username-text"></span> · <span id="gh-repos-count"></span> public repos</div>
+              </div>
+              <button class="gh-disconnect" onclick="githubLogout()">Disconnect</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="provider-card" id="netlify-auth-section">
+          <h3>🟢 Netlify</h3>
+          <p>Creates a Netlify site and uploads the generated project as a production ZIP deploy.</p>
+          <div id="netlify-login-panel">
+            <div class="info-box info">
+              <a href="https://app.netlify.com/user/applications#personal-access-tokens" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;text-decoration:underline">Create a Netlify token →</a>
+            </div>
+            <div class="form-group">
+              <label>Netlify PAT <span class="tip" data-tip="Your Netlify token stays in this browser session only and is sent only to the local generator server.">?</span></label>
+              <div style="display:flex;gap:0.5rem">
+                <input type="password" id="netlify-token" placeholder="nfp_xxxxxxxxxxxxxxxxxxxx" style="flex:1" onkeydown="if(event.key==='Enter')netlifyLogin()">
+                <button class="btn btn-primary" onclick="netlifyLogin()" id="btn-netlify-login">Sign In</button>
+              </div>
+              <div class="validation-msg" id="val-netlify-token"></div>
+            </div>
+          </div>
+          <div id="netlify-user-panel" style="display:none">
+            <div class="gh-user">
+              <img class="gh-avatar" id="netlify-avatar" src="" alt="Avatar">
+              <div class="gh-user-info">
+                <div class="gh-username" id="netlify-display-name"></div>
+                <div class="gh-repos" id="netlify-username-text"></div>
+              </div>
+              <button class="gh-disconnect" onclick="netlifyLogout()">Disconnect</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="provider-card" id="vercel-auth-section">
+          <h3>⚫ Vercel</h3>
+          <p>Creates a production Vercel deployment directly from the generated static files.</p>
+          <div id="vercel-login-panel">
+            <div class="info-box info">
+              <a href="https://vercel.com/account/settings/tokens" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;text-decoration:underline">Create a Vercel token →</a>
+            </div>
+            <div class="form-group">
+              <label>Vercel Token <span class="tip" data-tip="Your Vercel token stays in this browser session only and is sent only to the local generator server.">?</span></label>
+              <div style="display:flex;gap:0.5rem">
+                <input type="password" id="vercel-token" placeholder="xxxxxxxxxxxxxxxxxxxx" style="flex:1" onkeydown="if(event.key==='Enter')vercelLogin()">
+                <button class="btn btn-primary" onclick="vercelLogin()" id="btn-vercel-login">Sign In</button>
+              </div>
+              <div class="validation-msg" id="val-vercel-token"></div>
+            </div>
+          </div>
+          <div id="vercel-user-panel" style="display:none">
+            <div class="gh-user">
+              <img class="gh-avatar" id="vercel-avatar" src="" alt="Avatar">
+              <div class="gh-user-info">
+                <div class="gh-username" id="vercel-display-name"></div>
+                <div class="gh-repos" id="vercel-username-text"></div>
+              </div>
+              <button class="gh-disconnect" onclick="vercelLogout()">Disconnect</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -377,7 +455,7 @@ if ('serviceWorker' in navigator) {
     <div class="section">
       <h2>🚀 Deploy</h2>
       <div style="display:flex;gap:1rem;flex-wrap:wrap">
-        <button class="btn btn-primary" onclick="githubPublish()" id="btn-publish" disabled style="flex:1;min-width:200px">
+        <button class="btn btn-primary" onclick="publishSelectedProvider()" id="btn-selected-publish" disabled style="flex:1;min-width:200px">
           🔵 Publish to GitHub Pages
         </button>
         <button class="btn btn-secondary" onclick="downloadZip()" style="flex:1;min-width:200px">
@@ -422,10 +500,10 @@ if ('serviceWorker' in navigator) {
       <div class="success-panel">
         <div class="success-icon">🎉</div>
         <h2 style="border:none;padding:0;margin-bottom:0.5rem">Your Quiz Site is Live!</h2>
-        <p style="color:var(--text-muted);margin-bottom:1rem">It may take 1–2 minutes for GitHub Pages to build and deploy.</p>
+        <p id="success-note" style="color:var(--text-muted);margin-bottom:1rem">It may take a minute for the provider CDN to finish warming up.</p>
         <div class="info-box warn" id="pages-warning" style="display:none;margin-bottom:1rem"></div>
         <a class="success-url" id="live-url" href="#" target="_blank" rel="noopener"></a>
-        <p style="color:var(--text-muted);font-size:0.8rem;margin-top:0.25rem">Repository: <a id="repo-url" href="#" target="_blank" rel="noopener" style="color:var(--accent)"></a></p>
+        <p style="color:var(--text-muted);font-size:0.8rem;margin-top:0.25rem"><span id="provider-url-label">Provider</span>: <a id="repo-url" href="#" target="_blank" rel="noopener" style="color:var(--accent)"></a></p>
         <div class="success-actions">
           <button class="btn btn-primary" onclick="launchAdmin()">🛠️ Open Admin Dashboard</button>
           <button class="btn btn-secondary" onclick="copyLiveUrl()">📋 Copy Live URL</button>
@@ -467,7 +545,12 @@ let droppedFilesContent = {};
 let currentStep = 1;
 let ghToken = '';
 let ghUser = null;
+let netlifyToken = '';
+let netlifyUser = null;
+let vercelToken = '';
+let vercelUser = null;
 let lastProjectDir = '';
+let selectedProvider = 'github';
 
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
@@ -1045,169 +1128,221 @@ function updateStats() {
     return { folders: totalFolders, quizzes: totalQuizzes };
   }
   const counts = countItems(config.folders);
-  const baseFiles = 16;
+  const baseFiles = 18;
   $('stat-folders').textContent = counts.folders;
   $('stat-quizzes').textContent = counts.quizzes;
   $('stat-files').textContent = baseFiles + 1 + counts.folders + counts.quizzes;
 }
 
 /* ═══════════════════════════════════════════
-   GitHub Login / Logout
+   Provider Login / Logout
    ═══════════════════════════════════════════ */
-async function githubLogin() {
-  const token = $('gh-token').value.trim();
-  if (!token) {
-    showValidation('gh-token', 'Please enter your Personal Access Token');
-    return;
+const PROVIDERS = {
+  github: {
+    name: 'GitHub', tokenVar: () => ghToken, setToken: v => { ghToken = v; },
+    userVar: () => ghUser, setUser: v => { ghUser = v; },
+    tokenInput: 'gh-token', tokenValidation: 'gh-token', loginBtn: 'btn-gh-login', publishBtn: 'btn-selected-publish',
+    loginPanel: 'gh-login-panel', userPanel: 'gh-user-panel', avatar: 'gh-avatar',
+    displayName: 'gh-display-name', usernameText: 'gh-username-text',
+    verifyUrl: '/api/github/verify', publishUrl: '/api/github/publish',
+    publishLabel: '🔵 Publish to GitHub Pages', publishingLabel: 'Publishing to GitHub...',
+    successNote: 'It may take 1–2 minutes for GitHub Pages to build and deploy.',
+    providerLabel: 'Repository',
+    steps: ['Verifying GitHub account', 'Creating repository', 'Pushing project files', 'Enabling GitHub Pages', 'Site goes live!']
+  },
+  netlify: {
+    name: 'Netlify', tokenVar: () => netlifyToken, setToken: v => { netlifyToken = v; },
+    userVar: () => netlifyUser, setUser: v => { netlifyUser = v; },
+    tokenInput: 'netlify-token', tokenValidation: 'netlify-token', loginBtn: 'btn-netlify-login', publishBtn: 'btn-selected-publish',
+    loginPanel: 'netlify-login-panel', userPanel: 'netlify-user-panel', avatar: 'netlify-avatar',
+    displayName: 'netlify-display-name', usernameText: 'netlify-username-text',
+    verifyUrl: '/api/netlify/verify', publishUrl: '/api/netlify/publish',
+    publishLabel: '🟢 Publish to Netlify', publishingLabel: 'Publishing to Netlify...',
+    successNote: 'Netlify deploys usually go live within seconds; CDN propagation can take a short moment.',
+    providerLabel: 'Netlify Site',
+    steps: ['Verifying Netlify account', 'Creating Netlify site', 'Uploading ZIP deploy', 'Waiting for deploy', 'Site goes live!']
+  },
+  vercel: {
+    name: 'Vercel', tokenVar: () => vercelToken, setToken: v => { vercelToken = v; },
+    userVar: () => vercelUser, setUser: v => { vercelUser = v; },
+    tokenInput: 'vercel-token', tokenValidation: 'vercel-token', loginBtn: 'btn-vercel-login', publishBtn: 'btn-selected-publish',
+    loginPanel: 'vercel-login-panel', userPanel: 'vercel-user-panel', avatar: 'vercel-avatar',
+    displayName: 'vercel-display-name', usernameText: 'vercel-username-text',
+    verifyUrl: '/api/vercel/verify', publishUrl: '/api/vercel/publish',
+    publishLabel: '⚫ Publish to Vercel', publishingLabel: 'Publishing to Vercel...',
+    successNote: 'Vercel production deployments usually go live quickly; CDN propagation can take a short moment.',
+    providerLabel: 'Vercel Deployment',
+    steps: ['Verifying Vercel account', 'Preparing project', 'Uploading files', 'Creating production deployment', 'Site goes live!']
   }
-  clearValidation('gh-token');
-  const btn = $('btn-gh-login');
+};
+let isPublishing = false;
+
+function setSelectedProvider(key) {
+  selectedProvider = PROVIDERS[key] ? key : 'github';
+  if ($('deploy-provider-select')) $('deploy-provider-select').value = selectedProvider;
+  ['github', 'netlify', 'vercel'].forEach(providerKey => {
+    const sectionId = providerKey === 'github' ? 'gh-auth-section' : providerKey + '-auth-section';
+    const section = $(sectionId);
+    if (section) section.hidden = providerKey !== selectedProvider;
+  });
+  $('gh-visibility-section').style.display = selectedProvider === 'github' && ghUser ? '' : 'none';
+  updateSelectedPublishButton();
+}
+
+function updateSelectedPublishButton() {
+  const p = PROVIDERS[selectedProvider];
+  const btn = $('btn-selected-publish');
+  if (!btn || !p) return;
+  btn.innerHTML = p.publishLabel;
+  btn.disabled = !p.userVar() || isPublishing;
+}
+
+async function readJsonResponse(resp) {
+  const text = await resp.text();
+  try { return JSON.parse(text); }
+  catch (_) { throw new Error('Server returned a non-JSON response. It may have crashed — check the terminal for details.'); }
+}
+
+async function providerLogin(key) {
+  const p = PROVIDERS[key];
+  const token = $(p.tokenInput).value.trim();
+  if (!token) { showValidation(p.tokenValidation, 'Please enter your ' + p.name + ' token'); return; }
+  clearValidation(p.tokenValidation);
+  const btn = $(p.loginBtn);
   btn.innerHTML = '<span class="spinner"></span> Verifying...';
   btn.disabled = true;
 
   try {
-    const resp = await fetch('/api/github/verify', {
+    const resp = await fetch(p.verifyUrl, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token })
     });
-    let data;
-    try {
-      const text = await resp.text();
-      data = JSON.parse(text);
-    } catch (parseErr) {
-      showValidation('gh-token', 'Server error — check the terminal for details');
-      return;
-    }
-
+    const data = await readJsonResponse(resp);
     if (data.ok) {
-      ghToken = token;
-      ghUser = data;
-      $('gh-login-panel').style.display = 'none';
-      $('gh-user-panel').style.display = '';
-      $('gh-avatar').src = data.avatar;
-      $('gh-display-name').textContent = data.name;
-      $('gh-username-text').textContent = '@' + data.username;
-      $('gh-repos-count').textContent = data.repos_count;
-      $('gh-visibility-section').style.display = '';
-      $('btn-publish').disabled = false;
-      showToast('✅ Connected as ' + data.username, 'success');
+      p.setToken(token);
+      p.setUser(data);
+      $(p.loginPanel).style.display = 'none';
+      $(p.userPanel).style.display = '';
+      const avatarEl = $(p.avatar);
+      if (data.avatar) { avatarEl.src = data.avatar; avatarEl.style.display = ''; }
+      else { avatarEl.style.display = 'none'; }
+      $(p.displayName).textContent = data.name || data.username || p.name + ' user';
+      $(p.usernameText).textContent = data.username ? '@' + data.username : '';
+      if (key === 'github') {
+        $('gh-repos-count').textContent = data.repos_count;
+        $('gh-visibility-section').style.display = selectedProvider === 'github' ? '' : 'none';
+      }
+      $(p.publishBtn).disabled = false;
+      updateSelectedPublishButton();
+      showToast('✅ Connected to ' + p.name, 'success');
     } else {
-      showValidation('gh-token', data.error || 'Invalid token');
+      showValidation(p.tokenValidation, data.error || 'Invalid token');
     }
   } catch (err) {
-    showValidation('gh-token', 'Connection failed: ' + err.message);
+    showValidation(p.tokenValidation, 'Connection failed: ' + err.message);
   }
   btn.innerHTML = 'Sign In';
   btn.disabled = false;
 }
 
-function githubLogout() {
-  ghToken = '';
-  ghUser = null;
-  $('gh-token').value = '';
-  $('gh-login-panel').style.display = '';
-  $('gh-user-panel').style.display = 'none';
-  $('gh-visibility-section').style.display = 'none';
-  $('btn-publish').disabled = true;
-  showToast('Disconnected from GitHub');
+function providerLogout(key) {
+  const p = PROVIDERS[key];
+  p.setToken('');
+  p.setUser(null);
+  $(p.tokenInput).value = '';
+  $(p.loginPanel).style.display = '';
+  $(p.userPanel).style.display = 'none';
+  $(p.publishBtn).disabled = true;
+  if (key === 'github') $('gh-visibility-section').style.display = 'none';
+  updateSelectedPublishButton();
+  showToast('Disconnected from ' + p.name);
 }
 
+function githubLogin() { return providerLogin('github'); }
+function githubLogout() { return providerLogout('github'); }
+function netlifyLogin() { return providerLogin('netlify'); }
+function netlifyLogout() { return providerLogout('netlify'); }
+function vercelLogin() { return providerLogin('vercel'); }
+function vercelLogout() { return providerLogout('vercel'); }
+
 /* ═══════════════════════════════════════════
-   GitHub Publish (One-Click Deploy)
+   Provider Publish (GUI-only deploy)
    ═══════════════════════════════════════════ */
-async function githubPublish() {
-  if (!ghToken || !ghUser) { showToast('❌ Sign in to GitHub first', 'error'); return; }
+async function publishProvider(key) {
+  const p = PROVIDERS[key];
+  if (isPublishing) { showToast('A publish is already running.'); return; }
+  if (!p.tokenVar() || !p.userVar()) { showToast('❌ Sign in to ' + p.name + ' first', 'error'); return; }
   const config = getConfig();
   if (!config.folders.length) { showToast('❌ Add at least one folder!', 'error'); return; }
   config.dropped_files = droppedFilesContent;
 
-  // Show progress section
   $('publish-progress-section').style.display = '';
   $('success-section').style.display = 'none';
   $('download-success-section').style.display = 'none';
   $('publish-error').classList.remove('show');
-
-  // Reset all steps to pending
+  setPublishLabels(key);
   ['ps-verify','ps-repo','ps-push','ps-pages','ps-done'].forEach(id => {
     const el = $(id);
     el.className = 'publish-step pending';
   });
 
-  const btn = $('btn-publish');
+  const btn = $(p.publishBtn);
+  isPublishing = true;
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Publishing...';
+  updateSelectedPublishButton();
+  btn.innerHTML = '<span class="spinner"></span> ' + p.publishingLabel;
+  if (key === selectedProvider) $('btn-selected-publish').innerHTML = '<span class="spinner"></span> ' + p.publishingLabel;
 
-  const visibility = $('gh-visibility').value;
-
-  // Animate step 1: Verify
+  const payload = { token: p.tokenVar(), config };
+  if (key === 'github') payload.visibility = $('gh-visibility').value;
   setPublishStep('ps-verify', 'running');
 
   try {
-    // Step 1: Verify (already done via login, just animate)
-    await sleep(500);
+    await sleep(400);
     setPublishStep('ps-verify', 'done');
-
-    // Steps 2-4 are handled server-side
     setPublishStep('ps-repo', 'running');
 
-    const resp = await fetch('/api/github/publish', {
+    const resp = await fetch(p.publishUrl, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: ghToken, config, visibility })
+      body: JSON.stringify(payload)
     });
-
-    // Guard against non-JSON responses (e.g. Flask 500 HTML error page)
-    let data;
-    try {
-      const text = await resp.text();
-      data = JSON.parse(text);
-    } catch (parseErr) {
-      throw new Error('Server returned a non-JSON response. It may have crashed — check the terminal for details.');
-    }
+    const data = await readJsonResponse(resp);
 
     if (data.ok) {
-      // Server completed all steps — animate them in sequence
-      await sleep(400);
-      setPublishStep('ps-repo', 'done');
-      await sleep(400);
-      setPublishStep('ps-push', 'running');
-      await sleep(600);
-      setPublishStep('ps-push', 'done');
-      await sleep(300);
-      setPublishStep('ps-pages', 'running');
-      await sleep(500);
-      setPublishStep('ps-pages', 'done');
-      await sleep(300);
-      setPublishStep('ps-done', 'done');
+      await sleep(350); setPublishStep('ps-repo', 'done');
+      await sleep(250); setPublishStep('ps-push', 'running');
+      await sleep(500); setPublishStep('ps-push', 'done');
+      await sleep(250); setPublishStep('ps-pages', 'running');
+      await sleep(500); setPublishStep('ps-pages', 'done');
+      await sleep(250); setPublishStep('ps-done', 'done');
 
-      // Show success
+      const liveUrl = data.pages_url || data.live_url || '#';
+      const providerUrl = data.repo_url || data.provider_url || liveUrl;
       lastProjectDir = data.project_dir;
       $('publish-progress-section').style.display = 'none';
       $('success-section').style.display = '';
-      $('live-url').href = data.pages_url;
-      $('live-url').textContent = data.pages_url;
-      $('repo-url').href = data.repo_url;
-      $('repo-url').textContent = data.repo_url;
+      $('success-note').textContent = p.successNote;
+      $('live-url').href = liveUrl;
+      $('live-url').textContent = liveUrl;
+      $('repo-url').href = providerUrl;
+      $('repo-url').textContent = providerUrl;
+      $('provider-url-label').textContent = data.provider_label || p.providerLabel;
 
-      // Show Pages warning if applicable
-      const pagesWarningEl = $('pages-warning');
-      if (data.pages_warning) {
-        pagesWarningEl.textContent = data.pages_warning;
-        pagesWarningEl.style.display = '';
-      } else {
-        pagesWarningEl.style.display = 'none';
-      }
-
-      showToast('🎉 Site published successfully!', 'success');
+      const warningEl = $('pages-warning');
+      const warning = data.pages_warning || data.publish_warning;
+      if (warning) { warningEl.textContent = warning; warningEl.style.display = ''; }
+      else { warningEl.style.display = 'none'; }
+      showToast('🎉 Site published to ' + p.name + '!', 'success');
     } else {
-      // Find which step failed based on error
       const error = data.error || 'Unknown error';
-      // Save project_dir even on failure so admin dashboard can still be launched
       if (data.project_dir) lastProjectDir = data.project_dir;
       setPublishStep('ps-verify', 'done');
-
-      if (error.includes('repository') || error.includes('repo')) {
+      const lower = error.toLowerCase();
+      if (lower.includes('token')) {
+        setPublishStep('ps-verify', 'failed');
+      } else if (lower.includes('repository') || lower.includes('repo') || lower.includes('site') || lower.includes('project')) {
         setPublishStep('ps-repo', 'failed');
-      } else if (error.includes('push') || error.includes('git')) {
+      } else if (lower.includes('push') || lower.includes('git') || lower.includes('upload')) {
         setPublishStep('ps-repo', 'done');
         setPublishStep('ps-push', 'failed');
       } else {
@@ -1227,7 +1362,22 @@ async function githubPublish() {
   }
 
   btn.disabled = false;
-  btn.innerHTML = '🔵 Publish to GitHub Pages';
+  btn.innerHTML = p.publishLabel;
+  isPublishing = false;
+  updateSelectedPublishButton();
+}
+
+function githubPublish() { return publishProvider('github'); }
+function netlifyPublish() { return publishProvider('netlify'); }
+function vercelPublish() { return publishProvider('vercel'); }
+function publishSelectedProvider() { return publishProvider(selectedProvider); }
+
+function setPublishLabels(key) {
+  const labels = PROVIDERS[key].steps;
+  ['ps-verify','ps-repo','ps-push','ps-pages','ps-done'].forEach((id, idx) => {
+    const label = $(id)?.querySelector('.ps-label');
+    if (label) label.textContent = labels[idx];
+  });
 }
 
 function setPublishStep(id, state) {
@@ -1401,6 +1551,7 @@ window.addEventListener('DOMContentLoaded', () => {
       { title: 'Neuro Exam 1', description: 'First neurology exam', icon: '📝', tags: ['Exam'], url: 'neuro-1.html' }
     ]
   });
+  setSelectedProvider('github');
   updateStats();
 });
 </script>

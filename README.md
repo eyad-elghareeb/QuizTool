@@ -15,11 +15,11 @@ A modern, feature-rich quiz creation and management platform built with vanilla 
 Generate production-ready quiz sites similar to MU61S8 with a single command!
 
 - **3-Step Wizard UI**: Guided flow — Project Info → Structure → Publish
-- **One-Click GitHub Pages**: Sign in with a PAT, publish directly to GitHub Pages (no CLI needed)
+- **One-Click Hosting Providers**: Sign in with a provider token and publish directly to GitHub Pages, Netlify, or Vercel (no CLI needed)
 - **Drag-Drop Import**: Drop existing quiz/bank HTML files to auto-parse and place in folders
 - **Nested Folder Support**: Multi-level folder hierarchy with auto-generated index pages
-- **Admin Dashboard Launch**: After generating, open the admin dashboard to add content — no coding required
-- **Token-Safe Authentication**: Uses `GIT_ASKPASS` for push (never embeds tokens in URLs or `.git/config`); validates PAT scopes before use
+- **Admin Dashboard Launch**: After generating, open the admin dashboard to add content and redeploy — no coding required
+- **Token-Safe Authentication**: Provider tokens stay session-only; GitHub pushes use `GIT_ASKPASS` and Netlify/Vercel deploy through HTTPS APIs
 - **Automated Deployment**: Includes GitHub Actions workflows for auto-deployment
 - **Asset Synchronization**: Scripts to auto-update index pages and service worker precache
 - **Cross-Device Sync Engine**: Ships a bundled sync runtime with Nearby Devices, QR Sync, and file backup flows
@@ -32,6 +32,8 @@ Generate production-ready quiz sites similar to MU61S8 with a single command!
 - ✓ Intelligent Service Worker with content-hashed caching
 - ✓ PWA Manifest with all required icon sizes (48px-512px)
 - ✓ Automated GitHub Actions (Sync Assets + Jekyll Deployment)
+- ✓ Provider configs (`netlify.toml`, `vercel.json`) for static hosting
+- ✓ Local provider metadata (`.quiztool/deploy.json`, gitignored) for provider-aware redeploys
 - ✓ Asset Management Scripts (`sync_quiz_assets.py`, `standardize_quiz_files.py`)
 - ✓ Integrated Local Management via `admin-dashboard.py`
 - ✓ Built-in Tracker Map for long-term link reliability
@@ -55,6 +57,8 @@ project-name/
 ├── bank-engine.js               # Question bank engine
 ├── sw.js                        # Service worker (offline support)
 ├── manifest.webmanifest         # PWA manifest
+├── netlify.toml                 # Netlify static deploy config
+├── vercel.json                  # Vercel static deploy config
 ├── favicon.svg                  # SVG favicon
 ├── icon-*.png                   # PWA icons (48px-512px)
 ├── tracker-map.json              # UID-to-Path mapping
@@ -282,7 +286,7 @@ Use the Project Generator to create a deployable quiz site (like MU61S8):
    The web UI opens at http://localhost:5500.
 
 2. **Step 1 — Project Info**:
-   - Enter your project name (becomes the GitHub repo name)
+   - Enter your project name (becomes the repo/site/project name)
    - Set the site title, hero text, and default theme
 
 3. **Step 2 — Structure**:
@@ -292,22 +296,23 @@ Use the Project Generator to create a deployable quiz site (like MU61S8):
 
 4. **Step 3 — Publish**:
 
-   **Option A: One-click GitHub Pages** (recommended)
+   **Option A: One-click provider publish**
    - Click **"Create a token"** to generate a GitHub PAT with `repo` and `workflow` scopes
-   - Paste the token and click **Sign In** — your avatar and username appear
-   - Click **🔵 Publish to GitHub Pages**
-   - The generator creates the repo, pushes code, and enables Pages automatically
-   - Your site is live in 1–2 minutes!
+   - Or create a Netlify/Vercel access token from the provider card in the Publish step
+   - Paste the token and click **Sign In** — your account appears in the card
+   - Click **Publish to GitHub Pages**, **Publish to Netlify**, or **Publish to Vercel**
+   - The generator creates the remote target and deploys the static site automatically
+   - Your site is live once the provider finishes deploying
 
    **Option B: Download ZIP only**
    - Click **📥 Download ZIP Only**
    - Manually extract and deploy wherever you want
 
 5. **Add content**:
-   - Click **🛠️ Open Admin Dashboard** to create quizzes, banks, and edit content — no coding required
-   - The admin dashboard has built-in Git integration for pushing changes
+   - Click **🛠️ Open Admin Dashboard** to create quizzes, banks, edit content, and redeploy — no coding required
+   - The admin dashboard has a unified **Deploy** flow for GitHub Pages, Netlify, and Vercel
 
-**Security note**: Your GitHub PAT is used only during the current browser session. It is never saved to disk, logged, or embedded in git config. The generator uses `GIT_ASKPASS` to securely provide the token during push.
+**Security note**: Provider tokens are used only during the current browser session. They are never saved to disk or logged. GitHub publishing uses `GIT_ASKPASS` so tokens are not embedded in git URLs or `.git/config`; Netlify and Vercel publishing uses their HTTPS APIs directly.
 
 ### Managing Your Quiz Site
 
@@ -320,7 +325,7 @@ python scripts/admin-dashboard.py
 This opens a local web interface at `http://localhost:5500/admin/` for:
 - File browsing and editing
 - Structured quiz/bank editors
-- Git integration and deployment
+- Provider-aware deployment across GitHub Pages, Netlify, and Vercel
 - PDF export and more
 
 ### Maintaining the Sync Engine
@@ -384,7 +389,7 @@ QuizTool/
 ├── manifest.webmanifest          # PWA configuration for installability
 ├── favicon.svg                   # Vector app icon
 ├── icon-*.png                    # PWA icons (48px-512px)
-├── generate_project.py           # Flask-based project generator (with GitHub publish)
+├── generate_project.py           # Flask-based project generator (GitHub/Netlify/Vercel publish)
 ├── generator_templates/
 │   └── index.html                # 3-step wizard UI for the generator
 ├── generate_icons.py             # Utility to rebuild PNG icons from SVG
