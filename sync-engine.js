@@ -201,20 +201,27 @@ const SyncEngine = {
         // Compress data to fit in QR or easily copy/paste
         const jsonStr = JSON.stringify(payload);
         const compressed = LZString.compressToBase64(jsonStr);
-        // Append length checksum to detect truncation/corruption
-        return compressed + '!' + compressed.length;
+        // Prepend 10-digit length header to detect truncation
+        // Format: NNNNNNNNNN!<base64>
+        var lenStr = String(compressed.length);
+        while (lenStr.length < 10) lenStr = '0' + lenStr;
+        return lenStr + '!' + compressed;
     },
 
     _extractChecksum: function(data) {
-        // Format: <base64>!<length>
-        // Returns { base64, valid } — valid is false if checksum missing or mismatch
-        var lastBang = data.lastIndexOf('!');
-        if (lastBang === -1) return { base64: data, valid: true }; // Old format, no checksum
-        var expectedLen = parseInt(data.substring(lastBang + 1), 10);
-        if (isNaN(expectedLen)) return { base64: data, valid: true }; // Not a checksum
-        var base64 = data.substring(0, lastBang);
-        if (base64.length !== expectedLen) return { base64: base64, valid: false };
-        return { base64: base64, valid: true };
+        // New format: NNNNNNNNNN!<base64>  (10-digit zero-padded length + ! + data)
+        // Old format: <base64>  (no header — accepted for backward compatibility)
+        if (data.length >= 11 && data.charAt(10) === '!') {
+            var lenStr = data.substring(0, 10);
+            var expectedLen = parseInt(lenStr, 10);
+            if (!isNaN(expectedLen) && lenStr.length === 10 && /^\d{10}$/.test(lenStr)) {
+                var base64 = data.substring(11);
+                if (base64.length !== expectedLen) return { base64: base64, valid: false };
+                return { base64: base64, valid: true };
+            }
+        }
+        // Old format or unrecognized — treat entire string as raw base64
+        return { base64: data, valid: true };
     },
 
     _previewImportData: function(compressedStr) {
@@ -923,6 +930,17 @@ const SyncEngine = {
                 var preview = SyncEngine._previewImportData(data);
                 this._pendingSyncs[fromId] = { type: 'p2p-data', data: data };
                 SyncEngine.ui.showConfirmToast(fromId, this.devices[fromId]?.name || 'Unknown', preview);
+                return;
+            }
+            // Validate data integrity before importing (especially important for trusted devices
+            // which bypass the user confirmation step)
+            var extracted = SyncEngine._extractChecksum(data);
+            if (!extracted.valid) {
+                console.error("P2P data corrupted: expected length " +
+                    (data.charAt(10) === '!' ? data.substring(0, 10) : '?') +
+                    ", got " + extracted.base64.length);
+                SyncEngine.ui.setStatus("Received corrupted data — length mismatch.", false);
+                if (window.showToast) window.showToast("Sync failed: data corrupted during transfer.");
                 return;
             }
             SyncEngine.ui.setStatus("Receiving data...", true);
