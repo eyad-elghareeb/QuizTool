@@ -201,12 +201,27 @@ const SyncEngine = {
         // Compress data to fit in QR or easily copy/paste
         const jsonStr = JSON.stringify(payload);
         const compressed = LZString.compressToBase64(jsonStr);
-        return compressed;
+        // Append length checksum to detect truncation/corruption
+        return compressed + '!' + compressed.length;
+    },
+
+    _extractChecksum: function(data) {
+        // Format: <base64>!<length>
+        // Returns { base64, valid } — valid is false if checksum missing or mismatch
+        var lastBang = data.lastIndexOf('!');
+        if (lastBang === -1) return { base64: data, valid: true }; // Old format, no checksum
+        var expectedLen = parseInt(data.substring(lastBang + 1), 10);
+        if (isNaN(expectedLen)) return { base64: data, valid: true }; // Not a checksum
+        var base64 = data.substring(0, lastBang);
+        if (base64.length !== expectedLen) return { base64: base64, valid: false };
+        return { base64: base64, valid: true };
     },
 
     _previewImportData: function(compressedStr) {
         try {
-            const jsonStr = LZString.decompressFromBase64(compressedStr);
+            var extracted = this._extractChecksum(compressedStr);
+            if (!extracted.valid) return null;
+            const jsonStr = LZString.decompressFromBase64(extracted.base64);
             if (!jsonStr) return null;
             const payload = JSON.parse(jsonStr);
             if (!payload || !payload.data) return null;
@@ -235,12 +250,21 @@ const SyncEngine = {
                 throw new Error("Empty or invalid sync data received");
             }
 
+            // Extract and validate checksum: format is <base64>!<length>
+            var extracted = this._extractChecksum(compressedStr);
+            if (!extracted.valid) {
+                throw new Error("Sync data corrupted (length mismatch: expected " +
+                    (compressedStr.lastIndexOf('!') >= 0 ? compressedStr.substring(compressedStr.lastIndexOf('!') + 1) : '?') +
+                    ", got " + extracted.base64.length + ")");
+            }
+            var base64 = extracted.base64;
+
             // Quick sanity check: valid base64 only contains A-Za-z0-9+/=
-            if (!/^[A-Za-z0-9+/=]+$/.test(compressedStr.trim())) {
+            if (!/^[A-Za-z0-9+/=]+$/.test(base64.trim())) {
                 throw new Error("Sync data contains invalid characters (not base64)");
             }
 
-            const jsonStr = LZString.decompressFromBase64(compressedStr);
+            const jsonStr = LZString.decompressFromBase64(base64);
             if (!jsonStr) throw new Error("Invalid or corrupted sync data (decompression failed)");
             
             // Validate decompressed result looks like JSON
