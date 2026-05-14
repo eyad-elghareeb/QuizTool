@@ -775,7 +775,10 @@ const SyncEngine = {
         _chunkBuffers: {},
 
         _setupChannel: function(channel, targetId) {
-            channel.onopen = () => {
+            var sentData = false;
+            var sendData = () => {
+                if (sentData) return;
+                sentData = true;
                 console.log("DataChannel Open!");
                 if (this.pullOnly) {
                     SyncEngine.ui.setStatus("Pull-Only: Receiving only.", true);
@@ -786,8 +789,10 @@ const SyncEngine = {
                 const data = SyncEngine.exportData(opts);
                 var totalBytes = data.length;
                 var CHUNK_SIZE = 16384;
-                if (data.length <= CHUNK_SIZE) {
+                // Always send EOS so receiver can distinguish single messages from chunked transfers
+                if (data.length < CHUNK_SIZE) {
                     channel.send(data);
+                    channel.send('__EOS__');
                     SyncEngine.ui.updateTransferProgress(totalBytes, totalBytes);
                     SyncEngine.ui.setStatus("Data sent successfully!", true);
                 } else {
@@ -810,6 +815,15 @@ const SyncEngine = {
                     sendNext();
                 }
             };
+
+            // If channel is already open (e.g. remote channel received via ondatachannel),
+            // onopen won't fire — send immediately. Otherwise wait for the open event.
+            if (channel.readyState === 'open') {
+                sendData();
+            } else {
+                channel.onopen = sendData;
+            }
+
             channel.onmessage = (e) => {
                 console.log("DataChannel message received (" + e.data.length + " bytes)");
                 var fromId = targetId;
@@ -822,10 +836,16 @@ const SyncEngine = {
 
                 // Check for end-of-stream marker (chunked transfer complete)
                 if (e.data === '__EOS__') {
+                    // Clear any safety timeout
+                    var timeoutKey = '_timeout_' + fromId;
+                    if (this._chunkBuffers[timeoutKey]) {
+                        clearTimeout(this._chunkBuffers[timeoutKey]);
+                        delete this._chunkBuffers[timeoutKey];
+                    }
                     var fullData = this._chunkBuffers[fromId] || '';
                     delete this._chunkBuffers[fromId];
                     if (!fullData) {
-                        console.warn("EOS received but no buffered chunks for", fromId);
+                        // Single message already processed — EOS is expected, nothing to reassemble
                         return;
                     }
                     console.log("Chunked transfer complete, reassembled " + fullData.length + " bytes");
