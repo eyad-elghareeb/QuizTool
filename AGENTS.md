@@ -886,7 +886,7 @@ To prevent data loss and squashing, the engine uses a high-fidelity merge strate
 
 ### 21c. Technical Signaling Flow
 1. **Init**: Device fetches public IP via Google STUN → Hashes IP with salt → Joins MQTT topic `quiztool/sync/v2/{hash}/#`.
-2. **Presence**: Device publishes its name/ID to `.../presence/{id}`. Others see this and update their "Nearby Devices" list.
+2. **Presence**: Device publishes its name/ID to `.../presence/{id}`. Others see this and update their "Nearby Devices" list. The sync modal must always open on the `webrtc` / "Nearby Devices" tab by default; do not reuse a previously active tab when reopening the modal.
 3. **Connect**: Initiator sends WebRTC `offer` to `.../signal/{targetId}`.
 4. **Negotiation**: Receiver sends `answer` + `ice` candidates via signaling topics.
 5. **Channel**: Data channel opens → Both devices call `exportData()` → Data is exchanged and merged.
@@ -930,5 +930,8 @@ Whenever you modify `sync-engine.src.js`, you MUST rebuild the production bundle
 ```powershell
 .\scripts\build_sync_engine.ps1
 ```
-This script fetches the latest CDN dependencies and minifies the engine into a single file for PWA performance.
+This script fetches the latest CDN dependencies and bundles the engine into a single production file for PWA performance.
+
+### Propagating Sync Changes
+After rebuilding `sync-engine.js`, propagate the updated `sync-engine.src.js` and `sync-engine.js` into any maintained generated projects that vendor these files (for example `MU61S8`). Keep their local `AGENTS.md` notes aligned with any behavior or workflow changes you introduce.
 

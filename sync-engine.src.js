@@ -1330,9 +1330,7 @@ var SyncEngine = {
                 document.body.appendChild(this.modalEl);
             }
             this.modalEl.classList.add('open');
-            var activeTab = document.querySelector('.dash-scope-tab.active');
-            var tabId = activeTab ? activeTab.id.replace('sync-tab-btn-', '') : 'webrtc';
-            this.switchTab(tabId);
+            this.switchTab('webrtc');
         },
 
         closeModal: function() {

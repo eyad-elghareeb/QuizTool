@@ -45,6 +45,6 @@ $output = $banner + "`r`n" +
           "/* === PAHO-MQTT === */`r`n" + $mqttSrc + "`r`n" +
           "/* === SYNC ENGINE === */`r`n" + $engineJs
 
-[System.IO.File]::WriteAllText($outputFile, $output, [System.Text.Encoding]::UTF8)
+[System.IO.File]::WriteAllText($outputFile, $output, (New-Object System.Text.UTF8Encoding($false)))
 $size = [math]::Round((Get-Item $outputFile).Length / 1024)
 Write-Host "Done! sync-engine.js written ($size KB)"

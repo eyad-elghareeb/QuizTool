@@ -22,6 +22,7 @@ Generate production-ready quiz sites similar to MU61S8 with a single command!
 - **Token-Safe Authentication**: Uses `GIT_ASKPASS` for push (never embeds tokens in URLs or `.git/config`); validates PAT scopes before use
 - **Automated Deployment**: Includes GitHub Actions workflows for auto-deployment
 - **Asset Synchronization**: Scripts to auto-update index pages and service worker precache
+- **Cross-Device Sync Engine**: Ships a bundled sync runtime with Nearby Devices, QR Sync, and file backup flows
 - **Tracker Map Generation**: Automatically generates `tracker-map.json` for persistent link reliability
 - **Complete PWA Support**: All icon sizes (48px-512px), manifest, and offline-capable service worker
 - **Zero-Install Launcher**: `start.bat` auto-detects Python and installs Flask; `build_exe.py` creates a standalone EXE
@@ -322,6 +323,16 @@ This opens a local web interface at `http://localhost:5500/admin/` for:
 - Git integration and deployment
 - PDF export and more
 
+### Maintaining the Sync Engine
+
+When you change `sync-engine.src.js`, rebuild the production bundle before publishing or copying the engine into a generated site:
+
+```powershell
+.\scripts\build_sync_engine.ps1
+```
+
+The sync modal is expected to open on **Nearby Devices** by default on every fresh open. If you maintain a generated site that vendors `sync-engine.src.js` and `sync-engine.js` directly, copy both updated files after rebuilding.
+
 ### Adding New Quizzes to the Hub
 
 Edit the `QUIZZES` array in `index.html`:
@@ -366,6 +377,8 @@ QuizTool/
 ├── index-engine.css              # Styling for hubs & navigation
 ├── quiz-engine.js                # Core quiz playback & state engine
 ├── bank-engine.js                # Advanced question bank logic & session management
+├── sync-engine.src.js            # Editable source for cross-device sync
+├── sync-engine.js                # Bundled production sync engine
 ├── sw.js                         # Service worker for offline-first toolkit usage
 ├── tracker-map.json              # Persistent UID-to-Path mapping
 ├── manifest.webmanifest          # PWA configuration for installability
