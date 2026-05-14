@@ -201,22 +201,35 @@ const SyncEngine = {
         // Compress data to fit in QR or easily copy/paste
         const jsonStr = JSON.stringify(payload);
         const compressed = LZString.compressToBase64(jsonStr);
-        // Prepend 10-digit length header to detect truncation
-        // Format: NNNNNNNNNN!<base64>
+        // Prepend 10-digit length header + 4-char hex checksum to detect corruption
+        // Format: NNNNNNNNNN!XXXX!<base64>
         var lenStr = String(compressed.length);
         while (lenStr.length < 10) lenStr = '0' + lenStr;
-        return lenStr + '!' + compressed;
+        var checksum = this._computeChecksum(compressed);
+        return lenStr + '!' + checksum + '!' + compressed;
+    },
+
+    _computeChecksum: function(str) {
+        // Simple 16-bit checksum (sum of char codes mod 65536) as 4-char hex
+        var sum = 0;
+        for (var i = 0; i < str.length; i++) sum = (sum + str.charCodeAt(i)) % 65536;
+        var hex = sum.toString(16).toUpperCase();
+        while (hex.length < 4) hex = '0' + hex;
+        return hex;
     },
 
     _extractChecksum: function(data) {
-        // New format: NNNNNNNNNN!<base64>  (10-digit zero-padded length + ! + data)
+        // New format: NNNNNNNNNN!XXXX!<base64>  (length + content checksum)
         // Old format: <base64>  (no header — accepted for backward compatibility)
-        if (data.length >= 11 && data.charAt(10) === '!') {
+        if (data.length >= 16 && data.charAt(10) === '!' && data.charAt(15) === '!') {
             var lenStr = data.substring(0, 10);
             var expectedLen = parseInt(lenStr, 10);
-            if (!isNaN(expectedLen) && lenStr.length === 10 && /^\d{10}$/.test(lenStr)) {
-                var base64 = data.substring(11);
+            var expectedChecksum = data.substring(11, 15);
+            if (!isNaN(expectedLen) && lenStr.length === 10 && /^\d{10}$/.test(lenStr) && /^[0-9A-F]{4}$/.test(expectedChecksum)) {
+                var base64 = data.substring(16);
                 if (base64.length !== expectedLen) return { base64: base64, valid: false };
+                var actualChecksum = this._computeChecksum(base64);
+                if (actualChecksum !== expectedChecksum) return { base64: base64, valid: false };
                 return { base64: base64, valid: true };
             }
         }
@@ -257,12 +270,10 @@ const SyncEngine = {
                 throw new Error("Empty or invalid sync data received");
             }
 
-            // Extract and validate checksum: format is <base64>!<length>
+            // Extract and validate header: format is NNNNNNNNNN!XXXX!<base64>
             var extracted = this._extractChecksum(compressedStr);
             if (!extracted.valid) {
-                throw new Error("Sync data corrupted (length mismatch: expected " +
-                    (compressedStr.lastIndexOf('!') >= 0 ? compressedStr.substring(compressedStr.lastIndexOf('!') + 1) : '?') +
-                    ", got " + extracted.base64.length + ")");
+                throw new Error("Sync data corrupted (checksum or length mismatch)");
             }
             var base64 = extracted.base64;
 
