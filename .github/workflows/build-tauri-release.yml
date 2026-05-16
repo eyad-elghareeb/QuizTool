@@ -36,13 +36,24 @@ jobs:
             tauri-admin
             tauri
 
-      - name: Build Admin Dashboard
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2"
+
+      - name: Build Admin Dashboard (Binary)
         run: cargo build --release --locked
         working-directory: ./tauri-admin
 
-      - name: Build Project Generator
-        run: cargo build --release --locked
+      - name: Prepare dependency for Generator
+        # Generator expects .exe in the path for include_bytes!
+        run: cp tauri-admin/target/release/quiztool-admin.exe tauri-admin/target/release/quiztool-admin.exe || cp tauri-admin/target/release/quiztool-admin tauri-admin/target/release/quiztool-admin.exe
+
+      - name: Build Project Generator (Bundled)
+        run: cargo tauri build
         working-directory: ./tauri
+
+      - name: Build Admin Dashboard (Bundled)
+        run: cargo tauri build
+        working-directory: ./tauri-admin
 
       - name: Upload Generator EXE
         uses: actions/upload-artifact@v4
@@ -64,6 +75,10 @@ jobs:
           files: |
             tauri/target/release/quiztool-tauri.exe
             tauri-admin/target/release/quiztool-admin.exe
+            tauri/target/release/bundle/msi/*.msi
+            tauri/target/release/bundle/nsis/*.exe
+            tauri-admin/target/release/bundle/msi/*.msi
+            tauri-admin/target/release/bundle/nsis/*.exe
           generate_release_notes: true
           fail_on_unmatched_files: false
         env:
@@ -88,7 +103,10 @@ jobs:
             tauri-admin
             tauri
 
-      - name: Build Admin Dashboard
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2"
+
+      - name: Build Admin Dashboard (Binary)
         run: cargo build --release --locked
         working-directory: ./tauri-admin
 
@@ -96,9 +114,13 @@ jobs:
         # Generator expects .exe in the path for include_bytes!
         run: cp tauri-admin/target/release/quiztool-admin tauri-admin/target/release/quiztool-admin.exe
 
-      - name: Build Project Generator
-        run: cargo build --release --locked
+      - name: Build Project Generator (Bundled)
+        run: cargo tauri build
         working-directory: ./tauri
+
+      - name: Build Admin Dashboard (Bundled)
+        run: cargo tauri build
+        working-directory: ./tauri-admin
 
       - name: Upload Generator
         uses: actions/upload-artifact@v4
@@ -120,6 +142,8 @@ jobs:
           files: |
             tauri/target/release/quiztool-tauri
             tauri-admin/target/release/quiztool-admin
+            tauri/target/release/bundle/dmg/*.dmg
+            tauri-admin/target/release/bundle/dmg/*.dmg
           generate_release_notes: true
           fail_on_unmatched_files: false
         env:
@@ -156,7 +180,10 @@ jobs:
             libsoup-3.0-dev \
             libjavascriptcoregtk-4.1-dev
 
-      - name: Build Admin Dashboard
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2"
+
+      - name: Build Admin Dashboard (Binary)
         run: cargo build --release --locked
         working-directory: ./tauri-admin
 
@@ -164,9 +191,13 @@ jobs:
         # Generator expects .exe in the path for include_bytes!
         run: cp tauri-admin/target/release/quiztool-admin tauri-admin/target/release/quiztool-admin.exe
 
-      - name: Build Project Generator
-        run: cargo build --release --locked
+      - name: Build Project Generator (Bundled)
+        run: cargo tauri build
         working-directory: ./tauri
+
+      - name: Build Admin Dashboard (Bundled)
+        run: cargo tauri build
+        working-directory: ./tauri-admin
 
       - name: Strip debug symbols
         run: |
@@ -193,6 +224,10 @@ jobs:
           files: |
             tauri/target/release/quiztool-tauri
             tauri-admin/target/release/quiztool-admin
+            tauri/target/release/bundle/appimage/*.AppImage
+            tauri-admin/target/release/bundle/appimage/*.AppImage
+            tauri/target/release/bundle/deb/*.deb
+            tauri-admin/target/release/bundle/deb/*.deb
           generate_release_notes: true
           fail_on_unmatched_files: false
         env:
