@@ -82,6 +82,11 @@ Thumbs.db
 ehthumbs.db
 desktop.ini
 Icon?
+# Keep Tauri icons
+!**/icons/
+!**/icons/*.png
+!**/icons/*.ico
+!**/icons/*.icns
 
 # Coverage
 coverage/
