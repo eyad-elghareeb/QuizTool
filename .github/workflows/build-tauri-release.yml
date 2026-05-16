@@ -18,20 +18,8 @@ permissions:
 
 jobs:
   build-windows:
-    name: Build Windows (x86_64) - ${{ matrix.app }}
+    name: Build Windows (x86_64)
     runs-on: windows-latest
-    strategy:
-      matrix:
-        app: [tauri, tauri-admin]
-        include:
-          - app: tauri
-            binary: quiztool-tauri
-          - app: tauri-admin
-            binary: quiztool-admin
-    defaults:
-      run:
-        working-directory: ./${{ matrix.app }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -41,55 +29,49 @@ jobs:
         with:
           targets: x86_64-pc-windows-msvc
 
-      - name: Cache Cargo registry + build
+      - name: Cache Cargo
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: ${{ matrix.app }}
+          workspaces: |
+            tauri-admin
+            tauri
 
-      - name: Build release binary
+      - name: Build Admin Dashboard
         run: cargo build --release --locked
+        working-directory: ./tauri-admin
 
-      - name: Verify binary exists
-        run: |
-          if (-Not (Test-Path "target/release/${{ matrix.binary }}.exe")) {
-            Write-Error "Binary not found at target/release/${{ matrix.binary }}.exe"
-            exit 1
-          }
-          Write-Host "Binary size: $((Get-Item "target/release/${{ matrix.binary }}.exe").Length / 1KB) KB"
+      - name: Build Project Generator
+        run: cargo build --release --locked
+        working-directory: ./tauri
 
-      - name: Upload build artifact
+      - name: Upload Generator EXE
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.binary }}-windows-x86_64
-          path: ${{ matrix.app }}/target/release/${{ matrix.binary }}.exe
-          compression-level: 0
+          name: quiztool-tauri-windows-x86_64
+          path: tauri/target/release/quiztool-tauri.exe
+
+      - name: Upload Admin EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: quiztool-admin-windows-x86_64
+          path: tauri-admin/target/release/quiztool-admin.exe
 
       - name: Upload to Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
-          files: ${{ matrix.app }}/target/release/${{ matrix.binary }}.exe
+          files: |
+            tauri/target/release/quiztool-tauri.exe
+            tauri-admin/target/release/quiztool-admin.exe
           generate_release_notes: true
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-macos:
-    name: Build macOS (x86_64) - ${{ matrix.app }}
+    name: Build macOS (x86_64)
     runs-on: macos-latest
-    strategy:
-      matrix:
-        app: [tauri, tauri-admin]
-        include:
-          - app: tauri
-            binary: quiztool-tauri
-          - app: tauri-admin
-            binary: quiztool-admin
-    defaults:
-      run:
-        working-directory: ./${{ matrix.app }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -99,55 +81,53 @@ jobs:
         with:
           targets: x86_64-apple-darwin
 
-      - name: Cache Cargo registry + build
+      - name: Cache Cargo
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: ${{ matrix.app }}
+          workspaces: |
+            tauri-admin
+            tauri
 
-      - name: Build release binary
+      - name: Build Admin Dashboard
         run: cargo build --release --locked
+        working-directory: ./tauri-admin
 
-      - name: Verify binary exists
-        run: |
-          if [ ! -f "target/release/${{ matrix.binary }}" ]; then
-            echo "Binary not found at target/release/${{ matrix.binary }}"
-            exit 1
-          fi
-          echo "Binary size: $(du -h target/release/${{ matrix.binary }} | cut -f1)"
+      - name: Prepare dependency for Generator
+        # Generator expects .exe in the path for include_bytes!
+        run: cp tauri-admin/target/release/quiztool-admin tauri-admin/target/release/quiztool-admin.exe
 
-      - name: Upload build artifact
+      - name: Build Project Generator
+        run: cargo build --release --locked
+        working-directory: ./tauri
+
+      - name: Upload Generator
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.binary }}-macos-x86_64
-          path: ${{ matrix.app }}/target/release/${{ matrix.binary }}
-          compression-level: 0
+          name: quiztool-tauri-macos-x86_64
+          path: tauri/target/release/quiztool-tauri
+
+      - name: Upload Admin
+        uses: actions/upload-artifact@v4
+        with:
+          name: quiztool-admin-macos-x86_64
+          path: tauri-admin/target/release/quiztool-admin
 
       - name: Upload to Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
-          files: ${{ matrix.app }}/target/release/${{ matrix.binary }}
+          files: |
+            tauri/target/release/quiztool-tauri
+            tauri-admin/target/release/quiztool-admin
           generate_release_notes: true
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-linux:
-    name: Build Linux (x86_64) - ${{ matrix.app }}
+    name: Build Linux (x86_64)
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        app: [tauri, tauri-admin]
-        include:
-          - app: tauri
-            binary: quiztool-tauri
-          - app: tauri-admin
-            binary: quiztool-admin
-    defaults:
-      run:
-        working-directory: ./${{ matrix.app }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -157,10 +137,12 @@ jobs:
         with:
           targets: x86_64-unknown-linux-gnu
 
-      - name: Cache Cargo registry + build
+      - name: Cache Cargo
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: ${{ matrix.app }}
+          workspaces: |
+            tauri-admin
+            tauri
 
       - name: Install Tauri system dependencies
         run: |
@@ -174,61 +156,44 @@ jobs:
             libsoup-3.0-dev \
             libjavascriptcoregtk-4.1-dev
 
-      - name: Build release binary
+      - name: Build Admin Dashboard
         run: cargo build --release --locked
+        working-directory: ./tauri-admin
+
+      - name: Prepare dependency for Generator
+        # Generator expects .exe in the path for include_bytes!
+        run: cp tauri-admin/target/release/quiztool-admin tauri-admin/target/release/quiztool-admin.exe
+
+      - name: Build Project Generator
+        run: cargo build --release --locked
+        working-directory: ./tauri
 
       - name: Strip debug symbols
-        run: strip target/release/${{ matrix.binary }}
-
-      - name: Verify binary exists
         run: |
-          if [ ! -f "target/release/${{ matrix.binary }}" ]; then
-            echo "Binary not found at target/release/${{ matrix.binary }}"
-            exit 1
-          fi
-          echo "Binary size: $(du -h target/release/${{ matrix.binary }} | cut -f1)"
+          strip tauri/target/release/quiztool-tauri
+          strip tauri-admin/target/release/quiztool-admin
 
-      - name: Upload build artifact
+      - name: Upload Generator
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.binary }}-linux-x86_64
-          path: ${{ matrix.app }}/target/release/${{ matrix.binary }}
-          compression-level: 0
+          name: quiztool-tauri-linux-x86_64
+          path: tauri/target/release/quiztool-tauri
+
+      - name: Upload Admin
+        uses: actions/upload-artifact@v4
+        with:
+          name: quiztool-admin-linux-x86_64
+          path: tauri-admin/target/release/quiztool-admin
 
       - name: Upload to Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
-          files: ${{ matrix.app }}/target/release/${{ matrix.binary }}
+          files: |
+            tauri/target/release/quiztool-tauri
+            tauri-admin/target/release/quiztool-admin
           generate_release_notes: true
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  create-release-summary:
-    name: Release Summary
-    needs: [build-windows, build-macos, build-linux]
-    if: always() && !cancelled()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Generate build matrix summary
-        run: |
-          echo "## 🏗️ Tauri Build Results" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| App | Platform | Status | Artifact |" >> $GITHUB_STEP_SUMMARY
-          echo "|-----|----------|--------|----------|" >> $GITHUB_STEP_SUMMARY
-          
-          # Matrix jobs are named 'Job Name (matrix_value1, matrix_value2, ...)'
-          # We need to map the results carefully or just list them.
-          # Since it's a summary, we can just echo the general status.
-          
-          echo "| Generator | 🪟 Windows | ${{ needs.build-windows.result == 'success' && '✅' || '❌' }} | \`quiztool-tauri-windows-x86_64\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Generator | 🍎 macOS | ${{ needs.build-macos.result == 'success' && '✅' || '❌' }} | \`quiztool-tauri-macos-x86_64\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Generator | 🐧 Linux | ${{ needs.build-linux.result == 'success' && '✅' || '❌' }} | \`quiztool-tauri-linux-x86_64\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Admin Dashboard | 🪟 Windows | ${{ needs.build-windows.result == 'success' && '✅' || '❌' }} | \`quiztool-admin-windows-x86_64\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Admin Dashboard | 🍎 macOS | ${{ needs.build-macos.result == 'success' && '✅' || '❌' }} | \`quiztool-admin-macos-x86_64\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Admin Dashboard | 🐧 Linux | ${{ needs.build-linux.result == 'success' && '✅' || '❌' }} | \`quiztool-admin-linux-x86_64\` |" >> $GITHUB_STEP_SUMMARY
-          
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Trigger: **${{ github.ref_type }}** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
