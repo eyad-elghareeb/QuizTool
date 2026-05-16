@@ -458,12 +458,16 @@ A standalone port of `generate_project.py`.
 A native version of the local admin dashboard for managing existing projects.
 - **Architecture**: Rust backend handles all high-privilege filesystem and Git operations; HTML/JS frontend handles the UI.
 - **IPC Interface**: Frontend uses `invoke` to call Rust commands. The `fetchJson` wrapper bridges standard API calls to these native commands.
+- **Local Server**: Uses a lightweight, synchronous `tiny_http` server to host project files for the preview iframe and external browser windows. This avoids version conflicts with Tauri v2's internal tokio runtime.
+- **CORS & Security**: Implements an explicit `OPTIONS` preflight handler and aggressive Access-Control headers to satisfy browser security policies when communicating between the native protocol (`quiztool-admin://`) and the local server (`http://127.0.0.1`).
+- **Dynamic Path Rewriting**: The server automatically detects the folder depth of the requested file and rewrites the `window.__QUIZ_ENGINE_BASE` script using robust Regex to ensure engines (`quiz-engine.js`, etc.) resolve correctly.
+- **Aggressive Asset Fallbacks**: Shared assets (`sw.js`, manifest, engines, icons) are automatically served from the project root if requested from a subfolder and not found locally.
 - **Features**: 
   - **Filesystem CRUD**: Native performance for creating, moving, duplicating, and deleting files.
   - **Git Integration**: Direct execution of `git` commands for status, commit, pull, and push.
-  - **Project Probing**: Recursive scanning for question counts and workspace stats.
+  - **Windows Console Suppression**: Uses `CREATE_NO_WINDOW` flags and `shellexecute-on-windows` to ensure Git and browser actions never trigger console window popups.
   - **Theme Persistence**: Robust restoration of Light/Dark mode via `localStorage` and native window attributes.
-- **Preview Protocol**: Uses `quiztool-preview://localhost/` to securely serve project files for live editing.
+- **Preview System**: Uses `previewUrl()` helper to point the sidebar iframe to the dynamic local HTTP server.
 
 ### 7c. Technical Implementation (Common)
 
