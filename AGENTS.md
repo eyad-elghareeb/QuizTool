@@ -65,6 +65,17 @@ QuizTool/
 │   ├── sync_quiz_assets.py       ← Auto-index + SW updater for generated sites
 │   └── standardize_quiz_files.py ← One-time file formatter
 │
+├── — DESKTOP APP (TAURI) —
+├── tauri/                        ← Tauri project root
+│   ├── tauri.conf.json           ← App configuration (product name, icons, window settings)
+│   ├── src/
+│   │   ├── main.rs               ← App entry point & Tauri command registration
+│   │   ├── generator.rs          ← Ported generator logic (pure Rust)
+│   │   ├── engines.rs            ← Embedded engine constants
+│   │   └── api_helpers.rs        ← GitHub/Netlify/Vercel API integration
+│   └── frontend/
+│       └── index.html            ← Embedded wizard UI for desktop
+│
 └── .github/workflows/
     └── jekyll-gh-pages.yml       ← Deploys QuizTool itself to GitHub Pages
 ```
@@ -433,7 +444,47 @@ The generated `sw.js` includes:
 
 ---
 
-## 7. Authoring Tools Reference
+## 7. Tauri Standalone Desktop App (`tauri/`)
+
+The Tauri port provides a fully standalone, zero-dependency desktop version of the project generator. Unlike the Python version, it requires no local Python installation, Flask server, or sidecar processes.
+
+### 7a. Core Architecture
+
+- **Embedded Logic**: All project generation logic from `generate_project.py` is ported to pure Rust (`tauri/src/generator.rs`).
+- **Embedded Engines**: Core engine files (`quiz-engine.js`, etc.) and scripts are embedded into the binary at compile time via `include_str!` and `include_bytes!` in `tauri/src/engines.rs`.
+- **Custom Protocol**: Serves the frontend via the `quiztool://localhost/` URI scheme, bypassing standard HTTP/HTTPS local server requirements.
+- **Standalone APIs**: Uses the `reqwest` crate (bundled) to interact with GitHub, Netlify, and Vercel APIs directly from Rust.
+
+### 7b. Technical Implementation
+
+| Component | Role | Implementation |
+|-----------|------|----------------|
+| `main.rs` | App Controller | Registers URI schemes, manages state (last project dir), and exposes Tauri commands to JS. |
+| `generator.rs` | Pure Rust Generator | Builds the project ZIP in memory using the `zip` crate. Handles manifest, SW, and index generation. |
+| `engines.rs` | Asset Bundler | Constants that hold the entire content of engine JS/CSS, templates, and scripts. |
+| `api_helpers.rs` | Cloud Integrator | Direct HTTPS calls for token verification and project publishing. |
+
+### 7c. Desktop-Specific Features
+
+- **Local Extract**: Automatically extracts the generated ZIP to a temporary directory for immediate use.
+- **Admin Dashboard Integration**: Attempts to launch the Python-based admin dashboard for the newly generated project if a Python interpreter is found on the system.
+- **Cross-Platform**: Designed for Windows (`.exe`), but compatible with macOS and Linux via standard Tauri build targets.
+
+### 7d. Build Instructions
+
+```bash
+cd tauri/
+# Development
+npm run tauri dev
+
+# Production Build
+npm run tauri build
+# Output: tauri/target/release/QuizTool.exe (plus installer)
+```
+
+---
+
+## 8. Authoring Tools Reference
 
 | Tool | Input | Output | Notes |
 |------|-------|--------|-------|
@@ -450,7 +501,7 @@ All tools are **fully client-side** — no data is sent anywhere. Files are read
 
 ---
 
-## 8. The Sync Script (`scripts/sync_quiz_assets.py`)
+## 9. The Sync Script (`scripts/sync_quiz_assets.py`)
 
 This script is bundled into every generated ZIP and is designed to run inside a generated project (not inside QuizTool itself).
 
@@ -480,7 +531,7 @@ python scripts/sync_quiz_assets.py
 
 ---
 
-## 9. localStorage Key Reference
+## 10. localStorage Key Reference
 
 | Key | Set by | Value |
 |-----|--------|-------|
@@ -492,7 +543,7 @@ python scripts/sync_quiz_assets.py
 
 ---
 
-## 10. Global API: What the Engines Expose
+## 11. Global API: What the Engines Expose
 
 ### quiz-engine.js (global functions)
 
@@ -514,7 +565,7 @@ The modal (`#clear-tracker-modal`) and its styles are **dynamically injected by 
 
 ---
 
-## 11. Question Tracker System
+## 12. Question Tracker System
 
 The tracker is a persistence layer that aggregates mistakes and flagged items across all sessions for long-term review. It is shared between all engines and hub pages.
 
@@ -534,7 +585,7 @@ The tracker is a persistence layer that aggregates mistakes and flagged items ac
 
 ---
 
-## 12. Highlighter & Markup System
+## 13. Highlighter & Markup System
 
 A robust toolset for annotating questions during a session. Markups are persisted in the user's progress and restored on reload.
 
@@ -554,7 +605,7 @@ Markups are applied dynamically during `renderQuestion()` by injecting `<mark>` 
 
 ---
 
-## 13. Keyboard Shortcut System
+## 14. Keyboard Shortcut System
 
 The engine includes a full keyboard interface to speed up MCQ solving.
 
@@ -571,7 +622,7 @@ The engine includes a full keyboard interface to speed up MCQ solving.
 
 ---
 
-## 14. Session Management & Persistence
+## 15. Session Management & Persistence
 
 The engine ensures that a user's progress is never lost, even if they close the browser or refresh the page.
 
@@ -589,7 +640,7 @@ The engine ensures that a user's progress is never lost, even if they close the 
 
 ---
 
-## 15. CSS / Theme System
+## 16. CSS / Theme System
 
 All CSS is injected by the engines — do not add external stylesheets to quiz/bank files.
 
@@ -610,7 +661,7 @@ All CSS is injected by the engines — do not add external stylesheets to quiz/b
 
 ---
 
-## 16. CRITICAL RULES: DO NOT BREAK
+## 17. CRITICAL RULES: DO NOT BREAK
 
 To maintain the stability of the toolkit, the accuracy of the project generator, and the offline functionality of all produced sites, every agent MUST follow these rules:
 
@@ -644,9 +695,12 @@ To maintain the stability of the toolkit, the accuracy of the project generator,
 - **Toolkit vs Project Caches**: The toolkit uses `quiz-tool-` as a cache prefix. Generated projects use `quiz-cache-`. Never mix these, as it causes cross-contamination of offline data.
 - **Network-First for Hubs**: All `index.html` (hub) pages MUST use a network-first strategy in the service worker to ensure users see the latest quiz list when online.
 
+### 16f. Tauri Build Artifacts
+- **Tauri outputs are gitignored**: Both QuizTool itself and generated projects exclude Tauri build directories via `.gitignore`. The entries `src-tauri/target/` and `tauri/target/` prevent Rust build artifacts from being tracked. If a Tauri desktop wrapper is added, install the [Tauri CLI](https://v2.tauri.app/) and initialize in a `src-tauri/` directory. The PWA remains the primary distribution channel; Tauri is an optional native wrapper.
+
 ---
 
-## 17. Performance & Offline Resilience Architecture
+## 18. Performance & Offline Resilience Architecture
 
 The platform includes several optimizations to ensure high performance on mobile devices and robust offline capability:
 
@@ -684,7 +738,7 @@ When the tracker dashboard is opened, the engine fetches `tracker-map.json` in t
 
 ---
 
-## 18. Adding a New Tool to QuizTool
+## 19. Adding a New Tool to QuizTool
 
 1. Create `new-tool.html` in the repo root
 2. Add it to `QUIZZES` in `index.html`:
@@ -696,7 +750,7 @@ When the tracker dashboard is opened, the engine fetches `tracker-map.json` in t
 
 ---
 
-## 19. Dependency Map
+## 20. Dependency Map
 
 ```
 QuizTool (toolkit pages)
@@ -753,7 +807,7 @@ Bundled data files in `build_exe.py`:
 
 ---
 
-## 20. Local Admin Dashboard (`scripts/admin-dashboard.py`)
+## 21. Local Admin Dashboard (`scripts/admin-dashboard.py`)
 
 A local Flask-based web interface for managing quiz projects. Bundled into generated ZIPs and used for development. Runs on `http://localhost:5500/admin/` by default (configurable via `--port` CLI arg or `QUIZTOOL_ADMIN_PORT` env var).
 
@@ -963,4 +1017,189 @@ This script fetches the latest CDN dependencies and bundles the engine into a si
 
 ### Propagating Sync Changes
 After rebuilding `sync-engine.js`, propagate the updated `sync-engine.src.js` and `sync-engine.js` into any maintained generated projects that vendor these files (for example `MU61S8`). Keep their local `AGENTS.md` notes aligned with any behavior or workflow changes you introduce.
+
+---
+
+## 24. Tauri Desktop Wrapper
+
+Tauri is a lightweight framework for wrapping web apps as native desktop applications using a Rust backend. Both QuizTool itself and the quiz sites it generates can optionally be wrapped as Tauri apps for an offline desktop experience.
+
+### 24a. When to Use Tauri
+
+The quiz-site PWA (service worker + offline cache) is the **primary distribution channel** — it works on any device with a browser, requires no install, and supports offline access out of the box.
+
+Tauri is beneficial when:
+- **Native file access** is needed (e.g., saving PDFs to a user-chosen directory, drag-drop file management)
+- **System integration** is desired (tray icon, global shortcuts, native notifications)
+- **Distribution** via app stores (Windows MSI, macOS DMG, Linux AppImage) is required
+- **Offline-first** desktop experience without browser chrome
+
+### 24b. Prerequisites
+
+```bash
+# Install Tauri CLI
+cargo install tauri-cli --version "^2"
+
+# Or via npm (alternative)
+npm install -g @tauri-apps/cli
+```
+
+System requirements:
+- **Rust toolchain** (`rustup` + `cargo`) — see [rustup.rs](https://rustup.rs)
+- **Windows**: WebView2 (built into Windows 11, available for Win 10)
+- **macOS**: built-in WebKit
+- **Linux**: `libwebkit2gtk-4.1-dev`, `libgtk-3-dev`, etc.
+
+### 24c. Adding Tauri to a Generated Quiz Project
+
+For a generated project (e.g., MU61S8):
+
+```bash
+cd your-quiz-project/
+cargo tauri init
+```
+
+This creates a `src-tauri/` directory at the project root. The default config will work for most quiz sites — point the window to the local hub `index.html`.
+
+Key config file: `src-tauri/tauri.conf.json`
+
+```json
+{
+  "productName": "MU61 Quiz",
+  "version": "1.0.0",
+  "identifier": "com.mu61.quiz",
+  "build": {
+    "frontendDist": "../",
+    "devUrl": "http://localhost:8000",
+    "beforeDevCommand": "",
+    "beforeBuildCommand": ""
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "MU61 Quiz",
+        "width": 1024,
+        "height": 768,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icon-32x32.png",
+      "icon-128x128.png",
+      "icon-128x128@2x.png",
+      "icon.icns",
+      "icon.ico"
+    ]
+  }
+}
+```
+
+**Important config notes:**
+- `frontendDist`: Set to `"../"` since the quiz site is static HTML at the project root
+- `devUrl`: Point to your local dev server (e.g., `python -m http.server 8000`)
+- `beforeDevCommand`/`beforeBuildCommand`: Leave empty — no bundler/build step needed
+- `csp`: Set to `null` to allow inline styles/scripts that the engines inject
+
+### 24d. Repository Layout with Tauri
+
+```
+quiz-project/
+├── index.html                  ← Existing hub
+├── quiz-engine.js
+├── index-engine.js
+├── ...
+├── src-tauri/                  ← Created by `cargo tauri init`
+│   ├── tauri.conf.json         ← Tauri configuration
+│   ├── Cargo.toml              ← Rust dependencies
+│   ├── build.rs                ← Build script
+│   ├── src/
+│   │   └── lib.rs              ← Rust entry point (default, usually no changes needed)
+│   ├── capabilities/
+│   │   └── default.json        ← Permissions
+│   ├── icons/                  ← App icons (generated)
+│   └── target/                 ← Build artifacts (gitignored)
+```
+
+### 24e. Common Commands
+
+```bash
+# Development — opens a native window with hot-reload
+cargo tauri dev
+
+# Build for production — produces installers in src-tauri/target/release/bundle/
+cargo tauri build
+
+# Customize the app window title, size, etc.
+# Edit src-tauri/tauri.conf.json → app → windows
+```
+
+### 24f. Permissions & Capabilities
+
+Tauri v2 uses a capability-based security model. The default `src-tauri/capabilities/default.json` allows basic window management. For additional features:
+
+```json
+{
+  "identifier": "default",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:default",
+    "fs:default",
+    "shell:default"
+  ]
+}
+```
+
+Add permissions as needed (e.g., `dialog:allow-save` for PDF export, `fs:allow-write` for saving tracker exports).
+
+### 24g. Icon Generation
+
+Tauri requires platform-specific icons. Generate them from the project's existing PNGs:
+
+```bash
+# Using cargo tauri icon (requires imagemagick or similar)
+cargo tauri icon icon-512.png
+
+# Or manually place:
+#   src-tauri/icons/icon.ico          (Windows)
+#   src-tauri/icons/icon.icns         (macOS)
+#   src-tauri/icons/icon-32x32.png    (Linux)
+#   src-tauri/icons/icon-128x128.png  (Linux)
+#   src-tauri/icons/icon-128x128@2x.png (Linux)
+```
+
+### 24h. .gitignore Rules
+
+Both `src-tauri/target/` and `tauri/target/` are excluded to prevent Rust build artifacts from being tracked:
+
+```gitignore
+# Tauri
+src-tauri/target/
+tauri/target/
+```
+
+These entries are already present in both QuizTool's and generated projects' `.gitignore`.
+
+### 24i. Tauri + PWA Relationship
+
+- The **PWA** is the default distribution: works on all platforms, zero install, updated on every page load.
+- **Tauri** is an optional native wrapper: provides desktop-specific features (file system, system tray, etc.).
+- Both share the same static HTML/JS/CSS assets. No code changes are needed to support both.
+- The service worker continues to provide offline capability inside the Tauri webview.
+- The same `tracker-map.json` and `localStorage` data works identically in both environments.
+
+### 24j. Critical Rules for Tauri
+
+- **Never commit `src-tauri/target/`**: The Rust build directory can be 1GB+. Ensure the `.gitignore` entries are present.
+- **Keep `frontendDist` pointing to the project root**: Since quiz sites are flat HTML files with no bundler, `frontendDist: "../"` correctly resolves relative to `src-tauri/`.
+- **Inline scripts are expected**: The quiz/bank engines inject `<style>` and `<script>` tags at runtime. Do not set a strict CSP unless you've audited all injected content.
+- **Tauri is optional**: The generated ZIP and GitHub Pages deployment should never assume Tauri exists. All documentation and workflows must treat Tauri as an add-on, not a requirement.
 

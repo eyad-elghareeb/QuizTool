@@ -2087,6 +2087,11 @@ def download_local():
 
 def open_browser(port):
     import time
+    # When running as a Tauri sidecar, skip opening a browser tab —
+    # the Tauri WebView window is the UI instead.
+    if os.environ.get('TAURI_SIDECAR', '') == '1':
+        print(f'  [tauri sidecar] Skipping browser open (WebView will connect)')
+        return
     time.sleep(1.5)
     webbrowser.open(f'http://localhost:{port}')
 
@@ -2110,11 +2115,27 @@ def shutdown():
 
 
 def main():
-    port = 5500
+    import argparse
+
+    parser = argparse.ArgumentParser(description='QuizTool Project Generator')
+    parser.add_argument('--port', type=int, default=None,
+                        help='Port to run the Flask server on (default: 5500, or QUIZTOOL_PORT env var)')
+    args = parser.parse_args()
+
+    # Port priority: --port CLI arg > QUIZTOOL_PORT env var > default 5500
+    if args.port is not None:
+        port = args.port
+    else:
+        port = int(os.environ.get('QUIZTOOL_PORT', '5500'))
+
+    is_sidecar = os.environ.get('TAURI_SIDECAR', '') == '1'
+
     print(f"\n{'=' * 60}")
     print(f"  QuizTool Project Generator")
     print(f"{'=' * 60}")
     print(f"\n  Starting web UI on http://localhost:{port}")
+    if is_sidecar:
+        print(f"  [tauri sidecar mode] WebView will connect automatically")
     print(f"  Configure your project and generate a ready-to-deploy ZIP.")
     print(f"\n  Generated project structure (similar to MU61S8):")
     print(f"    [v] Engine files (quiz, bank, index)")
@@ -2126,6 +2147,7 @@ def main():
     print(f"    [x] No QuizTool utilities (quiz-maker, bank-maker, etc.)")
     print(f"\n  Press Ctrl+C to stop.\n")
 
+    # Only open browser when NOT running as a Tauri sidecar
     threading.Thread(target=open_browser, args=(port,), daemon=True).start()
 
     try:
