@@ -4,6 +4,12 @@
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
 
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
 // ── Deploy metadata ───────────────────────────────────────────────────────────
 
 fn deploy_dir(project_root: &Path) -> PathBuf {
@@ -45,11 +51,14 @@ pub fn inferred_github_metadata(project_root: &Path) -> Option<Value> {
     let (owner, repo) = crate::git::parse_github_remote(&remote)?;
     let (_, branch_out, _) = {
         use std::process::Command;
-        let out = Command::new("git")
-            .args(["rev-parse", "--abbrev-ref", "HEAD"])
-            .current_dir(project_root)
-            .output()
-            .ok()?;
+        let mut cmd = Command::new("git");
+        cmd.args(["rev-parse", "--abbrev-ref", "HEAD"])
+            .current_dir(project_root);
+        
+        #[cfg(windows)]
+        cmd.creation_flags(CREATE_NO_WINDOW);
+
+        let out = cmd.output().ok()?;
         (out.status.code().unwrap_or(1),
          String::from_utf8_lossy(&out.stdout).trim().to_string(),
          String::from_utf8_lossy(&out.stderr).trim().to_string())
@@ -117,7 +126,7 @@ fn http_request(
 }
 
 fn gh(method: &str, path: &str, token: &str, body: Option<&Value>) -> Result<(u16, Value), String> {
-    let mut req = ureq::AgentBuilder::new()
+    let req = ureq::AgentBuilder::new()
         .timeout_connect(std::time::Duration::from_secs(30))
         .timeout_read(std::time::Duration::from_secs(60))
         .build()
@@ -265,15 +274,18 @@ pub fn deploy_to_github(project_root: &Path, metadata: &Value, token: &str, comm
         "@echo off\necho %1 | findstr /i \"Username\" >nul\nif %errorlevel%==0 (echo %GIT_USERNAME%) else (echo %GIT_PASSWORD%)\n"
     );
 
-    let push_result = std::process::Command::new("git")
-        .args(["push", "origin", branch])
+    let mut cmd = std::process::Command::new("git");
+    cmd.args(["push", "origin", branch])
         .current_dir(project_root)
         .env("GIT_USERNAME", owner)
         .env("GIT_PASSWORD", token)
         .env("GIT_ASKPASS", askpass.to_string_lossy().as_ref())
-        .env("GIT_TERMINAL_PROMPT", "0")
-        .output()
-        .map_err(|e| format!("Failed to run git push: {}", e))?;
+        .env("GIT_TERMINAL_PROMPT", "0");
+
+    #[cfg(windows)]
+    cmd.creation_flags(CREATE_NO_WINDOW);
+
+    let push_result = cmd.output().map_err(|e| format!("Failed to run git push: {}", e))?;
 
     let _ = std::fs::remove_file(&askpass);
 
@@ -296,7 +308,13 @@ pub fn deploy_to_github(project_root: &Path, metadata: &Value, token: &str, comm
 }
 
 fn run_git_cwd(args: &[&str], cwd: &Path) -> (i32, String, String) {
-    match std::process::Command::new("git").args(args).current_dir(cwd).output() {
+    let mut cmd = std::process::Command::new("git");
+    cmd.args(args).current_dir(cwd);
+
+    #[cfg(windows)]
+    cmd.creation_flags(CREATE_NO_WINDOW);
+
+    match cmd.output() {
         Ok(out) => (
             out.status.code().unwrap_or(1),
             String::from_utf8_lossy(&out.stdout).to_string(),

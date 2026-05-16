@@ -1,8 +1,15 @@
 // commands.rs — All 19 Tauri IPC commands (1:1 with Flask routes)
 use crate::{deploy, git, parser, templates};
+use crate::server::QuizServer;
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
 use tauri::State;
+
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 pub struct ProjectRoot(pub std::sync::Mutex<PathBuf>);
 
@@ -10,15 +17,25 @@ fn root(state: &State<ProjectRoot>) -> PathBuf {
     state.0.lock().unwrap().clone()
 }
 
-const SKIP_DIRS: &[&str] = &["node_modules", "target", "__pycache__", ".git", ".quiztool"];
+const SKIP_DIRS: &[&str] = &["node_modules", "target", "__pycache__", ".git", ".quiztool", "tauri-admin", "tauri", "gen"];
 
 fn should_skip(name: &str) -> bool {
     SKIP_DIRS.contains(&name) || name.starts_with('.')
 }
 
 fn to_posix(p: &Path, base: &Path) -> String {
-    p.strip_prefix(base).unwrap_or(p)
-        .to_string_lossy().replace('\\', "/")
+    let p_s = p.to_string_lossy().replace('\\', "/");
+    let b_s = base.to_string_lossy().replace('\\', "/");
+    let p_clean = if p_s.starts_with("//?/") { &p_s[4..] } else { &p_s };
+    let b_clean = if b_s.starts_with("//?/") { &b_s[4..] } else { &b_s };
+    
+    if p_clean.to_lowercase().starts_with(&b_clean.to_lowercase()) {
+        let mut rel = &p_clean[b_clean.len()..];
+        if rel.starts_with('/') { rel = &rel[1..]; }
+        if rel.is_empty() { return ".".into(); }
+        return rel.to_string();
+    }
+    p_clean.to_string()
 }
 
 fn normalize(raw: &str) -> String {
@@ -30,7 +47,12 @@ fn normalize(raw: &str) -> String {
 fn resolve(root: &Path, rel: &str) -> Result<PathBuf, String> {
     let rel = normalize(rel);
     let p = if rel == "." { root.to_path_buf() } else { root.join(&rel) };
-    let p = p.canonicalize().unwrap_or_else(|_| root.join(&rel));
+    let mut p = p.canonicalize().unwrap_or_else(|_| root.join(&rel));
+    // Remove Windows UNC prefix (\\?\) so starts_with works against non-UNC roots
+    let s = p.to_string_lossy();
+    if s.starts_with(r"\\?\") {
+        p = PathBuf::from(&s[4..]);
+    }
     if !p.starts_with(root) { return Err("Path escapes project root.".into()); }
     Ok(p)
 }
@@ -200,7 +222,7 @@ pub fn save_file(path: String, content: String, confirm_uid_change: Option<bool>
 }
 
 #[tauri::command]
-pub fn validate_file(path: String, content: String, original_uid: Option<String>, state: State<ProjectRoot>) -> Value {
+pub fn validate_file(path: String, content: String, original_uid: Option<String>, _state: State<ProjectRoot>) -> Value {
     let uid = original_uid.as_deref().unwrap_or("");
     let v = parser::validate_dashboard_content(&path, &content, uid);
     json!({
@@ -381,7 +403,12 @@ pub fn run_sync(state: State<ProjectRoot>) -> Result<Value, String> {
     let script = root.join("scripts").join("sync_quiz_assets.py");
     if !script.exists() { return Err("Sync script not found (scripts/sync_quiz_assets.py).".into()); }
     let python = find_python().ok_or("Python not found in PATH. Please install Python to use sync.")?;
-    let out = std::process::Command::new(&python).arg(&script).current_dir(&root).output().map_err(|e| e.to_string())?;
+    let mut cmd = std::process::Command::new(&python);
+    cmd.arg(&script).current_dir(&root);
+    #[cfg(windows)]
+    cmd.creation_flags(CREATE_NO_WINDOW);
+    
+    let out = cmd.output().map_err(|e| e.to_string())?;
     let stdout = String::from_utf8_lossy(&out.stdout).trim().to_string();
     let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
     if out.status.success() {
@@ -409,7 +436,7 @@ pub fn git_push(state: State<ProjectRoot>) -> Result<Value, String> {
 }
 
 #[tauri::command]
-pub fn provider_verify(provider: String, token: String, state: State<ProjectRoot>) -> Result<Value, String> {
+pub fn provider_verify(provider: String, token: String, _state: State<ProjectRoot>) -> Result<Value, String> {
     let provider = provider.trim().to_lowercase();
     if !["github", "netlify", "vercel"].contains(&provider.as_str()) {
         return Err("Provider must be github, netlify, or vercel.".into());
@@ -442,7 +469,12 @@ pub fn provider_deploy(
         let script = root.join("scripts").join("sync_quiz_assets.py");
         if script.exists() {
             if let Some(py) = find_python() {
-                std::process::Command::new(&py).arg(&script).current_dir(&root).output()
+                let mut cmd = std::process::Command::new(&py);
+                cmd.arg(&script).current_dir(&root);
+                #[cfg(windows)]
+                cmd.creation_flags(CREATE_NO_WINDOW);
+                
+                cmd.output()
                     .ok().map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
                     .unwrap_or_default()
             } else { String::new() }
@@ -466,4 +498,24 @@ pub fn provider_deploy(
         "providerUrl": result.get("providerUrl"),
         "syncOutput": sync_output,
     }))
+}
+
+#[tauri::command]
+pub fn open_in_browser(url: String, _state: State<ProjectRoot>, server: State<QuizServer>) -> Result<(), String> {
+    let target = if url.starts_with("http://") || url.starts_with("https://") {
+        url
+    } else {
+        // Convert to local server URL
+        let rel = if url.starts_with("quiztool-preview://localhost/") {
+            url.trim_start_matches("quiztool-preview://localhost/").split('?').next().unwrap_or("")
+        } else if url.starts_with("http://127.0.0.1") {
+            // Already a server URL
+            return open::that(url).map_err(|e| e.to_string());
+        } else {
+            url.trim_start_matches('/')
+        };
+        format!("http://127.0.0.1:{}/{}", server.port, rel)
+    };
+
+    open::that(target).map_err(|e| e.to_string())
 }

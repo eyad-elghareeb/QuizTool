@@ -8,135 +8,114 @@ mod deploy;
 mod git;
 mod parser;
 mod templates;
+mod server;
 
 use commands::ProjectRoot;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::{
     http::{Request, Response},
-    Manager,
 };
+use server::QuizServer;
 
 // ── Embedded frontend ─────────────────────────────────────────────────────────
 const FRONTEND_HTML: &str = include_str!("../frontend/index.html");
 
-fn get_project_root() -> PathBuf {
-    // The EXE is placed in the project root — use its parent directory
-    std::env::current_exe()
-        .ok()
-        .and_then(|p| p.parent().map(|p| p.to_path_buf()))
-        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")))
-}
-
-// ── URI scheme: quiztool-admin:// → serves the SPA ───────────────────────────
-fn handle_admin_request(_req: Request<Vec<u8>>) -> Response<Vec<u8>> {
+fn serve_embedded(content: &[u8], mime: &str) -> Response<Vec<u8>> {
     Response::builder()
         .status(200)
-        .header("Content-Type", "text/html; charset=utf-8")
-        .body(FRONTEND_HTML.as_bytes().to_vec())
+        .header("Content-Type", mime)
+        .body(content.to_vec())
         .unwrap()
 }
 
-// ── URI scheme: quiztool-preview:// → serves project files with path rewriting ──
-fn handle_preview_request(req: Request<Vec<u8>>, project_root: &PathBuf) -> Response<Vec<u8>> {
-    let uri = req.uri().to_string();
-    // Strip scheme + host: quiztool-preview://localhost/gyn/dep/l1.html → gyn/dep/l1.html
-    let path_part = uri
-        .trim_start_matches("quiztool-preview://localhost/")
-        .trim_start_matches("quiztool-preview://localhost")
-        .trim_start_matches('/');
-
-    // Strip query params
-    let path_part = path_part.split('?').next().unwrap_or(path_part);
-    let path_part = path_part.split('#').next().unwrap_or(path_part);
-
-    if path_part.is_empty() || path_part == "." {
-        return not_found();
+fn get_project_root() -> PathBuf {
+    // 1. Check if we are running via 'cargo run'
+    if let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {
+        let path = PathBuf::from(manifest_dir);
+        if path.ends_with("tauri-admin") {
+            return path.parent().unwrap_or(&path).to_path_buf();
+        }
+        return path;
     }
 
-    let candidate = project_root.join(path_part);
-    // Security: must stay inside project root
-    let canonical = match candidate.canonicalize() {
-        Ok(c) => c,
-        Err(_) => return not_found(),
-    };
-    if !canonical.starts_with(project_root) {
-        return forbidden();
-    }
-    if !canonical.is_file() {
-        return not_found();
-    }
+    // 2. Portable mode: walk up from EXE directory looking for markers
+    if let Ok(p) = std::env::current_exe() {
+        if let Some(exe_dir) = p.parent() {
+            let mut curr = exe_dir.to_path_buf();
+            // Try up to 5 levels up
+            for _ in 0..5 {
+                if curr.join("index-engine.js").exists() || curr.join("manifest.webmanifest").exists() || curr.join("quiz-engine.js").exists() {
+                    return curr;
+                }
+                // If we are in a 'target' folder, keep walking up
+                let s = curr.to_string_lossy().replace('\\', "/");
+                if s.ends_with("/target/debug") || s.ends_with("/target/release") || s.contains("/target/x86_64") {
+                    // continue walking
+                } else if curr.ends_with("scripts") || curr.ends_with("bin") {
+                    // continue walking
+                } else if curr.join("Cargo.toml").exists() && !curr.join("index-engine.js").exists() {
+                    // We are in the tauri-admin source folder, root is parent
+                    return curr.parent().unwrap_or(&curr).to_path_buf();
+                }
 
-    let ext = canonical.extension()
-        .and_then(|s| s.to_str())
-        .unwrap_or("")
-        .to_lowercase();
-
-    if ext == "html" {
-        // Rewrite engine base path for preview context
-        let content = match std::fs::read_to_string(&canonical) {
-            Ok(c) => c,
-            Err(_) => return not_found(),
-        };
-        let depth = {
-            let rel = canonical.strip_prefix(project_root).unwrap_or(&canonical);
-            rel.components().count().saturating_sub(1)
-        };
-        let prefix = "../".repeat(depth);
-        let re = regex::Regex::new(
-            r"window\.__QUIZ_ENGINE_BASE\s*=\s*'\.\./'\.repeat\(Math\.max\(0,location\.pathname\.split\('/'[^)]*\)\.filter\(Boolean\)\.length\s*-\s*\d+\)\);?"
-        ).unwrap();
-        let rewritten = re.replace(&content, format!("window.__QUIZ_ENGINE_BASE='{}';", prefix).as_str());
-        Response::builder()
-            .status(200)
-            .header("Content-Type", "text/html; charset=utf-8")
-            .body(rewritten.as_bytes().to_vec())
-            .unwrap()
-    } else {
-        // Serve static asset with correct MIME type
-        let mime = match ext.as_str() {
-            "js"   => "application/javascript",
-            "css"  => "text/css",
-            "json" | "webmanifest" => "application/json",
-            "svg"  => "image/svg+xml",
-            "png"  => "image/png",
-            "jpg" | "jpeg" => "image/jpeg",
-            "ico"  => "image/x-icon",
-            "woff2" => "font/woff2",
-            "woff"  => "font/woff",
-            "ttf"   => "font/ttf",
-            _ => "application/octet-stream",
-        };
-        match std::fs::read(&canonical) {
-            Ok(data) => Response::builder()
-                .status(200)
-                .header("Content-Type", mime)
-                .body(data)
-                .unwrap(),
-            Err(_) => not_found(),
+                if let Some(parent) = curr.parent() {
+                    curr = parent.to_path_buf();
+                } else {
+                    break;
+                }
+            }
+            // If no marker found, default to EXE directory
+            return exe_dir.to_path_buf();
         }
     }
+
+    // 3. Fallback to CWD
+    std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
 }
 
-fn not_found() -> Response<Vec<u8>> {
-    Response::builder().status(404).body(b"Not Found".to_vec()).unwrap()
+fn canonicalize_path(p: PathBuf) -> PathBuf {
+    let p = p.canonicalize().unwrap_or(p);
+    let s = p.to_string_lossy();
+    if s.starts_with(r"\\?\") {
+        PathBuf::from(&s[4..])
+    } else {
+        p
+    }
 }
-fn forbidden() -> Response<Vec<u8>> {
-    Response::builder().status(403).body(b"Forbidden".to_vec()).unwrap()
+
+// ── URI scheme: quiztool-admin:// → serves the SPA ───────────────────────────
+fn handle_admin_request(req: Request<Vec<u8>>, port: u16) -> Response<Vec<u8>> {
+    let uri = req.uri().to_string();
+    if uri.contains("/admin/pdf-exporter") {
+        return serve_embedded(include_bytes!(concat!(env!("OUT_DIR"), "/engines/pdf-exporter.html")), "text/html; charset=utf-8");
+    }
+
+    // Inject the server port into the HTML
+    let script = format!("<script>window.__QUIZ_SERVER_PORT = {};</script>", port);
+    let mut html = FRONTEND_HTML.to_string();
+    if let Some(pos) = html.find("<head>") {
+        html.insert_str(pos + 6, &script);
+    }
+
+    Response::builder()
+        .status(200)
+        .header("Content-Type", "text/html; charset=utf-8")
+        .body(html.as_bytes().to_vec())
+        .unwrap()
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 fn main() {
-    let project_root = get_project_root();
+    let project_root = canonicalize_path(get_project_root());
+    let server = QuizServer::start(project_root.clone());
+    let port = server.port;
 
     tauri::Builder::default()
         .manage(ProjectRoot(Mutex::new(project_root.clone())))
+        .manage(server)
         .register_uri_scheme_protocol("quiztool-admin", move |_app, req| {
-            handle_admin_request(req)
-        })
-        .register_uri_scheme_protocol("quiztool-preview", {
-            let root = project_root.clone();
-            move |_app, req| handle_preview_request(req, &root)
+            handle_admin_request(req, port)
         })
         .invoke_handler(tauri::generate_handler![
             commands::list_files,
@@ -157,6 +136,7 @@ fn main() {
             commands::git_push,
             commands::provider_verify,
             commands::provider_deploy,
+            commands::open_in_browser,
         ])
         .run(tauri::generate_context!())
         .expect("error while running QuizTool Admin");

@@ -70,7 +70,7 @@ pub fn create_quiz_html(config: &Value, questions: &Value) -> String {
     let title = config.get("title").and_then(|v| v.as_str()).unwrap_or("Quiz");
     let config_json = serde_json::to_string_pretty(config).unwrap_or_default();
     let questions_json = serde_json::to_string_pretty(questions).unwrap_or_default();
-    format!(r#"<!DOCTYPE html>
+    format!(r##"<!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
@@ -100,14 +100,14 @@ const QUESTIONS = {questions_json};
 </script>
 </body>
 </html>
-"#, fouc = FOUC_SCRIPT, title = title, config_json = config_json, questions_json = questions_json)
+"##, fouc = FOUC_SCRIPT, title = title, config_json = config_json, questions_json = questions_json)
 }
 
 pub fn create_bank_html(config: &Value, questions: &Value) -> String {
     let title = config.get("title").and_then(|v| v.as_str()).unwrap_or("Bank");
     let config_json = serde_json::to_string_pretty(config).unwrap_or_default();
     let questions_json = serde_json::to_string_pretty(questions).unwrap_or_default();
-    format!(r#"<!DOCTYPE html>
+    format!(r##"<!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
@@ -137,7 +137,7 @@ const QUESTION_BANK = {questions_json};
 </script>
 </body>
 </html>
-"#, fouc = FOUC_SCRIPT, title = title, config_json = config_json, questions_json = questions_json)
+"##, fouc = FOUC_SCRIPT, title = title, config_json = config_json, questions_json = questions_json)
 }
 
 struct IndexCtx {
@@ -194,7 +194,7 @@ fn build_index_ctx(folder_rel: &str, title: &str, description: &str) -> IndexCtx
     }
 }
 
-static TRACKER_MODAL: &str = r#"<div class="dash-overlay" id="tracker-dashboard">
+static TRACKER_MODAL: &str = r##"<div class="dash-overlay" id="tracker-dashboard">
   <div class="dash-modal">
     <div class="dash-header">
       <h2 id="dash-title-text">Question Tracker</h2>
@@ -213,16 +213,16 @@ static TRACKER_MODAL: &str = r#"<div class="dash-overlay" id="tracker-dashboard"
       <button class="btn-dash-close" onclick="closeTrackerDashboard()">Close</button>
     </div>
   </div>
-</div>"#;
+</div>"##;
 
-static FOUC_SCRIPT_OPAQUE: &str = r#"(function(){var t=localStorage.getItem('quiz-theme')||'dark';var s=document.createElement('style');
+static FOUC_SCRIPT_OPAQUE: &str = r##"(function(){var t=localStorage.getItem('quiz-theme')||'dark';var s=document.createElement('style');
 s.textContent='html,body{background:'+(t==='light'?'#f3f0eb':'#0d1117')+';color:'+(t==='light'?'#1c1917':'#e6edf3')+';margin:0;padding:0;min-height:100%}';
-document.head.appendChild(s)})();"#;
+document.head.appendChild(s)})();"##;
 
 pub fn create_index_html(folder_rel: &str, title: &str, description: &str) -> String {
     let ctx = build_index_ctx(folder_rel, title, description);
     let prefix = &ctx.prefix;
-    format!(r#"<!DOCTYPE html>
+    format!(r##"<!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
@@ -279,7 +279,7 @@ if ('serviceWorker' in navigator) {{
 </script>
 </body>
 </html>
-"#,
+"##,
         fouc = FOUC_SCRIPT_OPAQUE,
         page_title = ctx.page_title,
         prefix = prefix,

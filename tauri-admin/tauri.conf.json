@@ -12,7 +12,7 @@
   "app": {
     "withGlobalTauri": true,
     "security": {
-      "csp": "default-src 'self' quiztool-admin: quiztool-preview: 'unsafe-inline' 'unsafe-eval'; connect-src *; img-src 'self' quiztool-preview: data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://fonts.googleapis.com; frame-src quiztool-preview: 'self'"
+      "csp": "default-src 'self' quiztool-admin: 'unsafe-inline' 'unsafe-eval'; connect-src *; img-src 'self' http://127.0.0.1:* data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://fonts.googleapis.com; frame-src http://127.0.0.1:* 'self'"
     },
     "windows": [
       {

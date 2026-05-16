@@ -5,8 +5,20 @@ use serde_json::{json, Value};
 use std::path::Path;
 use std::process::Command;
 
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
 fn run_git(args: &[&str], cwd: &Path) -> (i32, String, String) {
-    match Command::new("git").args(args).current_dir(cwd).output() {
+    let mut cmd = Command::new("git");
+    cmd.args(args).current_dir(cwd);
+    
+    #[cfg(windows)]
+    cmd.creation_flags(CREATE_NO_WINDOW);
+
+    match cmd.output() {
         Ok(out) => (
             out.status.code().unwrap_or(1),
             String::from_utf8_lossy(&out.stdout).to_string(),
