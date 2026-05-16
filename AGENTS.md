@@ -65,16 +65,16 @@ QuizTool/
 │   ├── sync_quiz_assets.py       ← Auto-index + SW updater for generated sites
 │   └── standardize_quiz_files.py ← One-time file formatter
 │
-├── — DESKTOP APP (TAURI) —
-├── tauri/                        ← Tauri project root
-│   ├── tauri.conf.json           ← App configuration (product name, icons, window settings)
-│   ├── src/
-│   │   ├── main.rs               ← App entry point & Tauri command registration
-│   │   ├── generator.rs          ← Ported generator logic (pure Rust)
-│   │   ├── engines.rs            ← Embedded engine constants
-│   │   └── api_helpers.rs        ← GitHub/Netlify/Vercel API integration
-│   └── frontend/
-│       └── index.html            ← Embedded wizard UI for desktop
+├── — DESKTOP APPS (TAURI) —
+├── tauri/                        ← Tauri generator root
+│   ├── tauri.conf.json           ← Generator configuration
+│   ├── src/                      ← Rust generator logic (ported from generate_project.py)
+│   └── frontend/                 ← Generator wizard UI
+│
+├── tauri-admin/                  ← Tauri admin dashboard root
+│   ├── tauri.conf.json           ← Dashboard configuration
+│   ├── src/                      ← Rust command handlers (FS, Git, validation)
+│   └── frontend/                 ← Dashboard SPA (ported from index.html)
 │
 └── .github/workflows/
     └── jekyll-gh-pages.yml       ← Deploys QuizTool itself to GitHub Pages
@@ -444,42 +444,45 @@ The generated `sw.js` includes:
 
 ---
 
-## 7. Tauri Standalone Desktop App (`tauri/`)
+## 7. Tauri Desktop Apps
 
-The Tauri port provides a fully standalone, zero-dependency desktop version of the project generator. Unlike the Python version, it requires no local Python installation, Flask server, or sidecar processes.
+QuizTool provides two native desktop wrappers built with Tauri, offering zero-dependency execution and deep system integration.
 
-### 7a. Core Architecture
+### 7a. Project Generator (`tauri/`)
+A standalone port of `generate_project.py`.
+- **Embedded Logic**: Project generation logic ported to pure Rust (`tauri/src/generator.rs`).
+- **Embedded Assets**: Core engine files and scripts are embedded into the binary.
+- **Custom Protocol**: Serves the frontend via `quiztool://localhost/`.
 
-- **Embedded Logic**: All project generation logic from `generate_project.py` is ported to pure Rust (`tauri/src/generator.rs`).
-- **Embedded Engines**: Core engine files (`quiz-engine.js`, etc.) and scripts are embedded into the binary at compile time via `include_str!` and `include_bytes!` in `tauri/src/engines.rs`.
-- **Custom Protocol**: Serves the frontend via the `quiztool://localhost/` URI scheme, bypassing standard HTTP/HTTPS local server requirements.
-- **Standalone APIs**: Uses the `reqwest` crate (bundled) to interact with GitHub, Netlify, and Vercel APIs directly from Rust.
+### 7b. Admin Dashboard (`tauri-admin/`)
+A native version of the local admin dashboard for managing existing projects.
+- **Architecture**: Rust backend handles all high-privilege filesystem and Git operations; HTML/JS frontend handles the UI.
+- **IPC Interface**: Frontend uses `invoke` to call Rust commands. The `fetchJson` wrapper bridges standard API calls to these native commands.
+- **Features**: 
+  - **Filesystem CRUD**: Native performance for creating, moving, duplicating, and deleting files.
+  - **Git Integration**: Direct execution of `git` commands for status, commit, pull, and push.
+  - **Project Probing**: Recursive scanning for question counts and workspace stats.
+  - **Theme Persistence**: Robust restoration of Light/Dark mode via `localStorage` and native window attributes.
+- **Preview Protocol**: Uses `quiztool-preview://localhost/` to securely serve project files for live editing.
 
-### 7b. Technical Implementation
+### 7c. Technical Implementation (Common)
 
 | Component | Role | Implementation |
 |-----------|------|----------------|
-| `main.rs` | App Controller | Registers URI schemes, manages state (last project dir), and exposes Tauri commands to JS. |
-| `generator.rs` | Pure Rust Generator | Builds the project ZIP in memory using the `zip` crate. Handles manifest, SW, and index generation. |
-| `engines.rs` | Asset Bundler | Constants that hold the entire content of engine JS/CSS, templates, and scripts. |
-| `api_helpers.rs` | Cloud Integrator | Direct HTTPS calls for token verification and project publishing. |
-
-### 7c. Desktop-Specific Features
-
-- **Local Extract**: Automatically extracts the generated ZIP to a temporary directory for immediate use.
-- **Admin Dashboard Integration**: Attempts to launch the Python-based admin dashboard for the newly generated project if a Python interpreter is found on the system.
-- **Cross-Platform**: Designed for Windows (`.exe`), but compatible with macOS and Linux via standard Tauri build targets.
+| `main.rs` | App Controller | Registers URI schemes, manages state, and exposes Tauri commands. |
+| `commands.rs` | Logic Layer | Implements backend functionality (FS, Git, etc.) returning `ApiResult<T>`. |
+| `frontend/` | UI Layer | Standard HTML/CSS/JS interface using Tauri's IPC bridge. |
 
 ### 7d. Build Instructions
 
 ```bash
+# Generator
 cd tauri/
-# Development
-npm run tauri dev
-
-# Production Build
 npm run tauri build
-# Output: tauri/target/release/QuizTool.exe (plus installer)
+
+# Admin Dashboard
+cd tauri-admin/
+npm run tauri build
 ```
 
 ---

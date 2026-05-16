@@ -355,6 +355,10 @@ SYNC_SCRIPT = (_SCRIPTS_DIR / 'sync_quiz_assets.py').read_text(encoding='utf-8')
 STANDARDIZE_SCRIPT = (_SCRIPTS_DIR / 'standardize_quiz_files.py').read_text(encoding='utf-8') if (_SCRIPTS_DIR / 'standardize_quiz_files.py').exists() else ''
 ADMIN_DASHBOARD_SCRIPT = (_SCRIPTS_DIR / 'admin-dashboard.py').read_text(encoding='utf-8') if (_SCRIPTS_DIR / 'admin-dashboard.py').exists() else ''
 
+# Read QuizTool-Admin.exe
+_ADMIN_EXE_PATH = BASE_DIR / 'tauri-admin' / 'target' / 'release' / 'quiztool-admin.exe'
+QUIZTOOL_ADMIN_EXE = _ADMIN_EXE_PATH.read_bytes() if _ADMIN_EXE_PATH.exists() else None
+
 # Auto-index script
 AUTO_INDEX_SCRIPT = '''#!/usr/bin/env python3
 """
@@ -733,6 +737,7 @@ target/
 
 # Local helpers
 admin-dashboard.bat
+QuizTool-Admin.exe
 .quiztool/
 .qwen/
 '''
@@ -1125,6 +1130,10 @@ def build_project_zip(config):
             zf.writestr('scripts/standardize_quiz_files.py', STANDARDIZE_SCRIPT)
         if ADMIN_DASHBOARD_SCRIPT:
             zf.writestr('scripts/admin-dashboard.py', ADMIN_DASHBOARD_SCRIPT)
+            
+        # --- Native Admin App ---
+        if QUIZTOOL_ADMIN_EXE:
+            zf.writestr('QuizTool-Admin.exe', QUIZTOOL_ADMIN_EXE)
 
         # --- GitHub Workflows ---
         zf.writestr('.github/workflows/sync-quiz-assets.yml', SYNC_WORKFLOW_YML)

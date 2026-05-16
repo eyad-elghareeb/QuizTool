@@ -516,6 +516,9 @@ pub fn build_project_zip(config: &ProjectConfig) -> Result<Vec<u8>, String> {
     add_str(&mut zip, "scripts/standardize_quiz_files.py", engines::STANDARDIZE_SCRIPT)?;
     add_str(&mut zip, "scripts/admin-dashboard.py", engines::ADMIN_DASHBOARD_SCRIPT)?;
 
+    // Native Admin App
+    add_bytes(&mut zip, "QuizTool-Admin.exe", engines::QUIZTOOL_ADMIN_EXE)?;
+
     // Service worker with all paths
     let sw_content = generate_sw_js(project_name, &all_file_paths);
     add_str(&mut zip, "sw.js", &sw_content)?;
