@@ -1,0 +1,469 @@
+// commands.rs — All 19 Tauri IPC commands (1:1 with Flask routes)
+use crate::{deploy, git, parser, templates};
+use serde_json::{json, Value};
+use std::path::{Path, PathBuf};
+use tauri::State;
+
+pub struct ProjectRoot(pub std::sync::Mutex<PathBuf>);
+
+fn root(state: &State<ProjectRoot>) -> PathBuf {
+    state.0.lock().unwrap().clone()
+}
+
+const SKIP_DIRS: &[&str] = &["node_modules", "target", "__pycache__", ".git", ".quiztool"];
+
+fn should_skip(name: &str) -> bool {
+    SKIP_DIRS.contains(&name) || name.starts_with('.')
+}
+
+fn to_posix(p: &Path, base: &Path) -> String {
+    p.strip_prefix(base).unwrap_or(p)
+        .to_string_lossy().replace('\\', "/")
+}
+
+fn normalize(raw: &str) -> String {
+    let c = raw.trim().replace('\\', "/");
+    let c = c.trim_matches('/');
+    if c.is_empty() || c == "." { ".".into() } else { c.to_string() }
+}
+
+fn resolve(root: &Path, rel: &str) -> Result<PathBuf, String> {
+    let rel = normalize(rel);
+    let p = if rel == "." { root.to_path_buf() } else { root.join(&rel) };
+    let p = p.canonicalize().unwrap_or_else(|_| root.join(&rel));
+    if !p.starts_with(root) { return Err("Path escapes project root.".into()); }
+    Ok(p)
+}
+
+fn resolve_must_exist(root: &Path, rel: &str) -> Result<PathBuf, String> {
+    let p = resolve(root, rel)?;
+    if !p.exists() { return Err(format!("Path not found: {}", rel)); }
+    Ok(p)
+}
+
+fn collect_files(root: &Path) -> Vec<Value> {
+    let mut records = Vec::new();
+    collect_files_inner(root, root, &mut records);
+    records.sort_by(|a, b| {
+        a["path"].as_str().unwrap_or("").cmp(b["path"].as_str().unwrap_or(""))
+    });
+    records
+}
+
+fn collect_files_inner(dir: &Path, root: &Path, out: &mut Vec<Value>) {
+    let rd = match std::fs::read_dir(dir) { Ok(r) => r, Err(_) => return };
+    for entry in rd.flatten() {
+        let p = entry.path();
+        let name = entry.file_name().to_string_lossy().to_string();
+        if p.is_dir() {
+            if !should_skip(&name) { collect_files_inner(&p, root, out); }
+        } else if name.to_lowercase().ends_with(".html") {
+            let content = std::fs::read_to_string(&p).unwrap_or_default();
+            let meta = parser::parse_file_metadata(&content);
+            let rel = to_posix(&p, root);
+            let folder = to_posix(p.parent().unwrap_or(root), root);
+            let folder = if folder.is_empty() { ".".into() } else { folder };
+            let title = meta.title.as_deref().unwrap_or(p.file_stem().and_then(|s| s.to_str()).unwrap_or(&name)).to_string();
+            let icon = parser::infer_icon(&meta.file_type, &name);
+            let modified = p.metadata().ok().and_then(|m| m.modified().ok())
+                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                .map(|d| d.as_secs_f64()).unwrap_or(0.0);
+            out.push(json!({
+                "path": rel, "name": name, "folder": folder,
+                "type": meta.file_type.as_str(),
+                "title": title,
+                "description": meta.description.as_deref().unwrap_or(""),
+                "uid": meta.uid.as_deref().unwrap_or(""),
+                "question_count": meta.question_count,
+                "icon": icon, "modified": modified,
+            }));
+        }
+    }
+}
+
+fn scan_folders(root: &Path) -> Vec<String> {
+    let mut folders = vec![".".to_string()];
+    scan_folders_inner(root, root, &mut folders);
+    folders.sort();
+    folders.dedup();
+    folders
+}
+
+fn scan_folders_inner(dir: &Path, root: &Path, out: &mut Vec<String>) {
+    let rd = match std::fs::read_dir(dir) { Ok(r) => r, Err(_) => return };
+    for entry in rd.flatten() {
+        let p = entry.path();
+        let name = entry.file_name().to_string_lossy().to_string();
+        if p.is_dir() && !should_skip(&name) {
+            out.push(to_posix(&p, root));
+            scan_folders_inner(&p, root, out);
+        }
+    }
+}
+
+fn build_summary(root: &Path) -> Value {
+    let files = collect_files(root);
+    let quiz_count = files.iter().filter(|f| f["type"] == "quiz").count();
+    let bank_count = files.iter().filter(|f| f["type"] == "bank").count();
+    let index_count = files.iter().filter(|f| f["type"] == "index").count();
+    let total_q: u64 = files.iter()
+        .filter(|f| f["type"] == "quiz" || f["type"] == "bank")
+        .filter_map(|f| f["question_count"].as_u64()).sum();
+    let folders = scan_folders(root);
+    json!({
+        "totalHtmlFiles": files.len(),
+        "quizCount": quiz_count,
+        "bankCount": bank_count,
+        "indexCount": index_count,
+        "folderCount": folders.len(),
+        "totalQuestions": total_q,
+    })
+}
+
+fn get_project_name(root: &Path) -> String {
+    let mf = root.join("manifest.webmanifest");
+    if let Ok(text) = std::fs::read_to_string(&mf) {
+        if let Ok(v) = serde_json::from_str::<Value>(&text) {
+            if let Some(name) = v.get("name").or_else(|| v.get("short_name")).and_then(|v| v.as_str()) {
+                return name.to_string();
+            }
+        }
+    }
+    root.file_name().and_then(|n| n.to_str()).unwrap_or("Project").to_string()
+}
+
+fn find_python() -> Option<String> {
+    for cmd in &["python", "python3", "py"] {
+        if std::process::Command::new(cmd).arg("--version").output().is_ok() {
+            return Some(cmd.to_string());
+        }
+    }
+    None
+}
+
+// ── Commands ──────────────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn list_files(state: State<ProjectRoot>) -> Value {
+    let root = root(&state);
+    json!({ "files": collect_files(&root), "folders": scan_folders(&root) })
+}
+
+#[tauri::command]
+pub fn project_state(state: State<ProjectRoot>) -> Value {
+    let root = root(&state);
+    let builtin_tools = json!([
+        {"id": "pdf-exporter", "label": "PDF Exporter", "description": "Export any quiz or bank to PDF"},
+    ]);
+    json!({
+        "projectName": get_project_name(&root),
+        "summary": build_summary(&root),
+        "git": git::get_git_status(&root),
+        "deploy": deploy::get_deploy_metadata(&root),
+        "builtinTools": builtin_tools,
+    })
+}
+
+#[tauri::command]
+pub fn load_file(path: String, state: State<ProjectRoot>) -> Result<Value, String> {
+    let root = root(&state);
+    let p = resolve_must_exist(&root, &path)?;
+    if !p.is_file() { return Err("Not a file.".into()); }
+    let content = std::fs::read_to_string(&p).map_err(|e| e.to_string())?;
+    let meta = parser::parse_file_metadata(&content);
+    Ok(json!({ "content": content, "meta": meta.to_json() }))
+}
+
+#[tauri::command]
+pub fn save_file(path: String, content: String, confirm_uid_change: Option<bool>, state: State<ProjectRoot>) -> Result<Value, String> {
+    let root = root(&state);
+    let p = resolve_must_exist(&root, &path)?;
+    let original_content = std::fs::read_to_string(&p).unwrap_or_default();
+    let original_uid = parser::parse_file_metadata(&original_content).uid.unwrap_or_default();
+    let validation = parser::validate_dashboard_content(&path, &content, &original_uid);
+    if !validation.errors.is_empty() {
+        return Err(serde_json::to_string(&json!({
+            "message": "Validation failed. Fix issues before saving.",
+            "validation": { "errors": validation.errors, "warnings": validation.warnings }
+        })).unwrap_or_default());
+    }
+    let uid_changed = validation.warnings.iter().any(|w| w.code.as_deref() == Some("uid_changed"));
+    if uid_changed && !confirm_uid_change.unwrap_or(false) {
+        return Err(serde_json::to_string(&json!({
+            "message": "UID change requires confirmation.",
+            "validation": { "errors": validation.errors, "warnings": validation.warnings },
+            "requires_uid_confirmation": true
+        })).unwrap_or_default());
+    }
+    std::fs::write(&p, &content).map_err(|e| e.to_string())?;
+    Ok(json!({ "message": format!("Saved {}.", path) }))
+}
+
+#[tauri::command]
+pub fn validate_file(path: String, content: String, original_uid: Option<String>, state: State<ProjectRoot>) -> Value {
+    let uid = original_uid.as_deref().unwrap_or("");
+    let v = parser::validate_dashboard_content(&path, &content, uid);
+    json!({
+        "message": "Validation completed.",
+        "validation": { "errors": v.errors, "warnings": v.warnings },
+        "ok": v.errors.is_empty(),
+    })
+}
+
+#[tauri::command]
+pub fn create_folder(name: String, title: Option<String>, description: Option<String>, state: State<ProjectRoot>) -> Result<Value, String> {
+    let root = root(&state);
+    let rel = normalize(&name);
+    if rel == "." { return Err("Please provide a folder path.".into()); }
+    let folder_path = resolve(&root, &rel)?;
+    if folder_path.exists() { return Err("Folder already exists.".into()); }
+    std::fs::create_dir_all(&folder_path).map_err(|e| e.to_string())?;
+    let index_path = folder_path.join("index.html");
+    let html = templates::create_index_html(&rel, title.as_deref().unwrap_or(""), description.as_deref().unwrap_or(""));
+    std::fs::write(&index_path, html).map_err(|e| e.to_string())?;
+    Ok(json!({ "message": format!("Created folder \"{}\".", rel), "path": format!("{}/index.html", rel) }))
+}
+
+#[tauri::command]
+pub fn create_file(
+    r#type: String, folder: Option<String>, title: String,
+    description: Option<String>, filename: Option<String>,
+    icon: Option<String>, questions: Option<Value>, state: State<ProjectRoot>
+) -> Result<Value, String> {
+    let root = root(&state);
+    let ft = r#type.to_lowercase();
+    if ft != "quiz" && ft != "bank" { return Err("Type must be quiz or bank.".into()); }
+    if title.trim().is_empty() { return Err("Title is required.".into()); }
+    let folder_rel = normalize(folder.as_deref().unwrap_or("."));
+    let folder_path = resolve_must_exist(&root, &folder_rel)?;
+    if !folder_path.is_dir() { return Err("Target path is not a folder.".into()); }
+
+    let base_stem = templates::slugify(filename.as_deref().unwrap_or(&title), "untitled");
+    let base_stem = if ft == "bank" && !base_stem.starts_with("all-") {
+        format!("all-{}", base_stem)
+    } else { base_stem };
+    let file_path = ensure_unique_path(&folder_path, &base_stem);
+    let stem = file_path.file_stem().and_then(|s| s.to_str()).unwrap_or("file");
+    let uid = templates::derive_uid(&folder_rel, stem);
+    let desc = description.as_deref().unwrap_or("");
+    let q_val = questions.unwrap_or_else(|| json!([{"question":"Sample question?","options":["A","B","C","D"],"correct":0,"explanation":"Sample explanation."}]));
+    let cfg = if ft == "quiz" {
+        json!({"uid": uid, "title": title, "description": desc})
+    } else {
+        json!({"uid": uid, "title": title, "description": desc, "icon": icon.as_deref().unwrap_or("🗃️")})
+    };
+    let html = if ft == "quiz" { templates::create_quiz_html(&cfg, &q_val) } else { templates::create_bank_html(&cfg, &q_val) };
+    std::fs::write(&file_path, html).map_err(|e| e.to_string())?;
+    let rel = to_posix(&file_path, &root);
+    Ok(json!({ "message": format!("Created {} file \"{}\".", ft, file_path.file_name().unwrap_or_default().to_string_lossy()), "path": rel, "uid": uid }))
+}
+
+fn ensure_unique_path(folder: &Path, stem: &str) -> PathBuf {
+    let mut p = folder.join(format!("{}.html", stem));
+    let mut i = 2;
+    while p.exists() { p = folder.join(format!("{}-{}.html", stem, i)); i += 1; }
+    p
+}
+
+#[tauri::command]
+pub fn duplicate_file(path: String, folder: Option<String>, filename: Option<String>, state: State<ProjectRoot>) -> Result<Value, String> {
+    let root = root(&state);
+    let src = resolve_must_exist(&root, &path)?;
+    if !src.is_file() { return Err("Source is not a file.".into()); }
+    let folder_rel = normalize(folder.as_deref().unwrap_or("."));
+    let target_folder = resolve_must_exist(&root, &folder_rel)?;
+    if !target_folder.is_dir() { return Err("Target is not a folder.".into()); }
+    let src_stem = src.file_stem().and_then(|s| s.to_str()).unwrap_or("file");
+    let default_stem = format!("{}-copy", src_stem);
+    let base_stem = templates::slugify(filename.as_deref().unwrap_or(&default_stem), "untitled");
+    let dest = ensure_unique_path(&target_folder, &base_stem);
+    let src_content = std::fs::read_to_string(&src).map_err(|e| e.to_string())?;
+    let meta = parser::parse_file_metadata(&src_content);
+    let dest_stem = dest.file_stem().and_then(|s| s.to_str()).unwrap_or("file");
+    let new_uid = templates::derive_uid(&folder_rel, dest_stem);
+    let html = match meta.file_type {
+        parser::FileType::Quiz => {
+            let mut cfg = meta.config.unwrap_or_else(|| json!({}));
+            cfg["uid"] = json!(new_uid);
+            templates::create_quiz_html(&cfg, &meta.questions.unwrap_or_else(|| json!([])))
+        }
+        parser::FileType::Bank => {
+            let mut cfg = meta.config.unwrap_or_else(|| json!({}));
+            cfg["uid"] = json!(new_uid);
+            templates::create_bank_html(&cfg, &meta.questions.unwrap_or_else(|| json!([])))
+        }
+        _ => src_content,
+    };
+    std::fs::write(&dest, html).map_err(|e| e.to_string())?;
+    let rel = to_posix(&dest, &root);
+    Ok(json!({ "message": format!("Created duplicate \"{}\".", dest.file_name().unwrap_or_default().to_string_lossy()), "path": rel, "uid": new_uid }))
+}
+
+#[tauri::command]
+pub fn move_file(path: String, folder: Option<String>, filename: Option<String>, state: State<ProjectRoot>) -> Result<Value, String> {
+    let root = root(&state);
+    let src = resolve_must_exist(&root, &path)?;
+    let folder_rel = normalize(folder.as_deref().unwrap_or("."));
+    let target_folder = resolve_must_exist(&root, &folder_rel)?;
+    if !target_folder.is_dir() { return Err("Target is not a folder.".into()); }
+    let src_stem = src.file_stem().and_then(|s| s.to_str()).unwrap_or("file");
+    let stem = templates::slugify(filename.as_deref().unwrap_or(src_stem), "untitled");
+    let dest = target_folder.join(format!("{}.html", stem));
+    if dest.exists() && dest != src { return Err("A file with that name already exists in the target folder.".into()); }
+    std::fs::rename(&src, &dest).map_err(|e| e.to_string())?;
+    let rel = to_posix(&dest, &root);
+    Ok(json!({ "message": "File moved successfully.", "path": rel }))
+}
+
+#[tauri::command]
+pub fn delete_file(path: String, state: State<ProjectRoot>) -> Result<Value, String> {
+    let root = root(&state);
+    let p = resolve_must_exist(&root, &path)?;
+    if !p.is_file() { return Err("Not a file.".into()); }
+    std::fs::remove_file(&p).map_err(|e| e.to_string())?;
+    Ok(json!({ "message": format!("Deleted {}.", path) }))
+}
+
+#[tauri::command]
+pub fn delete_folder(path: String, state: State<ProjectRoot>) -> Result<Value, String> {
+    let root = root(&state);
+    let rel = normalize(&path);
+    if rel == "." { return Err("Cannot delete the root folder.".into()); }
+    let p = resolve_must_exist(&root, &rel)?;
+    if !p.is_dir() { return Err("Path is not a folder.".into()); }
+    let file_count = count_html_files(&p);
+    std::fs::remove_dir_all(&p).map_err(|e| e.to_string())?;
+    Ok(json!({ "message": format!("Deleted folder '{}' with {} HTML file(s).", rel, file_count) }))
+}
+
+fn count_html_files(dir: &Path) -> usize {
+    let mut count = 0;
+    if let Ok(rd) = std::fs::read_dir(dir) {
+        for e in rd.flatten() {
+            let p = e.path();
+            if p.is_dir() { count += count_html_files(&p); }
+            else if p.extension().and_then(|s| s.to_str()).map(|s| s.eq_ignore_ascii_case("html")).unwrap_or(false) { count += 1; }
+        }
+    }
+    count
+}
+
+#[tauri::command]
+pub fn convert_file(path: String, state: State<ProjectRoot>) -> Result<Value, String> {
+    let root = root(&state);
+    let p = resolve_must_exist(&root, &path)?;
+    let content = std::fs::read_to_string(&p).map_err(|e| e.to_string())?;
+    let meta = parser::parse_file_metadata(&content);
+    let stem = p.file_stem().and_then(|s| s.to_str()).unwrap_or("file");
+    let folder_rel = to_posix(p.parent().unwrap_or(&root), &root);
+    let uid = meta.uid.as_deref().unwrap_or("").to_string();
+    let uid = if uid.is_empty() { templates::derive_uid(&folder_rel, stem) } else { uid };
+    match meta.file_type {
+        parser::FileType::Quiz => {
+            let cfg = json!({"uid": uid, "title": meta.title.as_deref().unwrap_or(stem), "description": meta.description.as_deref().unwrap_or(""), "icon": "🗃️"});
+            let html = templates::create_bank_html(&cfg, &meta.questions.unwrap_or_else(|| json!([])));
+            std::fs::write(&p, html).map_err(|e| e.to_string())?;
+            Ok(json!({ "message": "Converted quiz to question bank while preserving UID." }))
+        }
+        parser::FileType::Bank => {
+            let cfg = json!({"uid": uid, "title": meta.title.as_deref().unwrap_or(stem), "description": meta.description.as_deref().unwrap_or("")});
+            let html = templates::create_quiz_html(&cfg, &meta.questions.unwrap_or_else(|| json!([])));
+            std::fs::write(&p, html).map_err(|e| e.to_string())?;
+            Ok(json!({ "message": "Converted question bank to quiz while preserving UID." }))
+        }
+        _ => Err("Only quiz and bank files can be converted.".into()),
+    }
+}
+
+#[tauri::command]
+pub fn run_sync(state: State<ProjectRoot>) -> Result<Value, String> {
+    let root = root(&state);
+    let script = root.join("scripts").join("sync_quiz_assets.py");
+    if !script.exists() { return Err("Sync script not found (scripts/sync_quiz_assets.py).".into()); }
+    let python = find_python().ok_or("Python not found in PATH. Please install Python to use sync.")?;
+    let out = std::process::Command::new(&python).arg(&script).current_dir(&root).output().map_err(|e| e.to_string())?;
+    let stdout = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
+    if out.status.success() {
+        Ok(json!({ "message": "Sync completed successfully.", "returncode": 0, "output": stdout, "stderr": stderr }))
+    } else {
+        Ok(json!({ "message": "Sync completed with errors.", "returncode": out.status.code().unwrap_or(1), "output": stdout, "stderr": stderr }))
+    }
+}
+
+#[tauri::command]
+pub fn git_commit(message: Option<String>, state: State<ProjectRoot>) -> Result<Value, String> {
+    let root = root(&state);
+    let msg = message.as_deref().unwrap_or("Update quiz project files");
+    git::git_commit(&root, msg)
+}
+
+#[tauri::command]
+pub fn git_pull(state: State<ProjectRoot>) -> Result<Value, String> {
+    git::git_pull(&root(&state))
+}
+
+#[tauri::command]
+pub fn git_push(state: State<ProjectRoot>) -> Result<Value, String> {
+    git::git_push(&root(&state))
+}
+
+#[tauri::command]
+pub fn provider_verify(provider: String, token: String, state: State<ProjectRoot>) -> Result<Value, String> {
+    let provider = provider.trim().to_lowercase();
+    if !["github", "netlify", "vercel"].contains(&provider.as_str()) {
+        return Err("Provider must be github, netlify, or vercel.".into());
+    }
+    if token.trim().is_empty() { return Err("Token is required.".into()); }
+    deploy::verify_provider_token(&provider, token.trim())?;
+    Ok(json!({ "message": format!("{} token verified.", provider), "provider": provider }))
+}
+
+#[tauri::command]
+pub fn provider_deploy(
+    provider: String, token: String,
+    message: Option<String>, metadata: Option<Value>,
+    state: State<ProjectRoot>
+) -> Result<Value, String> {
+    let root = root(&state);
+    let provider = provider.trim().to_lowercase();
+    if !["github", "netlify", "vercel"].contains(&provider.as_str()) {
+        return Err("Provider must be github, netlify, or vercel.".into());
+    }
+    if token.trim().is_empty() { return Err("Token is required.".into()); }
+    let mut meta = metadata
+        .or_else(|| deploy::get_deploy_metadata(&root))
+        .ok_or("Deployment metadata is missing. Configure a provider before deploying.")?;
+
+    deploy::verify_provider_token(&provider, token.trim())?;
+
+    // Run sync first (best-effort)
+    let sync_output = {
+        let script = root.join("scripts").join("sync_quiz_assets.py");
+        if script.exists() {
+            if let Some(py) = find_python() {
+                std::process::Command::new(&py).arg(&script).current_dir(&root).output()
+                    .ok().map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+                    .unwrap_or_default()
+            } else { String::new() }
+        } else { String::new() }
+    };
+
+    let result = match provider.as_str() {
+        "github" => {
+            let msg = message.as_deref().unwrap_or("Update quiz project files");
+            deploy::deploy_to_github(&root, &meta, token.trim(), msg)?
+        }
+        "netlify" => deploy::deploy_to_netlify(&root, &mut meta, token.trim())?,
+        "vercel" => deploy::deploy_to_vercel(&root, &mut meta, token.trim())?,
+        _ => unreachable!(),
+    };
+
+    Ok(json!({
+        "message": result.get("message").and_then(|v| v.as_str()).unwrap_or("Deploy completed."),
+        "provider": provider,
+        "liveUrl": result.get("liveUrl"),
+        "providerUrl": result.get("providerUrl"),
+        "syncOutput": sync_output,
+    }))
+}
