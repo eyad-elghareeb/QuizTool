@@ -928,7 +928,7 @@
         <div class="brand-mark">MU</div>
         <div class="brand-copy">
           <div class="brand-title">Admin Dashboard</div>
-          <div class="brand-subtitle"> <span id="save-indicator">ready</span></div>
+          <div class="brand-subtitle"><span id="project-name-display"></span> <span id="save-indicator">ready</span></div>
         </div>
       </div>
       <div class="topbar-actions">
@@ -986,81 +986,12 @@
 
   <div class="context-menu" id="context-menu"></div>
 
-  <script>
-    // ─── Tauri IPC Bridge ────────────────────────────────────────────────────────
-    // Replaces Flask fetch() calls with native Tauri invoke() calls.
-    // Maps URL patterns to Tauri command names and extracts args accordingly.
+  <div class="toast-stack" id="toast-stack"></div>
 
-    const __ROUTE_MAP = {
-      '/admin/files':          { cmd: 'list_files',       method: 'GET'  },
-      '/admin/project-state':  { cmd: 'project_state',    method: 'GET'  },
-      '/admin/load-file':      { cmd: 'load_file',        method: 'GET', queryParam: 'path' },
-      '/admin/save-file':      { cmd: 'save_file',        method: 'POST' },
-      '/admin/validate-file':  { cmd: 'validate_file',    method: 'POST' },
-      '/admin/create-folder':  { cmd: 'create_folder',    method: 'POST' },
-      '/admin/create-file':    { cmd: 'create_file',      method: 'POST' },
-      '/admin/duplicate-file': { cmd: 'duplicate_file',   method: 'POST' },
-      '/admin/move-file':      { cmd: 'move_file',        method: 'POST' },
-      '/admin/delete-file':    { cmd: 'delete_file',      method: 'POST' },
-      '/admin/delete-folder':  { cmd: 'delete_folder',    method: 'POST' },
-      '/admin/convert-file':   { cmd: 'convert_file',     method: 'POST' },
-      '/admin/run-sync':       { cmd: 'run_sync',         method: 'POST' },
-      '/admin/git-commit':     { cmd: 'git_commit',       method: 'POST' },
-      '/admin/git-pull':       { cmd: 'git_pull',         method: 'POST' },
-      '/admin/git-push':       { cmd: 'git_push',         method: 'POST' },
-      '/admin/provider-verify':{ cmd: 'provider_verify',  method: 'POST' },
-      '/admin/provider-deploy':{ cmd: 'provider_deploy',  method: 'POST' },
-    };
-
-    async function fetchJson(url, options = {}) {
-      const [rawPath, rawQuery] = url.split('?');
-      const route = __ROUTE_MAP[rawPath];
-      if (!route) {
-        // Fallback for non-mapped routes if they exist
-        const response = await fetch(url, options);
-        return response.json();
-      }
-
-      let args = {};
-      if (route.queryParam && rawQuery) {
-        const params = new URLSearchParams(rawQuery);
-        args[route.queryParam] = params.get(route.queryParam) || '';
-      }
-      if (options.body) {
-        try { args = { ...args, ...JSON.parse(options.body) }; } catch(e) {}
-      }
-
-      try {
-        const result = await window.__TAURI__.core.invoke(route.cmd, args);
-        return result;
-      } catch (err) {
-        let parsed = null;
-        if (typeof err === 'string') {
-          try { parsed = JSON.parse(err); } catch(_) {}
-        }
-        if (parsed && parsed.message) throw Object.assign(new Error(parsed.message), parsed);
-        throw new Error(typeof err === 'string' ? err : JSON.stringify(err));
-      }
-    }
-
-    function previewUrl(filePath) {
-      const port = window.__QUIZ_SERVER_PORT || 5500;
-      return `http://127.0.0.1:${port}/${filePath}`;
-    }
-
-    async function openInBrowser(url) {
-      try {
-        await window.__TAURI__.core.invoke('open_in_browser', { url });
-      } catch (err) {
-        console.error('Failed to open in browser:', err);
-      }
-    }
-
-    window.__previewUrl = previewUrl;
-    window.__openInBrowser = openInBrowser;
-  </script>
 
   <script>
+    const invoke = window.__TAURI__ ? window.__TAURI__.core.invoke : async () => ({});
+
     const state = {
       files: [],
       folders: [],
@@ -1321,12 +1252,37 @@
       `).join('')}</div>`;
     }
 
+    async function fetchJson(url, options = {}) {
+      const qIdx = url.indexOf('?');
+      const base = qIdx >= 0 ? url.slice(0, qIdx) : url;
+      const qs   = qIdx >= 0 ? url.slice(qIdx + 1) : '';
+      const endpoint = base.replace('/admin/', '').replace(/-/g, '_');
 
+      let payload = {};
+      if (qs) {
+        qs.split('&').forEach(part => {
+          const [k, v] = part.split('=');
+          if (k && k !== 't') payload[decodeURIComponent(k)] = decodeURIComponent(v || '');
+        });
+      }
+      if (options.body) {
+        Object.assign(payload, JSON.parse(options.body));
+      }
+
+      try {
+        const res = await invoke(endpoint, payload);
+        return res;
+      } catch (error) {
+        const err = new Error(error.message || error || 'Request failed');
+        err.payload = { message: err.message };
+        throw err;
+      }
+    }
 
     async function refreshWorkspace({ preserveCurrent = true } = {}) {
       const [filePayload, projectState] = await Promise.all([
-        fetchJson(`/admin/files?t=${Date.now()}`),
-        fetchJson(`/admin/project-state?t=${Date.now()}`),
+        fetchJson(`/admin/files?t=${Date.now()}`).catch(() => ({ files: [], folders: ['.'] })),
+        fetchJson(`/admin/project-state?t=${Date.now()}`).catch(() => ({ git: { available: false }, project_name: '' })),
       ]);
       state.files = filePayload.files || [];
       state.folders = filePayload.folders || [];
@@ -1678,7 +1634,7 @@
               <div class="overview-item">
                 <div class="overview-dot"></div>
                 <div>
-                  <strong><a href="/admin/pdf-exporter" target="_blank" rel="noopener">PDF Exporter</a></strong>
+                  <strong><a href="pdf-exporter.html" target="_blank" rel="noopener">PDF Exporter</a></strong>
                   <div class="muted">Generate printable PDF versions of your quizzes and banks.</div>
                 </div>
               </div>
@@ -1842,7 +1798,7 @@
         return;
       }
       const meta = state.currentData.meta || {};
-      const pUrl = previewUrl(encodePath(state.currentFile)) + `?v=${Date.now()}`;
+      const previewUrl = `quiztool-preview://localhost/${encodePath(state.currentFile)}`;
       const canStructuredEdit = ['quiz', 'bank', 'index'].includes(meta.type);
 
       let content = '';
@@ -1850,11 +1806,11 @@
         content = `
           <div class="preview-toolbar">
             <button class="mini-btn" onclick="renderFilePanel()">Reload Preview</button>
-            <button class="mini-btn" onclick="openInBrowser(previewUrl(encodePath(state.currentFile)))">Open in Browser</button>
-            <button class="mini-btn" onclick="openInBrowser('/' + encodePath(state.currentFile))">Open Real File</button>
-            ${state.currentFile.includes('/') ? `<button class="mini-btn" onclick="openInBrowser('/' + encodePath(state.currentFile.slice(0, state.currentFile.lastIndexOf('/')) + '/index.html'))">Open Parent Index</button>` : ''}
+            <a class="mini-btn" href="quiztool-preview://localhost/${encodePath(state.currentFile)}" target="_blank" rel="noopener">Open in New Tab</a>
+            <a class="mini-btn" href="/${encodePath(state.currentFile)}" target="_blank" rel="noopener">Open Real File</a>
+            ${state.currentFile.includes('/') ? `<a class="mini-btn" href="/${encodePath(state.currentFile.slice(0, state.currentFile.lastIndexOf('/')) + '/index.html')}" target="_blank" rel="noopener">Open Parent Index</a>` : ''}
           </div>
-          <iframe class="preview-frame" src="${pUrl}" style="flex: 1; min-height: 0;" title="Preview"></iframe>
+          <iframe class="preview-frame" src="${previewUrl}" style="flex: 1; min-height: 0;" title="Preview"></iframe>
         `;
       } else if (state.currentTab === 'editor' && canStructuredEdit) {
         content = renderStructuredEditor(meta);
@@ -2457,9 +2413,9 @@
         title: 'Export PDF',
         subtitle: 'The PDF exporter provides a print-ready view of the current file.',
         body: `
-          <iframe class="preview-frame" src="${previewUrl(state.currentFile)}" style="flex: 1; min-height: 0;" title="File Preview"></iframe>
+         <iframe class="preview-frame" src="quiztool-preview://localhost/${state.currentFile}" style="flex: 1; min-height: 0;" title="File Preview"></iframe>
           <div class="modal-actions">
-            <button class="btn btn-primary" onclick="openInBrowser('${url}')">Open in Browser</button>
+            <a class="btn btn-primary" href="${url}" target="_blank" rel="noopener">Open in New Tab</a>
             <button class="btn" onclick="closeModal()">Close</button>
           </div>
         `
@@ -2492,7 +2448,7 @@
             </button>
           </div>
           <div class="modal-actions" style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;">
-             <button class="btn" onclick="closeModal(); openInBrowser('/admin/pdf-exporter')">Open Standalone PDF Exporter</button>
+             <a class="btn" href="pdf-exporter.html" target="_blank" rel="noopener" onclick="closeModal()">Open Standalone PDF Exporter</a>
              <button class="btn" onclick="closeModal()">Cancel</button>
           </div>
         `
@@ -3459,12 +3415,20 @@
       showToast('Dashboard ready. Search files with /, quick-open with Ctrl+K, and save with Ctrl+S.', 'info');
     }
 
+
+    setTimeout(async () => {
+      try {
+        const p = await invoke("get_project_name");
+        document.title = "Admin Dashboard - " + p;
+        document.querySelectorAll("#project-name-display").forEach(d => d.textContent = p);
+      } catch(e) {}
+    }, 200);
+
     boot().catch((error) => {
       console.error(error);
       showToast(error.message || 'Failed to load dashboard.', 'error');
       logActivity('Dashboard error', error.message || String(error), 'error');
     });
   </script>
-
 </body>
 </html>
