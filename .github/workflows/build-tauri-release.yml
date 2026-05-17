@@ -73,8 +73,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-macos:
-    name: Build macOS (x86_64)
+    name: Build macOS (Universal)
     runs-on: macos-latest
+    env:
+      TAURI_BUNDLER_DMG_IGNORE_CI: "true"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -109,13 +111,13 @@ jobs:
       - name: Upload Generator DMG
         uses: actions/upload-artifact@v4
         with:
-          name: quiztool-tauri-macos-x86_64
+          name: quiztool-tauri-macos-aarch64
           path: tauri/target/release/bundle/dmg/*.dmg
 
       - name: Upload Admin DMG
         uses: actions/upload-artifact@v4
         with:
-          name: quiztool-admin-macos-x86_64
+          name: quiztool-admin-macos-aarch64
           path: tauri-admin/target/release/bundle/dmg/*.dmg
 
       - name: Upload to Release
@@ -166,7 +168,7 @@ jobs:
         run: cargo install tauri-cli --version "^2"
 
       - name: Build Admin Dashboard (Bundled)
-        run: cargo tauri build
+        run: cargo tauri build --bundles appimage
         working-directory: ./tauri-admin
 
       - name: Prepare dependency for Generator
@@ -174,7 +176,7 @@ jobs:
         run: cp tauri-admin/target/release/bundle/appimage/*.AppImage tauri-admin/target/release/quiztool-admin.AppImage
 
       - name: Build Project Generator (Bundled)
-        run: cargo tauri build
+        run: cargo tauri build --bundles appimage
         working-directory: ./tauri
 
       - name: Strip debug symbols
@@ -202,8 +204,6 @@ jobs:
           files: |
             tauri/target/release/bundle/appimage/*.AppImage
             tauri-admin/target/release/bundle/appimage/*.AppImage
-            tauri/target/release/bundle/deb/*.deb
-            tauri-admin/target/release/bundle/deb/*.deb
           generate_release_notes: true
           fail_on_unmatched_files: false
         env:
