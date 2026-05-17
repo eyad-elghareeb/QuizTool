@@ -1,12 +1,14 @@
-
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap"
+    rel="stylesheet">
   <style>
     :root {
       --bg: #0d1117;
@@ -26,6 +28,7 @@
       --shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
       --transition: 0.2s ease;
     }
+
     [data-theme="light"] {
       --bg: #f3f0eb;
       --surface: #ffffff;
@@ -42,27 +45,42 @@
       --purple: #7c3aed;
       --shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
     }
-    * { box-sizing: border-box; }
-    html, body { height: 100%; }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
     body {
       margin: 0;
       font-family: 'Outfit', sans-serif;
       color: var(--text);
       background: var(--bg);
     }
-    button, input, select, textarea {
+
+    button,
+    input,
+    select,
+    textarea {
       font: inherit;
     }
+
     a {
       color: inherit;
       text-decoration: none;
     }
+
     .shell {
       height: 100vh;
       display: flex;
       flex-direction: column;
       overflow: hidden;
     }
+
     .topbar {
       position: sticky;
       top: 0;
@@ -75,12 +93,14 @@
       background: var(--surface);
       border-bottom: 1px solid var(--border);
     }
+
     .brand {
       display: flex;
       align-items: center;
       gap: 1rem;
       min-width: 0;
     }
+
     .brand-mark {
       width: 40px;
       height: 40px;
@@ -91,9 +111,11 @@
       color: #17120a;
       font-weight: 800;
     }
+
     .brand-copy {
       min-width: 0;
     }
+
     .brand-title {
       font-family: 'Playfair Display', serif;
       font-size: 1.25rem;
@@ -102,10 +124,12 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+
     .brand-subtitle {
       color: var(--text-muted);
       font-size: 0.9rem;
     }
+
     .topbar-actions {
       display: flex;
       align-items: center;
@@ -113,41 +137,58 @@
       flex-wrap: wrap;
       justify-content: flex-end;
     }
-    .btn, .icon-btn, .filter-btn, .tab-btn, .ghost-btn {
+
+    .btn,
+    .icon-btn,
+    .filter-btn,
+    .tab-btn,
+    .ghost-btn {
       border: 1px solid var(--border);
       background: var(--surface2);
       color: var(--text);
       transition: transform var(--transition), border-color var(--transition), background var(--transition), color var(--transition), opacity var(--transition);
     }
-    .btn, .ghost-btn {
+
+    .btn,
+    .ghost-btn {
       border-radius: 999px;
       min-height: 42px;
       padding: 0.7rem 1rem;
       cursor: pointer;
       font-weight: 600;
     }
-    .btn:hover, .ghost-btn:hover, .icon-btn:hover, .filter-btn:hover, .tab-btn:hover {
+
+    .btn:hover,
+    .ghost-btn:hover,
+    .icon-btn:hover,
+    .filter-btn:hover,
+    .tab-btn:hover {
       border-color: var(--accent);
       color: var(--accent);
     }
+
     .btn-primary {
       background: var(--accent);
       color: #17120a;
       border-color: transparent;
     }
+
     .btn-primary:hover {
       color: #17120a;
       opacity: 0.92;
     }
+
     .btn-danger {
       color: var(--wrong);
       border-color: color-mix(in srgb, var(--wrong) 60%, var(--border));
     }
+
     .btn-danger:hover {
       color: #fff;
       background: var(--wrong);
       border-color: var(--wrong);
     }
+
     .icon-btn {
       width: 40px;
       height: 40px;
@@ -158,6 +199,7 @@
       cursor: pointer;
       font-size: 1.1rem;
     }
+
     .page {
       flex: 1;
       width: 100vw;
@@ -168,7 +210,10 @@
       grid-template-rows: 1fr;
       min-height: 0;
     }
-    .panel, .sidebar, .activity {
+
+    .panel,
+    .sidebar,
+    .activity {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
@@ -177,23 +222,27 @@
       flex-direction: column;
       min-height: 0;
     }
+
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 0.75rem;
     }
+
     .stat-card {
       padding: 0.9rem 1rem;
       border-radius: 10px;
       background: var(--surface);
       border: 1px solid var(--border);
     }
+
     .stat-value {
       font-size: 1.6rem;
       font-weight: 800;
       color: var(--accent);
       line-height: 1;
     }
+
     .stat-label {
       color: var(--text-muted);
       margin-top: 0.35rem;
@@ -201,6 +250,7 @@
       text-transform: uppercase;
       letter-spacing: 0.08em;
     }
+
     .main-grid {
       display: grid;
       grid-template-columns: minmax(380px, 24%) minmax(0, 1fr);
@@ -208,6 +258,7 @@
       height: 100%;
       min-height: 0;
     }
+
     .sidebar {
       padding: 1rem;
       height: 100%;
@@ -216,6 +267,7 @@
       display: flex;
       flex-direction: column;
     }
+
     .sidebar-header {
       display: flex;
       align-items: center;
@@ -223,20 +275,30 @@
       gap: 0.75rem;
       margin-bottom: 1rem;
     }
-    .sidebar-header h2, .section-title, .panel-title {
+
+    .sidebar-header h2,
+    .section-title,
+    .panel-title {
       margin: 0;
       font-size: 1rem;
       font-weight: 700;
     }
-    .sidebar-subtitle, .muted {
+
+    .sidebar-subtitle,
+    .muted {
       color: var(--text-muted);
       font-size: 0.9rem;
     }
+
     .search-wrap {
       position: relative;
       margin-bottom: 0.9rem;
     }
-    .search-input, .text-input, .select-input, .text-area {
+
+    .search-input,
+    .text-input,
+    .select-input,
+    .text-area {
       width: 100%;
       border-radius: 10px;
       border: 1px solid var(--border);
@@ -246,9 +308,11 @@
       outline: none;
       transition: border-color var(--transition), background var(--transition);
     }
+
     .search-input {
       padding-left: 2.7rem;
     }
+
     .search-wrap svg {
       position: absolute;
       left: 0.95rem;
@@ -256,15 +320,21 @@
       transform: translateY(-50%);
       opacity: 0.55;
     }
-    .search-input:focus, .text-input:focus, .select-input:focus, .text-area:focus {
+
+    .search-input:focus,
+    .text-input:focus,
+    .select-input:focus,
+    .text-area:focus {
       border-color: var(--accent);
     }
+
     .filter-row {
       display: flex;
       flex-wrap: wrap;
       gap: 0.55rem;
       margin-bottom: 0.9rem;
     }
+
     .filter-btn {
       border-radius: 999px;
       padding: 0.55rem 0.8rem;
@@ -272,11 +342,13 @@
       font-size: 0.84rem;
       font-weight: 600;
     }
+
     .filter-btn.active {
       background: var(--accent-dim);
       border-color: var(--accent);
       color: var(--accent);
     }
+
     .tree-wrap {
       min-height: 0;
       overflow: auto;
@@ -285,16 +357,20 @@
       margin-top: 0.1rem;
       padding-top: 0.9rem;
     }
-    .file-tree, .file-tree ul {
+
+    .file-tree,
+    .file-tree ul {
       list-style: none;
       margin: 0;
       padding: 0;
     }
+
     .file-tree ul {
       margin-left: 0.95rem;
       padding-left: 0.9rem;
       border-left: 1px solid var(--border);
     }
+
     .tree-row {
       width: 100%;
       display: flex;
@@ -306,23 +382,28 @@
       transition: background var(--transition), transform var(--transition), color var(--transition);
       margin-bottom: 0.16rem;
     }
+
     .tree-row:hover {
       background: var(--surface2);
     }
+
     .tree-row.active {
       background: var(--accent-dim);
       color: var(--accent);
       border: 1px solid color-mix(in srgb, var(--accent) 65%, var(--border));
     }
+
     .tree-icon {
       width: 20px;
       text-align: center;
       flex: none;
     }
+
     .tree-copy {
       min-width: 0;
       flex: 1;
     }
+
     .tree-name {
       font-size: 0.95rem;
       font-weight: 600;
@@ -330,6 +411,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+
     .tree-meta {
       color: var(--text-muted);
       font-size: 0.78rem;
@@ -338,19 +420,23 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+
     .tree-row.folder-row {
       padding-right: 0.45rem;
     }
+
     .tree-row .tree-actions {
       display: flex;
       align-items: center;
       opacity: 0;
       transition: opacity var(--transition);
     }
+
     .tree-row:hover .tree-actions,
     .tree-row:focus-within .tree-actions {
       opacity: 1;
     }
+
     .tree-add-btn {
       width: 28px;
       height: 28px;
@@ -363,6 +449,7 @@
       font-size: 1rem;
       font-weight: 700;
     }
+
     .content-stack {
       display: grid;
       gap: 1.1rem;
@@ -370,9 +457,11 @@
       grid-template-rows: 1fr;
       min-height: 0;
     }
+
     .panel {
       padding: 1rem;
     }
+
     .panel-header {
       display: flex;
       align-items: flex-start;
@@ -380,35 +469,41 @@
       gap: 1rem;
       margin-bottom: 1rem;
     }
+
     .panel-header-main {
       min-width: 0;
       flex: 1;
       cursor: context-menu;
     }
+
     .panel-path {
       margin-top: 0.35rem;
       color: var(--text-muted);
       word-break: break-word;
       font-size: 0.92rem;
     }
+
     .panel-actions {
       display: flex;
       gap: 0.6rem;
       flex-wrap: wrap;
       justify-content: flex-end;
     }
+
     .panel-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 0.7rem;
       margin-bottom: 1rem;
     }
+
     .meta-card {
       background: var(--surface2);
       border: 1px solid var(--border);
       border-radius: 10px;
       padding: 0.8rem 0.9rem;
     }
+
     .meta-label {
       color: var(--text-muted);
       font-size: 0.78rem;
@@ -416,16 +511,19 @@
       letter-spacing: 0.08em;
       margin-bottom: 0.3rem;
     }
+
     .meta-value {
       font-weight: 700;
       word-break: break-word;
     }
+
     .tab-row {
       display: flex;
       flex-wrap: wrap;
       gap: 0.55rem;
       margin-bottom: 1rem;
     }
+
     .tab-btn {
       border-radius: 999px;
       min-height: 38px;
@@ -437,22 +535,34 @@
       color: var(--text-muted);
       transition: var(--transition);
     }
+
     .tab-btn.active {
       background: var(--accent-dim);
       border-color: var(--accent);
       color: var(--accent);
     }
+
     .subpanel {
       display: none;
       animation: fadeIn 0.2s ease;
     }
+
     .subpanel.active {
       display: block;
     }
+
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(4px); }
-      to { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
+
     .preview-frame {
       width: 100%;
       min-height: 600px;
@@ -460,6 +570,7 @@
       border-radius: 10px;
       background: #fff;
     }
+
     .preview-toolbar,
     .status-strip,
     .validation-strip,
@@ -469,6 +580,7 @@
       border-radius: 10px;
       background: var(--surface2);
     }
+
     .preview-toolbar,
     .status-strip {
       display: flex;
@@ -478,15 +590,18 @@
       padding: 0.75rem 0.85rem;
       margin-bottom: 0.9rem;
     }
+
     .validation-strip {
       padding: 0.8rem 0.9rem;
       margin-bottom: 0.9rem;
     }
+
     .validation-list {
       display: grid;
       gap: 0.45rem;
       margin-top: 0.55rem;
     }
+
     .validation-item {
       padding: 0.55rem 0.7rem;
       border-radius: 8px;
@@ -494,12 +609,15 @@
       background: var(--surface3);
       font-size: 0.88rem;
     }
+
     .validation-item.error {
       border-color: color-mix(in srgb, var(--wrong) 55%, var(--border));
     }
+
     .validation-item.warning {
       border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
     }
+
     .status-chip {
       display: inline-flex;
       align-items: center;
@@ -511,6 +629,7 @@
       font-size: 0.8rem;
       font-weight: 700;
     }
+
     .editor-toolbar {
       display: flex;
       flex-wrap: wrap;
@@ -519,45 +638,56 @@
       align-items: center;
       margin-bottom: 0.35rem;
     }
+
     .editor-toolbar-actions {
       display: flex;
       gap: 0.55rem;
       flex-wrap: wrap;
     }
+
     .editor-card.collapsed .editor-card-body {
       display: none;
     }
+
     .editor-summary {
       color: var(--text-muted);
       font-size: 0.85rem;
       margin-top: 0.1rem;
     }
+
     .editor-grid {
       display: grid;
       gap: 1rem;
     }
+
     .field-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 0.9rem;
     }
+
     .field {
       display: grid;
       gap: 0.45rem;
     }
+
     .field.full {
       grid-column: 1 / -1;
     }
+
     .field label {
       font-weight: 600;
     }
+
     .field small {
       color: var(--text-muted);
     }
+
     .text-area {
       min-height: 110px;
       resize: vertical;
     }
+
     .text-area.code {
       min-height: 520px;
       font-family: Consolas, "Courier New", monospace;
@@ -565,11 +695,13 @@
       line-height: 1.55;
       white-space: pre;
     }
+
     .editor-list {
       display: grid;
       gap: 1rem;
       margin-top: 0.5rem;
     }
+
     .editor-card {
       border: 1px solid var(--border);
       border-radius: 10px;
@@ -578,21 +710,25 @@
       display: grid;
       gap: 0.8rem;
     }
+
     .editor-card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 0.75rem;
     }
+
     .editor-card-title {
       font-weight: 800;
       color: var(--accent);
     }
+
     .mini-actions {
       display: flex;
       gap: 0.45rem;
       flex-wrap: wrap;
     }
+
     .mini-btn {
       border: 1px solid var(--border);
       background: var(--surface3);
@@ -601,21 +737,26 @@
       padding: 0.45rem 0.65rem;
       cursor: pointer;
     }
+
     .modal-tab-content {
       display: none;
       animation: fadeIn 0.2s ease;
     }
+
     .modal-tab-content.active {
       display: block;
     }
+
     .mini-btn:hover {
       border-color: var(--accent);
       color: var(--accent);
     }
+
     .mini-btn.delete:hover {
       border-color: var(--wrong);
       color: var(--wrong);
     }
+
     .option-row {
       display: grid;
       grid-template-columns: auto minmax(0, 1fr);
@@ -623,17 +764,20 @@
       align-items: center;
       margin-bottom: 0.55rem;
     }
+
     .option-row input[type="radio"] {
       width: 18px;
       height: 18px;
       accent-color: var(--correct);
       cursor: pointer;
     }
+
     .overview-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
       gap: 1rem;
     }
+
     .overview-card {
       padding: 1rem;
       border-radius: 10px;
@@ -642,18 +786,23 @@
       display: grid;
       gap: 0.75rem;
     }
-    .overview-list, .activity-list {
+
+    .overview-list,
+    .activity-list {
       display: grid;
       gap: 0.8rem;
     }
+
     .overview-list a:hover {
       color: var(--accent);
     }
+
     .overview-item {
       display: flex;
       gap: 0.75rem;
       align-items: flex-start;
     }
+
     .overview-dot {
       width: 10px;
       height: 10px;
@@ -662,11 +811,13 @@
       margin-top: 0.45rem;
       flex: none;
     }
+
     .badge-row {
       display: flex;
       flex-wrap: wrap;
       gap: 0.5rem;
     }
+
     .badge {
       display: inline-flex;
       align-items: center;
@@ -679,35 +830,53 @@
       font-weight: 700;
       color: var(--text-muted);
     }
-    .status-good { color: var(--correct); }
-    .status-warn { color: var(--accent); }
-    .status-bad { color: var(--wrong); }
-    .status-info { color: var(--blue); }
+
+    .status-good {
+      color: var(--correct);
+    }
+
+    .status-warn {
+      color: var(--accent);
+    }
+
+    .status-bad {
+      color: var(--wrong);
+    }
+
+    .status-info {
+      color: var(--blue);
+    }
+
     .activity {
       padding: 0.7rem 0.8rem;
       max-height: 220px;
       overflow: auto;
     }
+
     .activity-entry {
       padding: 0.55rem 0.7rem;
       border-radius: 10px;
       background: var(--surface2);
       border: 1px solid var(--border);
     }
-    .activity-entry + .activity-entry {
+
+    .activity-entry+.activity-entry {
       margin-top: 0.7rem;
     }
+
     .activity-title {
       font-weight: 700;
       margin-bottom: 0.15rem;
       font-size: 0.9rem;
     }
+
     .activity-meta {
       color: var(--text-muted);
       font-size: 0.78rem;
       white-space: pre-wrap;
       word-break: break-word;
     }
+
     .modal {
       position: fixed;
       inset: 0;
@@ -718,9 +887,11 @@
       padding: 1rem;
       z-index: 100;
     }
+
     .modal.open {
       display: flex;
     }
+
     .modal-card {
       width: min(900px, 100%);
       max-height: min(90vh, 1020px);
@@ -731,6 +902,7 @@
       box-shadow: var(--shadow);
       padding: 1.1rem;
     }
+
     .modal-header {
       display: flex;
       align-items: flex-start;
@@ -738,10 +910,12 @@
       gap: 1rem;
       margin-bottom: 1rem;
     }
+
     .modal-header h3 {
       margin: 0;
       font-size: 1.05rem;
     }
+
     .modal-actions {
       display: flex;
       gap: 0.7rem;
@@ -749,27 +923,32 @@
       flex-wrap: wrap;
       margin-top: 1rem;
     }
+
     .wizard-layout {
       display: grid;
       grid-template-columns: minmax(0, 1fr) 280px;
       gap: 1rem;
       align-items: start;
     }
+
     .wizard-summary {
       padding: 0.95rem;
       position: sticky;
       top: 0;
     }
+
     .wizard-step-title {
       margin-bottom: 0.75rem;
       font-size: 0.95rem;
       font-weight: 700;
     }
+
     .wizard-preset-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
       gap: 0.7rem;
     }
+
     .wizard-preset {
       text-align: left;
       padding: 0.85rem;
@@ -778,10 +957,12 @@
       background: var(--surface2);
       cursor: pointer;
     }
+
     .wizard-preset.active {
       border-color: var(--accent);
       background: var(--accent-dim);
     }
+
     .context-menu {
       position: fixed;
       z-index: 140;
@@ -791,9 +972,11 @@
       display: none;
       box-shadow: var(--shadow);
     }
+
     .context-menu.open {
       display: block;
     }
+
     .context-menu-title {
       padding: 0.3rem 0.5rem 0.4rem;
       color: var(--text-muted);
@@ -801,6 +984,7 @@
       text-transform: uppercase;
       letter-spacing: 0.08em;
     }
+
     .context-menu button {
       width: 100%;
       text-align: left;
@@ -812,17 +996,21 @@
       cursor: pointer;
       font-size: 0.88rem;
     }
+
     .context-menu button:hover {
       background: var(--surface3);
     }
+
     .context-menu button.danger {
       color: var(--wrong);
     }
+
     .context-divider {
       height: 1px;
       margin: 0.25rem 0;
       background: var(--border);
     }
+
     .close-btn {
       border: 1px solid var(--border);
       background: var(--surface2);
@@ -832,6 +1020,7 @@
       border-radius: 12px;
       cursor: pointer;
     }
+
     .toast-stack {
       position: fixed;
       right: 1rem;
@@ -841,6 +1030,7 @@
       gap: 0.65rem;
       width: min(420px, calc(100vw - 2rem));
     }
+
     .toast {
       padding: 0.9rem 1rem;
       border-radius: 10px;
@@ -848,10 +1038,23 @@
       background: var(--surface);
       box-shadow: var(--shadow);
     }
-    .toast.info { border-color: color-mix(in srgb, var(--blue) 40%, var(--border)); }
-    .toast.success { border-color: color-mix(in srgb, var(--correct) 50%, var(--border)); }
-    .toast.warn { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); }
-    .toast.error { border-color: color-mix(in srgb, var(--wrong) 55%, var(--border)); }
+
+    .toast.info {
+      border-color: color-mix(in srgb, var(--blue) 40%, var(--border));
+    }
+
+    .toast.success {
+      border-color: color-mix(in srgb, var(--correct) 50%, var(--border));
+    }
+
+    .toast.warn {
+      border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+    }
+
+    .toast.error {
+      border-color: color-mix(in srgb, var(--wrong) 55%, var(--border));
+    }
+
     .kbd {
       display: inline-flex;
       align-items: center;
@@ -865,6 +1068,7 @@
       color: var(--text-muted);
       font-weight: 700;
     }
+
     .empty-state {
       padding: 1.4rem;
       border: 1px dashed var(--border);
@@ -873,54 +1077,76 @@
       text-align: center;
       background: var(--surface2);
     }
+
     @media (max-width: 1200px) {
       .main-grid {
         grid-template-columns: 1fr;
       }
+
       .sidebar {
         position: static;
         max-height: none;
       }
     }
+
     @media (max-width: 900px) {
-      .stats-grid, .panel-grid, .field-grid, .overview-grid {
+
+      .stats-grid,
+      .panel-grid,
+      .field-grid,
+      .overview-grid {
         grid-template-columns: 1fr 1fr;
       }
+
       .wizard-layout {
         grid-template-columns: 1fr;
       }
+
       .tree-row .tree-actions {
         opacity: 1;
       }
+
       .topbar {
         align-items: flex-start;
         flex-direction: column;
       }
+
       .topbar-actions {
         width: 100%;
         justify-content: flex-start;
       }
     }
+
     @media (max-width: 640px) {
       .page {
         width: min(100vw - 1rem, 100%);
         margin-top: 0.7rem;
       }
-      .stats-grid, .panel-grid, .field-grid, .overview-grid {
+
+      .stats-grid,
+      .panel-grid,
+      .field-grid,
+      .overview-grid {
         grid-template-columns: 1fr;
       }
-      .panel-actions, .modal-actions {
+
+      .panel-actions,
+      .modal-actions {
         justify-content: stretch;
       }
-      .panel-actions > *, .modal-actions > * {
+
+      .panel-actions>*,
+      .modal-actions>* {
         width: 100%;
       }
+
       .preview-frame {
         min-height: 420px;
       }
     }
   </style>
 </head>
+
 <body>
   <div class="shell">
     <div class="topbar">
@@ -928,7 +1154,7 @@
         <div class="brand-mark">MU</div>
         <div class="brand-copy">
           <div class="brand-title">Admin Dashboard</div>
-          <div class="brand-subtitle"><span id="project-name-display"></span> <span id="save-indicator">ready</span></div>
+          <div class="brand-subtitle"> <span id="save-indicator">ready</span></div>
         </div>
       </div>
       <div class="topbar-actions">
@@ -953,8 +1179,12 @@
           </div>
 
           <div class="search-wrap">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
-            <input id="file-search" class="search-input" type="text" placeholder="Search by path, title, or UID..." oninput="setSearch(this.value)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="7"></circle>
+              <path d="m20 20-3.5-3.5"></path>
+            </svg>
+            <input id="file-search" class="search-input" type="text" placeholder="Search by path, title, or UID..."
+              oninput="setSearch(this.value)">
           </div>
 
           <div class="filter-row" id="filter-row"></div>
@@ -986,12 +1216,81 @@
 
   <div class="context-menu" id="context-menu"></div>
 
-  <div class="toast-stack" id="toast-stack"></div>
+  <script>
+    // ─── Tauri IPC Bridge ────────────────────────────────────────────────────────
+    // Replaces Flask fetch() calls with native Tauri invoke() calls.
+    // Maps URL patterns to Tauri command names and extracts args accordingly.
 
+    const __ROUTE_MAP = {
+      '/admin/files': { cmd: 'list_files', method: 'GET' },
+      '/admin/project-state': { cmd: 'project_state', method: 'GET' },
+      '/admin/load-file': { cmd: 'load_file', method: 'GET', queryParam: 'path' },
+      '/admin/save-file': { cmd: 'save_file', method: 'POST' },
+      '/admin/validate-file': { cmd: 'validate_file', method: 'POST' },
+      '/admin/create-folder': { cmd: 'create_folder', method: 'POST' },
+      '/admin/create-file': { cmd: 'create_file', method: 'POST' },
+      '/admin/duplicate-file': { cmd: 'duplicate_file', method: 'POST' },
+      '/admin/move-file': { cmd: 'move_file', method: 'POST' },
+      '/admin/delete-file': { cmd: 'delete_file', method: 'POST' },
+      '/admin/delete-folder': { cmd: 'delete_folder', method: 'POST' },
+      '/admin/convert-file': { cmd: 'convert_file', method: 'POST' },
+      '/admin/run-sync': { cmd: 'run_sync', method: 'POST' },
+      '/admin/git-commit': { cmd: 'git_commit', method: 'POST' },
+      '/admin/git-pull': { cmd: 'git_pull', method: 'POST' },
+      '/admin/git-push': { cmd: 'git_push', method: 'POST' },
+      '/admin/provider-verify': { cmd: 'provider_verify', method: 'POST' },
+      '/admin/provider-deploy': { cmd: 'provider_deploy', method: 'POST' },
+    };
+
+    async function fetchJson(url, options = {}) {
+      const [rawPath, rawQuery] = url.split('?');
+      const route = __ROUTE_MAP[rawPath];
+      if (!route) {
+        // Fallback for non-mapped routes if they exist
+        const response = await fetch(url, options);
+        return response.json();
+      }
+
+      let args = {};
+      if (route.queryParam && rawQuery) {
+        const params = new URLSearchParams(rawQuery);
+        args[route.queryParam] = params.get(route.queryParam) || '';
+      }
+      if (options.body) {
+        try { args = { ...args, ...JSON.parse(options.body) }; } catch (e) { }
+      }
+
+      try {
+        const result = await window.__TAURI__.core.invoke(route.cmd, args);
+        return result;
+      } catch (err) {
+        let parsed = null;
+        if (typeof err === 'string') {
+          try { parsed = JSON.parse(err); } catch (_) { }
+        }
+        if (parsed && parsed.message) throw Object.assign(new Error(parsed.message), parsed);
+        throw new Error(typeof err === 'string' ? err : JSON.stringify(err));
+      }
+    }
+
+    function previewUrl(filePath) {
+      const port = window.__QUIZ_SERVER_PORT || 5500;
+      return `http://127.0.0.1:${port}/${filePath}`;
+    }
+
+    async function openInBrowser(url) {
+      try {
+        await window.__TAURI__.core.invoke('open_in_browser', { url });
+      } catch (err) {
+        console.error('Failed to open in browser:', err);
+      }
+    }
+
+    window.__previewUrl = previewUrl;
+    window.__openInBrowser = openInBrowser;
+  </script>
 
   <script>
-    const invoke = window.__TAURI__ ? window.__TAURI__.core.invoke : async () => ({});
-
     const state = {
       files: [],
       folders: [],
@@ -1252,37 +1551,12 @@
       `).join('')}</div>`;
     }
 
-    async function fetchJson(url, options = {}) {
-      const qIdx = url.indexOf('?');
-      const base = qIdx >= 0 ? url.slice(0, qIdx) : url;
-      const qs   = qIdx >= 0 ? url.slice(qIdx + 1) : '';
-      const endpoint = base.replace('/admin/', '').replace(/-/g, '_');
 
-      let payload = {};
-      if (qs) {
-        qs.split('&').forEach(part => {
-          const [k, v] = part.split('=');
-          if (k && k !== 't') payload[decodeURIComponent(k)] = decodeURIComponent(v || '');
-        });
-      }
-      if (options.body) {
-        Object.assign(payload, JSON.parse(options.body));
-      }
-
-      try {
-        const res = await invoke(endpoint, payload);
-        return res;
-      } catch (error) {
-        const err = new Error(error.message || error || 'Request failed');
-        err.payload = { message: err.message };
-        throw err;
-      }
-    }
 
     async function refreshWorkspace({ preserveCurrent = true } = {}) {
       const [filePayload, projectState] = await Promise.all([
-        fetchJson(`/admin/files?t=${Date.now()}`).catch(() => ({ files: [], folders: ['.'] })),
-        fetchJson(`/admin/project-state?t=${Date.now()}`).catch(() => ({ git: { available: false }, project_name: '' })),
+        fetchJson(`/admin/files?t=${Date.now()}`),
+        fetchJson(`/admin/project-state?t=${Date.now()}`),
       ]);
       state.files = filePayload.files || [];
       state.folders = filePayload.folders || [];
@@ -1634,7 +1908,7 @@
               <div class="overview-item">
                 <div class="overview-dot"></div>
                 <div>
-                  <strong><a href="pdf-exporter.html" target="_blank" rel="noopener">PDF Exporter</a></strong>
+                  <strong><a href="#" onclick="event.preventDefault(); openPdfExporterModal()">PDF Exporter</a></strong>
                   <div class="muted">Generate printable PDF versions of your quizzes and banks.</div>
                 </div>
               </div>
@@ -1798,7 +2072,7 @@
         return;
       }
       const meta = state.currentData.meta || {};
-      const previewUrl = `quiztool-preview://localhost/${encodePath(state.currentFile)}`;
+      const pUrl = previewUrl(encodePath(state.currentFile)) + `?v=${Date.now()}`;
       const canStructuredEdit = ['quiz', 'bank', 'index'].includes(meta.type);
 
       let content = '';
@@ -1806,11 +2080,11 @@
         content = `
           <div class="preview-toolbar">
             <button class="mini-btn" onclick="renderFilePanel()">Reload Preview</button>
-            <a class="mini-btn" href="quiztool-preview://localhost/${encodePath(state.currentFile)}" target="_blank" rel="noopener">Open in New Tab</a>
-            <a class="mini-btn" href="/${encodePath(state.currentFile)}" target="_blank" rel="noopener">Open Real File</a>
-            ${state.currentFile.includes('/') ? `<a class="mini-btn" href="/${encodePath(state.currentFile.slice(0, state.currentFile.lastIndexOf('/')) + '/index.html')}" target="_blank" rel="noopener">Open Parent Index</a>` : ''}
+            <button class="mini-btn" onclick="openInBrowser(previewUrl(encodePath(state.currentFile)))">Open in Browser</button>
+            <button class="mini-btn" onclick="openInBrowser('/' + encodePath(state.currentFile))">Open Real File</button>
+            ${state.currentFile.includes('/') ? `<button class="mini-btn" onclick="openInBrowser('/' + encodePath(state.currentFile.slice(0, state.currentFile.lastIndexOf('/')) + '/index.html'))">Open Parent Index</button>` : ''}
           </div>
-          <iframe class="preview-frame" src="${previewUrl}" style="flex: 1; min-height: 0;" title="Preview"></iframe>
+          <iframe class="preview-frame" src="${pUrl}" style="flex: 1; min-height: 0;" title="Preview"></iframe>
         `;
       } else if (state.currentTab === 'editor' && canStructuredEdit) {
         content = renderStructuredEditor(meta);
@@ -2093,7 +2367,7 @@
       window.clearTimeout(state.validationTimer);
       state.validationTimer = window.setTimeout(() => {
         if (state.currentFile && state.currentData) {
-          validateCurrentFile({ silent: true }).catch(() => {});
+          validateCurrentFile({ silent: true }).catch(() => { });
         }
       }, 350);
     }
@@ -2392,6 +2666,39 @@
       await runSync({ silentToast: true, preserveCurrent: true });
     }
 
+    function openPdfExporterModal() {
+      const port = window.__QUIZ_SERVER_PORT || 5500;
+      const currentPath = state.currentFile ? encodeURIComponent(state.currentFile) : '';
+      openModal({
+        title: 'PDF Exporter',
+        subtitle: 'Load a quiz file to generate a print-ready PDF.',
+        body: `
+          <div style="display:flex; flex-direction:column; height:80vh;">
+            <div style="flex-shrink:0; display:flex; gap:0.5rem; align-items:center; padding-bottom:0.75rem; border-bottom:1px solid var(--border); margin-bottom:0.75rem;">
+              <input type="text" id="pdf-exporter-url" class="text-input" placeholder="gyn/dep/l1-anatomy.html" value="${escapeHtml(state.currentFile || '')}" style="flex:1;">
+              <button class="btn btn-primary" onclick="loadPdfExporter()">Load</button>
+              <button class="btn" onclick="closeModal()">Close</button>
+            </div>
+            <iframe id="pdf-exporter-iframe" style="flex:1; min-height:0; border:1px solid var(--border); border-radius:10px; background:#fff;" src="about:blank"></iframe>
+          </div>
+        `
+      });
+      window.setTimeout(() => loadPdfExporter(), 100);
+    }
+
+    function loadPdfExporter() {
+      const port = window.__QUIZ_SERVER_PORT || 5500;
+      const urlInput = document.getElementById('pdf-exporter-url');
+      const iframe = document.getElementById('pdf-exporter-iframe');
+      if (!urlInput || !iframe) return;
+      let rawUrl = urlInput.value.trim();
+      if (!rawUrl) { showToast('Enter a file path.', 'warn'); return; }
+      if (!rawUrl.startsWith('http://') && !rawUrl.startsWith('https://')) {
+        rawUrl = `http://127.0.0.1:${port}/${rawUrl.replace(/^\//, '')}`;
+      }
+      iframe.src = `/admin/pdf-exporter?url=${encodeURIComponent(rawUrl)}`;
+    }
+
     function openModal({ title, subtitle = '', body, onOpen = null }) {
       state.modalOpen = true;
       document.getElementById('modal-title').textContent = title;
@@ -2407,15 +2714,15 @@
       document.getElementById('modal-body').innerHTML = '';
       state.modalTab = '';
     }
-    
+
     function openPdfModal(url) {
       openModal({
         title: 'Export PDF',
         subtitle: 'The PDF exporter provides a print-ready view of the current file.',
         body: `
-         <iframe class="preview-frame" src="quiztool-preview://localhost/${state.currentFile}" style="flex: 1; min-height: 0;" title="File Preview"></iframe>
+          <iframe class="preview-frame" src="${previewUrl(state.currentFile)}" style="flex: 1; min-height: 0;" title="File Preview"></iframe>
           <div class="modal-actions">
-            <a class="btn btn-primary" href="${url}" target="_blank" rel="noopener">Open in New Tab</a>
+            <button class="btn btn-primary" onclick="openInBrowser('${url}')">Open in Browser</button>
             <button class="btn" onclick="closeModal()">Close</button>
           </div>
         `
@@ -2448,7 +2755,7 @@
             </button>
           </div>
           <div class="modal-actions" style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;">
-             <a class="btn" href="pdf-exporter.html" target="_blank" rel="noopener" onclick="closeModal()">Open Standalone PDF Exporter</a>
+             <button class="btn" onclick="closeModal(); openPdfExporterModal()">Open PDF Exporter</button>
              <button class="btn" onclick="closeModal()">Cancel</button>
           </div>
         `
@@ -2709,7 +3016,7 @@
       return state.modalQuestions.map((q, i) => `
         <div class="editor-card" style="margin-bottom: 0.5rem; padding: 0.75rem; background: var(--surface2); border: 1px solid var(--border);">
           <div class="editor-card-header" style="margin-bottom: 0.5rem;">
-             <div class="editor-card-title">Q${i+1}</div>
+             <div class="editor-card-title">Q${i + 1}</div>
              <button class="mini-btn delete" onclick="removeModalQuestion(${i})">Remove Q</button>
           </div>
           <input class="text-input mq-q" data-idx="${i}" value="${escapeHtml(q.question)}" placeholder="Question text" style="margin-bottom:0.5rem;">
@@ -2718,7 +3025,7 @@
             ${(q.options || []).map((opt, oi) => `
               <div class="option-row" style="padding: 0.25rem; display: flex; align-items: center; gap: 0.25rem;">
                 <input type="radio" name="mq-correct-${i}" value="${oi}" ${q.correct === oi ? 'checked' : ''}>
-                <input class="text-input mq-opt" data-idx="${i}" data-oidx="${oi}" value="${escapeHtml(opt)}" placeholder="Opt ${String.fromCharCode(65+oi)}" style="flex:1;">
+                <input class="text-input mq-opt" data-idx="${i}" data-oidx="${oi}" value="${escapeHtml(opt)}" placeholder="Opt ${String.fromCharCode(65 + oi)}" style="flex:1;">
                 ${q.options.length > 2 ? `<button class="mini-btn delete" onclick="removeModalOption(${i}, ${oi})" title="Remove Option">×</button>` : ''}
               </div>
             `).join('')}
@@ -2775,7 +3082,7 @@
       textarea.classList.remove('dragover');
       const file = e.dataTransfer.files[0];
       if (!file) return;
-      
+
       const reader = new FileReader();
       reader.onload = (event) => {
         textarea.value = event.target.result;
@@ -2836,7 +3143,7 @@
           <div class="field-grid">
             <div class="field">
               <label>Target Folder</label>
-              <select class="select-input" id="move-folder">${folderOptions(parent || '.') }</select>
+              <select class="select-input" id="move-folder">${folderOptions(parent || '.')}</select>
             </div>
             <div class="field">
               <label>New Filename</label>
@@ -2917,7 +3224,7 @@
           ${escapeHtml(item.path.split('/').pop())}
         </div>
       `).join('') || '<div class="muted">No changed paths.</div>';
-      
+
       openModal({
         title: 'Deploy Project',
         subtitle: deploy.provider ? `${providerDisplayName(deploy.provider)}${deploy.inferred ? ' (inferred from Git remote)' : ''}` : 'Choose a provider for this project',
@@ -3135,7 +3442,7 @@
       logActivity('Created file', result.path || title, 'success');
       rememberRecent('recentFolders', folder);
       rememberRecent('recentPresets', wizard.presetKey);
-      
+
       // Expand target folder before refresh so it shows up
       if (folder && folder !== '.') {
         const parts = folder.split('/');
@@ -3146,7 +3453,7 @@
         }
         saveUiPrefs();
       }
-      
+
       await runSync({ silentToast: true, preserveCurrent: false });
       if (result.path) {
         if (mode === 'open') {
@@ -3275,19 +3582,19 @@
         showToast('Commit message is required for sync.', 'warn');
         return;
       }
-      
+
       showToast('Starting Git Sync...', 'info');
       logActivity('Git Sync started', 'Pulling, committing, and pushing...', 'info');
-      
+
       try {
         // 1. Pull
-        const pullRes = await fetchJson('/admin/git-pull', { 
+        const pullRes = await fetchJson('/admin/git-pull', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({})
         });
         logActivity('Git Pull result', pullRes.output || pullRes.message, 'success');
-        
+
         // 2. Commit (also does git add -A)
         const commitRes = await fetchJson('/admin/git-commit', {
           method: 'POST',
@@ -3295,15 +3602,15 @@
           body: JSON.stringify({ message }),
         });
         logActivity('Git Commit result', commitRes.output || commitRes.message, 'success');
-        
+
         // 3. Push
-        const pushRes = await fetchJson('/admin/git-push', { 
+        const pushRes = await fetchJson('/admin/git-push', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({})
         });
         logActivity('Git Push result', pushRes.output || pushRes.message, 'success');
-        
+
         showToast('Git Sync completed!', 'success');
         await refreshWorkspace({ preserveCurrent: true });
         closeModal();
@@ -3415,20 +3722,13 @@
       showToast('Dashboard ready. Search files with /, quick-open with Ctrl+K, and save with Ctrl+S.', 'info');
     }
 
-
-    setTimeout(async () => {
-      try {
-        const p = await invoke("get_project_name");
-        document.title = "Admin Dashboard - " + p;
-        document.querySelectorAll("#project-name-display").forEach(d => d.textContent = p);
-      } catch(e) {}
-    }, 200);
-
     boot().catch((error) => {
       console.error(error);
       showToast(error.message || 'Failed to load dashboard.', 'error');
       logActivity('Dashboard error', error.message || String(error), 'error');
     });
   </script>
+
 </body>
+
 </html>
