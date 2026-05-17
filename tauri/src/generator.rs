@@ -517,7 +517,16 @@ pub fn build_project_zip(config: &ProjectConfig) -> Result<Vec<u8>, String> {
     add_str(&mut zip, "scripts/admin-dashboard.py", engines::ADMIN_DASHBOARD_SCRIPT)?;
 
     // Native Admin App
-    add_bytes(&mut zip, "QuizTool-Admin.exe", engines::QUIZTOOL_ADMIN_EXE)?;
+    let admin_filename = if cfg!(target_os = "windows") {
+        "QuizTool-Admin.exe"
+    } else if cfg!(target_os = "macos") {
+        "QuizTool-Admin.dmg"
+    } else if cfg!(target_os = "linux") {
+        "QuizTool-Admin.AppImage"
+    } else {
+        "QuizTool-Admin"
+    };
+    add_bytes(&mut zip, admin_filename, engines::QUIZTOOL_ADMIN_BINARY)?;
 
     // Service worker with all paths
     let sw_content = generate_sw_js(project_name, &all_file_paths);

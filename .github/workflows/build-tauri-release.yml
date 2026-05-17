@@ -39,21 +39,13 @@ jobs:
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version "^2"
 
-      - name: Build Admin Dashboard (Binary)
-        run: cargo build --release --locked
+      - name: Build Admin Dashboard (Bundled)
+        run: cargo tauri build
         working-directory: ./tauri-admin
-
-      - name: Prepare dependency for Generator
-        # Generator expects .exe in the path for include_bytes!
-        run: cp tauri-admin/target/release/quiztool-admin.exe tauri-admin/target/release/quiztool-admin.exe || cp tauri-admin/target/release/quiztool-admin tauri-admin/target/release/quiztool-admin.exe
 
       - name: Build Project Generator (Bundled)
         run: cargo tauri build
         working-directory: ./tauri
-
-      - name: Build Admin Dashboard (Bundled)
-        run: cargo tauri build
-        working-directory: ./tauri-admin
 
       - name: Upload Generator EXE
         uses: actions/upload-artifact@v4
@@ -106,21 +98,17 @@ jobs:
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version "^2"
 
-      - name: Build Admin Dashboard (Binary)
-        run: cargo build --release --locked
+      - name: Build Admin Dashboard (Bundled)
+        run: cargo tauri build
         working-directory: ./tauri-admin
 
       - name: Prepare dependency for Generator
-        # Generator expects .exe in the path for include_bytes!
-        run: cp tauri-admin/target/release/quiztool-admin tauri-admin/target/release/quiztool-admin.exe
+        # Mac generator expects .dmg in the path for include_bytes!
+        run: cp tauri-admin/target/release/bundle/dmg/*.dmg tauri-admin/target/release/quiztool-admin.dmg
 
       - name: Build Project Generator (Bundled)
         run: cargo tauri build
         working-directory: ./tauri
-
-      - name: Build Admin Dashboard (Bundled)
-        run: cargo tauri build
-        working-directory: ./tauri-admin
 
       - name: Upload Generator
         uses: actions/upload-artifact@v4
@@ -183,21 +171,17 @@ jobs:
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version "^2"
 
-      - name: Build Admin Dashboard (Binary)
-        run: cargo build --release --locked
+      - name: Build Admin Dashboard (Bundled)
+        run: cargo tauri build
         working-directory: ./tauri-admin
 
       - name: Prepare dependency for Generator
-        # Generator expects .exe in the path for include_bytes!
-        run: cp tauri-admin/target/release/quiztool-admin tauri-admin/target/release/quiztool-admin.exe
+        # Linux generator expects .AppImage in the path for include_bytes!
+        run: cp tauri-admin/target/release/bundle/appimage/*.AppImage tauri-admin/target/release/quiztool-admin.AppImage
 
       - name: Build Project Generator (Bundled)
         run: cargo tauri build
         working-directory: ./tauri
-
-      - name: Build Admin Dashboard (Bundled)
-        run: cargo tauri build
-        working-directory: ./tauri-admin
 
       - name: Strip debug symbols
         run: |
