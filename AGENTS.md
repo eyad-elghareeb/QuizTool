@@ -89,7 +89,7 @@ Default to surfacing uncertainty, not hiding it.
 |-----|-------|
 | **Type** | Authoring toolkit + project generator — static HTML tools, no backend required for the tools themselves |
 | **Deployment** | GitHub Pages (the toolkit pages themselves are deployed here) |
-| **Generator** | `generate_project.py` (Flask, port 5500) — produces self-contained quiz site ZIPs |
+| **Generator** | `tauri/` (Tauri Desktop App) is the primary generator. `generate_project.py` is deprecated. |
 | **Output** | Generated ZIPs are MU61S8-equivalent sites (see `AGENTS.md` in generated projects) |
 
 ---
@@ -128,7 +128,7 @@ QuizTool/
 ├── index-template.html           ← Base template for index-editor output
 │
 ├── — GENERATOR —
-├── generate_project.py           ← Flask server: full project generator + GitHub/Netlify/Vercel publish
+├── generate_project.py           ← [DEPRECATED] Flask server project generator (kept for backwards compatibility)
 ├── generator_templates/
 │   └── index.html                ← 3-step wizard UI (Project Info → Structure → Publish)
 ├── start.bat                     ← Windows launcher (auto-installs Python deps)
@@ -138,7 +138,7 @@ QuizTool/
 ├── — SCRIPTS —
 ├── scripts/
 │   ├── build_sync_engine.ps1     ← Bundle tool: merges libraries + sync-engine.src.js
-│   ├── admin-dashboard.py       ← Local Flask admin dashboard (bundled into generated projects)
+│   ├── admin-dashboard.py       ← [DEPRECATED] Local Flask admin dashboard (kept for backwards compatibility)
 │   ├── sync_quiz_assets.py       ← Auto-index + SW updater for generated sites
 │   └── standardize_quiz_files.py ← One-time file formatter
 │
@@ -319,6 +319,8 @@ const QUIZZES = [
 ---
 
 ## 6. generate_project.py — The Project Generator
+
+> **DEPRECATED:** The Python-based `generate_project.py` is deprecated. All new features should be implemented in the Tauri native build (`tauri/`). This Python version is kept strictly for backwards compatibility.
 
 ### Running it
 
@@ -523,16 +525,16 @@ The generated `sw.js` includes:
 
 ## 7. Tauri Desktop Apps
 
-QuizTool provides two native desktop wrappers built with Tauri, offering zero-dependency execution and deep system integration.
+QuizTool provides two native desktop wrappers built with Tauri, offering zero-dependency execution and deep system integration. **These are the primary, actively developed versions of the generator and admin dashboard.**
 
 ### 7a. Project Generator (`tauri/`)
-A standalone port of `generate_project.py`.
+The primary project generator (replaces the deprecated `generate_project.py`).
 - **Embedded Logic**: Project generation logic ported to pure Rust (`tauri/src/generator.rs`).
 - **Embedded Assets**: Core engine files and scripts are embedded into the binary.
 - **Custom Protocol**: Serves the frontend via `quiztool://localhost/`.
 
 ### 7b. Admin Dashboard (`tauri-admin/`)
-A native version of the local admin dashboard for managing existing projects.
+The primary local admin dashboard for managing existing projects (replaces the deprecated `admin-dashboard.py`).
 - **Architecture**: Rust backend handles all high-privilege filesystem and Git operations; HTML/JS frontend handles the UI.
 - **IPC Interface**: Frontend uses `invoke` to call Rust commands. The `fetchJson` wrapper bridges standard API calls to these native commands.
 - **Local Server**: Uses a lightweight, synchronous `tiny_http` server to host project files for the preview iframe and external browser windows. This avoids version conflicts with Tauri v2's internal tokio runtime.
@@ -892,6 +894,8 @@ Bundled data files in `build_exe.py`:
 ---
 
 ## 21. Local Admin Dashboard (`scripts/admin-dashboard.py`)
+
+> **DEPRECATED:** The Python-based `admin-dashboard.py` is deprecated. All new features should be implemented in the Tauri native build (`tauri-admin/`). This Python version is kept strictly for backwards compatibility.
 
 A local Flask-based web interface for managing quiz projects. Bundled into generated ZIPs and used for development. Runs on `http://localhost:5500/admin/` by default (configurable via `--port` CLI arg or `QUIZTOOL_ADMIN_PORT` env var).
 
