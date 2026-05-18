@@ -25,7 +25,7 @@
       --blue: #58a6ff;
       --purple: #d2a8ff;
       --radius: 12px;
-      --shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
+      --shadow: 0 4px 20px rgba(0, 0, 0, 0.25), 0 1px 3px rgba(0, 0, 0, 0.12);
       --transition: 0.2s ease;
     }
 
@@ -43,7 +43,7 @@
       --wrong: #dc2626;
       --blue: #2563eb;
       --purple: #7c3aed;
-      --shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+      --shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
     }
 
     * {
@@ -143,7 +143,7 @@
     .filter-btn,
     .tab-btn,
     .ghost-btn {
-      border: 1px solid var(--border);
+      border: 1px solid transparent;
       background: var(--surface2);
       color: var(--text);
       transition: transform var(--transition), border-color var(--transition), background var(--transition), color var(--transition), opacity var(--transition);
@@ -153,7 +153,7 @@
     .ghost-btn {
       border-radius: 999px;
       min-height: 42px;
-      padding: 0.7rem 1rem;
+      padding: 0.7rem 1.2rem;
       cursor: pointer;
       font-weight: 600;
     }
@@ -165,6 +165,7 @@
     .tab-btn:hover {
       border-color: var(--accent);
       color: var(--accent);
+      background: var(--surface3);
     }
 
     .btn-primary {
@@ -176,17 +177,77 @@
     .btn-primary:hover {
       color: #17120a;
       opacity: 0.92;
+      background: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    /* Dropdown Actions Styling */
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .dropdown-menu {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 110%;
+      background: var(--surface3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      z-index: 1000;
+      min-width: 175px;
+      padding: 0.4rem 0;
+      flex-direction: column;
+      animation: dropdownFadeIn 0.15s ease-out;
+    }
+    
+    @keyframes dropdownFadeIn {
+      from { opacity: 0; transform: translateY(-5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .dropdown-item {
+      text-align: left;
+      background: none;
+      border: none;
+      padding: 0.6rem 1rem;
+      width: 100%;
+      color: var(--text);
+      font-size: 0.88rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      transition: background var(--transition), color var(--transition);
+      font-weight: 500;
+      font-family: inherit;
+    }
+    
+    .dropdown-item:hover {
+      background: var(--surface2) !important;
+      color: var(--accent) !important;
+    }
+    
+    .dropdown-item.danger {
+      color: #ff6b6b !important;
+    }
+    
+    .dropdown-item.danger:hover {
+      background: rgba(255, 107, 107, 0.15) !important;
+      color: #ff8787 !important;
     }
 
     .btn-danger {
       color: var(--wrong);
-      border-color: color-mix(in srgb, var(--wrong) 60%, var(--border));
+      border-color: transparent;
     }
 
     .btn-danger:hover {
       color: #fff;
       background: var(--wrong);
-      border-color: var(--wrong);
+      border-color: transparent;
     }
 
     .icon-btn {
@@ -730,12 +791,13 @@
     }
 
     .mini-btn {
-      border: 1px solid var(--border);
+      border: 1px solid transparent;
       background: var(--surface3);
       color: var(--text-muted);
       border-radius: 8px;
       padding: 0.45rem 0.65rem;
       cursor: pointer;
+      transition: all var(--transition);
     }
 
     .modal-tab-content {
@@ -750,11 +812,13 @@
     .mini-btn:hover {
       border-color: var(--accent);
       color: var(--accent);
+      background: var(--surface2);
     }
 
     .mini-btn.delete:hover {
       border-color: var(--wrong);
       color: var(--wrong);
+      background: var(--surface2);
     }
 
     .option-row {
@@ -2074,6 +2138,7 @@
       const meta = state.currentData.meta || {};
       const pUrl = previewUrl(encodePath(state.currentFile)) + `?v=${Date.now()}`;
       const canStructuredEdit = ['quiz', 'bank', 'index'].includes(meta.type);
+      const isExportable = ['quiz', 'bank'].includes(meta.type);
 
       let content = '';
       if (state.currentTab === 'preview') {
@@ -2100,12 +2165,19 @@
             <div class="panel-title">${meta.title || meta.filename || 'New File'}</div>
             <div class="panel-path">${escapeHtml(state.currentFile)}</div>
           </div>
-          <div class="panel-actions">
+          <div class="panel-actions" style="display: flex; gap: 0.5rem; align-items: center;">
             ${(() => { const a = getPrimaryActionState(); if (a.action) return `<button class="btn ${a.tone === 'primary' ? 'btn-primary' : a.tone === 'warn' ? 'btn' : a.tone === 'error' ? 'btn btn-danger' : 'btn'}" onclick="${a.action}">${escapeHtml(a.label)}</button>`; return `<button class="btn" disabled>${escapeHtml(a.label)}</button>`; })()}
-            <button class="btn" onclick="runSync()">Sync</button>
-            <button class="btn" onclick="openDuplicateModal()">Duplicate</button>
-            <button class="btn" onclick="openMoveModal()">Move/Rename</button>
-            <button class="btn delete" onclick="openDeleteModal()">Delete</button>
+            <div class="dropdown">
+              <button class="btn icon-btn" onclick="toggleMoreActionsDropdown(event)" title="More Actions" style="min-height: 42px; display: flex; align-items: center; justify-content: center; width: 42px; padding: 0;">⋮</button>
+              <div id="more-actions-dropdown" class="dropdown-menu">
+                <button class="dropdown-item" onclick="runSync()"><span style="font-size: 1.1rem;">🔄</span> Sync Project</button>
+                ${isExportable ? `<button class="dropdown-item" onclick="openPdfExporterModal()"><span style="font-size: 1.1rem;">📄</span> Export PDF</button>` : ''}
+                <button class="dropdown-item" onclick="openDuplicateModal()"><span style="font-size: 1.1rem;">👯</span> Duplicate File</button>
+                <button class="dropdown-item" onclick="openMoveModal()"><span style="font-size: 1.1rem;">📂</span> Move / Rename</button>
+                <div style="border-top: 1px solid var(--border); margin: 0.3rem 0;"></div>
+                <button class="dropdown-item danger" onclick="openDeleteModal()"><span style="font-size: 1.1rem;">🗑️</span> Delete File</button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -2715,6 +2787,26 @@
       state.modalTab = '';
     }
 
+    function toggleMoreActionsDropdown(event) {
+      event.stopPropagation();
+      const menu = document.getElementById('more-actions-dropdown');
+      if (!menu) return;
+      const isVisible = menu.style.display === 'flex';
+      
+      closeAllDropdowns();
+      
+      if (!isVisible) {
+        menu.style.display = 'flex';
+        document.addEventListener('click', closeAllDropdowns);
+      }
+    }
+
+    function closeAllDropdowns() {
+      const menu = document.getElementById('more-actions-dropdown');
+      if (menu) menu.style.display = 'none';
+      document.removeEventListener('click', closeAllDropdowns);
+    }
+
     function openPdfModal(url) {
       openModal({
         title: 'Export PDF',
@@ -2879,6 +2971,52 @@
         .filter(file => file.type === 'quiz' || file.type === 'bank')
         .map(file => `<option value="${escapeHtml(file.path)}" ${file.path === wizard.clonePath ? 'selected' : ''}>${escapeHtml(file.title)} (${escapeHtml(file.path)})</option>`)
         .join('');
+      
+      function renderCombineTreeLevel(node) {
+        return Object.entries(node).sort((a, b) => {
+          const aFolder = a[1].kind === 'folder';
+          const bFolder = b[1].kind === 'folder';
+          if (aFolder !== bFolder) return aFolder ? -1 : 1;
+          return a[0].localeCompare(b[0]);
+        }).map(([name, item]) => {
+          if (item.kind === 'folder') {
+            const hasChildren = Object.keys(item.children).length > 0;
+            if (!hasChildren) return '';
+            return `
+              <li style="margin-bottom: 0.25rem; list-style-type: none;">
+                <details open style="outline: none;">
+                  <summary style="cursor: pointer; display: flex; align-items: center; gap: 0.4rem; padding: 0.2rem 0.4rem; border-radius: 4px; font-weight: 500; font-size: 0.88rem; color: var(--text-heading); outline: none; user-select: none;">
+                    <span style="font-size: 0.95rem;">📂</span>
+                    <span>${escapeHtml(name)}</span>
+                  </summary>
+                  <ul style="padding-left: 1rem; margin-top: 0.2rem; border-left: 1px dashed var(--border); list-style-type: none; display: grid; gap: 0.25rem;">
+                    ${renderCombineTreeLevel(item.children)}
+                  </ul>
+                </details>
+              </li>
+            `;
+          }
+          const file = item.record;
+          const fileId = `combine-file-${Math.random().toString(36).substr(2, 9)}`;
+          const subMeta = [file.type, file.question_count ? `${file.question_count} Qs` : ''].filter(Boolean).join(' • ');
+          return `
+            <li style="list-style-type: none; margin-bottom: 0.25rem;">
+              <div style="display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.35rem 0.5rem; border-radius: 6px; background: var(--surface2);">
+                <input type="checkbox" class="combine-quiz-checkbox" id="${fileId}" value="${escapeHtml(file.path)}" style="margin-top: 0.25rem; accent-color: var(--accent); cursor: pointer; width: 14px; height: 14px;">
+                <label for="${fileId}" style="font-weight: normal; cursor: pointer; font-size: 0.88rem; line-height: 1.4; color: var(--text); display: flex; flex-direction: column; gap: 0.1rem; flex: 1;">
+                  <strong>${escapeHtml(file.title)}</strong>
+                  <span class="muted" style="font-size: 0.78rem;">${escapeHtml(file.path)} • ${escapeHtml(subMeta)}</span>
+                </label>
+              </div>
+            </li>
+          `;
+        }).join('');
+      }
+
+      const filteredFiles = state.files.filter(file => file.type === 'quiz' || file.type === 'bank');
+      const combineTreeData = buildTreeFromFiles(filteredFiles);
+      const combineChecklist = `<ul style="padding: 0; margin: 0; list-style-type: none; display: grid; gap: 0.4rem;">${renderCombineTreeLevel(combineTreeData) || '<div class="muted" style="padding: 0.5rem;">No quizzes found in this project.</div>'}</ul>`;
+      
       const body = `
         <div>
             <div class="tab-row" style="margin-bottom: 1.5rem;">
@@ -2934,6 +3072,7 @@
                   <option value="json" ${wizard.sourceMode === 'json' ? 'selected' : ''}>Paste JSON</option>
                   <option value="text" ${wizard.sourceMode === 'text' ? 'selected' : ''}>Paste MCQ Text</option>
                   <option value="clone" ${wizard.sourceMode === 'clone' ? 'selected' : ''}>Clone Existing Quiz/Bank</option>
+                  <option value="combine" ${wizard.sourceMode === 'combine' ? 'selected' : ''}>Combine Multiple Quizzes</option>
                 </select>
               </div>
               ${wizard.sourceMode === 'clone' ? `
@@ -2945,6 +3084,22 @@
                   </select>
                   <div class="modal-actions">
                     <button class="btn" onclick="applyCloneSource()">Load Questions</button>
+                  </div>
+                </div>
+              ` : wizard.sourceMode === 'combine' ? `
+                <div class="field" style="margin-top:1rem;">
+                  <label>Select Quizzes/Banks to Combine</label>
+                  <div id="combine-quiz-checklist" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem; background: var(--surface3); display: grid; gap: 0.4rem; margin-top: 0.4rem;">
+                    ${combineChecklist || '<div class="muted" style="padding: 0.5rem;">No quizzes found in this project.</div>'}
+                  </div>
+                  
+                  <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem;">
+                    <input type="checkbox" id="combine-dedup" checked style="accent-color: var(--accent); cursor: pointer; width: auto; min-height: auto;">
+                    <label for="combine-dedup" style="margin-bottom: 0; font-size: 0.88rem; font-weight: normal; cursor: pointer;">Remove duplicate questions (by exact prompt)</label>
+                  </div>
+
+                  <div class="modal-actions" style="margin-top: 1rem;">
+                    <button class="btn btn-primary" onclick="applyCombineSource()">Combine &amp; Load Questions</button>
                   </div>
                 </div>
               ` : wizard.sourceMode === 'manual' ? `
@@ -3130,6 +3285,65 @@
       state.modalTab = 'questions';
       renderNewFileModal();
       showToast(`Loaded ${state.modalQuestions.length} questions from ${sourcePath}.`, 'success');
+    }
+
+    async function applyCombineSource() {
+      const checkedBoxes = document.querySelectorAll('.combine-quiz-checkbox:checked');
+      if (!checkedBoxes.length) {
+        showToast('Choose at least one quiz or bank to combine.', 'warn');
+        return;
+      }
+      
+      const paths = Array.from(checkedBoxes).map(cb => cb.value);
+      const shouldDedup = document.getElementById('combine-dedup')?.checked;
+      
+      let allQuestions = [];
+      let totalFiles = paths.length;
+      
+      try {
+        for (const path of paths) {
+          const payload = await fetchJson(`/admin/load-file?path=${encodeURIComponent(path)}`);
+          const questions = payload.meta?.questions || [];
+          allQuestions = allQuestions.concat(questions);
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('Error loading some files to combine.', 'error');
+        return;
+      }
+      
+      let standardized = allQuestions.map(q => ({
+        question: q.question || '',
+        options: q.options || ['', '', '', ''],
+        correct: Number(q.correct || 0),
+        explanation: q.explanation || '',
+      }));
+      
+      let dupesCount = 0;
+      if (shouldDedup) {
+        const seen = new Set();
+        const deduped = [];
+        for (const q of standardized) {
+          const key = q.question.trim().toLowerCase();
+          if (seen.has(key)) {
+            dupesCount++;
+          } else {
+            seen.add(key);
+            deduped.push(q);
+          }
+        }
+        standardized = deduped;
+      }
+      
+      state.modalQuestions = standardized;
+      state.modalTab = 'questions';
+      renderNewFileModal();
+      
+      if (shouldDedup && dupesCount > 0) {
+        showToast(`Combined ${standardized.length} questions from ${totalFiles} file(s) (removed ${dupesCount} duplicate(s)).`, 'success');
+      } else {
+        showToast(`Combined ${standardized.length} questions from ${totalFiles} file(s).`, 'success');
+      }
     }
 
     function openMoveModal() {
