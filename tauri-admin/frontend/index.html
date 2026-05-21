@@ -1681,7 +1681,11 @@
       // single quotes, trailing commas, comments, strings with commas/colons).
       result = result.replace(/[\u201C\u201D\u00AB\u00BB\u201E\u201F]/g, '"')
                      .replace(/[\u2018\u2019\u2032\u02BC]/g, "'");
-      return result.trim();
+      // Ensure the result is wrapped in array brackets so JSON.parse always works
+      result = result.trim();
+      if (!result.startsWith('[')) result = '[' + result;
+      if (!result.endsWith(']')) result = result + ']';
+      return result;
     }
 
     function normalizeQuestionItem(item) {
@@ -1826,17 +1830,8 @@
         }
       } catch (_) {}
 
-      // Strategy 2: Sanitized JSON.parse (handles trailing commas, comments, unquoted keys)
-      try {
-        const sanitized = sanitizeForJSON(cleanJSArrayInput(cleanText));
-        const arr = JSON.parse(sanitized);
-        const list = Array.isArray(arr) ? arr : (arr.questions || arr.QUESTION_BANK || arr.QUESTIONS || []);
-        if (Array.isArray(list) && list.length > 0) {
-          return { questions: list.map(normalizeQuestionItem).filter(Boolean), issues: [] };
-        }
-      } catch (_) {}
-
-      // Strategy 3: new Function() eval (handles JS syntax: single quotes, template literals, etc.)
+      // Strategy 2: new Function() eval on RAW input (handles JS syntax: single quotes, trailing commas, unquoted keys, comments)
+      // This is tried BEFORE sanitizeForJSON because that function's aggressive transforms can break valid JS.
       try {
         const cleaned = cleanJSArrayInput(cleanText);
         let parsed = null;
@@ -1852,9 +1847,17 @@
         if (Array.isArray(list) && list.length > 0) {
           return { questions: list.map(normalizeQuestionItem).filter(Boolean), issues: [] };
         }
-      } catch (error) {
-        issues.push(`JS parse failed: ${error.message}. Trying plain-text fallback.`);
-      }
+      } catch (_) {}
+
+      // Strategy 3: Sanitized JSON.parse (handles trailing commas, comments, unquoted keys via string transforms)
+      try {
+        const sanitized = sanitizeForJSON(cleanJSArrayInput(cleanText));
+        const arr = JSON.parse(sanitized);
+        const list = Array.isArray(arr) ? arr : (arr.questions || arr.QUESTION_BANK || arr.QUESTIONS || []);
+        if (Array.isArray(list) && list.length > 0) {
+          return { questions: list.map(normalizeQuestionItem).filter(Boolean), issues: [] };
+        }
+      } catch (_) {}
 
       // Strategy 4: Plain-text MCQ fallback (blank-line-separated blocks)
       const questions = text
@@ -3249,10 +3252,32 @@
       `;
     }
 
+    function onFileTitleChange() {
+      const titleInput = document.getElementById('file-title');
+      const filenameInput = document.getElementById('file-name');
+      // Auto-fill filename override if it's currently empty (user hasn't typed there)
+      if (filenameInput && titleInput && !filenameInput.value.trim()) {
+        filenameInput.placeholder = 'Auto: ' + slugifyClient(titleInput.value || 'untitled');
+      }
+      syncWizardSummary();
+    }
+
+    function renderWizardValidationBanner() {
+      const banner = document.getElementById('wizard-validation-banner');
+      if (!banner) return;
+      // Sync questions from UI first to get the latest data
+      syncModalQuestionsFromUI();
+      const issues = validateQuestionListClient(state.modalQuestions);
+      const errors = issues.filter(i => i.level === 'error');
+      const warnings = issues.filter(i => i.level === 'warning');
+      banner.innerHTML = renderValidationIssues([...errors, ...warnings], { empty: 'All questions look valid.' });
+    }
+
     function syncWizardSummary() {
       state.wizard = collectWizardState();
       const host = document.getElementById('wizard-summary');
       if (host) host.innerHTML = renderWizardSummaryBox(state.wizard);
+      if (state.modalTab === 'questions') renderWizardValidationBanner();
     }
 
     function openNewFileWizard(options = {}) {
@@ -3361,7 +3386,7 @@
                 </div>
                 <div class="field full">
                   <label>Title</label>
-                  <input class="text-input" id="file-title" value="${escapeHtml(wizard.title)}" placeholder="L1 Anatomy" oninput="syncWizardSummary()">
+                  <input class="text-input" id="file-title" value="${escapeHtml(wizard.title)}" placeholder="L1 Anatomy" oninput="onFileTitleChange()">
                 </div>
                 <div class="field full">
                   <label>Description</label>
@@ -3422,10 +3447,7 @@
               ` : `
                 <div class="field" style="margin-top:1rem;">
                   <label>Paste JSON array, QUESTIONS block, or plain MCQ text</label>
-                  <textarea class="text-area code" id="file-import-raw" style="height: 220px;" oninput="syncWizardSummary()" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="onModalJsonDrop(event)">${escapeHtml(wizard.sourceRaw || '')}</textarea>
-                  <div class="modal-actions">
-                    <button class="btn" onclick="applyWizardImport()">Import Into Builder</button>
-                  </div>
+                  <textarea class="text-area code" id="file-import-raw" style="height: 220px;" oninput="onPasteInputChange()" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="onModalJsonDrop(event)">${escapeHtml(wizard.sourceRaw || '')}</textarea>
                 </div>
               `}
               <div class="modal-actions" style="margin-top:2rem; border-top: 1px solid var(--border); padding-top: 1.5rem;">
@@ -3434,6 +3456,7 @@
               </div>
             </div>
             <div class="modal-tab-content ${state.modalTab === 'questions' ? 'active' : ''}">
+              <div id="wizard-validation-banner"></div>
               <div class="editor-list" id="modal-question-list" style="max-height: 420px; overflow-y: auto; margin-bottom: 1rem; border: 1px solid var(--border); padding: 0.5rem; border-radius: 8px;">
                 ${renderModalQuestionList()}
               </div>
@@ -3461,7 +3484,10 @@
       if ((mode === 'json' || mode === 'text') && raw.trim()) {
         // Only auto-import if questions haven't been imported yet or still look like starters
         const allStarters = state.modalQuestions.every(q => !q.question && !(q.options || []).some(Boolean));
-        if (allStarters) applyWizardImport();
+        if (allStarters) {
+          const imported = applyWizardImport();
+          if (!imported) return; // Don't advance to builder if parsing failed
+        }
       }
       setModalTab('questions');
     }
@@ -3557,6 +3583,23 @@
       renderNewFileModal();
     }
 
+    let pasteImportTimer = null;
+    let _suppressPasteImport = false;
+    function onPasteInputChange() {
+      if (_suppressPasteImport) return;
+      const raw = document.getElementById('file-import-raw')?.value || '';
+      syncWizardSummary();
+      window.clearTimeout(pasteImportTimer);
+      if (raw.trim()) {
+        pasteImportTimer = window.setTimeout(() => {
+          const mode = document.getElementById('file-source-mode')?.value;
+          if (mode === 'json' || mode === 'text') {
+            applyWizardImport();
+          }
+        }, 800);
+      }
+    }
+
     function onModalJsonDrop(e) {
       e.preventDefault();
       const textarea = document.getElementById('file-import-raw');
@@ -3576,10 +3619,17 @@
       if (modeSelect && modeSelect.value !== 'json') modeSelect.value = 'json';
       if (state.wizard) state.wizard.sourceMode = 'json';
 
+      // Clear any pending paste import timer to avoid double-import
+      window.clearTimeout(pasteImportTimer);
+      // Suppress oninput-triggered import since we import immediately below
+      _suppressPasteImport = true;
+
       const reader = new FileReader();
       reader.onload = (event) => {
         const content = event.target.result;
+        // Set textarea value without triggering oninput (which would re-import)
         textarea.value = content;
+        _suppressPasteImport = false;
         if (state.wizard) state.wizard.sourceRaw = content;
         syncWizardSummary();
         applyWizardImport();
@@ -3591,8 +3641,8 @@
       const raw = document.getElementById('file-import-raw')?.value || '';
       const parsed = parseImportedQuestions(raw);
       if (!parsed.questions.length) {
-        showToast('No questions could be parsed from the pasted content.', 'warn');
-        return;
+        showToast('No questions could be parsed from the pasted content. Check the format and try again.', 'error');
+        return false;
       }
       state.modalQuestions = parsed.questions.map(question => ({
         question: question.question || '',
@@ -3604,6 +3654,7 @@
       else showToast(`Imported ${state.modalQuestions.length} questions.`, 'success');
       state.modalTab = 'questions';
       renderNewFileModal();
+      return true;
     }
 
     async function applyCloneSource() {
@@ -4007,6 +4058,12 @@
       if (!title) {
         showToast('Title is required.', 'warn');
         setModalTab('setup');
+        return;
+      }
+
+      if (!questions.length) {
+        showToast('Add at least one question before creating the file.', 'warn');
+        setModalTab('questions');
         return;
       }
 

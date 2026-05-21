@@ -260,7 +260,7 @@ pub fn create_file(
     let folder_path = resolve_must_exist(&root, &folder_rel)?;
     if !folder_path.is_dir() { return Err("Target path is not a folder.".into()); }
 
-    let base_stem = templates::slugify(filename.as_deref().unwrap_or(&title), "untitled");
+    let base_stem = templates::slugify(filename.as_deref().filter(|s| !s.is_empty()).unwrap_or(&title), "untitled");
     let base_stem = if ft == "bank" && !base_stem.starts_with("all-") {
         format!("all-{}", base_stem)
     } else { base_stem };
