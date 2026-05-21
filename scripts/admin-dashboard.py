@@ -1258,32 +1258,222 @@ DASHBOARD_HTML = r"""
       return { question: '', options: ['', '', '', ''], correct: 0, explanation: '' };
     }
 
+    function fixOCRArtifacts(input) {
+      return input.replace(/[\u2B0D\u2AF9\u2C55]/g, '\u2264').replace(/[\u2B0E\u2AFA\u2C56]/g, '\u2265').replace(/\u242E/g, '\u03BC');
+    }
+
+    function normaliseAndEscapeCurlyQuotes(input) {
+      const CURLY_DQ = /[\u201C\u201D\u00AB\u00BB\u201E\u201F]/;
+      const CURLY_SQ = /[\u2018\u2019\u2032\u02BC]/;
+      let result = ''; let i = 0; let inString = false; let stringChar = '';
+      while (i < input.length) {
+        const ch = input[i];
+        if (!inString) {
+          if (ch === '"' || ch === "'") { inString = true; stringChar = ch; result += ch; }
+          else if (CURLY_DQ.test(ch)) result += '"';
+          else if (CURLY_SQ.test(ch)) result += "'";
+          else result += ch;
+        } else {
+          if (ch === '\\') { result += ch; i++; if (i < input.length) result += input[i]; }
+          else if (ch === stringChar) { inString = false; result += ch; stringChar = ''; }
+          else if (CURLY_DQ.test(ch)) result += '\\"';
+          else if (CURLY_SQ.test(ch)) result += "'";
+          else result += ch;
+        }
+        i++;
+      }
+      return result;
+    }
+
+    function sanitizeStringsStateMachine(str) {
+      let result = ''; let i = 0; let inString = false; let stringStartQuote = '';
+      while (i < str.length) {
+        const char = str[i];
+        if (!inString) {
+          if (char === '"' || char === "'" || char === '`') { inString = true; stringStartQuote = char; result += '"'; }
+          else result += char;
+        } else {
+          if (char === '\\') {
+            i++;
+            if (i < str.length) {
+              const escaped = str[i];
+              if (escaped === "'" && stringStartQuote === "'") result += "'";
+              else if (escaped === '`' && stringStartQuote === '`') result += '`';
+              else if (escaped === "'" && stringStartQuote !== "'") result += "'";
+              else if (escaped === '\n' || escaped === '\r') {}
+              else result += '\\' + escaped;
+            }
+          } else if (char === stringStartQuote) {
+            if (stringStartQuote === '"') {
+              let j = i + 1;
+              while (j < str.length && (str[j] === ' ' || str[j] === '\t')) j++;
+              const peek = j < str.length ? str[j] : '';
+              const isClose = peek === '' || peek === ',' || peek === '}' || peek === ']' || peek === ':' || peek === '\n' || peek === '\r';
+              if (isClose) { inString = false; result += '"'; stringStartQuote = ''; }
+              else result += '\\"';
+            } else { inString = false; result += '"'; stringStartQuote = ''; }
+          } else if (char === '"' && stringStartQuote !== '"') result += '\\"';
+          else if (char === "'" && stringStartQuote !== "'") result += "'";
+          else if (char === '`' && stringStartQuote !== '`') result += '`';
+          else if (char === '\n') result += '\\n';
+          else if (char === '\r') result += '\\r';
+          else if (char === '\t') result += '\\t';
+          else if (char === '\b') result += '\\b';
+          else if (char === '\f') result += '\\f';
+          else if (char.charCodeAt(0) < 0x20) result += '\\u' + char.charCodeAt(0).toString(16).padStart(4, '0');
+          else result += char;
+        }
+        i++;
+      }
+      return result;
+    }
+
+    function cleanJSArrayInput(input) {
+      let result = input.replace(/^\uFEFF/, '');
+      result = result.replace(/```(?:json|javascript|js)?\s*/gi, '').replace(/```\s*$/g, '');
+      result = fixOCRArtifacts(result);
+      result = normaliseAndEscapeCurlyQuotes(result);
+      result = sanitizeStringsStateMachine(result);
+      result = result.replace(/,(\s*[\]\}])/g, '$1');
+      return result.trim();
+    }
+
+    function normalizeQuestionItem(item) {
+      if (!item || typeof item !== 'object') return null;
+
+      // 1. Find question text
+      let question = '';
+      const questionKeys = ['question', 'questionText', 'question_text', 'prompt', 'text', 'q'];
+      for (const k of questionKeys) {
+        if (item[k] !== undefined && item[k] !== null) {
+          question = String(item[k]);
+          break;
+        }
+      }
+
+      // 2. Find options
+      let options = null;
+      const optionsKeys = ['options', 'choices', 'answers', 'optionsList', 'options_list'];
+      for (const k of optionsKeys) {
+        if (Array.isArray(item[k])) {
+          options = item[k].map(opt => String(opt || '').trim());
+          break;
+        }
+      }
+      if (!options) {
+        const individualOptions = [];
+        const alphabet = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+        let hasOptionKeys = false;
+        for (let idx = 0; idx < alphabet.length; idx++) {
+          const key = `option${alphabet[idx]}`;
+          if (item[key] !== undefined && item[key] !== null) {
+            individualOptions.push(String(item[key]).trim());
+            hasOptionKeys = true;
+          }
+        }
+        if (!hasOptionKeys) {
+          for (let idx = 0; idx < alphabet.length; idx++) {
+            const key = alphabet[idx];
+            if (item[key] !== undefined && item[key] !== null) {
+              individualOptions.push(String(item[key]).trim());
+            }
+          }
+        }
+        if (individualOptions.length >= 2) {
+          options = individualOptions;
+        }
+      }
+      if (!options) {
+        options = ['', '', '', ''];
+      }
+
+      // 3. Find explanation
+      let explanation = '';
+      const explanationKeys = ['explanation', 'explanationText', 'explanation_text', 'exp', 'rationale', 'feedback'];
+      for (const k of explanationKeys) {
+        if (item[k] !== undefined && item[k] !== null) {
+          explanation = String(item[k]);
+          break;
+        }
+      }
+
+      // 4. Find correct answer index
+      let correct = 0;
+      let foundCorrect = false;
+      const correctKeys = ['correct', 'correctAnswer', 'correct_answer', 'answer', 'correctOption', 'correct_option', 'key'];
+      for (const k of correctKeys) {
+        const val = item[k];
+        if (val !== undefined && val !== null) {
+          const valStr = String(val).trim();
+          if (/^[A-H]$/i.test(valStr)) {
+            correct = valStr.toUpperCase().charCodeAt(0) - 65;
+            foundCorrect = true;
+          } else {
+            const valNum = Number(valStr);
+            if (!Number.isNaN(valNum) && Number.isInteger(valNum)) {
+              correct = valNum;
+              foundCorrect = true;
+            } else {
+              const optIdx = options.findIndex(opt => opt.toLowerCase() === valStr.toLowerCase());
+              if (optIdx >= 0) {
+                correct = optIdx;
+                foundCorrect = true;
+              }
+            }
+          }
+          if (foundCorrect) break;
+        }
+      }
+
+      if (correct > 0 && correct >= options.length) {
+        correct = options.length - 1;
+      } else if (correct < 0) {
+        correct = 0;
+      }
+
+      return {
+        question: question.trim(),
+        options,
+        correct,
+        explanation: explanation.trim()
+      };
+    }
+
     function parseImportedQuestions(raw) {
       const text = String(raw || '').trim();
       if (!text) return { questions: [], issues: [] };
+
+      let cleanText = text;
+      const blockMatch = text.match(/const\s+(?:QUESTION_BANK|QUESTIONS)\s*=\s*(\[[\s\S]*\]);?/);
+      if (blockMatch) {
+        cleanText = blockMatch[1];
+      }
+
+      const issues = [];
       try {
-        const parsed = JSON.parse(text);
-        const list = Array.isArray(parsed) ? parsed : (parsed.questions || parsed.QUESTION_BANK || parsed.QUESTIONS || []);
-        if (Array.isArray(list)) {
+        const cleaned = cleanJSArrayInput(cleanText);
+        // Try parsing as-is first (handles arrays AND objects with .questions)
+        let parsed = null;
+        try {
+          parsed = JSON.parse(cleaned);
+        } catch (_) {
+          // Fall back: try wrapping in array (handles bare object or missing brackets)
+          const wrapped = cleaned.startsWith('[') ? cleaned : '[' + cleaned + ']';
+          parsed = JSON.parse(wrapped);
+        }
+        const list = Array.isArray(parsed)
+          ? parsed
+          : (parsed.questions || parsed.QUESTION_BANK || parsed.QUESTIONS || []);
+        if (Array.isArray(list) && list.length > 0) {
           return {
-            questions: list.map(item => ({
-              question: item.question || '',
-              options: Array.isArray(item.options) ? item.options : ['', '', '', ''],
-              correct: Number.isInteger(item.correct) ? item.correct : Number(item.correct || 0),
-              explanation: item.explanation || '',
-            })),
+            questions: list.map(normalizeQuestionItem).filter(Boolean),
             issues: [],
           };
         }
       } catch (error) {
+        issues.push(`JSON Parsing Error: ${error.message}. Attempting text fallback.`);
       }
 
-      const blockMatch = text.match(/const\s+(?:QUESTION_BANK|QUESTIONS)\s*=\s*(\[[\s\S]*\]);?/);
-      if (blockMatch) {
-        return parseImportedQuestions(blockMatch[1]);
-      }
-
-      const issues = [];
       const questions = text
         .split(/\n\s*\n/)
         .map(block => block.trim())
@@ -2863,15 +3053,25 @@ DASHBOARD_HTML = r"""
       textarea.classList.remove('dragover');
       const file = e.dataTransfer.files[0];
       if (!file) return;
-      
+
+      // Only accept .json files
+      if (!/\.json$/i.test(file.name || '')) {
+        showToast('Only .json files can be dropped here.', 'warn');
+        return;
+      }
+
+      // Force JSON source mode
+      const modeSelect = document.getElementById('file-source-mode');
+      if (modeSelect && modeSelect.value !== 'json') modeSelect.value = 'json';
+      if (state.wizard) state.wizard.sourceMode = 'json';
+
       const reader = new FileReader();
       reader.onload = (event) => {
-        textarea.value = event.target.result;
+        const content = event.target.result;
+        textarea.value = content;
+        if (state.wizard) state.wizard.sourceRaw = content;
         syncWizardSummary();
-        const sourceMode = document.getElementById('file-source-mode')?.value || state.wizard?.sourceMode || '';
-        if (/\.json$/i.test(file.name || '') || sourceMode === 'json') {
-          applyWizardImport();
-        }
+        applyWizardImport();
       };
       reader.readAsText(file);
     }

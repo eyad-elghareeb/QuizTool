@@ -22,23 +22,27 @@ pub fn extract_assigned_literal(content: &str, const_name: &str, open_char: char
     let pattern = format!(r"const\s+{}\s*=\s*{}", regex::escape(const_name), regex::escape(&open_char.to_string()));
     let re = Regex::new(&pattern).ok()?;
     let m = re.find(content)?;
-    let start = content[m.start()..].find(open_char)? + m.start();
-    let bytes: Vec<u8> = content.as_bytes()[start..].to_vec();
-    let sub = std::str::from_utf8(&bytes).ok()?;
-    let chars: Vec<char> = sub.chars().collect();
+    let start_idx = content[m.start()..].find(open_char)? + m.start();
+    
     let mut depth = 0i32;
-    let mut byte_offset = start;
-    for ch in &chars {
-        if *ch == open_char { depth += 1; }
-        else if *ch == close_char {
+    let mut end_idx = None;
+    for (idx, ch) in content[start_idx..].char_indices() {
+        if ch == open_char {
+            depth += 1;
+        } else if ch == close_char {
             depth -= 1;
             if depth == 0 {
-                return Some(content[start..byte_offset + ch.len_utf8()].to_string());
+                end_idx = Some(start_idx + idx + ch.len_utf8());
+                break;
             }
         }
-        byte_offset += ch.len_utf8();
     }
-    None
+    
+    if let Some(end) = end_idx {
+        Some(content[start_idx..end].to_string())
+    } else {
+        None
+    }
 }
 
 pub fn sanitize_jsonish(block: &str) -> String {

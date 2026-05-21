@@ -194,27 +194,6 @@ fn build_index_ctx(folder_rel: &str, title: &str, description: &str) -> IndexCtx
     }
 }
 
-static TRACKER_MODAL: &str = r##"<div class="dash-overlay" id="tracker-dashboard">
-  <div class="dash-modal">
-    <div class="dash-header">
-      <h2 id="dash-title-text">Question Tracker</h2>
-      <button class="dash-close-btn" onclick="closeTrackerDashboard()">x</button>
-    </div>
-    <div class="dash-scope-bar" id="dash-scope-bar"></div>
-    <div class="dash-summary">
-      <div class="dash-stat"><div class="ds-val red" id="dash-total-wrong">0</div><div class="ds-lbl">Wrong</div></div>
-      <div class="dash-stat"><div class="ds-val blue" id="dash-total-flagged">0</div><div class="ds-lbl">Flagged</div></div>
-      <div class="dash-stat"><div class="ds-val green" id="dash-total-quizzes">0</div><div class="ds-lbl">Quizzes</div></div>
-    </div>
-    <div class="dash-body" id="dash-body"></div>
-    <div class="dash-footer">
-      <button class="btn-dash-action" onclick="exportTrackerToPDF()">Export PDF</button>
-      <button class="btn-dash-action btn-dash-danger" onclick="confirmClearTrackerData()">Clear All</button>
-      <button class="btn-dash-close" onclick="closeTrackerDashboard()">Close</button>
-    </div>
-  </div>
-</div>"##;
-
 static FOUC_SCRIPT_OPAQUE: &str = r##"(function(){var t=localStorage.getItem('quiz-theme')||'dark';var s=document.createElement('style');
 s.textContent='html,body{background:'+(t==='light'?'#f3f0eb':'#0d1117')+';color:'+(t==='light'?'#1c1917':'#e6edf3')+';margin:0;padding:0;min-height:100%}';
 document.head.appendChild(s)})();"##;
@@ -258,8 +237,6 @@ pub fn create_index_html(folder_rel: &str, title: &str, description: &str) -> St
     <div class="footer-note">Made By: <a href="https://github.com/eyad-elghareeb/QuizTool">QuizTool</a></div>
   </div>
 
-{tracker_modal}
-
 <script src="{prefix}index-engine.js"></script>
 <script>
 const QUIZZES = [];
@@ -287,6 +264,5 @@ if ('serviceWorker' in navigator) {{
         topbar_title = ctx.topbar_title,
         hero_title = ctx.hero_title,
         hero_description = ctx.hero_description,
-        tracker_modal = TRACKER_MODAL,
     )
 }

@@ -137,6 +137,8 @@ fn main() {
             commands::provider_verify,
             commands::provider_deploy,
             commands::open_in_browser,
+            commands::read_saved_token,
+            commands::save_token,
         ])
         .run(tauri::generate_context!())
         .expect("error while running QuizTool Admin");

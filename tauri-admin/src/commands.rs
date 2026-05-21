@@ -519,3 +519,40 @@ pub fn open_in_browser(url: String, _state: State<ProjectRoot>, server: State<Qu
 
     open::that(target).map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub fn read_saved_token(provider: String, state: State<ProjectRoot>) -> Option<String> {
+    let root = root(&state);
+    let path = root.join(".quiztool").join("tokens.json");
+    let text = std::fs::read_to_string(&path).ok()?;
+    let map: serde_json::Map<String, Value> = serde_json::from_str(&text).ok()?;
+    map.get(&provider).and_then(|v| v.as_str()).map(|s| s.to_string())
+}
+
+#[tauri::command]
+pub fn save_token(provider: String, token: String, state: State<ProjectRoot>) -> Result<(), String> {
+    let root = root(&state);
+    let dir = root.join(".quiztool");
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    // Ensure .quiztool/ is gitignored
+    {
+        let gi = root.join(".gitignore");
+        let content = std::fs::read_to_string(&gi).unwrap_or_default();
+        if !content.lines().any(|l| l == ".quiztool/") {
+            let suffix = if content.ends_with('\n') { "" } else { "\n" };
+            let _ = std::fs::write(&gi, format!("{}{}.quiztool/\n", content, suffix));
+        }
+    }
+    let path = dir.join("tokens.json");
+    let mut map: serde_json::Map<String, Value> = std::fs::read_to_string(&path)
+        .ok()
+        .and_then(|t| serde_json::from_str(&t).ok())
+        .unwrap_or_default();
+    if token.is_empty() {
+        map.remove(&provider);
+    } else {
+        map.insert(provider, Value::String(token));
+    }
+    let out = serde_json::to_string_pretty(&Value::Object(map)).map_err(|e| e.to_string())?;
+    std::fs::write(&path, out).map_err(|e| e.to_string())
+}
