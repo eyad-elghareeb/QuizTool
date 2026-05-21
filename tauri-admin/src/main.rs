@@ -139,6 +139,8 @@ fn main() {
             commands::open_in_browser,
             commands::read_saved_token,
             commands::save_token,
+            commands::read_external_file,
+            commands::parse_json_questions,
         ])
         .run(tauri::generate_context!())
         .expect("error while running QuizTool Admin");

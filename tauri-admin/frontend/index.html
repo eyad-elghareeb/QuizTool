@@ -1048,26 +1048,6 @@
       font-weight: 700;
     }
 
-    .wizard-preset-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 0.7rem;
-    }
-
-    .wizard-preset {
-      text-align: left;
-      padding: 0.85rem;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: var(--surface2);
-      cursor: pointer;
-    }
-
-    .wizard-preset.active {
-      border-color: var(--accent);
-      background: var(--accent-dim);
-    }
-
     .context-menu {
       position: fixed;
       z-index: 140;
@@ -1348,6 +1328,7 @@
       '/admin/provider-deploy': { cmd: 'provider_deploy', method: 'POST' },
       '/admin/read-saved-token': { cmd: 'read_saved_token', method: 'GET', queryParam: 'provider' },
       '/admin/save-token': { cmd: 'save_token', method: 'POST' },
+      '/admin/parse-json-questions': { cmd: 'parse_json_questions', method: 'POST' },
     };
 
     async function fetchJson(url, options = {}) {
@@ -1423,17 +1404,8 @@
       quickOpenQuery: '',
       collapsedQuestions: new Set(),
       recentFolders: JSON.parse(localStorage.getItem('admin-recent-folders') || '[]'),
-      recentPresets: JSON.parse(localStorage.getItem('admin-recent-presets') || '[]'),
       wizard: null,
     };
-
-    const WIZARD_PRESETS = [
-      { key: 'blank', label: 'Blank Quiz', description: 'Start from a clean question set.', type: 'quiz', starterCount: 1, folderHint: '', bankIcon: '🗃️' },
-      { key: 'lecture', label: 'Lecture MCQ', description: 'Single lecture practice set.', type: 'quiz', starterCount: 5, defaultDescription: 'Lecture MCQs', bankIcon: '🗃️' },
-      { key: 'past-paper', label: 'Past Paper', description: 'Exam-style set for previous years.', type: 'quiz', starterCount: 10, defaultDescription: 'Past paper MCQs', bankIcon: '🗃️' },
-      { key: 'quick-review', label: 'Quick Review', description: 'Short revision-focused quiz.', type: 'quiz', starterCount: 3, defaultDescription: 'Quick review questions', bankIcon: '🗃️' },
-      { key: 'all-bank', label: 'All Bank', description: 'Large question bank with bank defaults.', type: 'bank', starterCount: 8, defaultDescription: 'All questions in one bank file', bankIcon: '🗃️' },
-    ];
 
     const FILTERS = [
       { key: 'all', label: 'All' },
@@ -1461,7 +1433,6 @@
       localStorage.setItem('admin-search', state.search);
       localStorage.setItem('admin-open-folders', JSON.stringify(Array.from(state.openFolders)));
       localStorage.setItem('admin-recent-folders', JSON.stringify(state.recentFolders.slice(0, 8)));
-      localStorage.setItem('admin-recent-presets', JSON.stringify(state.recentPresets.slice(0, 8)));
       if (state.currentFile) localStorage.setItem('admin-last-file', state.currentFile);
     }
 
@@ -1510,7 +1481,13 @@
     }
 
     function showToast(message, tone = 'info') {
-      const stack = document.getElementById('toast-stack');
+      let stack = document.getElementById('toast-stack');
+      if (!stack) {
+        stack = document.createElement('div');
+        stack.id = 'toast-stack';
+        stack.className = 'toast-stack';
+        document.body.appendChild(stack);
+      }
       const toast = document.createElement('div');
       toast.className = `toast ${tone}`;
       toast.textContent = message;
@@ -1676,11 +1653,10 @@
       result = result.replace(/```(?:json|javascript|js)?\s*/gi, '').replace(/```\s*$/g, '');
       result = fixOCRArtifacts(result);
       // Normalize typographic/curly quotes to straight ASCII equivalents.
-      // A simple global replace is correct here — we hand the result directly to
-      // new Function() which handles all JS syntax natively (unquoted keys,
-      // single quotes, trailing commas, comments, strings with commas/colons).
       result = result.replace(/[\u201C\u201D\u00AB\u00BB\u201E\u201F]/g, '"')
                      .replace(/[\u2018\u2019\u2032\u02BC]/g, "'");
+      // Remove trailing commas before ] or } (inspired by bank-maker)
+      result = result.replace(/,(\s*[\]\}])/g, '$1');
       // Ensure the result is wrapped in array brackets so JSON.parse always works
       result = result.trim();
       if (!result.startsWith('[')) result = '[' + result;
@@ -1688,8 +1664,52 @@
       return result;
     }
 
+    /**
+     * Recursively extract question arrays from wrapper objects.
+     * Handles: {questions:[...]}, {QUESTION_BANK:[...]}, {data:{questions:[...]}}, etc.
+     * Returns an array of question items, or null if no questions array found.
+     */
+    function extractQuestionsArray(obj, depth = 0) {
+      if (depth > 4) return null; // prevent infinite recursion
+      if (!obj || typeof obj !== 'object') return null;
+      if (Array.isArray(obj)) return obj; // already an array
+
+      // Check all known keys that might hold a questions array
+      const questionArrayKeys = [
+        'questions', 'QUESTION_BANK', 'QUESTIONS', 'questionBank',
+        'question_bank', 'items', 'data', 'quiz', 'quizzes', 'bank'
+      ];
+      for (const k of questionArrayKeys) {
+        const val = obj[k];
+        if (val === undefined || val === null) continue;
+        if (Array.isArray(val)) {
+          // Check if this array looks like it contains question objects
+          if (val.length > 0 && val.some(v => v && typeof v === 'object' && (v.question || v.questionText || v.question_text || v.prompt || v.text || v.options || v.choices))) {
+            return val;
+          }
+          // Even if no obvious question markers, return it if non-empty (normalizeQuestionItem will handle it)
+          if (val.length > 0) return val;
+        }
+        if (val && typeof val === 'object' && !Array.isArray(val)) {
+          const nested = extractQuestionsArray(val, depth + 1);
+          if (nested && nested.length > 0) return nested;
+        }
+      }
+      return null;
+    }
+
     function normalizeQuestionItem(item) {
       if (!item || typeof item !== 'object') return null;
+
+      // If the item itself looks like a wrapper (has a questions array but no question text),
+      // try to extract questions from it recursively
+      if (!item.question && !item.questionText && !item.question_text && !item.prompt && !item.text && !item.q) {
+        const innerQuestions = extractQuestionsArray(item);
+        if (innerQuestions && innerQuestions.length > 0) {
+          // Return a marker so the caller can flatten nested arrays
+          return { __unwrap: innerQuestions };
+        }
+      }
 
       // 1. Find question text
       let question = '';
@@ -1789,6 +1809,33 @@
       };
     }
 
+    /**
+     * Flatten the result of normalizeQuestionItem, handling __unwrap markers
+     * for wrapper objects that contain nested question arrays.
+     */
+    function flattenNormalizedQuestions(items) {
+      const result = [];
+      for (const item of items) {
+        if (!item) continue;
+        if (item.__unwrap) {
+          // Recursively normalize the unwrapped items
+          for (const sub of item.__unwrap) {
+            const normalized = normalizeQuestionItem(sub);
+            if (normalized) {
+              if (normalized.__unwrap) {
+                result.push(...flattenNormalizedQuestions([normalized]));
+              } else {
+                result.push(normalized);
+              }
+            }
+          }
+        } else {
+          result.push(item);
+        }
+      }
+      return result;
+    }
+
     function sanitizeForJSON(str) {
       // Fast path: already valid JSON
       try { JSON.parse(str); return str.trim(); } catch (_) {}
@@ -1801,6 +1848,42 @@
       result = result.replace(/([\{,]\s*)([a-zA-Z_$][a-zA-Z_$0-9]*)(\s*:)/g, '$1"$2"$3');
       // Convert single-quoted strings to double-quoted
       result = result.replace(/'((?:[^'\\]|\\.)*)'/g, '"$1"');
+      // Convert backtick strings to double-quoted (inspired by bank-maker)
+      result = result.replace(/`((?:[^`\\]|\\.)*)`/g, '"$1"');
+      // Use state machine to properly handle strings and escape control characters (inspired by bank-maker)
+      result = sanitizeStringsStateMachine(result);
+      // Fix unescaped double quotes — PASS 1: Merge adjacent broken strings
+      let prevResult;
+      do {
+        prevResult = result;
+        result = result.replace(/(:\s*)"([^"]*)"([",:\]\}\{\[]+)"/g, function(match, prefix, content1, content2) {
+          return prefix + '"' + content1 + content2 + '"';
+        });
+        result = result.replace(/(,\s*)"([^"]*)"([",:\]\}\{\[]+)"/g, function(match, prefix, content1, content2) {
+          return prefix + '"' + content1 + content2 + '"';
+        });
+        result = result.replace(/(\[\s*)"([^"]*)"([",:\]\}\{\[]+)"/g, function(match, prefix, content1, content2) {
+          return prefix + '"' + content1 + content2 + '"';
+        });
+      } while (result !== prevResult);
+      // After initial fixes, try parsing again
+      try { JSON.parse(result); return result.trim(); } catch (_) {}
+      // PASS 2: More aggressive fix for strings with multiple internal quotes
+      do {
+        prevResult = result;
+        result = result.replace(/(:\s*)"([^"]*(?:"[^"]*)+)"/g, function(match, prefix, fullContent) {
+          const clean = fullContent.replace(/"/g, '');
+          return prefix + '"' + clean + '"';
+        });
+        result = result.replace(/(,\s*)"([^"]*(?:"[^"]*)+)"/g, function(match, prefix, fullContent) {
+          const clean = fullContent.replace(/"/g, '');
+          return prefix + '"' + clean + '"';
+        });
+        result = result.replace(/(\[\s*)"([^"]*(?:"[^"]*)+)"/g, function(match, prefix, fullContent) {
+          const clean = fullContent.replace(/"/g, '');
+          return prefix + '"' + clean + '"';
+        });
+      } while (result !== prevResult);
       // Remove trailing commas before ] or }
       result = result.replace(/,(\s*[\]\}])/g, '$1');
       // Remove trailing semicolons
@@ -1808,11 +1891,46 @@
       return result.trim();
     }
 
+    /**
+     * Helper: try to extract a questions array from any parsed value.
+     * Handles arrays directly, objects with known keys, and nested structures.
+     */
+    function tryExtractQuestions(parsed) {
+      if (!parsed) return null;
+      // Direct array
+      if (Array.isArray(parsed)) return parsed;
+      // Object with known question-array keys
+      if (typeof parsed === 'object') {
+        const extracted = extractQuestionsArray(parsed);
+        if (extracted && extracted.length > 0) return extracted;
+      }
+      return null;
+    }
+
+    /**
+     * Helper: normalize a raw list of items into proper question objects,
+     * flattening any wrapper objects encountered via __unwrap markers.
+     */
+    function normalizeQuestionList(list) {
+      const raw = list.map(normalizeQuestionItem).filter(Boolean);
+      return flattenNormalizedQuestions(raw);
+    }
+
     function parseImportedQuestions(raw) {
-      const text = String(raw || '').trim();
+      let text = String(raw || '').trim();
       if (!text) return { questions: [], issues: [] };
 
+      // ── Pre-clean: always normalize first (like bank-maker does) ──
+      // Remove BOM, code fences, and normalize curly quotes BEFORE any strategy.
+      // Previous code tried the raw text first (Strategy 0), but this caused
+      // issues when files had BOMs or encoding artifacts that prevented JSON.parse
+      // from working even though the content was otherwise valid JSON.
+      text = text.replace(/^\uFEFF/, '');                              // Remove BOM
+      text = text.replace(/^\s*```(?:json|js|javascript)?\s*/i, '');   // Remove opening code fence
+      text = text.replace(/\s*```\s*$/i, '');                          // Remove closing code fence
+
       let cleanText = text;
+      // Extract from JS const assignment: const QUESTION_BANK = [...]; or const QUESTIONS = [...];
       const blockMatch = text.match(/const\s+(?:QUESTION_BANK|QUESTIONS)\s*=\s*(\[[\s\S]*\]);?/);
       if (blockMatch) {
         cleanText = blockMatch[1];
@@ -1820,18 +1938,37 @@
 
       const issues = [];
 
-      // Strategy 1: Direct JSON.parse (fastest, strictest)
+      // ── Strategy 0: Direct JSON.parse on the pre-cleaned text ──
+      // After BOM and code-fence removal, most valid JSON files parse here.
       try {
-        const cleaned = cleanJSArrayInput(cleanText);
-        const arr = JSON.parse(cleaned);
-        const list = Array.isArray(arr) ? arr : (arr.questions || arr.QUESTION_BANK || arr.QUESTIONS || []);
-        if (Array.isArray(list) && list.length > 0) {
-          return { questions: list.map(normalizeQuestionItem).filter(Boolean), issues: [] };
+        const arr = JSON.parse(cleanText);
+        const list = tryExtractQuestions(arr);
+        if (list && list.length > 0) {
+          return { questions: normalizeQuestionList(list), issues: [] };
         }
       } catch (_) {}
 
-      // Strategy 2: new Function() eval on RAW input (handles JS syntax: single quotes, trailing commas, unquoted keys, comments)
-      // This is tried BEFORE sanitizeForJSON because that function's aggressive transforms can break valid JS.
+      // ── Strategy 1: JSON.parse after cleanJSArrayInput (handles missing brackets, curly quotes, etc.) ──
+      try {
+        const cleaned = cleanJSArrayInput(cleanText);
+        const arr = JSON.parse(cleaned);
+        const list = tryExtractQuestions(arr);
+        if (list && list.length > 0) {
+          return { questions: normalizeQuestionList(list), issues: [] };
+        }
+      } catch (_) {}
+
+      // ── Strategy 2: Sanitized JSON.parse (handles trailing commas, comments, unquoted keys) ──
+      try {
+        const sanitized = sanitizeForJSON(cleanJSArrayInput(cleanText));
+        const arr = JSON.parse(sanitized);
+        const list = tryExtractQuestions(arr);
+        if (list && list.length > 0) {
+          return { questions: normalizeQuestionList(list), issues: [] };
+        }
+      } catch (_) {}
+
+      // ── Strategy 3: new Function() eval (handles JS syntax: single quotes, trailing commas, unquoted keys, comments) ──
       try {
         const cleaned = cleanJSArrayInput(cleanText);
         let parsed = null;
@@ -1841,25 +1978,13 @@
           const wrapped = cleaned.startsWith('[') ? cleaned : '[' + cleaned + ']';
           parsed = new Function('return (' + wrapped + ')')();
         }
-        const list = Array.isArray(parsed)
-          ? parsed
-          : (parsed.questions || parsed.QUESTION_BANK || parsed.QUESTIONS || []);
-        if (Array.isArray(list) && list.length > 0) {
-          return { questions: list.map(normalizeQuestionItem).filter(Boolean), issues: [] };
+        const list = tryExtractQuestions(parsed);
+        if (list && list.length > 0) {
+          return { questions: normalizeQuestionList(list), issues: [] };
         }
       } catch (_) {}
 
-      // Strategy 3: Sanitized JSON.parse (handles trailing commas, comments, unquoted keys via string transforms)
-      try {
-        const sanitized = sanitizeForJSON(cleanJSArrayInput(cleanText));
-        const arr = JSON.parse(sanitized);
-        const list = Array.isArray(arr) ? arr : (arr.questions || arr.QUESTION_BANK || arr.QUESTIONS || []);
-        if (Array.isArray(list) && list.length > 0) {
-          return { questions: list.map(normalizeQuestionItem).filter(Boolean), issues: [] };
-        }
-      } catch (_) {}
-
-      // Strategy 4: Plain-text MCQ fallback (blank-line-separated blocks)
+      // ── Strategy 4: Plain-text MCQ fallback (blank-line-separated blocks) ──
       const questions = text
         .split(/\n\s*\n/)
         .map(block => block.trim())
@@ -3205,14 +3330,6 @@
       });
     }
 
-    function getPresetByKey(key) {
-      return WIZARD_PRESETS.find(preset => preset.key === key) || WIZARD_PRESETS[0];
-    }
-
-    function buildStarterQuestions(count) {
-      return Array.from({ length: Math.max(1, count || 1) }, () => defaultQuestion());
-    }
-
     function collectWizardState() {
       const previous = state.wizard || {};
       return {
@@ -3222,7 +3339,6 @@
         description: document.getElementById('file-description')?.value || previous.description || '',
         filename: document.getElementById('file-name')?.value || previous.filename || '',
         icon: document.getElementById('file-icon')?.value || previous.icon || '🗃️',
-        presetKey: document.getElementById('file-preset')?.value || previous.presetKey || 'lecture',
         sourceMode: document.getElementById('file-source-mode')?.value || previous.sourceMode || 'manual',
         sourceRaw: document.getElementById('file-import-raw')?.value || previous.sourceRaw || '',
         clonePath: document.getElementById('file-clone-path')?.value || previous.clonePath || '',
@@ -3231,7 +3347,7 @@
 
     function renderWizardSummaryBox(wizard) {
       const stemBase = slugifyClient(wizard.filename || wizard.title, 'untitled');
-      const stem = wizard.type === 'bank' && !wizard.filename && !stemBase.startsWith('all-') ? `all-${stemBase}` : stemBase;
+      const stem = stemBase;
       const uid = buildDerivedUid(wizard.folder, stem);
       const issues = [];
       if (!wizard.title.trim()) issues.push({ level: 'error', message: 'Title is required before create.' });
@@ -3283,7 +3399,6 @@
     function openNewFileWizard(options = {}) {
       const previous = state.wizard || {};
       const type = options.type || previous.type || 'quiz';
-      const presetKey = previous.presetKey || (type === 'bank' ? 'all-bank' : (state.recentPresets[0] || 'lecture'));
       state.wizard = {
         folder: Object.prototype.hasOwnProperty.call(options, 'folder') ? options.folder : (previous.folder || state.recentFolders[0] || '.'),
         type,
@@ -3291,14 +3406,11 @@
         description: previous.description || '',
         filename: previous.filename || '',
         icon: previous.icon || '🗃️',
-        presetKey,
         sourceMode: previous.sourceMode || 'manual',
         sourceRaw: previous.sourceRaw || '',
         clonePath: previous.clonePath || '',
       };
-      if (!state.modalOpen || !state.modalQuestions.length) {
-        state.modalQuestions = buildStarterQuestions(getPresetByKey(presetKey).starterCount);
-      }
+      if (!state.modalOpen) state.modalQuestions = [];
       if (!state.modalTab || state.modalTab === 'basic') state.modalTab = 'setup';
       renderNewFileModal();
     }
@@ -3307,7 +3419,6 @@
       const wizard = collectWizardState();
       state.wizard = wizard;
       const isBank = wizard.type === 'bank';
-      const preset = getPresetByKey(wizard.presetKey);
       const cloneOptions = state.files
         .filter(file => file.type === 'quiz' || file.type === 'bank')
         .map(file => `<option value="${escapeHtml(file.path)}" ${file.path === wizard.clonePath ? 'selected' : ''}>${escapeHtml(file.title)} (${escapeHtml(file.path)})</option>`)
@@ -3368,12 +3479,6 @@
             <div class="modal-tab-content ${state.modalTab === 'setup' ? 'active' : ''}">
               <div class="field-grid">
                 <div class="field">
-                  <label>Starter Preset</label>
-                  <select class="select-input" id="file-preset" onchange="setWizardPreset(this.value)">
-                    ${WIZARD_PRESETS.map(item => `<option value="${escapeHtml(item.key)}" ${item.key === wizard.presetKey ? 'selected' : ''}>${escapeHtml(item.label)}</option>`).join('')}
-                  </select>
-                </div>
-                <div class="field">
                   <label>Type</label>
                   <select class="select-input" id="file-type" onchange="onFileTypeChange(); syncWizardSummary()">
                     <option value="quiz" ${wizard.type === 'quiz' ? 'selected' : ''}>Quiz</option>
@@ -3390,7 +3495,7 @@
                 </div>
                 <div class="field full">
                   <label>Description</label>
-                  <textarea class="text-area" id="file-description" placeholder="${escapeHtml(preset.defaultDescription || 'Short start-screen description')}" oninput="syncWizardSummary()">${escapeHtml(wizard.description)}</textarea>
+                  <textarea class="text-area" id="file-description" placeholder="Short start-screen description" oninput="syncWizardSummary()">${escapeHtml(wizard.description)}</textarea>
                 </div>
                 <div class="field">
                   <label>Filename Override</label>
@@ -3398,7 +3503,7 @@
                 </div>
                 <div class="field" id="bank-icon-wrap" style="display:${isBank ? 'grid' : 'none'};">
                   <label>Bank Icon</label>
-                  <input class="text-input" id="file-icon" value="${escapeHtml(wizard.icon || preset.bankIcon || '🗃️')}" oninput="syncWizardSummary()">
+                  <input class="text-input" id="file-icon" value="${escapeHtml(wizard.icon || '🗃️')}" oninput="syncWizardSummary()">
                 </div>
               </div>
               <div class="modal-actions">
@@ -3447,6 +3552,12 @@
               ` : `
                 <div class="field" style="margin-top:1rem;">
                   <label>Paste JSON array, QUESTIONS block, or plain MCQ text</label>
+                  <div style="display:flex; gap:0.5rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+                    <button class="btn" onclick="document.getElementById('json-file-input').click()" style="white-space:nowrap;">📁 Browse .json File</button>
+                    <button class="btn btn-primary" onclick="handleSourceNext()" style="white-space:nowrap;">🔍 Parse &amp; Import</button>
+                    <span class="muted" style="align-self:center; font-size:0.85rem;">or paste / drag-and-drop below</span>
+                  </div>
+                  <input type="file" id="json-file-input" accept=".json" style="display:none;" onchange="onJsonFileSelected(event)">
                   <textarea class="text-area code" id="file-import-raw" style="height: 220px;" oninput="onPasteInputChange()" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="onModalJsonDrop(event)">${escapeHtml(wizard.sourceRaw || '')}</textarea>
                 </div>
               `}
@@ -3471,29 +3582,44 @@
       `;
       openModal({
         title: 'Create New Quiz or Bank',
-        subtitle: 'Use presets, import helpers, and folder-aware defaults to build files faster.',
+        subtitle: 'Use import helpers and folder-aware defaults to build files faster.',
         body,
         onOpen: () => syncWizardSummary(),
       });
     }
 
-    function handleSourceNext() {
-      // Auto-import pasted text when advancing from source tab to builder tab.
+    async function handleSourceNext() {
+      window.clearTimeout(pasteImportTimer);
       const mode = document.getElementById('file-source-mode')?.value;
       const raw = document.getElementById('file-import-raw')?.value || '';
+      const shouldImport = (mode === 'json' || mode === 'text') && raw.trim();
+
+      // Navigation should never depend on parser success. Move first, then import.
+      setModalTab('questions');
+
+      if (!shouldImport) return;
+
+      state.wizard = { ...(state.wizard || {}), sourceMode: mode, sourceRaw: raw };
+
+      let imported = false;
       if ((mode === 'json' || mode === 'text') && raw.trim()) {
-        // Only auto-import if questions haven't been imported yet or still look like starters
-        const allStarters = state.modalQuestions.every(q => !q.question && !(q.options || []).some(Boolean));
-        if (allStarters) {
-          const imported = applyWizardImport();
-          if (!imported) return; // Don't advance to builder if parsing failed
+        try {
+          imported = await applyWizardImport(raw);
+        } catch (err) {
+          showToast('Could not parse questions from source content. You can edit them manually on the Builder tab.', 'warn');
+          return;
         }
       }
-      setModalTab('questions');
+
+      if (imported) {
+        renderNewFileModal();
+      } else {
+        showToast('Could not parse questions from source content. You can edit them manually on the Builder tab.', 'warn');
+      }
     }
 
     function setModalTab(tab) {
-      syncModalQuestionsFromUI();
+      if (state.modalTab === 'questions') syncModalQuestionsFromUI();
       state.wizard = collectWizardState();
       state.modalTab = tab;
       renderNewFileModal();
@@ -3503,20 +3629,6 @@
       const type = document.getElementById('file-type').value;
       const wrap = document.getElementById('bank-icon-wrap');
       if (wrap) wrap.style.display = type === 'bank' ? 'grid' : 'none';
-    }
-
-    function setWizardPreset(key) {
-      syncModalQuestionsFromUI();
-      state.wizard = collectWizardState();
-      state.wizard.presetKey = key;
-      const preset = getPresetByKey(key);
-      state.wizard.type = preset.type;
-      if (!state.wizard.description) state.wizard.description = preset.defaultDescription || '';
-      if (!state.modalQuestions.length || state.modalQuestions.every(question => !question.question && !(question.options || []).some(Boolean))) {
-        state.modalQuestions = buildStarterQuestions(preset.starterCount);
-      }
-      rememberRecent('recentPresets', key);
-      renderNewFileModal();
     }
 
     function renderModalQuestionList() {
@@ -3591,10 +3703,11 @@
       syncWizardSummary();
       window.clearTimeout(pasteImportTimer);
       if (raw.trim()) {
-        pasteImportTimer = window.setTimeout(() => {
+        pasteImportTimer = window.setTimeout(async () => {
           const mode = document.getElementById('file-source-mode')?.value;
           if (mode === 'json' || mode === 'text') {
-            applyWizardImport();
+            const imported = await applyWizardImport();
+            if (imported) setModalTab('questions');
           }
         }, 800);
       }
@@ -3605,7 +3718,7 @@
       const textarea = document.getElementById('file-import-raw');
       if (!textarea) return;
       textarea.classList.remove('dragover');
-      const file = e.dataTransfer.files[0];
+      const file = e.dataTransfer?.files?.[0];
       if (!file) return;
 
       // Only accept .json files
@@ -3625,23 +3738,128 @@
       _suppressPasteImport = true;
 
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         const content = event.target.result;
         // Set textarea value without triggering oninput (which would re-import)
         textarea.value = content;
         _suppressPasteImport = false;
         if (state.wizard) state.wizard.sourceRaw = content;
         syncWizardSummary();
-        applyWizardImport();
+        const imported = await applyWizardImport();
+        if (imported) setModalTab('questions');
       };
       reader.readAsText(file);
     }
 
-    function applyWizardImport() {
-      const raw = document.getElementById('file-import-raw')?.value || '';
-      const parsed = parseImportedQuestions(raw);
+    /**
+     * Handler for the "Browse .json File" button's file input.
+     * Uses the native <input type="file"> which works reliably in all
+     * Tauri webviews (unlike OS-level drag-and-drop which may be blocked).
+     */
+    function onJsonFileSelected(e) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const textarea = document.getElementById('file-import-raw');
+      if (!textarea) return;
+
+      // Force JSON source mode
+      const modeSelect = document.getElementById('file-source-mode');
+      if (modeSelect && modeSelect.value !== 'json') modeSelect.value = 'json';
+      if (state.wizard) state.wizard.sourceMode = 'json';
+
+      window.clearTimeout(pasteImportTimer);
+      _suppressPasteImport = true;
+
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const content = event.target.result;
+        textarea.value = content;
+        _suppressPasteImport = false;
+        if (state.wizard) state.wizard.sourceRaw = content;
+        syncWizardSummary();
+        const imported = await applyWizardImport();
+        if (imported) setModalTab('questions');
+      };
+      reader.readAsText(file);
+      // Reset the input so the same file can be selected again
+      e.target.value = '';
+    }
+
+    /**
+     * Import JSON content from a string (used by both file picker and Tauri drag-drop).
+     */
+    function importJsonContent(content, fileName) {
+      const textarea = document.getElementById('file-import-raw');
+      if (!textarea) return;
+
+      // Force JSON source mode
+      const modeSelect = document.getElementById('file-source-mode');
+      if (modeSelect && modeSelect.value !== 'json') modeSelect.value = 'json';
+      if (state.wizard) state.wizard.sourceMode = 'json';
+
+      window.clearTimeout(pasteImportTimer);
+      _suppressPasteImport = true;
+
+      textarea.value = content;
+      _suppressPasteImport = false;
+      if (state.wizard) state.wizard.sourceRaw = content;
+      syncWizardSummary();
+      applyWizardImport().then(imported => {
+        if (imported) setModalTab('questions');
+      });
+    }
+
+    /**
+     * Listen for Tauri-native drag-drop events.
+     * When dragDropEnabled is true in tauri.conf.json, Tauri intercepts OS file drops
+     * and emits 'tauri://drag-drop' events with file paths instead of passing them to
+     * the webview's ondrop handler. We read the file via a Tauri command.
+     */
+    function initTauriDragDrop() {
+      if (typeof window !== 'undefined' && window.__TAURI__ && window.__TAURI__.event) {
+        try {
+          window.__TAURI__.event.listen('tauri://drag-drop', async (event) => {
+            const paths = event.payload?.paths;
+            if (!paths || !paths.length) return;
+
+            const filePath = paths[0];
+            if (!/\.json$/i.test(filePath || '')) {
+              showToast('Only .json files can be dropped.', 'warn');
+              return;
+            }
+
+            try {
+              const result = await window.__TAURI__.core.invoke('read_external_file', { path: filePath });
+              if (result && result.content) {
+                importJsonContent(result.content, result.name || filePath);
+              }
+            } catch (err) {
+              showToast('Failed to read dropped file: ' + (err.message || err), 'error');
+            }
+          });
+        } catch (_) {
+          // Tauri event API not available — file picker button still works
+        }
+      }
+    }
+
+    async function applyWizardImport(rawOverride = null) {
+      const raw = rawOverride ?? document.getElementById('file-import-raw')?.value ?? '';
+      let parsed = parseImportedQuestions(raw);
+      // If client-side parsing failed, try server-side fallback via Tauri command
+      if (!parsed.questions.length && window.__TAURI__) {
+        try {
+          const serverResult = await window.__TAURI__.core.invoke('parse_json_questions', { content: raw });
+          if (serverResult && serverResult.questions && serverResult.questions.length > 0) {
+            parsed = { questions: normalizeQuestionList(serverResult.questions), issues: serverResult.issues || [] };
+          }
+        } catch (_) {
+          // Server-side parse also failed — fall through to error
+        }
+      }
       if (!parsed.questions.length) {
-        showToast('No questions could be parsed from the pasted content. Check the format and try again.', 'error');
+        showToast('No questions could be parsed from the content. Check the format and try again.', 'error');
         return false;
       }
       state.modalQuestions = parsed.questions.map(question => ({
@@ -3652,8 +3870,10 @@
       }));
       if (parsed.issues.length) showToast(`Imported ${state.modalQuestions.length} questions with ${parsed.issues.length} warning(s).`, 'warn');
       else showToast(`Imported ${state.modalQuestions.length} questions.`, 'success');
-      state.modalTab = 'questions';
-      renderNewFileModal();
+      // NOTE: Do NOT auto-switch tabs or re-render here.
+      // The caller (handleSourceNext / onJsonFileSelected / etc.) is responsible
+      // for switching to the Builder tab. Auto-switching caused a double-render
+      // bug where syncModalQuestionsFromUI() would read from a stale DOM.
       return true;
     }
 
@@ -3670,9 +3890,8 @@
         correct: Number(question.correct || 0),
         explanation: question.explanation || '',
       }));
-      state.modalTab = 'questions';
-      renderNewFileModal();
       showToast(`Loaded ${state.modalQuestions.length} questions from ${sourcePath}.`, 'success');
+      setModalTab('questions');
     }
 
     async function applyCombineSource() {
@@ -3724,8 +3943,7 @@
       }
       
       state.modalQuestions = standardized;
-      state.modalTab = 'questions';
-      renderNewFileModal();
+      setModalTab('questions');
       
       if (shouldDedup && dupesCount > 0) {
         showToast(`Combined ${standardized.length} questions from ${totalFiles} file(s) (removed ${dupesCount} duplicate(s)).`, 'success');
@@ -4073,16 +4291,19 @@
         return;
       }
 
+      let createdPath = '';
       try {
         const result = await fetchJson('/admin/create-file', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ type, folder, title, description, filename, icon, questions }),
         });
+        createdPath = result.path || '';
         showToast(result.message || 'File created.', 'success');
         logActivity('Created file', result.path || title, 'success');
         rememberRecent('recentFolders', folder);
-        rememberRecent('recentPresets', wizard.presetKey);
+
+        if (mode === 'open') closeModal();
 
         // Expand target folder before refresh so it shows up
         if (folder && folder !== '.') {
@@ -4098,7 +4319,6 @@
         await runSync({ silentToast: true, preserveCurrent: false });
         if (result.path) {
           if (mode === 'open') {
-            closeModal();
             await loadFile(result.path);
             setTimeout(() => {
               const activeRow = document.querySelector('.tree-row.active');
@@ -4106,14 +4326,17 @@
             }, 100);
           } else {
             state.wizard = { ...wizard, title: '', filename: '', sourceRaw: '' };
-            state.modalQuestions = buildStarterQuestions(getPresetByKey(wizard.presetKey).starterCount);
+            state.modalQuestions = [];
             renderNewFileModal();
             setModalTab('setup');
           }
         }
       } catch (err) {
-        showToast(err.message || 'Failed to create file.', 'error');
-        logActivity('Create file failed', err.message || 'Unknown error', 'error');
+        const message = createdPath
+          ? `File was created, but refresh/open failed: ${err.message || 'Unknown error'}`
+          : (err.message || 'Failed to create file.');
+        showToast(message, 'error');
+        logActivity(createdPath ? 'Open created file failed' : 'Create file failed', err.message || 'Unknown error', 'error');
       }
     }
 
@@ -4359,6 +4582,7 @@
       restoreTheme();
       restoreSidebar();
       setupKeyboard();
+      initTauriDragDrop();
       renderActivity();
       await refreshWorkspace({ preserveCurrent: false });
 

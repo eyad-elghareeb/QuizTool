@@ -1,6 +1,7 @@
-// commands.rs — All 19 Tauri IPC commands (1:1 with Flask routes)
+// commands.rs — All 19+ Tauri IPC commands (1:1 with Flask routes)
 use crate::{deploy, git, parser, templates};
 use crate::server::QuizServer;
+use regex::Regex;
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
 use tauri::State;
@@ -261,14 +262,11 @@ pub fn create_file(
     if !folder_path.is_dir() { return Err("Target path is not a folder.".into()); }
 
     let base_stem = templates::slugify(filename.as_deref().filter(|s| !s.is_empty()).unwrap_or(&title), "untitled");
-    let base_stem = if ft == "bank" && !base_stem.starts_with("all-") {
-        format!("all-{}", base_stem)
-    } else { base_stem };
     let file_path = ensure_unique_path(&folder_path, &base_stem);
     let stem = file_path.file_stem().and_then(|s| s.to_str()).unwrap_or("file");
     let uid = templates::derive_uid(&folder_rel, stem);
     let desc = description.as_deref().unwrap_or("");
-    let q_val = questions.unwrap_or_else(|| json!([{"question":"Sample question?","options":["A","B","C","D"],"correct":0,"explanation":"Sample explanation."}]));
+    let q_val = questions.unwrap_or_else(|| json!([]));
     let cfg = if ft == "quiz" {
         json!({"uid": uid, "title": title, "description": desc})
     } else {
@@ -527,6 +525,118 @@ pub fn read_saved_token(provider: String, state: State<ProjectRoot>) -> Option<S
     let text = std::fs::read_to_string(&path).ok()?;
     let map: serde_json::Map<String, Value> = serde_json::from_str(&text).ok()?;
     map.get(&provider).and_then(|v| v.as_str()).map(|s| s.to_string())
+}
+
+#[tauri::command]
+pub fn read_external_file(path: String) -> Result<Value, String> {
+    let p = PathBuf::from(&path);
+
+    // Safety: only allow .json files
+    let ext = p.extension().and_then(|s| s.to_str()).unwrap_or("").to_lowercase();
+    if ext != "json" {
+        return Err("Only .json files can be imported.".into());
+    }
+
+    // Safety: limit file size to 50 MB
+    if let Ok(meta) = std::fs::metadata(&p) {
+        if meta.len() > 50 * 1024 * 1024 {
+            return Err("File is too large (max 50 MB).".into());
+        }
+    }
+
+    let content = std::fs::read_to_string(&p).map_err(|e| format!("Cannot read file: {}", e))?;
+    Ok(json!({ "content": content, "name": p.file_name().and_then(|n| n.to_str()).unwrap_or("file").to_string() }))
+}
+
+/// Parse raw JSON/JS content and extract question items.
+/// This provides a reliable server-side fallback when the frontend parser fails.
+/// Handles: bare arrays, objects with `questions`/`QUESTION_BANK` keys, JS const assignments.
+#[tauri::command]
+pub fn parse_json_questions(content: String) -> Result<Value, String> {
+    // Remove BOM first (common in Windows-saved JSON files)
+    let trimmed = content.trim().strip_prefix('\u{FEFF}').unwrap_or(content.trim()).to_string();
+    let text = trimmed;
+    if text.is_empty() {
+        return Ok(json!({"questions": [], "issues": ["Empty content."]}));
+    }
+
+    // Extract from JS const assignment
+    let clean_text = if let Some(caps) = Regex::new(r"const\s+(?:QUESTION_BANK|QUESTIONS)\s*=\s*(\[[\s\S]*\]);?")
+        .ok()
+        .and_then(|re| re.captures(&text))
+        .and_then(|c| c.get(1).map(|m| m.as_str().to_string()))
+    {
+        caps
+    } else {
+        text.clone()
+    };
+
+    // Strategy 1: Direct JSON parse
+    if let Ok(parsed) = serde_json::from_str::<Value>(&clean_text) {
+        if let Some(questions) = extract_questions_from_value(&parsed) {
+            return Ok(json!({"questions": questions, "issues": []}));
+        }
+    }
+
+    // Strategy 2: Sanitized parse (handles trailing commas, unquoted keys, comments)
+    let sanitized = parser::sanitize_jsonish(&clean_text);
+    if let Ok(parsed) = serde_json::from_str::<Value>(&sanitized) {
+        if let Some(questions) = extract_questions_from_value(&parsed) {
+            return Ok(json!({"questions": questions, "issues": []}));
+        }
+    }
+
+    Ok(json!({"questions": [], "issues": ["Could not parse any questions from the content."]}))
+}
+
+/// Recursively extract a questions array from a parsed JSON value.
+fn extract_questions_from_value(val: &Value) -> Option<Vec<Value>> {
+    match val {
+        Value::Array(arr) => {
+            if arr.is_empty() { return None; }
+            // Check if it looks like question objects
+            let first = &arr[0];
+            if first.is_object() {
+                let obj = first.as_object().unwrap();
+                if obj.contains_key("question") || obj.contains_key("questionText")
+                    || obj.contains_key("question_text") || obj.contains_key("prompt")
+                    || obj.contains_key("options") || obj.contains_key("choices")
+                    || obj.contains_key("text")
+                {
+                    return Some(arr.clone());
+                }
+            }
+            // Might be an array of wrapper objects — try to extract from each
+            let mut all_questions: Vec<Value> = Vec::new();
+            for item in arr {
+                if let Some(sub) = extract_questions_from_value(item) {
+                    all_questions.extend(sub);
+                }
+            }
+            if !all_questions.is_empty() { return Some(all_questions); }
+            // Even if no obvious markers, return as-is (frontend will normalize)
+            Some(arr.clone())
+        }
+        Value::Object(obj) => {
+            // Check known keys for question arrays
+            let keys = ["questions", "QUESTION_BANK", "QUESTIONS", "questionBank", "question_bank", "items", "data", "quiz"];
+            for k in &keys {
+                if let Some(v) = obj.get(*k) {
+                    if let Some(qs) = extract_questions_from_value(v) {
+                        return Some(qs);
+                    }
+                }
+            }
+            // Try any key that has an array value
+            for (_, v) in obj {
+                if let Some(qs) = extract_questions_from_value(v) {
+                    return Some(qs);
+                }
+            }
+            None
+        }
+        _ => None,
+    }
 }
 
 #[tauri::command]

@@ -23,11 +23,32 @@ pub fn extract_assigned_literal(content: &str, const_name: &str, open_char: char
     let re = Regex::new(&pattern).ok()?;
     let m = re.find(content)?;
     let start_idx = content[m.start()..].find(open_char)? + m.start();
-    
+
     let mut depth = 0i32;
     let mut end_idx = None;
+    let mut in_string = false;
+    let mut string_quote = ' ';
+    let mut escape_next = false;
     for (idx, ch) in content[start_idx..].char_indices() {
-        if ch == open_char {
+        if escape_next {
+            escape_next = false;
+            continue;
+        }
+        if ch == '\\' && in_string {
+            escape_next = true;
+            continue;
+        }
+        if in_string {
+            if ch == string_quote {
+                in_string = false;
+            }
+            continue;
+        }
+        // Not inside a string
+        if ch == '"' || ch == '\'' {
+            in_string = true;
+            string_quote = ch;
+        } else if ch == open_char {
             depth += 1;
         } else if ch == close_char {
             depth -= 1;
@@ -37,7 +58,7 @@ pub fn extract_assigned_literal(content: &str, const_name: &str, open_char: char
             }
         }
     }
-    
+
     if let Some(end) = end_idx {
         Some(content[start_idx..end].to_string())
     } else {
@@ -46,9 +67,11 @@ pub fn extract_assigned_literal(content: &str, const_name: &str, open_char: char
 }
 
 pub fn sanitize_jsonish(block: &str) -> String {
+    // Remove BOM first (common in Windows-saved JSON files)
+    let s = block.strip_prefix('\u{FEFF}').unwrap_or(block);
     // Strip single-line comments, avoiding protocol slashes like http://
     let re_lc = Regex::new(r"(?m)(^|[^:])//.*$").unwrap();
-    let s = re_lc.replace_all(block, "$1");
+    let s = re_lc.replace_all(s, "$1");
     let re_bc = Regex::new(r"(?s)/\*.*?\*/").unwrap();
     let s = re_bc.replace_all(&s, "");
     let re_keys = Regex::new(r#"([{,]\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:"#).unwrap();
