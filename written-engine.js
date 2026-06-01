@@ -73,13 +73,22 @@
     ['gemma-4-26b-a4b-it', 'Gemma 4 26B IT (fast open model)']
   ];
 
+  function pickField(obj) {
+    var fields = Array.prototype.slice.call(arguments, 1);
+    for (var i = 0; i < fields.length; i++) {
+      var val = obj[fields[i]];
+      if (val !== null && val !== undefined) return val;
+    }
+    return undefined;
+  }
+
   function normalizeConfig(raw) {
-    var title = textOr(raw.title, 'Written Assessment');
+    var title = textOr(pickField(raw, 'title', 'name', 'quizName', 'assessment_name', 'assessmentName'), 'Written Assessment');
     return {
-      uid: textOr(raw.uid, slugify(title) || 'written_assessment'),
+      uid: textOr(pickField(raw, 'uid', 'id', 'quizId', 'uniqueId'), slugify(title) || 'written_assessment'),
       title: title,
-      description: textOr(raw.description, 'Answer in your own words, compare with the model answer, and save your review progress.'),
-      icon: textOr(raw.icon, 'WA')
+      description: textOr(pickField(raw, 'description', 'desc', 'subtitle', 'intro'), 'Answer in your own words, compare with the model answer, and save your review progress.'),
+      icon: textOr(pickField(raw, 'icon', 'emoji', 'icon_emoji'), 'WA')
     };
   }
 
@@ -122,10 +131,16 @@
   }
 
   function extractConstValue(source, name) {
-    var startToken = 'const ' + name + ' =';
-    var start = source.indexOf(startToken);
+    var patterns = ['const ' + name + ' =', 'var ' + name + ' =', 'let ' + name + ' ='];
+    var start = -1;
+    for (var p = 0; p < patterns.length; p++) {
+      start = source.indexOf(patterns[p]);
+      if (start !== -1) {
+        start += patterns[p].length;
+        break;
+      }
+    }
     if (start === -1) return null;
-    start += startToken.length;
     var end = findStatementEnd(source, start);
     if (end === -1) return null;
     var expression = source.slice(start, end).trim();
@@ -196,11 +211,11 @@
     return raw.map(function (q, index) {
       q = q || {};
       return {
-        id: textOr(q.id, 'wq-' + (index + 1)),
-        question: textOr(q.question, 'Untitled written question'),
-        modelAnswer: textOr(q.modelAnswer || q.answer, ''),
-        rubric: textOr(q.rubric, ''),
-        explanation: textOr(q.explanation, ''),
+        id: textOr(pickField(q, 'id', 'questionId', 'qid', 'uid'), 'wq-' + (index + 1)),
+        question: textOr(pickField(q, 'question', 'q', 'prompt', 'text', 'question_text', 'questionText'), 'Untitled written question'),
+        modelAnswer: textOr(pickField(q, 'modelAnswer', 'model_answer', 'answer', 'expected_answer', 'expectedAnswer', 'correct_answer', 'correctAnswer', 'model_answer_text'), ''),
+        rubric: textOr(pickField(q, 'rubric', 'grading_rubric', 'marking_scheme', 'criteria'), ''),
+        explanation: textOr(pickField(q, 'explanation', 'notes', 'note', 'background', 'explanation_text'), ''),
         tags: Array.isArray(q.tags) ? q.tags.map(String).filter(Boolean) : []
       };
     });
@@ -723,6 +738,9 @@
       showToast('Write an answer before requesting AI grading.');
       return;
     }
+    if (answer.length < 10 && answer.split(/\s+/).length < 3) {
+      showToast('Very short answer — AI grading will work but results may be limited. Consider writing more detail.');
+    }
     if (!apiKey) {
       createManualEvaluation({
         source: 'Manual fallback',
@@ -760,9 +778,10 @@
 
   function gradeWithGemini(question, answer, apiKey, model) {
     var prompt = [
-      'You are grading a written educational answer.',
+      'You are grading a written educational answer. Be fair and consider partial credit.',
       'Return valid JSON only with keys: score, passed, strengths, gaps, feedback.',
-      'score must be a number from 0 to 100. passed must be true when score is 60 or higher unless the rubric demands otherwise.',
+      'score is a number from 0 to 100. Set passed to true when the answer shows reasonable understanding — generally score ≥ 60 is a pass, but use your judgment for borderline responses. If the rubric sets a different bar, follow the rubric.',
+      'Be generous with partial credit. If the answer is mostly correct but has minor errors, set passed to true and note the gaps.',
       '',
       'QUESTION:',
       question.question,
@@ -865,9 +884,8 @@
   function parseJsonResponse(text) {
     if (!text) throw new Error('Gemini response did not include text.');
     var cleaned = String(text).trim()
-      .replace(/^```json\s*/i, '')
-      .replace(/^```\s*/i, '')
-      .replace(/```$/i, '')
+      .replace(/^```(?:json|javascript|js)?\s*/i, '')
+      .replace(/\s*```$/i, '')
       .trim();
     try {
       return JSON.parse(cleaned);
@@ -875,18 +893,42 @@
       var start = cleaned.indexOf('{');
       var end = cleaned.lastIndexOf('}');
       if (start !== -1 && end > start) {
-        return JSON.parse(cleaned.slice(start, end + 1));
+        var sliced = cleaned.slice(start, end + 1);
+        try { return JSON.parse(sliced); } catch (_) {}
+        try { return JSON.parse(fixSloppyJson(sliced)); } catch (_) {}
+        try { return JSON.parse(fixSloppyJson(sliced.replace(/'/g, '"'))); } catch (_) {}
       }
+      try { return JSON.parse(fixSloppyJson(cleaned)); } catch (_) {}
+      try { return JSON.parse(fixSloppyJson(cleaned.replace(/'/g, '"'))); } catch (_) {}
       throw error;
     }
   }
 
+  function fixSloppyJson(str) {
+    str = str.replace(/,\s*([}\]])/g, '$1');
+    str = str.replace(/([{,])\s*(\w+)\s*:/g, '$1"$2":');
+    str = str.replace(/:\s*'([^']*?)'\s*([,}\]])/g, ':"$1"$2');
+    return str;
+  }
+
   function normalizeEvaluation(raw, source) {
     raw = raw || {};
-    var score = Number(raw.score);
-    if (!isFinite(score)) score = null;
+    var score = raw.score;
+    if (score === null || score === undefined || score === '' || score === 'N/A' || score === 'n/a') score = null;
+    if (score !== null) {
+      score = Number(score);
+      if (!isFinite(score)) score = null;
+    }
     if (score !== null) score = Math.max(0, Math.min(100, Math.round(score)));
-    var passed = typeof raw.passed === 'boolean' ? raw.passed : (score !== null ? score >= 60 : false);
+    var passed;
+    if (typeof raw.passed === 'boolean') {
+      passed = raw.passed;
+    } else if (score !== null) {
+      passed = score >= 60;
+      if (score >= 55 && score < 60) passed = true;
+    } else {
+      passed = false;
+    }
     return {
       score: score,
       passed: passed,
