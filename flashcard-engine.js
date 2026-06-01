@@ -1790,7 +1790,7 @@ input[type=radio] { display: none; }
       if (e.name === 'QuotaExceededError' || e.code === 22) {
         clearOldSaves();
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData)); } catch (err) {
-          showToast('Storage full! Clear tracker data to save progress.');
+          showToast('Storage full! Clear saved data to free space.');
         }
       }
     }
@@ -1868,68 +1868,7 @@ input[type=radio] { display: none; }
     if (overlay) overlay.classList.remove('visible');
   };
 
-  /* ── Tracker Integration ───────────────────────────────────── */
-  var TRACKER_KEYS_KEY = 'quiz_tracker_keys';
-  function getTrackerUid() {
-    return BANK_CONFIG.uid || window.location.pathname.replace(/[^a-zA-Z0-9]/g, '_');
-  }
-  function getTrackerKey() {
-    return 'quiz_tracker_v2_' + getTrackerUid();
-  }
-  window.saveTrackerData = function() {
-    var uid = getTrackerUid();
-    var wrongCount = 0;
-    var flaggedCount = 0;
-    var againCards = [];
-    var flaggedCards = [];
-    SESSION_CARDS.forEach(function(card, idx) {
-      var isAgain = state.ratings[idx] === 'again';
-      var isFlagged = !!state.flagged[idx];
-      if (isAgain) { wrongCount++; againCards.push({ idx: idx, front: card.front || card.text, back: card.back || '', type: card.type, tags: card.tags }); }
-      if (isFlagged) { flaggedCount++; flaggedCards.push({ idx: idx, front: card.front || card.text, back: card.back || '', type: card.type, tags: card.tags }); }
-    });
-    if (wrongCount === 0 && flaggedCount === 0) return;
-    var existing = {};
-    try {
-      var raw = localStorage.getItem(getTrackerKey());
-      if (raw) existing = JSON.parse(raw);
-    } catch (e) { existing = {}; }
-    var merged = {
-      uid: uid,
-      title: BANK_CONFIG.title || 'Flashcard Deck',
-      path: window.location.pathname,
-      folderPath: window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/')),
-      timestamp: Date.now(),
-      deckType: 'flashcard',
-      wrongCount: wrongCount + (existing.wrongCount || 0),
-      flaggedCount: flaggedCount + (existing.flaggedCount || 0),
-      wrong: mergeQuestions(existing.wrong || [], againCards, 'idx'),
-      flagged: mergeQuestions(existing.flagged || [], flaggedCards, 'idx'),
-    };
-    merged.wrongCount = merged.wrong.length;
-    merged.flaggedCount = merged.flagged.length;
-    try {
-      localStorage.setItem(getTrackerKey(), JSON.stringify(merged));
-      var keys = JSON.parse(localStorage.getItem(TRACKER_KEYS_KEY) || '[]');
-      if (keys.indexOf(uid) === -1) { keys.push(uid); localStorage.setItem(TRACKER_KEYS_KEY, JSON.stringify(keys)); }
-    } catch (e) {
-      if (e.name === 'QuotaExceededError' || e.code === 22) {
-        showToast('Storage full! Clear tracker data to save progress.');
-      }
-    }
-  };
-  function mergeQuestions(existing, incoming, keyField) {
-    var used = {};
-    existing.forEach(function(item) { used[item[keyField]] = true; });
-    var merged = existing.slice();
-    incoming.forEach(function(item) {
-      if (!used[item[keyField]]) {
-        used[item[keyField]] = true;
-        merged.push(item);
-      }
-    });
-    return merged;
-  }
+  /* ── Flashcard uses its own storage; no quiz tracker integration ── */
 
   function checkSavedProgress() {
     var saved = localStorage.getItem(STORAGE_KEY);
@@ -2020,7 +1959,7 @@ input[type=radio] { display: none; }
       localStorage.setItem(BANK_PROGRESS_KEY, JSON.stringify(progress));
     } catch (e) {
       if (e.name === 'QuotaExceededError' || e.code === 22) {
-        showToast('Storage full! Clear tracker data to save deck progress.');
+        showToast('Storage full! Clear saved data to free space.');
       }
     }
   }
@@ -2697,7 +2636,6 @@ input[type=radio] { display: none; }
     state.submitted = true;
     stopTimer();
     clearProgress();
-    try { saveTrackerData(); } catch (e) {}
     buildResults();
     showScreen('result-screen');
   };
