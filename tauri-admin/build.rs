@@ -16,6 +16,7 @@ fn main() {
         "quiz-engine.js",
         "bank-engine.js",
         "flashcard-engine.js",
+        "written-engine.js",
         "index-engine.js",
         "index-engine.css",
         "sync-engine.js",
@@ -23,6 +24,7 @@ fn main() {
         "sw.js",
         "manifest.webmanifest",
         "pdf-exporter.html",
+        "written-template.html",
     ];
 
     for file in &files_to_copy {

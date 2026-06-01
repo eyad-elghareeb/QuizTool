@@ -236,6 +236,7 @@ function handleAsset(event, request) {
           'quiz-engine.js',
           'bank-engine.js',
           'index-engine.js',
+          'written-engine.js',
           'index-engine.css',
           'manifest.webmanifest',
           'favicon.svg',

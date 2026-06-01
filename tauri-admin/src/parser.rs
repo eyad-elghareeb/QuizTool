@@ -5,7 +5,7 @@ use regex::Regex;
 use serde_json::Value;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum FileType { Quiz, Bank, Index, Html, Flashcard }
+pub enum FileType { Quiz, Bank, Index, Html, Flashcard, Written }
 
 impl FileType {
     pub fn as_str(&self) -> &'static str {
@@ -15,6 +15,7 @@ impl FileType {
             FileType::Index => "index",
             FileType::Html => "html",
             FileType::Flashcard => "flashcard",
+            FileType::Written => "written",
         }
     }
 }
@@ -137,6 +138,21 @@ pub fn parse_file_metadata(content: &str) -> FileMeta {
             };
         }
     }
+    if let Some(cfg) = parse_literal(content, "WRITTEN_CONFIG", '{', '}') {
+        if cfg.is_object() {
+            let questions = parse_literal(content, "WRITTEN_QUESTIONS", '[', ']');
+            let qc = questions.as_ref().and_then(|v| v.as_array()).map(|a| a.len()).unwrap_or(0);
+            return FileMeta {
+                file_type: FileType::Written,
+                uid: cfg.get("uid").and_then(|v| v.as_str()).map(String::from),
+                title: cfg.get("title").and_then(|v| v.as_str()).map(String::from),
+                description: cfg.get("description").and_then(|v| v.as_str()).map(String::from),
+                icon: cfg.get("icon").and_then(|v| v.as_str()).map(String::from),
+                hero_title: None, question_count: qc,
+                config: Some(cfg), questions, quizzes: None,
+            };
+        }
+    }
     if (content.contains("/* [FLASHCARD_BANK_START] */") || content.contains("FLASHCARD_BANK"))
         && content.contains("BANK_CONFIG")
     {
@@ -203,6 +219,7 @@ pub fn infer_icon(ft: &FileType, filename: &str) -> &'static str {
         FileType::Quiz => "📝",
         FileType::Bank => "🗃️",
         FileType::Flashcard => "🃏",
+        FileType::Written => "✍️",
         FileType::Html => if filename == "index.html" { "🏠" } else { "📄" },
     }
 }
@@ -291,6 +308,28 @@ pub fn validate_dashboard_content(_rel_path: &str, content: &str, original_uid: 
             if uid.is_empty() { issues.push(mk_err("Flashcard UID is required.", "uid", "uid_missing", None)); }
             else if !original_uid.is_empty() && original_uid != uid { issues.push(mk_warn("UID changed from the saved file. This can orphan learner progress.", "uid", "uid_changed", None)); }
             if let Some(ref q) = meta.questions { issues.extend(validate_question_list(q, "questions", true)); }
+        }
+        FileType::Written => {
+            if !content.contains("/* [WRITTEN_CONFIG_START] */") { issues.push(mk_err("Written config markers are missing.", "config", "written_config_markers", None)); }
+            if !content.contains("/* [WRITTEN_QUESTIONS_START] */") { issues.push(mk_err("Written questions markers are missing.", "questions", "written_question_markers", None)); }
+            let uid = meta.uid.as_deref().unwrap_or("").trim().to_string();
+            if uid.is_empty() { issues.push(mk_err("Written assessment UID is required.", "uid", "uid_missing", None)); }
+            else if !original_uid.is_empty() && original_uid != uid { issues.push(mk_warn("UID changed from the saved file. This can orphan learner progress.", "uid", "uid_changed", None)); }
+            if let Some(ref q) = meta.questions {
+                let arr = q.as_array();
+                if arr.is_none() {
+                    issues.push(mk_err("Written questions could not be parsed.", "questions", "written_questions_invalid", None));
+                } else if arr.unwrap().is_empty() {
+                    issues.push(mk_warn("This file has no written questions yet.", "questions", "written_questions_empty", None));
+                } else {
+                    for (i, item) in arr.unwrap().iter().enumerate() {
+                        let text = item.get("question").and_then(|v| v.as_str()).unwrap_or("").trim().to_string();
+                        if text.is_empty() {
+                            issues.push(mk_err(&format!("Written question {} is missing its prompt.", i+1), &format!("questions.{}.question", i), "written_question_missing_text", Some(i)));
+                        }
+                    }
+                }
+            }
         }
         FileType::Index => {
             if meta.quizzes.as_ref().and_then(|v| v.as_array()).is_none() {

@@ -57,6 +57,7 @@ fn lookup_embedded(filename: &str) -> Option<(&'static [u8], &'static str)> {
         "quiz-engine.js"       => Some((engine_bytes!("quiz-engine.js"),       "application/javascript; charset=utf-8")),
         "bank-engine.js"       => Some((engine_bytes!("bank-engine.js"),       "application/javascript; charset=utf-8")),
         "flashcard-engine.js"  => Some((engine_bytes!("flashcard-engine.js"),  "application/javascript; charset=utf-8")),
+        "written-engine.js"    => Some((engine_bytes!("written-engine.js"),    "application/javascript; charset=utf-8")),
         "index-engine.js"      => Some((engine_bytes!("index-engine.js"),      "application/javascript; charset=utf-8")),
         "index-engine.css"     => Some((engine_bytes!("index-engine.css"),     "text/css; charset=utf-8")),
         "sync-engine.js"       => Some((engine_bytes!("sync-engine.js"),       "application/javascript; charset=utf-8")),
@@ -183,9 +184,9 @@ impl QuizServer {
         let root = project_root.clone();
 
         thread::spawn(move || {
-            // Updated regex to handle both quiz-engine and flashcard-engine base paths
+            // Regex to rewrite QUIZ, FLASHCARD, and WRITTEN engine base paths for correct depth
             let re_base = Regex::new(
-                r#"(?s)window\.__(QUIZ|FLASHCARD)_ENGINE_BASE\s*=\s*[^;]*;"#
+                r#"(?s)window\.__(QUIZ|FLASHCARD|WRITTEN)_ENGINE_BASE\s*=\s*[^;]*;"#
             ).unwrap();
 
             let state = Arc::new(ServerState { root, re_base });

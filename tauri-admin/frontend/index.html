@@ -559,6 +559,8 @@
     .tree-type-dot.type-quiz { background: var(--accent); }
     .tree-type-dot.type-bank { background: var(--purple); }
     .tree-type-dot.type-index { background: var(--blue); }
+    .tree-type-dot.type-flashcard { background: var(--correct); }
+    .tree-type-dot.type-written { background: #d946ef; }
     .tree-type-dot.type-html { background: var(--text-muted); }
     .tree-type-dot.type-folder { background: var(--text-muted); opacity: 0.5; }
 
@@ -1496,6 +1498,7 @@
       { key: 'quiz', label: 'Quiz' },
       { key: 'bank', label: 'Bank' },
       { key: 'flashcard', label: 'Flashcard' },
+      { key: 'written', label: 'Written' },
       { key: 'index', label: 'Index' },
       { key: 'html', label: 'Other HTML' },
     ];
@@ -2145,6 +2148,8 @@
 
     function validateQuestionListClient(questions) {
       const isFlashcard = state.wizard?.type === 'flashcard';
+      const isWritten = state.wizard?.type === 'written';
+      const skipOptions = isFlashcard || isWritten;
       const issues = [];
       if (!Array.isArray(questions) || !questions.length) {
         issues.push({ level: 'warning', message: 'No questions yet.', field: 'questions' });
@@ -2155,9 +2160,10 @@
         const options = Array.isArray(question.options) ? question.options.map(option => String(option || '').trim()) : [];
         const correct = Number(question.correct || 0);
         if (!prompt) issues.push({ level: 'error', message: `Question ${index + 1} is missing its prompt.`, field: `questions.${index}.question` });
-        if (!isFlashcard && options.length < 2) issues.push({ level: 'error', message: `Question ${index + 1} needs at least 2 options.`, field: `questions.${index}.options` });
-        if (!isFlashcard && options.length >= 2 && options.some(option => !option)) issues.push({ level: 'warning', message: `Question ${index + 1} has a blank option.`, field: `questions.${index}.options` });
-        if (!isFlashcard && (correct < 0 || correct >= options.length)) issues.push({ level: 'error', message: `Question ${index + 1} has an invalid correct answer.`, field: `questions.${index}.correct` });
+        if (isWritten && !String(question.modelAnswer || '').trim()) issues.push({ level: 'warning', message: `Written question ${index + 1} has no model answer. AI grading may be less effective.`, field: `questions.${index}.modelAnswer` });
+        if (!skipOptions && options.length < 2) issues.push({ level: 'error', message: `Question ${index + 1} needs at least 2 options.`, field: `questions.${index}.options` });
+        if (!skipOptions && options.length >= 2 && options.some(option => !option)) issues.push({ level: 'warning', message: `Question ${index + 1} has a blank option.`, field: `questions.${index}.options` });
+        if (!skipOptions && (correct < 0 || correct >= options.length)) issues.push({ level: 'error', message: `Question ${index + 1} has an invalid correct answer.`, field: `questions.${index}.correct` });
       });
       return issues;
     }
@@ -2410,6 +2416,7 @@
         { label: 'New Quiz Here', onclick: `closeContextMenu(); openNewFileWizard({ folder: '${escapeHtml(folderPath)}', type: 'quiz' })` },
         { label: 'New Bank Here', onclick: `closeContextMenu(); openNewFileWizard({ folder: '${escapeHtml(folderPath)}', type: 'bank' })` },
         { label: 'New Flashcard Deck Here', onclick: `closeContextMenu(); openNewFileWizard({ folder: '${escapeHtml(folderPath)}', type: 'flashcard' })` },
+        { label: 'New Written Assessment Here', onclick: `closeContextMenu(); openNewFileWizard({ folder: '${escapeHtml(folderPath)}', type: 'written' })` },
         { label: 'New Folder Here', onclick: `closeContextMenu(); openNewFolderModal('${escapeHtml(folderPath)}')` },
         state.currentFile ? { label: 'Duplicate Active File Here', onclick: `closeContextMenu(); openDuplicateModal('${escapeHtml(folderPath)}')` } : null,
       ]);
@@ -2421,6 +2428,7 @@
         { label: 'New Quiz Here', onclick: `closeContextMenu(); openNewFileWizard({ folder: '${escapeHtml(folderPath)}', type: 'quiz' })` },
         { label: 'New Bank Here', onclick: `closeContextMenu(); openNewFileWizard({ folder: '${escapeHtml(folderPath)}', type: 'bank' })` },
         { label: 'New Flashcard Deck Here', onclick: `closeContextMenu(); openNewFileWizard({ folder: '${escapeHtml(folderPath)}', type: 'flashcard' })` },
+        { label: 'New Written Assessment Here', onclick: `closeContextMenu(); openNewFileWizard({ folder: '${escapeHtml(folderPath)}', type: 'written' })` },
         { label: 'New Folder Here', onclick: `closeContextMenu(); openNewFolderModal('${escapeHtml(folderPath)}')` },
         state.currentFile ? { label: 'Duplicate Active File Here', onclick: `closeContextMenu(); openDuplicateModal('${escapeHtml(folderPath)}')` } : null,
         { divider: true },
@@ -2462,6 +2470,7 @@
         (file?.type === 'quiz' || file?.type === 'bank') ? { label: 'Convert Quiz/Bank', onclick: `closeContextMenu(); requestLoadFile('${escapeHtml(filePath)}', { afterLoadAction: 'convertFile' })` } : null,
         (file?.type === 'quiz' || file?.type === 'bank') ? { label: 'Convert to Flashcard', onclick: `closeContextMenu(); requestLoadFile('${escapeHtml(filePath)}', { afterLoadAction: 'convertToFlashcard' })` } : null,
         file?.type === 'flashcard' ? { label: 'Convert to Quiz', onclick: `closeContextMenu(); requestLoadFile('${escapeHtml(filePath)}', { afterLoadAction: 'convertFile' })` } : null,
+        file?.type === 'written' ? { label: 'Convert to Quiz', onclick: `closeContextMenu(); requestLoadFile('${escapeHtml(filePath)}', { afterLoadAction: 'convertFile' })` } : null,
         { divider: true },
         { label: 'Copy Path', onclick: `closeContextMenu(); copyTextValue('${escapeHtml(filePath)}', 'Path')` },
         { label: 'Delete', danger: true, onclick: `closeContextMenu(); requestLoadFile('${escapeHtml(filePath)}', { afterLoadAction: 'openDeleteModal' })` },
@@ -2729,8 +2738,8 @@
       }
       const meta = state.currentData.meta || {};
       const pUrl = previewUrl(encodePath(state.currentFile)) + `?v=${Date.now()}`;
-      const canStructuredEdit = ['quiz', 'bank', 'flashcard', 'index'].includes(meta.type);
-      const isExportable = ['quiz', 'bank', 'flashcard'].includes(meta.type);
+      const canStructuredEdit = ['quiz', 'bank', 'flashcard', 'written', 'index'].includes(meta.type);
+      const isExportable = ['quiz', 'bank', 'flashcard', 'written'].includes(meta.type);
 
       let content = '';
       if (state.currentTab === 'preview') {
@@ -2829,7 +2838,7 @@
     }
 
     function renderStructuredEditor(meta) {
-      if (meta.type === 'quiz' || meta.type === 'bank' || meta.type === 'flashcard') {
+      if (meta.type === 'quiz' || meta.type === 'bank' || meta.type === 'flashcard' || meta.type === 'written') {
         return renderQuizBankEditor(meta);
       }
       if (meta.type === 'index') {
@@ -2853,6 +2862,7 @@
     function renderQuizBankEditor(meta) {
       const isBank = meta.type === 'bank' || meta.type === 'flashcard';
       const isFlashcard = meta.type === 'flashcard';
+      const isWritten = meta.type === 'written';
       const questions = meta.questions || [];
       const topFields = `
         <div class="editor-grid">
@@ -2871,10 +2881,10 @@
             <label>Description</label>
             <textarea class="text-area" id="cfg-description" oninput="syncQuizBankEditor()">${escapeHtml(meta.config?.description || '')}</textarea>
           </div>
-          ${isBank ? `
+          ${(isBank || isWritten) ? `
             <div class="field" style="max-width:300px;">
-              <label>${isFlashcard ? 'Icon' : 'Bank Icon'}</label>
-              <input class="text-input" id="cfg-icon" value="${escapeHtml(meta.config?.icon || (isFlashcard ? '🃏' : '🗃️'))}" oninput="syncQuizBankEditor()">
+              <label>${isFlashcard ? 'Icon' : (isWritten ? 'Icon' : 'Bank Icon')}</label>
+              <input class="text-input" id="cfg-icon" value="${escapeHtml(meta.config?.icon || (isFlashcard ? '🃏' : isWritten ? '✍️' : '🗃️'))}" oninput="syncQuizBankEditor()">
             </div>
             ${isFlashcard ? `
             <div class="field full">
@@ -2889,8 +2899,8 @@
         ${topFields}
           <div class="panel-grid">
             ${renderMetaCard('Questions', questions.length)}
-            ${renderMetaCard('Mode', isFlashcard ? 'Flashcard' : (isBank ? 'Bank' : 'Quiz'))}
-            ${renderMetaCard('Engine', isFlashcard ? 'flashcard-engine.js' : (isBank ? 'bank-engine.js' : 'quiz-engine.js'))}
+            ${renderMetaCard('Mode', isWritten ? 'Written Assessment' : (isFlashcard ? 'Flashcard' : (isBank ? 'Bank' : 'Quiz')))}
+            ${renderMetaCard('Engine', isWritten ? 'written-engine.js' : (isFlashcard ? 'flashcard-engine.js' : (isBank ? 'bank-engine.js' : 'quiz-engine.js')))}
           </div>
           <div class="editor-toolbar">
             <div class="muted">Collapse large banks to scan and reorder them faster.</div>
@@ -2909,6 +2919,52 @@
 
     function renderQuestionCard(question, index) {
       const isFlashcard = state.currentData?.meta?.type === 'flashcard';
+      const isWritten = state.currentData?.meta?.type === 'written';
+      if (isWritten) {
+        const collapsed = state.collapsedQuestions.has(index);
+        const summary = `${(question.question || 'Untitled written question').slice(0, 90)}${(question.question || '').length > 90 ? '…' : ''}`;
+        const tags = Array.isArray(question.tags) ? question.tags.join(', ') : (typeof question.tags === 'string' ? question.tags : '');
+        return `
+          <div class="editor-card ${collapsed ? 'collapsed' : ''}" data-qidx="${index}">
+            <div class="editor-card-header">
+              <div>
+                <div class="editor-card-title">Written Question ${index + 1}</div>
+                <div class="editor-summary">${escapeHtml(summary)}</div>
+              </div>
+              <div class="mini-actions">
+                <button class="mini-btn" onclick="toggleQuestionCollapse(${index})">${collapsed ? 'Expand' : 'Collapse'}</button>
+                <button class="mini-btn" onclick="moveQuestion(${index}, -1)" ${index === 0 ? 'disabled' : ''}>Up</button>
+                <button class="mini-btn" onclick="moveQuestion(${index}, 1)" ${index === (state.currentData.meta.questions || []).length - 1 ? 'disabled' : ''}>Down</button>
+                <button class="mini-btn" onclick="duplicateQuestion(${index})">Duplicate</button>
+                <button class="mini-btn delete" onclick="removeQuestion(${index})">Remove</button>
+              </div>
+            </div>
+            <div class="editor-card-body">
+              <div class="field">
+                <label>Question Prompt</label>
+                <textarea class="text-area wq-question" data-index="${index}" oninput="syncQuizBankEditor()">${escapeHtml(question.question || '')}</textarea>
+              </div>
+              <div class="field">
+                <label>Model Answer</label>
+                <textarea class="text-area wq-model-answer" data-index="${index}" oninput="syncQuizBankEditor()">${escapeHtml(question.modelAnswer || question.answer || '')}</textarea>
+              </div>
+              <div class="field">
+                <label>Rubric (optional)</label>
+                <textarea class="text-area wq-rubric" data-index="${index}" oninput="syncQuizBankEditor()">${escapeHtml(question.rubric || '')}</textarea>
+                <small>Grading guidance for AI evaluation.</small>
+              </div>
+              <div class="field">
+                <label>Explanation (optional)</label>
+                <textarea class="text-area wq-explanation" data-index="${index}" oninput="syncQuizBankEditor()">${escapeHtml(question.explanation || '')}</textarea>
+              </div>
+              <div class="field">
+                <label>Tags (comma-separated)</label>
+                <input class="text-input wq-tags" data-index="${index}" value="${escapeHtml(tags)}" oninput="syncQuizBankEditor()" placeholder="e.g. biology, respiration">
+              </div>
+            </div>
+          </div>
+        `;
+      }
       if (isFlashcard) {
         const collapsed = state.collapsedQuestions.has(index);
         const summary = `${(question.front || 'Untitled card').slice(0, 90)}${(question.front || '').length > 90 ? '…' : ''}`;
@@ -3118,13 +3174,24 @@
       if (!state.currentData) return;
       const meta = state.currentData.meta;
       const isFlashcard = meta.type === 'flashcard';
+      const isWritten = meta.type === 'written';
       const uid = document.getElementById('cfg-uid')?.value || '';
       const title = document.getElementById('cfg-title')?.value || '';
       const description = document.getElementById('cfg-description')?.value || '';
-      const icon = document.getElementById('cfg-icon')?.value || (isFlashcard ? '🃏' : '🗃️');
+      const icon = document.getElementById('cfg-icon')?.value || (isFlashcard ? '🃏' : isWritten ? '✍️' : '🗃️');
       const cards = Array.from(document.querySelectorAll('.editor-card'));
       let questions;
-      if (isFlashcard) {
+      if (isWritten) {
+        questions = cards.map((card) => {
+          const q = card.querySelector('.wq-question')?.value || '';
+          const modelAnswer = card.querySelector('.wq-model-answer')?.value || '';
+          const rubric = card.querySelector('.wq-rubric')?.value || '';
+          const explanation = card.querySelector('.wq-explanation')?.value || '';
+          const tagsStr = card.querySelector('.wq-tags')?.value || '';
+          const tags = tagsStr.split(',').map(t => t.trim()).filter(Boolean);
+          return { question: q, modelAnswer, rubric, explanation, tags };
+        });
+      } else if (isFlashcard) {
         questions = cards.map((card, index) => {
           const cardType = card.querySelector('.q-card-type')?.value || 'basic';
           const front = card.querySelector('.q-front')?.value || '';
@@ -3149,11 +3216,11 @@
       meta.config.uid = uid;
       meta.config.title = title;
       meta.config.description = description;
-      if (meta.type === 'bank' || meta.type === 'flashcard') meta.config.icon = icon;
+      if (meta.type === 'bank' || meta.type === 'flashcard' || meta.type === 'written') meta.config.icon = icon;
       meta.uid = uid;
       meta.title = title;
       meta.description = description;
-      meta.icon = (meta.type === 'bank' || meta.type === 'flashcard') ? icon : undefined;
+      meta.icon = (meta.type === 'bank' || meta.type === 'flashcard' || meta.type === 'written') ? icon : undefined;
       meta.questions = questions;
       meta.question_count = questions.length;
       // Debounce the expensive serialization + content string rebuild
@@ -3161,8 +3228,9 @@
       _editorDebounceTimer = setTimeout(() => {
         if (!state.currentData) return;
         const isFC = meta.type === 'flashcard';
-        const configName = isFC ? 'BANK_CONFIG' : (meta.type === 'bank' ? 'BANK_CONFIG' : 'QUIZ_CONFIG');
-        const arrayName = isFC ? 'FLASHCARD_BANK' : (meta.type === 'bank' ? 'QUESTION_BANK' : 'QUESTIONS');
+        const isWR = meta.type === 'written';
+        const configName = isFC ? 'BANK_CONFIG' : (isWR ? 'WRITTEN_CONFIG' : (meta.type === 'bank' ? 'BANK_CONFIG' : 'QUIZ_CONFIG'));
+        const arrayName = isFC ? 'FLASHCARD_BANK' : (isWR ? 'WRITTEN_QUESTIONS' : (meta.type === 'bank' ? 'QUESTION_BANK' : 'QUESTIONS'));
         let updated = state.currentData.content;
         updated = replaceAssignedBlock(updated, configName, '{', '}', meta.config);
         updated = replaceAssignedBlock(updated, arrayName, '[', ']', questions);
@@ -3295,9 +3363,12 @@
       const list = state.currentData?.meta?.questions;
       if (!list) return;
       const isFlashcard = state.currentData?.meta?.type === 'flashcard';
+      const isWritten = state.currentData?.meta?.type === 'written';
       list.push(isFlashcard
         ? { type: 'basic', front: '', back: '', tags: [] }
-        : { question: '', options: ['', '', '', ''], correct: 0, explanation: '' }
+        : isWritten
+          ? { id: 'wq-' + Date.now().toString(36) + '-' + (list.length + 1), question: '', modelAnswer: '', rubric: '', explanation: '', tags: [] }
+          : { question: '', options: ['', '', '', ''], correct: 0, explanation: '' }
       );
       renderFilePanel();
       setTab('editor');
@@ -3678,7 +3749,7 @@
         title: document.getElementById('file-title')?.value || previous.title || '',
         description: document.getElementById('file-description')?.value || previous.description || '',
         filename: document.getElementById('file-name')?.value || previous.filename || '',
-        icon: document.getElementById('file-icon')?.value || previous.icon || (currentType === 'flashcard' ? '🃏' : '🗃️'),
+        icon: document.getElementById('file-icon')?.value || previous.icon || (currentType === 'flashcard' ? '🃏' : currentType === 'written' ? '✍️' : '🗃️'),
         sourceMode: document.getElementById('file-source-mode')?.value || previous.sourceMode || 'manual',
         sourceRaw: document.getElementById('file-import-raw')?.value || previous.sourceRaw || '',
         clonePath: document.getElementById('file-clone-path')?.value || previous.clonePath || '',
@@ -3745,7 +3816,7 @@
         title: previous.title || '',
         description: previous.description || '',
         filename: previous.filename || '',
-        icon: previous.icon || (type === 'flashcard' ? '🃏' : '🗃️'),
+        icon: previous.icon || (type === 'flashcard' ? '🃏' : type === 'written' ? '✍️' : '🗃️'),
         sourceMode: previous.sourceMode || 'manual',
         sourceRaw: previous.sourceRaw || '',
         clonePath: previous.clonePath || '',
@@ -3761,7 +3832,7 @@
       const isBank = wizard.type === 'bank' || wizard.type === 'flashcard';
       const isFlashcard = wizard.type === 'flashcard';
       const cloneOptions = state.files
-        .filter(file => file.type === 'quiz' || file.type === 'bank' || file.type === 'flashcard')
+        .filter(file => file.type === 'quiz' || file.type === 'bank' || file.type === 'flashcard' || file.type === 'written')
         .map(file => `<option value="${escapeHtml(file.path)}" ${file.path === wizard.clonePath ? 'selected' : ''}>${escapeHtml(file.title)} (${escapeHtml(file.path)})</option>`)
         .join('');
       
@@ -3806,7 +3877,7 @@
         }).join('');
       }
 
-      const filteredFiles = state.files.filter(file => file.type === 'quiz' || file.type === 'bank' || file.type === 'flashcard');
+      const filteredFiles = state.files.filter(file => file.type === 'quiz' || file.type === 'bank' || file.type === 'flashcard' || file.type === 'written');
       const combineTreeData = buildTreeFromFiles(filteredFiles);
       const combineChecklist = `<ul style="padding: 0; margin: 0; list-style-type: none; display: grid; gap: 0.4rem;">${renderCombineTreeLevel(combineTreeData) || '<div class="muted" style="padding: 0.5rem;">No quizzes found in this project.</div>'}</ul>`;
       
@@ -3821,11 +3892,12 @@
               <div class="field-grid">
                 <div class="field">
                   <label>Type</label>
-                  <select class="select-input" id="file-type" onchange="onFileTypeChange(); syncWizardSummary()">
-                    <option value="quiz" ${wizard.type === 'quiz' ? 'selected' : ''}>Quiz</option>
-                    <option value="bank" ${wizard.type === 'bank' ? 'selected' : ''}>Question Bank</option>
-                    <option value="flashcard" ${wizard.type === 'flashcard' ? 'selected' : ''}>Flashcard Deck</option>
-                  </select>
+                    <select class="select-input" id="file-type" onchange="onFileTypeChange(); syncWizardSummary()">
+                      <option value="quiz" ${wizard.type === 'quiz' ? 'selected' : ''}>Quiz</option>
+                      <option value="bank" ${wizard.type === 'bank' ? 'selected' : ''}>Question Bank</option>
+                      <option value="flashcard" ${wizard.type === 'flashcard' ? 'selected' : ''}>Flashcard Deck</option>
+                      <option value="written" ${wizard.type === 'written' ? 'selected' : ''}>Written Assessment</option>
+                    </select>
                 </div>
                 <div class="field">
                   <label>Folder</label>
@@ -3923,7 +3995,7 @@
         </div>
       `;
       openModal({
-        title: 'Create New Quiz, Bank, or Flashcard',
+        title: 'Create New Quiz, Bank, Flashcard, or Written Assessment',
         subtitle: 'Use import helpers and folder-aware defaults to build files faster.',
         body,
         onOpen: () => syncWizardSummary(),
@@ -3970,27 +4042,37 @@
     function onFileTypeChange() {
       const type = document.getElementById('file-type').value;
       const wrap = document.getElementById('bank-icon-wrap');
-      if (wrap) wrap.style.display = (type === 'bank' || type === 'flashcard') ? 'grid' : 'none';
+      const isIconType = type === 'bank' || type === 'flashcard' || type === 'written';
+      if (wrap) wrap.style.display = isIconType ? 'grid' : 'none';
       const iconInput = document.getElementById('file-icon');
       if (iconInput) {
         const cur = iconInput.value;
-        if (type === 'flashcard' && (!cur || cur === '🗃️')) iconInput.value = '🃏';
-        else if (type !== 'flashcard' && (!cur || cur === '🃏')) iconInput.value = '🗃️';
+        if (type === 'flashcard' && (!cur || cur === '🗃️' || cur === '✍️')) iconInput.value = '🃏';
+        else if (type === 'written' && (!cur || cur === '🗃️' || cur === '🃏')) iconInput.value = '✍️';
+        else if (type !== 'flashcard' && type !== 'written' && (!cur || cur === '🃏' || cur === '✍️')) iconInput.value = '🗃️';
       }
     }
 
     function renderModalQuestionList() {
       if (!state.modalQuestions.length) return '<div class="muted" style="padding:1rem;">No questions added yet.</div>';
       const isFlashcard = state.wizard?.type === 'flashcard';
+      const isWritten = state.wizard?.type === 'written';
       return state.modalQuestions.map((q, i) => `
         <div class="editor-card" style="margin-bottom: 0.5rem; padding: 0.75rem; background: var(--surface2); border: 1px solid var(--border);">
           <div class="editor-card-header" style="margin-bottom: 0.5rem;">
-             <div class="editor-card-title">${isFlashcard ? 'C' : 'Q'}${i + 1}</div>
-             <button class="mini-btn delete" onclick="removeModalQuestion(${i})">Remove ${isFlashcard ? 'Card' : 'Q'}</button>
+             <div class="editor-card-title">${isFlashcard ? 'C' : isWritten ? 'W' : 'Q'}${i + 1}</div>
+             <button class="mini-btn delete" onclick="removeModalQuestion(${i})">Remove ${isFlashcard ? 'Card' : isWritten ? 'Q' : 'Q'}</button>
           </div>
-          <input class="text-input mq-q" data-idx="${i}" value="${escapeHtml(q.question)}" placeholder="${isFlashcard ? 'Front text' : 'Question text'}" style="margin-bottom:0.5rem;">
-          <textarea class="text-area mq-exp" data-idx="${i}" placeholder="${isFlashcard ? 'Back text / answer' : 'Explanation (optional)'}" style="min-height:80px; margin-bottom:0.5rem;">${escapeHtml(q.explanation || '')}</textarea>
-          ${!isFlashcard ? `
+          <input class="text-input mq-q" data-idx="${i}" value="${escapeHtml(q.question)}" placeholder="${isFlashcard ? 'Front text' : isWritten ? 'Written question text' : 'Question text'}" style="margin-bottom:0.5rem;">
+          ${isWritten ? `
+          <textarea class="text-area mq-model-answer" data-idx="${i}" placeholder="Model answer (required for AI grading)" style="min-height:80px; margin-bottom:0.5rem;">${escapeHtml(q.modelAnswer || '')}</textarea>
+          <input class="text-input" data-idx="${i}" value="${escapeHtml(q.rubric || '')}" placeholder="Rubric (optional grading guidance)" style="margin-bottom:0.5rem;" oninput="syncModalQuestionsFromUI()">
+          <textarea class="text-area mq-exp" data-idx="${i}" placeholder="Explanation (optional)" style="min-height:60px; margin-bottom:0.5rem;">${escapeHtml(q.explanation || '')}</textarea>
+          <input class="text-input" data-idx="${i}" value="${escapeHtml((q.tags || []).join(', '))}" placeholder="Tags (comma-separated)" style="margin-bottom:0.5rem;" oninput="syncModalQuestionsFromUI()">
+          ` : isFlashcard ? `
+          <textarea class="text-area mq-exp" data-idx="${i}" placeholder="Back text / answer" style="min-height:80px; margin-bottom:0.5rem;">${escapeHtml(q.explanation || '')}</textarea>
+          ` : `
+          <textarea class="text-area mq-exp" data-idx="${i}" placeholder="Explanation (optional)" style="min-height:80px; margin-bottom:0.5rem;">${escapeHtml(q.explanation || '')}</textarea>
           <div class="option-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
             ${(q.options || []).map((opt, oi) => `
               <div class="option-row" style="padding: 0.25rem; display: flex; align-items: center; gap: 0.25rem;">
@@ -4001,23 +4083,44 @@
             `).join('')}
             <button class="mini-btn" onclick="addModalOption(${i})" style="grid-column: span 2; border-style: dashed;">+ Add Option</button>
           </div>
-          ` : ''}
+          `}
         </div>
       `).join('');
     }
 
     function syncModalQuestionsFromUI() {
       const isFlashcard = state.wizard?.type === 'flashcard';
+      const isWritten = state.wizard?.type === 'written';
       const questions = [];
       const rows = document.querySelectorAll('#modal-question-list .editor-card');
       rows.forEach((row, i) => {
         const question = row.querySelector('.mq-q').value;
         const explanation = row.querySelector('.mq-exp')?.value || '';
-        const opts = Array.from(row.querySelectorAll('.mq-opt')).map(input => input.value);
-        // For flashcards, options are hidden — store empty array
-        const options = isFlashcard ? [] : opts;
-        const correct = isFlashcard ? 0 : (parseInt(row.querySelector(`input[name="mq-correct-${i}"]:checked`)?.value || '0'));
-        questions.push({ question, options, correct, explanation });
+        if (isWritten) {
+          const modelAnswer = row.querySelector('.mq-model-answer')?.value || '';
+          const rubricInputs = row.querySelectorAll('.editor-card input[data-idx]');
+          let rubric = '';
+          let tagsStr = '';
+          rubricInputs.forEach(inp => {
+            const idx = parseInt(inp.dataset.idx);
+            if (idx === i && !inp.classList.contains('mq-q') && !inp.classList.contains('mq-exp') && !inp.classList.contains('mq-opt')) {
+              // This is either rubric or tags; rubric is text input, tags is second input
+            }
+          });
+          // Get all inputs with data-idx in this card
+          const allInputs = row.querySelectorAll('input[data-idx]');
+          // The rubric is typically the first non-mq-q, non-mq-opt input; tags the second
+          const nonQInputs = Array.from(allInputs).filter(inp => !inp.classList.contains('mq-q') && !inp.classList.contains('mq-opt'));
+          rubric = nonQInputs[0]?.value || '';
+          tagsStr = nonQInputs[1]?.value || '';
+          const tags = tagsStr.split(',').map(t => t.trim()).filter(Boolean);
+          questions.push({ question, modelAnswer, rubric, explanation, tags });
+        } else {
+          const opts = Array.from(row.querySelectorAll('.mq-opt')).map(input => input.value);
+          const options = isFlashcard ? [] : opts;
+          const correct = isFlashcard ? 0 : (parseInt(row.querySelector(`input[name="mq-correct-${i}"]:checked`)?.value || '0'));
+          questions.push({ question, options, correct, explanation });
+        }
       });
       if (questions.length) state.modalQuestions = questions;
     }
@@ -4025,7 +4128,11 @@
     function addModalQuestion() {
       syncModalQuestionsFromUI();
       const isFlashcard = state.wizard?.type === 'flashcard';
-      state.modalQuestions.push({ question: '', options: isFlashcard ? [] : ['', '', '', ''], correct: 0, explanation: '' });
+      const isWritten = state.wizard?.type === 'written';
+      state.modalQuestions.push(isWritten
+        ? { id: 'wq-' + Date.now().toString(36) + '-' + (state.modalQuestions.length + 1), question: '', modelAnswer: '', rubric: '', explanation: '', tags: [] }
+        : { question: '', options: isFlashcard ? [] : ['', '', '', ''], correct: 0, explanation: '' }
+      );
       renderNewFileModal();
     }
 
@@ -4625,10 +4732,10 @@
       const title = wizard.title;
       const description = wizard.description;
       const filename = wizard.filename;
-      const icon = wizard.icon || (wizard.type === 'flashcard' ? '🃏' : '🗃️');
+      const icon = wizard.icon || (wizard.type === 'flashcard' ? '🃏' : wizard.type === 'written' ? '✍️' : '🗃️');
       const questions = state.modalQuestions;
 
-      // Convert quiz-format questions to flashcard format when creating a deck
+      // Convert quiz-format questions to flashcard or written format when creating
       const payloadQuestions = type === 'flashcard'
         ? questions.map(q => ({
             type: 'basic',
@@ -4636,7 +4743,16 @@
             back: q.explanation || (q.options?.[q.correct] || ''),
             tags: [],
           }))
-        : questions;
+        : type === 'written'
+          ? questions.map(q => ({
+              id: q.id || 'wq-' + Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 5),
+              question: q.question || '',
+              modelAnswer: q.modelAnswer || '',
+              rubric: q.rubric || '',
+              explanation: q.explanation || '',
+              tags: Array.isArray(q.tags) ? q.tags : (typeof q.tags === 'string' ? q.tags.split(',').map(t => t.trim()).filter(Boolean) : []),
+            }))
+          : questions;
 
       if (!title) {
         showToast('Title is required.', 'warn');

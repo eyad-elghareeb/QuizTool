@@ -140,6 +140,54 @@ const QUESTION_BANK = {questions_json};
 "##, fouc = FOUC_SCRIPT, title = title, config_json = config_json, questions_json = questions_json)
 }
 
+pub fn create_written_html(config: &Value, questions: &Value) -> String {
+    let title = config.get("title").and_then(|v| v.as_str()).unwrap_or("Written Assessment");
+    let config_json = serde_json::to_string_pretty(config).unwrap_or_default();
+    let questions_json = serde_json::to_string_pretty(questions).unwrap_or_default();
+    let ver = "2026-06-01-ai-fallback-ui";
+    format!(r##"<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+{fouc}
+</script>
+<title>{title}</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="favicon.svg">
+<script>
+if ('serviceWorker' in navigator) {{
+  window.addEventListener('load', function () {{
+    navigator.serviceWorker.register('sw.js').catch(function () {{}});
+  }});
+}}
+</script>
+</head>
+<body>
+<script>
+
+/* [WRITTEN_CONFIG_START] */
+const WRITTEN_CONFIG = {config_json};
+/* [WRITTEN_CONFIG_END] */
+
+/* [WRITTEN_QUESTIONS_START] */
+const WRITTEN_QUESTIONS = {questions_json};
+/* [WRITTEN_QUESTIONS_END] */
+
+</script>
+<script>
+(function () {{
+  window.__WRITTEN_ENGINE_BASE = '../'.repeat(Math.max(0, location.pathname.split('/').filter(Boolean).length - 2));
+  window.__WRITTEN_ENGINE_VERSION = '{ver}';
+  document.write('<scr' + 'ipt src="' + window.__WRITTEN_ENGINE_BASE + 'written-engine.js?v=' + window.__WRITTEN_ENGINE_VERSION + '"><\/scr' + 'ipt>');
+}})();
+</script>
+</body>
+</html>
+"##, fouc = FOUC_SCRIPT, title = title, config_json = config_json, questions_json = questions_json, ver = ver)
+}
+
 pub fn create_flashcard_html(config: &Value, questions: &Value) -> String {
     let title = config.get("title").and_then(|v| v.as_str()).unwrap_or("Flashcards");
     let config_json = serde_json::to_string_pretty(config).unwrap_or_default();
