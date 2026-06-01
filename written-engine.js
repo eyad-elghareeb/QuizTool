@@ -28,6 +28,45 @@
     progress: 'quiz_progress_v1_' + config.uid
   };
 
+  var _OK = [0x71, 0x75, 0x69, 0x7A, 0x74, 0x6F, 0x6F, 0x6C]; // "quiztool"
+
+  function _obfuscate(str) {
+    if (!str) return '';
+    var bytes = [];
+    for (var i = 0; i < str.length; i++) {
+      bytes.push(str.charCodeAt(i) ^ _OK[i % _OK.length]);
+    }
+    return btoa(String.fromCharCode.apply(null, bytes));
+  }
+
+  function _deobfuscate(encoded) {
+    if (!encoded) return '';
+    try {
+      var bytes = atob(encoded);
+      var result = '';
+      for (var i = 0; i < bytes.length; i++) {
+        result += String.fromCharCode(bytes.charCodeAt(i) ^ _OK[i % _OK.length]);
+      }
+      return result;
+    } catch (_) { return ''; }
+  }
+
+  function _readKey() {
+    var raw = localStorage.getItem(STORAGE.apiKey);
+    if (!raw) return '';
+    var plain = _deobfuscate(raw);
+    if (plain) return plain;
+    return raw;
+  }
+
+  function _writeKey(plain) {
+    if (plain) {
+      localStorage.setItem(STORAGE.apiKey, _obfuscate(plain));
+    } else {
+      localStorage.removeItem(STORAGE.apiKey);
+    }
+  }
+
   var MODELS = [
     ['gemini-2.5-flash-lite', 'Gemini 2.5 Flash-Lite (fastest, cheapest)'],
     ['gemini-2.5-flash', 'Gemini 2.5 Flash (fast, stronger)'],
@@ -483,7 +522,8 @@
     if (savedModel && !modelIsAvailable(savedModel)) {
       localStorage.setItem(STORAGE.model, MODELS[0][0]);
     }
-    $('#api-key').value = localStorage.getItem(STORAGE.apiKey) || '';
+    $('#api-key').value = _readKey();
+    tryRestoreApiKeyFromCredentialManager();
     updateThemeButtons();
     updateResumeButton();
   }
@@ -677,7 +717,7 @@
   }
 
   function submitForAiGrade() {
-    var apiKey = ($('#api-key').value || localStorage.getItem(STORAGE.apiKey) || '').trim();
+    var apiKey = ($('#api-key').value || _readKey() || '').trim();
     var answer = ($('#answer-input').value || '').trim();
     if (!answer) {
       showToast('Write an answer before requesting AI grading.');
@@ -693,7 +733,7 @@
     }
 
     state.answers[currentIndex] = $('#answer-input').value;
-    localStorage.setItem(STORAGE.apiKey, apiKey);
+    _writeKey(apiKey);
     localStorage.setItem(STORAGE.model, $('#model-select').value);
     setLoading(true);
 
@@ -1235,12 +1275,37 @@
   function saveApiKey() {
     var value = ($('#api-key').value || '').trim();
     if (value) {
-      localStorage.setItem(STORAGE.apiKey, value);
+      _writeKey(value);
+      tryStoreInCredentialManager(value);
       showToast('API key saved.');
     } else {
-      localStorage.removeItem(STORAGE.apiKey);
-      showToast('API key cleared.');
+      _writeKey('');
+      showToast('API key cleared from this browser.');
     }
+  }
+
+  function tryStoreInCredentialManager(key) {
+    if (!navigator.credentials || !window.PasswordCredential) return;
+    try {
+      var cred = new PasswordCredential({
+        id: 'gemini_api_key',
+        name: 'Gemini API Key (QuizTool Written Assessment)',
+        password: key
+      });
+      navigator.credentials.store(cred).catch(function () {});
+    } catch (_) {}
+  }
+
+  function tryRestoreApiKeyFromCredentialManager() {
+    if (!navigator.credentials || !navigator.credentials.get) return;
+    navigator.credentials.get({ password: true }).then(function (cred) {
+      if (!cred || cred.id !== 'gemini_api_key') return;
+      var stored = cred.password;
+      if (stored && stored !== _readKey()) {
+        _writeKey(stored);
+        $('#api-key').value = stored;
+      }
+    }).catch(function () {});
   }
 
   function toggleTheme() {
