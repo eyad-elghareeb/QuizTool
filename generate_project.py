@@ -154,6 +154,7 @@ self.addEventListener('install', function (event) {
       var REQUIRED = [
         'quiz-engine.js',
         'bank-engine.js',
+        'flashcard-engine.js',
         'index-engine.js',
         'sync-engine.js',
         'index-engine.css',
@@ -273,6 +274,7 @@ function handleAsset(event, request) {
         var SHARED = [
           'quiz-engine.js',
           'bank-engine.js',
+          'flashcard-engine.js',
           'index-engine.js',
           'sync-engine.js',
           'index-engine.css',
@@ -347,6 +349,7 @@ INDEX_ENGINE_JS = read_file('index-engine.js')
 INDEX_ENGINE_CSS = read_file('index-engine.css')
 QUIZ_ENGINE_JS = read_file('quiz-engine.js')
 BANK_ENGINE_JS = read_file('bank-engine.js')
+FLASHCARD_ENGINE_JS = read_file('flashcard-engine.js')
 SYNC_ENGINE_JS = read_file('sync-engine.js')
 
 # Read sync scripts from QuizTool's own scripts/ folder (self-contained, no MU61S8 dependency)
@@ -362,8 +365,8 @@ QUIZTOOL_ADMIN_EXE = _ADMIN_EXE_PATH.read_bytes() if _ADMIN_EXE_PATH.exists() el
 # Auto-index script
 AUTO_INDEX_SCRIPT = '''#!/usr/bin/env python3
 """
-Auto-index new quiz/bank HTML files.
-Scans all folders for .html files with QUIZ_CONFIG or BANK_CONFIG
+Auto-index new quiz/bank/flashcard HTML files.
+Scans all folders for .html files with QUIZ_CONFIG, BANK_CONFIG, or FLASHCARD_CONFIG
 and updates parent folder index.html files.
 """
 import os
@@ -372,11 +375,11 @@ import json
 from pathlib import Path
 
 def parse_quiz_file(filepath):
-    """Extract config from a quiz/bank HTML file."""
+    """Extract config from a quiz/bank/flashcard HTML file."""
     content = filepath.read_text(encoding='utf-8')
     
     # Try QUIZ_CONFIG
-    match = re.search(r'/\\*\\s*\\[QUIZ_CONFIG_START\\]\\s*\\*/[\\s\\S]*?const\\s+QUIZ_CONFIG\\s*=\\s*({[\\s\\S]*?});[\\s\\S]*?/\\*\\s*\\[QUIZ_CONFIG_END\\]\\s*\\*/', content)
+    match = re.search(r'/\\*\\s*\\[QUIZ_CONFIG_START\\]\\s*\\*/[\\s\\S]*?(?:const|var)\\s+QUIZ_CONFIG\\s*=\\s*({[\\s\\S]*?});[\\s\\S]*?/\\*\\s*\\[QUIZ_CONFIG_END\\]\\s*\\*/', content)
     if match:
         try:
             config = eval(match.group(1))
@@ -384,8 +387,17 @@ def parse_quiz_file(filepath):
         except:
             pass
     
+    # Try FLASHCARD_CONFIG first (flashcard files use FLASHCARD_CONFIG markers)
+    match = re.search(r'/\\*\\s*\\[FLASHCARD_CONFIG_START\\]\\s*\\*/[\\s\\S]*?(?:const|var)\\s+BANK_CONFIG\\s*=\\s*({[\\s\\S]*?});[\\s\\S]*?/\\*\\s*\\[FLASHCARD_CONFIG_END\\]\\s*\\*/', content)
+    if match:
+        try:
+            config = eval(match.group(1))
+            return {'type': 'flashcard', 'config': config}
+        except:
+            pass
+    
     # Try BANK_CONFIG
-    match = re.search(r'/\\*\\s*\\[BANK_CONFIG_START\\]\\s*\\*/[\\s\\S]*?const\\s+BANK_CONFIG\\s*=\\s*({[\\s\\S]*?});[\\s\\S]*?/\\*\\s*\\[BANK_CONFIG_END\\]\\s*\\*/', content)
+    match = re.search(r'/\\*\\s*\\[BANK_CONFIG_START\\]\\s*\\*/[\\s\\S]*?(?:const|var)\\s+BANK_CONFIG\\s*=\\s*({[\\s\\S]*?});[\\s\\S]*?/\\*\\s*\\[BANK_CONFIG_END\\]\\s*\\*/', content)
     if match:
         try:
             config = eval(match.group(1))
@@ -413,11 +425,13 @@ def scan_folder(folder_path):
         if parsed:
             config = parsed['config']
             rel_path = html_file.name
+            type_icon = config.get('icon', '\\U0001F4DD' if parsed['type'] == 'quiz' else ('\\U0001F0CF' if parsed['type'] == 'flashcard' else '\\U0001F5C3\\uFE0F'))
+            type_label = {'quiz': 'Quiz', 'bank': 'Bank', 'flashcard': 'Flashcard'}.get(parsed['type'], 'Quiz')
             quizzes.append({
                 'title': config.get('title', html_file.stem),
                 'description': config.get('description', ''),
-                'icon': config.get('icon', '\\U0001F4DD' if parsed['type'] == 'quiz' else '\\U0001F5C3\\uFE0F'),
-                'tags': ['Bank' if parsed['type'] == 'bank' else 'Quiz'],
+                'icon': type_icon,
+                'tags': [type_label],
                 'url': rel_path
             })
     
@@ -845,6 +859,7 @@ def build_project_zip(config):
         'index-engine.css',
         'quiz-engine.js',
         'bank-engine.js',
+        'flashcard-engine.js',
         'sync-engine.js',
         'tracker-map.json',
         'favicon.svg',
@@ -934,6 +949,7 @@ def build_project_zip(config):
         zf.writestr('index-engine.css', INDEX_ENGINE_CSS)
         zf.writestr('quiz-engine.js', QUIZ_ENGINE_JS)
         zf.writestr('bank-engine.js', BANK_ENGINE_JS)
+        zf.writestr('flashcard-engine.js', FLASHCARD_ENGINE_JS)
         zf.writestr('sync-engine.js', SYNC_ENGINE_JS)
 
         # --- Static assets ---

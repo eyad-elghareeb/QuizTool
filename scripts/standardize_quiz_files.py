@@ -33,27 +33,42 @@ def standardize_file(file_path):
     # 4. Change topbar title from "Quiz Loading..." to "Quiz"
     content = re.sub(r'(<div[^>]+class="topbar-title"[^>]*>)\s*Quiz Loading\.\.\.\s*(</div>)', r'\1Quiz\2', content)
     
-    # 5. Add [QUIZ_CONFIG_START] and [QUIZ_CONFIG_END] markers around QUIZ_CONFIG object
-    if not '[QUIZ_CONFIG_START]' in content:
-        # Find QUIZ_CONFIG object
-        config_match = re.search(r'(const\s+QUIZ_CONFIG\s*=\s*\{[^}]+\};)', content, re.DOTALL)
-        if config_match:
-            config_code = config_match.group(1)
-            wrapped_config = f"""/* [QUIZ_CONFIG_START] */
+    # 5. Add marker comments around config objects (QUIZ_CONFIG, BANK_CONFIG, FLASHCARD_CONFIG)
+    config_markers = [
+        ('QUIZ_CONFIG', 'QUIZ_CONFIG_START', 'QUIZ_CONFIG_END'),
+        ('BANK_CONFIG', 'BANK_CONFIG_START', 'BANK_CONFIG_END'),
+    ]
+    for var, start_marker, end_marker in config_markers:
+        if start_marker not in content:
+            esc = re.escape(var)
+            config_match = re.search(r'(const\s+' + esc + r'\s*=\s*\{[^}]+\};)', content, re.DOTALL)
+            if not config_match:
+                config_match = re.search(r'(var\s+' + esc + r'\s*=\s*\{[^}]+\};)', content, re.DOTALL)
+            if config_match:
+                config_code = config_match.group(1)
+                wrapped = f"""/* [{start_marker}] */
 {config_code}
-/* [QUIZ_CONFIG_END] */"""
-            content = content.replace(config_code, wrapped_config)
-    
-    # 6. Add [QUESTIONS_START] and [QUESTIONS_END] markers around QUESTIONS array
-    if not '[QUESTIONS_START]' in content:
-        # Find QUESTIONS array
-        questions_match = re.search(r'(const\s+QUESTIONS\s*=\s*\[.*?\];)', content, re.DOTALL)
-        if questions_match:
-            questions_code = questions_match.group(1)
-            wrapped_questions = f"""/* [QUESTIONS_START] */
-{questions_code}
-/* [QUESTIONS_END] */"""
-            content = content.replace(questions_code, wrapped_questions)
+/* [{end_marker}] */"""
+                content = content.replace(config_code, wrapped)
+
+    # 6. Add marker comments around data arrays (QUESTIONS, QUESTION_BANK, FLASHCARD_BANK)
+    array_markers = [
+        ('QUESTIONS', 'QUESTIONS_START', 'QUESTIONS_END'),
+        ('QUESTION_BANK', 'QUESTION_BANK_START', 'QUESTION_BANK_END'),
+        ('FLASHCARD_BANK', 'FLASHCARD_BANK_START', 'FLASHCARD_BANK_END'),
+    ]
+    for var, start_marker, end_marker in array_markers:
+        if start_marker not in content:
+            esc = re.escape(var)
+            array_match = re.search(r'(const\s+' + esc + r'\s*=\s*\[.*?\];)', content, re.DOTALL)
+            if not array_match:
+                array_match = re.search(r'(var\s+' + esc + r'\s*=\s*\[.*?\];)', content, re.DOTALL)
+            if array_match:
+                array_code = array_match.group(1)
+                wrapped = f"""/* [{start_marker}] */
+{array_code}
+/* [{end_marker}] */"""
+                content = content.replace(array_code, wrapped)
     
     # 7. Clean up whitespace (trim trailing spaces, normalize line endings)
     lines = content.splitlines()

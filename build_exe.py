@@ -138,7 +138,7 @@ def build_pyinstaller():
 
     # Engine files
     for name in ['quiz-engine.js', 'bank-engine.js', 'index-engine.js', 
-                 'sync-engine.js', 'index-engine.css', 'quiz-engine-test.html']:
+                 'flashcard-engine.js', 'sync-engine.js', 'index-engine.css', 'quiz-engine-test.html']:
         p = BASE_DIR / name
         if p.exists():
             datas.append(str(p) + ';.')
@@ -161,7 +161,7 @@ def build_pyinstaller():
         datas.append(str(favicon) + ';.')
 
     # Template HTML files
-    for name in ['quiz-template.html', 'question-bank-template.html', 'index-template.html']:
+    for name in ['quiz-template.html', 'question-bank-template.html', 'flashcard-template.html', 'index-template.html']:
         p = BASE_DIR / name
         if p.exists():
             datas.append(str(p) + ';.')
