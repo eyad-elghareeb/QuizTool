@@ -2876,6 +2876,13 @@
               <label>${isFlashcard ? 'Icon' : 'Bank Icon'}</label>
               <input class="text-input" id="cfg-icon" value="${escapeHtml(meta.config?.icon || (isFlashcard ? '🃏' : '🗃️'))}" oninput="syncQuizBankEditor()">
             </div>
+            ${isFlashcard ? `
+            <div class="field full">
+              <label>Custom Script</label>
+              <textarea class="text-area" id="cfg-custom-script" oninput="syncQuizBankEditor()" placeholder="Optional custom JavaScript for card rendering behavior. Wraps between CUSTOM_SCRIPT markers." style="min-height:80px;">${escapeHtml(meta.customScript || '')}</textarea>
+              <small>JavaScript inserted into the flashcard HTML between <code>/* [CUSTOM_SCRIPT_START] */</code> markers. Useful for custom card types or logic.</small>
+            </div>
+            ` : ''}
           ` : ''}
       `;
       return `
@@ -2901,6 +2908,50 @@
     }
 
     function renderQuestionCard(question, index) {
+      const isFlashcard = state.currentData?.meta?.type === 'flashcard';
+      if (isFlashcard) {
+        const collapsed = state.collapsedQuestions.has(index);
+        const summary = `${(question.front || 'Untitled card').slice(0, 90)}${(question.front || '').length > 90 ? '…' : ''}`;
+        const tags = Array.isArray(question.tags) ? question.tags.join(', ') : (typeof question.tags === 'string' ? question.tags : '');
+        return `
+          <div class="editor-card ${collapsed ? 'collapsed' : ''}" data-qidx="${index}">
+            <div class="editor-card-header">
+              <div>
+                <div class="editor-card-title">Card ${index + 1}</div>
+                <div class="editor-summary">${escapeHtml(summary)}</div>
+              </div>
+              <div class="mini-actions">
+                <button class="mini-btn" onclick="toggleQuestionCollapse(${index})">${collapsed ? 'Expand' : 'Collapse'}</button>
+                <button class="mini-btn" onclick="moveQuestion(${index}, -1)" ${index === 0 ? 'disabled' : ''}>Up</button>
+                <button class="mini-btn" onclick="moveQuestion(${index}, 1)" ${index === (state.currentData.meta.questions || []).length - 1 ? 'disabled' : ''}>Down</button>
+                <button class="mini-btn" onclick="duplicateQuestion(${index})">Duplicate</button>
+                <button class="mini-btn delete" onclick="removeQuestion(${index})">Remove</button>
+              </div>
+            </div>
+            <div class="editor-card-body">
+              <div class="field">
+                <label>Card Type</label>
+                <select class="text-input q-card-type" data-index="${index}" onchange="syncQuizBankEditor()" style="width:auto;">
+                  <option value="basic" ${(question.type||'basic')==='basic'?'selected':''}>Basic (Front + Back)</option>
+                  <option value="cloze" ${question.type==='cloze'?'selected':''}>Cloze (Fill in blank)</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Front${question.type==='cloze'?' / Cloze text (use {{c1::blank}} syntax)':''}</label>
+                <textarea class="text-area q-front" data-index="${index}" oninput="syncQuizBankEditor()" placeholder="${question.type==='cloze'?'The {{c1::capital}} of France is {{c2::Paris}}':'Enter the front of the card'}">${escapeHtml(question.front || question.text || '')}</textarea>
+              </div>
+              <div class="field">
+                <label>Back${question.type==='cloze'?' / Extra notes':''}</label>
+                <textarea class="text-area q-back" data-index="${index}" oninput="syncQuizBankEditor()" placeholder="${question.type==='cloze'?'Extra explanation or notes for this cloze deletion':'Enter the back of the card'}">${escapeHtml(question.back || question.extra || '')}</textarea>
+              </div>
+              <div class="field">
+                <label>Tags (comma-separated)</label>
+                <input class="text-input q-tags" data-index="${index}" value="${escapeHtml(tags)}" oninput="syncQuizBankEditor()" placeholder="e.g. anatomy, heart">
+              </div>
+            </div>
+          </div>
+        `;
+      }
       const options = question.options || ['', '', '', ''];
       const collapsed = state.collapsedQuestions.has(index);
       const summary = `${(question.question || 'Untitled question').slice(0, 90)}${(question.question || '').length > 90 ? '…' : ''}`;
@@ -3066,19 +3117,34 @@
     function syncQuizBankEditor() {
       if (!state.currentData) return;
       const meta = state.currentData.meta;
+      const isFlashcard = meta.type === 'flashcard';
       const uid = document.getElementById('cfg-uid')?.value || '';
       const title = document.getElementById('cfg-title')?.value || '';
       const description = document.getElementById('cfg-description')?.value || '';
-      const icon = document.getElementById('cfg-icon')?.value || '🗃️';
+      const icon = document.getElementById('cfg-icon')?.value || (isFlashcard ? '🃏' : '🗃️');
       const cards = Array.from(document.querySelectorAll('.editor-card'));
-      const questions = cards.map((card, index) => {
-        const questionText = card.querySelector('.q-question')?.value || '';
-        const options = Array.from(card.querySelectorAll('.q-option')).map(input => input.value || '');
-        const checked = card.querySelector(`input[name="correct-${index}"]:checked`);
-        const correct = checked ? Number(checked.value) : 0;
-        const explanation = card.querySelector('.q-explanation')?.value || '';
-        return { question: questionText, options, correct, explanation };
-      });
+      let questions;
+      if (isFlashcard) {
+        questions = cards.map((card, index) => {
+          const cardType = card.querySelector('.q-card-type')?.value || 'basic';
+          const front = card.querySelector('.q-front')?.value || '';
+          const back = card.querySelector('.q-back')?.value || '';
+          const tagsStr = card.querySelector('.q-tags')?.value || '';
+          const tags = tagsStr.split(',').map(t => t.trim()).filter(Boolean);
+          return { type: cardType, front, back, tags };
+        });
+        const customScript = document.getElementById('cfg-custom-script')?.value || '';
+        meta.customScript = customScript;
+      } else {
+        questions = cards.map((card, index) => {
+          const questionText = card.querySelector('.q-question')?.value || '';
+          const options = Array.from(card.querySelectorAll('.q-option')).map(input => input.value || '');
+          const checked = card.querySelector(`input[name="correct-${index}"]:checked`);
+          const correct = checked ? Number(checked.value) : 0;
+          const explanation = card.querySelector('.q-explanation')?.value || '';
+          return { question: questionText, options, correct, explanation };
+        });
+      }
       meta.config = meta.config || {};
       meta.config.uid = uid;
       meta.config.title = title;
@@ -3094,12 +3160,31 @@
       clearTimeout(_editorDebounceTimer);
       _editorDebounceTimer = setTimeout(() => {
         if (!state.currentData) return;
-        const isFlashcard = meta.type === 'flashcard';
-        const configName = isFlashcard ? 'BANK_CONFIG' : (meta.type === 'bank' ? 'BANK_CONFIG' : 'QUIZ_CONFIG');
-        const arrayName = isFlashcard ? 'FLASHCARD_BANK' : (meta.type === 'bank' ? 'QUESTION_BANK' : 'QUESTIONS');
+        const isFC = meta.type === 'flashcard';
+        const configName = isFC ? 'BANK_CONFIG' : (meta.type === 'bank' ? 'BANK_CONFIG' : 'QUIZ_CONFIG');
+        const arrayName = isFC ? 'FLASHCARD_BANK' : (meta.type === 'bank' ? 'QUESTION_BANK' : 'QUESTIONS');
         let updated = state.currentData.content;
         updated = replaceAssignedBlock(updated, configName, '{', '}', meta.config);
         updated = replaceAssignedBlock(updated, arrayName, '[', ']', questions);
+        if (isFC) {
+          const customScript = meta.customScript || '';
+          const scStart = '/* [CUSTOM_SCRIPT_START] */';
+          const scEnd = '/* [CUSTOM_SCRIPT_END] */';
+          const scBlock = scStart + '\n' + customScript + '\n' + scEnd;
+          if (updated.includes(scStart)) {
+            const si = updated.indexOf(scStart);
+            const ei = updated.indexOf(scEnd, si);
+            if (ei !== -1) {
+              updated = updated.substring(0, si) + scBlock + updated.substring(ei + scEnd.length);
+            }
+          } else {
+            // Insert before the engine loader
+            updated = updated.replace(
+              '</script>\n<script>\n(function(){\n  window.__FLASHCARD_ENGINE_BASE',
+              scBlock + '\n</script>\n<script>\n(function(){\n  window.__FLASHCARD_ENGINE_BASE'
+            );
+          }
+        }
         state.currentData.content = updated;
         updateRawAndMeta();
       }, 200);
@@ -3209,13 +3294,19 @@
     function addQuestion() {
       const list = state.currentData?.meta?.questions;
       if (!list) return;
-      list.push({ question: '', options: ['', '', '', ''], correct: 0, explanation: '' });
+      const isFlashcard = state.currentData?.meta?.type === 'flashcard';
+      list.push(isFlashcard
+        ? { type: 'basic', front: '', back: '', tags: [] }
+        : { question: '', options: ['', '', '', ''], correct: 0, explanation: '' }
+      );
       renderFilePanel();
       setTab('editor');
       syncQuizBankEditor();
     }
 
     function addOption(qIdx) {
+      const isFlashcard = state.currentData?.meta?.type === 'flashcard';
+      if (isFlashcard) return;
       const list = state.currentData?.meta?.questions;
       if (!list) return;
       list[qIdx].options.push('');
@@ -3225,6 +3316,8 @@
     }
 
     function removeOption(qIdx, oIdx) {
+      const isFlashcard = state.currentData?.meta?.type === 'flashcard';
+      if (isFlashcard) return;
       const list = state.currentData?.meta?.questions;
       if (!list) return;
       list[qIdx].options.splice(oIdx, 1);

@@ -417,8 +417,16 @@ pub fn convert_file(path: String, state: State<ProjectRoot>) -> Result<Value, St
             Ok(json!({ "message": "Converted question bank to quiz while preserving UID." }))
         }
         parser::FileType::Flashcard => {
-            let cfg = json!({"uid": uid, "title": meta.title.as_deref().unwrap_or(stem), "description": meta.description.as_deref().unwrap_or(""), "icon": "🗃️"});
-            let html = templates::create_quiz_html(&cfg, &meta.questions.unwrap_or_else(|| json!([])));
+            let cfg = json!({"uid": uid, "title": meta.title.as_deref().unwrap_or(stem), "description": meta.description.as_deref().unwrap_or("")});
+            let questions = meta.questions.unwrap_or_else(|| json!([]));
+            let converted: Vec<Value> = questions.as_array().map(|arr| {
+                arr.iter().map(|q| {
+                    let front = q.get("front").and_then(|v| v.as_str()).unwrap_or("");
+                    let back = q.get("back").and_then(|v| v.as_str()).unwrap_or("");
+                    json!({"question": front, "options": ["", "", "", ""], "correct": 0, "explanation": back})
+                }).collect()
+            }).unwrap_or_default();
+            let html = templates::create_quiz_html(&cfg, &json!(converted));
             std::fs::write(&p, html).map_err(|e| e.to_string())?;
             Ok(json!({ "message": "Converted flashcard deck to quiz while preserving UID." }))
         }
@@ -439,7 +447,25 @@ pub fn convert_to_flashcard(path: String, state: State<ProjectRoot>) -> Result<V
     match meta.file_type {
         parser::FileType::Quiz | parser::FileType::Bank => {
             let cfg = json!({"uid": uid, "title": meta.title.as_deref().unwrap_or(stem), "description": meta.description.as_deref().unwrap_or(""), "icon": "🃏"});
-            let html = templates::create_flashcard_html(&cfg, &meta.questions.unwrap_or_else(|| json!([])));
+            let questions = meta.questions.unwrap_or_else(|| json!([]));
+            let converted: Vec<Value> = questions.as_array().map(|arr| {
+                arr.iter().map(|q| {
+                    let question = q.get("question").and_then(|v| v.as_str()).unwrap_or("");
+                    let explanation = q.get("explanation").and_then(|v| v.as_str()).unwrap_or("");
+                    let options = q.get("options").and_then(|v| v.as_array())
+                        .map(|a| a.iter().filter_map(|o| o.as_str()).collect::<Vec<_>>())
+                        .unwrap_or_default();
+                    let correct = q.get("correct").and_then(|v| v.as_i64()).unwrap_or(0) as usize;
+                    let answer = options.get(correct).copied().unwrap_or("");
+                    let back = if explanation.is_empty() {
+                        format!("Answer: {}", answer)
+                    } else {
+                        format!("{}\n\nAnswer: {}", explanation, answer)
+                    };
+                    json!({"type": "basic", "front": question, "back": back, "tags": []})
+                }).collect()
+            }).unwrap_or_default();
+            let html = templates::create_flashcard_html(&cfg, &json!(converted));
             std::fs::write(&p, html).map_err(|e| e.to_string())?;
             Ok(json!({ "message": "Converted to flashcard deck while preserving UID." }))
         }

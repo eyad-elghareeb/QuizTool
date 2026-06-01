@@ -120,7 +120,7 @@ fn try_serve(state: &Arc<ServerState>, path: PathBuf) -> Option<(Vec<u8>, &'stat
                 let prefix = "../".repeat(depth);
                 // Rewrite window.__QUIZ_ENGINE_BASE or __FLASHCARD_ENGINE_BASE for proper engine resolution
                 let rewritten = state.re_base.replace(&content, |caps: &regex::Captures| {
-                    format!("window.{}__ENGINE_BASE='{}';", caps[1].to_string(), prefix)
+                    format!("window.__{}_ENGINE_BASE='{}';", caps[1].to_string(), prefix)
                 }).into_owned();
                 return Some((rewritten.into_bytes(), "text/html; charset=utf-8"));
             }

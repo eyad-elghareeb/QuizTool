@@ -165,6 +165,9 @@ var BANK_CONFIG = {config_json};
 var FLASHCARD_BANK = {questions_json};
 /* [FLASHCARD_BANK_END] */
 
+/* [CUSTOM_SCRIPT_START] */
+/* [CUSTOM_SCRIPT_END] */
+
 </script>
 <script>
 (function(){{
