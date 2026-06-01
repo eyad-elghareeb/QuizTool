@@ -62,7 +62,7 @@
   _addLink('apple-touch-icon', ENGINE_BASE + 'favicon.svg');
 
   // Set background immediately to prevent flash of white
-  var savedTheme = localStorage.getItem('flashcard-theme') || 'dark';
+  var savedTheme = localStorage.getItem('quiz-theme') || 'dark';
   document.documentElement.setAttribute('data-theme', savedTheme);
   document.body.style.background = savedTheme === 'light' ? '#f3f0eb' : '#0d1117';
   document.body.style.color = savedTheme === 'light' ? '#1c1917' : '#e6edf3';
@@ -1840,7 +1840,7 @@ input[type=radio] { display: none; }
     var current = html.getAttribute('data-theme') || 'dark';
     var next = current === 'dark' ? 'light' : 'dark';
     html.setAttribute('data-theme', next);
-    localStorage.setItem('flashcard-theme', next);
+    localStorage.setItem('quiz-theme', next);
     document.body.style.background = next === 'light' ? '#f3f0eb' : '#0d1117';
     document.body.style.color = next === 'light' ? '#1c1917' : '#e6edf3';
     var icon = document.getElementById('theme-toggle-icon');
@@ -1852,7 +1852,7 @@ input[type=radio] { display: none; }
     }
   };
   window.__updateThemeIcon = function() {
-    var theme = localStorage.getItem('flashcard-theme') || 'dark';
+    var theme = localStorage.getItem('quiz-theme') || 'dark';
     var icon = document.getElementById('theme-toggle-icon');
     if (icon) icon.textContent = theme === 'dark' ? '☀' : '🌙';
   };
@@ -2201,7 +2201,7 @@ input[type=radio] { display: none; }
     adjustCount(0);
     updateStartScreenStats();
 
-    var savedTheme = localStorage.getItem('flashcard-theme');
+    var savedTheme = localStorage.getItem('quiz-theme');
     if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
     updateThemeIcon();
     uiReady = true;
@@ -2957,7 +2957,7 @@ input[type=radio] { display: none; }
     document.body.style.color = '';
     var themeMeta = document.querySelector('meta[name="theme-color"]');
     if (themeMeta) themeMeta.content = newTheme === 'light' ? '#f3f0eb' : '#0d1117';
-    localStorage.setItem('flashcard-theme', newTheme);
+    localStorage.setItem('quiz-theme', newTheme);
     updateThemeIcon();
   };
 

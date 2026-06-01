@@ -4788,7 +4788,7 @@ def create_flashcard_html(config: dict[str, Any], cards: list[dict[str, Any]] | 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>
-(function(){{var t=localStorage.getItem('flashcard-theme')||'dark';var s=document.createElement('style');s.textContent='html,body{{background:'+(t==='light'?'#f3f0eb':'#0d1117')+';color:'+(t==='light'?'#1c1917':'#e6edf3')+';margin:0;padding:0;overflow:hidden;height:100%}}';document.head.appendChild(s)}})();
+(function(){{var t=localStorage.getItem('quiz-theme')||'dark';var s=document.createElement('style');s.textContent='html,body{{background:'+(t==='light'?'#f3f0eb':'#0d1117')+';color:'+(t==='light'?'#1c1917':'#e6edf3')+';margin:0;padding:0;overflow:hidden;height:100%}}';document.head.appendChild(s)}})();
 </script>
 <title>{config['title']}</title>
 </head>
