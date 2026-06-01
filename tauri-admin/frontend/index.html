@@ -2144,6 +2144,7 @@
     }
 
     function validateQuestionListClient(questions) {
+      const isFlashcard = state.wizard?.type === 'flashcard';
       const issues = [];
       if (!Array.isArray(questions) || !questions.length) {
         issues.push({ level: 'warning', message: 'No questions yet.', field: 'questions' });
@@ -2154,9 +2155,9 @@
         const options = Array.isArray(question.options) ? question.options.map(option => String(option || '').trim()) : [];
         const correct = Number(question.correct || 0);
         if (!prompt) issues.push({ level: 'error', message: `Question ${index + 1} is missing its prompt.`, field: `questions.${index}.question` });
-        if (options.length < 2) issues.push({ level: 'error', message: `Question ${index + 1} needs at least 2 options.`, field: `questions.${index}.options` });
-        if (options.length >= 2 && options.some(option => !option)) issues.push({ level: 'warning', message: `Question ${index + 1} has a blank option.`, field: `questions.${index}.options` });
-        if (correct < 0 || correct >= options.length) issues.push({ level: 'error', message: `Question ${index + 1} has an invalid correct answer.`, field: `questions.${index}.correct` });
+        if (!isFlashcard && options.length < 2) issues.push({ level: 'error', message: `Question ${index + 1} needs at least 2 options.`, field: `questions.${index}.options` });
+        if (!isFlashcard && options.length >= 2 && options.some(option => !option)) issues.push({ level: 'warning', message: `Question ${index + 1} has a blank option.`, field: `questions.${index}.options` });
+        if (!isFlashcard && (correct < 0 || correct >= options.length)) issues.push({ level: 'error', message: `Question ${index + 1} has an invalid correct answer.`, field: `questions.${index}.correct` });
       });
       return issues;
     }
@@ -3887,14 +3888,16 @@
 
     function renderModalQuestionList() {
       if (!state.modalQuestions.length) return '<div class="muted" style="padding:1rem;">No questions added yet.</div>';
+      const isFlashcard = state.wizard?.type === 'flashcard';
       return state.modalQuestions.map((q, i) => `
         <div class="editor-card" style="margin-bottom: 0.5rem; padding: 0.75rem; background: var(--surface2); border: 1px solid var(--border);">
           <div class="editor-card-header" style="margin-bottom: 0.5rem;">
-             <div class="editor-card-title">Q${i + 1}</div>
-             <button class="mini-btn delete" onclick="removeModalQuestion(${i})">Remove Q</button>
+             <div class="editor-card-title">${isFlashcard ? 'C' : 'Q'}${i + 1}</div>
+             <button class="mini-btn delete" onclick="removeModalQuestion(${i})">Remove ${isFlashcard ? 'Card' : 'Q'}</button>
           </div>
-          <input class="text-input mq-q" data-idx="${i}" value="${escapeHtml(q.question)}" placeholder="Question text" style="margin-bottom:0.5rem;">
-          <textarea class="text-area mq-exp" data-idx="${i}" placeholder="Explanation (optional)" style="min-height:80px; margin-bottom:0.5rem;">${escapeHtml(q.explanation || '')}</textarea>
+          <input class="text-input mq-q" data-idx="${i}" value="${escapeHtml(q.question)}" placeholder="${isFlashcard ? 'Front text' : 'Question text'}" style="margin-bottom:0.5rem;">
+          <textarea class="text-area mq-exp" data-idx="${i}" placeholder="${isFlashcard ? 'Back text / answer' : 'Explanation (optional)'}" style="min-height:80px; margin-bottom:0.5rem;">${escapeHtml(q.explanation || '')}</textarea>
+          ${!isFlashcard ? `
           <div class="option-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
             ${(q.options || []).map((opt, oi) => `
               <div class="option-row" style="padding: 0.25rem; display: flex; align-items: center; gap: 0.25rem;">
@@ -3905,18 +3908,22 @@
             `).join('')}
             <button class="mini-btn" onclick="addModalOption(${i})" style="grid-column: span 2; border-style: dashed;">+ Add Option</button>
           </div>
+          ` : ''}
         </div>
       `).join('');
     }
 
     function syncModalQuestionsFromUI() {
+      const isFlashcard = state.wizard?.type === 'flashcard';
       const questions = [];
       const rows = document.querySelectorAll('#modal-question-list .editor-card');
       rows.forEach((row, i) => {
         const question = row.querySelector('.mq-q').value;
         const explanation = row.querySelector('.mq-exp')?.value || '';
-        const options = Array.from(row.querySelectorAll('.mq-opt')).map(input => input.value);
-        const correct = parseInt(row.querySelector(`input[name="mq-correct-${i}"]:checked`)?.value || '0');
+        const opts = Array.from(row.querySelectorAll('.mq-opt')).map(input => input.value);
+        // For flashcards, options are hidden — store empty array
+        const options = isFlashcard ? [] : opts;
+        const correct = isFlashcard ? 0 : (parseInt(row.querySelector(`input[name="mq-correct-${i}"]:checked`)?.value || '0'));
         questions.push({ question, options, correct, explanation });
       });
       if (questions.length) state.modalQuestions = questions;
@@ -3924,7 +3931,8 @@
 
     function addModalQuestion() {
       syncModalQuestionsFromUI();
-      state.modalQuestions.push({ question: '', options: ['', '', '', ''], correct: 0, explanation: '' });
+      const isFlashcard = state.wizard?.type === 'flashcard';
+      state.modalQuestions.push({ question: '', options: isFlashcard ? [] : ['', '', '', ''], correct: 0, explanation: '' });
       renderNewFileModal();
     }
 

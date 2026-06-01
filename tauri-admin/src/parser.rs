@@ -20,7 +20,7 @@ impl FileType {
 }
 
 pub fn extract_assigned_literal(content: &str, const_name: &str, open_char: char, close_char: char) -> Option<String> {
-    let pattern = format!(r"const\s+{}\s*=\s*{}", regex::escape(const_name), regex::escape(&open_char.to_string()));
+    let pattern = format!(r"(?:const|let|var)\s+{}\s*=\s*{}", regex::escape(const_name), regex::escape(&open_char.to_string()));
     let re = Regex::new(&pattern).ok()?;
     let m = re.find(content)?;
     let start_idx = content[m.start()..].find(open_char)? + m.start();
