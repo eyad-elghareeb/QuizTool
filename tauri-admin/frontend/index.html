@@ -3124,10 +3124,25 @@
       }
     }
 
+    let _syncDebounceTimer = null;
+
+    function scheduleSync() {
+      if (_syncDebounceTimer) clearTimeout(_syncDebounceTimer);
+      setSyncState('needs-sync', 'Sync pending...');
+      _syncDebounceTimer = setTimeout(async () => {
+        _syncDebounceTimer = null;
+        await runSync({ silentToast: true, preserveCurrent: false });
+      }, 2000);
+    }
+
     async function runSync({ silentToast = false, preserveCurrent = true } = {}) {
       if (state.dirty) {
         showToast('Save the current file before running sync.', 'warn');
         return false;
+      }
+      if (_syncDebounceTimer) {
+        clearTimeout(_syncDebounceTimer);
+        _syncDebounceTimer = null;
       }
       setSyncState('syncing', 'Running sync script...');
       try {
@@ -3179,7 +3194,7 @@
       closeModal();
       showToast(result.message || 'File converted.', 'success');
       logActivity('Converted file', `${state.currentFile}\n${result.message || ''}`, 'success');
-      await runSync({ silentToast: true, preserveCurrent: true });
+      scheduleSync();
     }
 
     function openPdfExporterModal() {
@@ -4259,7 +4274,7 @@
         }
         saveUiPrefs();
       }
-      await runSync({ silentToast: true, preserveCurrent: false });
+      scheduleSync();
     }
 
     async function createFile(mode = 'open') {
@@ -4316,7 +4331,7 @@
           saveUiPrefs();
         }
 
-        await runSync({ silentToast: true, preserveCurrent: false });
+        scheduleSync();
         if (result.path) {
           if (mode === 'open') {
             await loadFile(result.path);
@@ -4351,7 +4366,7 @@
       closeModal();
       showToast(result.message || 'Duplicate created.', 'success');
       logActivity('Duplicated file', `${sourcePath}\n→ ${result.path}`, 'success');
-      await runSync({ silentToast: true, preserveCurrent: false });
+      scheduleSync();
       if (result.path) await loadFile(result.path);
     }
 
@@ -4368,7 +4383,7 @@
       showToast(result.message || 'File moved.', 'success');
       logActivity('Moved file', `${previous}\n→ ${result.path}`, 'success');
       state.currentFile = result.path;
-      await runSync({ silentToast: true, preserveCurrent: false });
+      scheduleSync();
       await loadFile(result.path, { keepTab: false });
     }
 
@@ -4385,7 +4400,7 @@
       state.currentFile = null;
       state.currentData = null;
       setDirty(false);
-      await runSync({ silentToast: true, preserveCurrent: false });
+      scheduleSync();
       renderOverview();
     }
 
@@ -4404,7 +4419,7 @@
         state.validation = null;
         setDirty(false);
       }
-      await runSync({ silentToast: true, preserveCurrent: false });
+      scheduleSync();
     }
 
     async function commitChanges() {

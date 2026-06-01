@@ -5,6 +5,7 @@ use regex::Regex;
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
 use tauri::State;
+use tauri::async_runtime;
 
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
@@ -395,17 +396,17 @@ pub fn convert_file(path: String, state: State<ProjectRoot>) -> Result<Value, St
     }
 }
 
-#[tauri::command]
-pub fn run_sync(state: State<ProjectRoot>) -> Result<Value, String> {
-    let root = root(&state);
+/// Shared blocking sync — runs the Python sync script synchronously.
+/// Used by the async `run_sync` command (via spawn_blocking) and by `provider_deploy` inline.
+fn run_sync_blocking(root: &Path) -> Result<Value, String> {
     let script = root.join("scripts").join("sync_quiz_assets.py");
     if !script.exists() { return Err("Sync script not found (scripts/sync_quiz_assets.py).".into()); }
     let python = find_python().ok_or("Python not found in PATH. Please install Python to use sync.")?;
     let mut cmd = std::process::Command::new(&python);
-    cmd.arg(&script).current_dir(&root);
+    cmd.arg(&script).current_dir(root);
     #[cfg(windows)]
     cmd.creation_flags(CREATE_NO_WINDOW);
-    
+
     let out = cmd.output().map_err(|e| e.to_string())?;
     let stdout = String::from_utf8_lossy(&out.stdout).trim().to_string();
     let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
@@ -414,6 +415,33 @@ pub fn run_sync(state: State<ProjectRoot>) -> Result<Value, String> {
     } else {
         Ok(json!({ "message": "Sync completed with errors.", "returncode": out.status.code().unwrap_or(1), "output": stdout, "stderr": stderr }))
     }
+}
+
+/// Best-effort sync for use inside `provider_deploy` — returns stdout string or empty.
+fn run_sync_best_effort(root: &Path) -> String {
+    let script = root.join("scripts").join("sync_quiz_assets.py");
+    if script.exists() {
+        if let Some(py) = find_python() {
+            let mut cmd = std::process::Command::new(&py);
+            cmd.arg(&script).current_dir(root);
+            #[cfg(windows)]
+            cmd.creation_flags(CREATE_NO_WINDOW);
+            return cmd.output()
+                .ok().map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+                .unwrap_or_default();
+        }
+    }
+    String::new()
+}
+
+#[tauri::command]
+pub async fn run_sync(state: State<'_, ProjectRoot>) -> Result<Value, String> {
+    let root = state.0.lock().unwrap().clone();
+    async_runtime::spawn_blocking(move || {
+        run_sync_blocking(&root)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -463,21 +491,7 @@ pub fn provider_deploy(
     deploy::verify_provider_token(&provider, token.trim())?;
 
     // Run sync first (best-effort)
-    let sync_output = {
-        let script = root.join("scripts").join("sync_quiz_assets.py");
-        if script.exists() {
-            if let Some(py) = find_python() {
-                let mut cmd = std::process::Command::new(&py);
-                cmd.arg(&script).current_dir(&root);
-                #[cfg(windows)]
-                cmd.creation_flags(CREATE_NO_WINDOW);
-                
-                cmd.output()
-                    .ok().map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
-                    .unwrap_or_default()
-            } else { String::new() }
-        } else { String::new() }
-    };
+    let sync_output = run_sync_best_effort(&root);
 
     let result = match provider.as_str() {
         "github" => {
