@@ -11,10 +11,13 @@ mod templates;
 mod server;
 
 use commands::ProjectRoot;
+use notify::{EventKind, RecursiveMode, Watcher};
 use std::path::PathBuf;
 use std::sync::Mutex;
+use std::time::Duration;
 use tauri::{
     http::{Request, Response},
+    Emitter,
 };
 use server::QuizServer;
 
@@ -105,6 +108,67 @@ fn handle_admin_request(req: Request<Vec<u8>>, port: u16) -> Response<Vec<u8>> {
         .unwrap()
 }
 
+// ── File watcher ────────────────────────────────────────────────────
+// Replaces the 3-second frontend polling with push-based notifications.
+
+fn start_file_watcher(app_handle: tauri::AppHandle, root: PathBuf) {
+    std::thread::Builder::new()
+        .name("quiztool-watcher".into())
+        .spawn(move || {
+            let skip_dirs = [".git", "node_modules", "target", "__pycache__", ".quiztool", "tauri-admin", "tauri", "gen"];
+
+            let (tx, rx) = std::sync::mpsc::channel();
+            let mut watcher = match notify::recommended_watcher(move |res| {
+                let _ = tx.send(res);
+            }) {
+                Ok(w) => w,
+                Err(e) => {
+                    eprintln!("[Watcher] Failed to start: {}", e);
+                    return;
+                }
+            };
+
+            // Track last event time for debouncing
+            use std::time::Instant;
+            let debounce = Duration::from_millis(500);
+            let mut last_event: Option<Instant> = None;
+
+            // Watch the project root
+            if watcher.watch(&root, RecursiveMode::Recursive).is_err() {
+                eprintln!("[Watcher] Failed to watch root directory");
+                return;
+            }
+
+            // Process events in a loop
+            while let Ok(Ok(event)) = rx.recv() {
+                // Skip non-modify events (e.g. metadata changes, access)
+                let is_modify = matches!(event.kind,
+                    EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_)
+                );
+                if !is_modify { continue; }
+
+                // Skip ignored directories
+                let should_skip = event.paths.iter().any(|p| {
+                    skip_dirs.iter().any(|skip| {
+                        p.components().any(|c| c.as_os_str() == std::ffi::OsStr::new(skip))
+                    })
+                });
+                if should_skip { continue; }
+
+                // Debounce: only emit if 500ms has passed since last event
+                let now = Instant::now();
+                if let Some(last) = last_event {
+                    if now.duration_since(last) < debounce { continue; }
+                }
+                last_event = Some(now);
+
+                // Run sync in a best-effort manner
+                let _ = app_handle.emit("files-changed", ());
+            }
+        })
+        .ok();
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 fn main() {
     let project_root = canonicalize_path(get_project_root());
@@ -116,6 +180,11 @@ fn main() {
         .manage(server)
         .register_uri_scheme_protocol("quiztool-admin", move |_app, req| {
             handle_admin_request(req, port)
+        })
+        .setup(move |app| {
+            // Start file watcher to replace frontend polling
+            start_file_watcher(app.handle().clone(), project_root.clone());
+            Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             commands::list_files,

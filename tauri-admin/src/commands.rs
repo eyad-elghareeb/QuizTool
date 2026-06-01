@@ -4,6 +4,7 @@ use crate::server::QuizServer;
 use regex::Regex;
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 use tauri::State;
 use tauri::async_runtime;
 
@@ -156,13 +157,21 @@ fn get_project_name(root: &Path) -> String {
     root.file_name().and_then(|n| n.to_str()).unwrap_or("Project").to_string()
 }
 
+static PYTHON_CACHE: OnceLock<Option<String>> = OnceLock::new();
+
 fn find_python() -> Option<String> {
-    for cmd in &["python", "python3", "py"] {
-        if std::process::Command::new(cmd).arg("--version").output().is_ok() {
-            return Some(cmd.to_string());
+    PYTHON_CACHE.get_or_init(|| {
+        for cmd in &["python", "python3", "py"] {
+            let mut c = std::process::Command::new(cmd);
+            c.arg("--version");
+            #[cfg(windows)]
+            c.creation_flags(CREATE_NO_WINDOW);
+            if c.output().is_ok() {
+                return Some(cmd.to_string());
+            }
         }
-    }
-    None
+        None
+    }).clone()
 }
 
 // ── Commands ──────────────────────────────────────────────────────────────────

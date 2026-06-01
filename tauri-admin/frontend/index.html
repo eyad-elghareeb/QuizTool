@@ -147,6 +147,15 @@
       color: var(--text-muted);
       font-size: 0.9rem;
     }
+    .save-indicator-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      display: inline-block; flex: none;
+      background: var(--correct);
+      transition: background 0.3s ease;
+    }
+    .save-indicator-dot.dirty { background: var(--accent); }
+    .save-indicator-dot.syncing { background: var(--blue); }
+    .save-indicator-dot.failed { background: var(--wrong); }
 
     .topbar-actions {
       display: flex;
@@ -332,7 +341,7 @@
 
     .main-grid {
       display: grid;
-      grid-template-columns: minmax(300px, 24%) minmax(0, 1fr);
+      grid-template-columns: minmax(220px, 22%) minmax(0, 1fr);
       gap: 0.8rem;
       height: 100%;
       min-height: 0;
@@ -349,7 +358,7 @@
     }
 
     .sidebar {
-      padding: 1rem;
+      padding: 0.65rem;
       height: 100%;
       min-height: 0;
       overflow: hidden;
@@ -361,8 +370,8 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 0.75rem;
-      margin-bottom: 1rem;
+      gap: 0.5rem;
+      margin-bottom: 0.35rem;
     }
 
     .sidebar-header h2,
@@ -381,7 +390,7 @@
 
     .search-wrap {
       position: relative;
-      margin-bottom: 0.9rem;
+      margin-bottom: 0.4rem;
     }
 
     .search-input,
@@ -389,11 +398,11 @@
     .select-input,
     .text-area {
       width: 100%;
-      border-radius: 10px;
+      border-radius: 8px;
       border: 1px solid var(--border);
       background: var(--surface2);
       color: var(--text);
-      padding: 0.8rem 0.9rem;
+      padding: 0.5rem 0.65rem;
       outline: none;
       transition: border-color var(--transition), background var(--transition);
     }
@@ -411,15 +420,17 @@
     }
 
     .search-input {
-      padding-left: 2.7rem;
+      padding-left: 2.2rem;
     }
 
     .search-wrap svg {
       position: absolute;
-      left: 0.95rem;
+      left: 0.7rem;
       top: 50%;
       transform: translateY(-50%);
       opacity: 0.55;
+      width: 15px;
+      height: 15px;
     }
 
     .search-input:focus,
@@ -432,15 +443,15 @@
     .filter-row {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.55rem;
-      margin-bottom: 0.9rem;
+      gap: 0.35rem;
+      margin-bottom: 0.4rem;
     }
 
     .filter-btn {
       border-radius: 999px;
-      padding: 0.55rem 0.8rem;
+      padding: 0.35rem 0.55rem;
       cursor: pointer;
-      font-size: 0.84rem;
+      font-size: 0.75rem;
       font-weight: 600;
     }
 
@@ -453,10 +464,10 @@
     .tree-wrap {
       min-height: 0;
       overflow: auto;
-      padding-right: 0.2rem;
+      padding-right: 0.15rem;
       border-top: 1px solid var(--border);
-      margin-top: 0.1rem;
-      padding-top: 0.9rem;
+      margin-top: 0.05rem;
+      padding-top: 0.4rem;
     }
 
     .file-tree,
@@ -467,8 +478,8 @@
     }
 
     .file-tree ul {
-      margin-left: 0.95rem;
-      padding-left: 0.9rem;
+      margin-left: 0.55rem;
+      padding-left: 0.5rem;
       border-left: 1px solid var(--border);
     }
 
@@ -476,13 +487,16 @@
       width: 100%;
       display: flex;
       align-items: center;
-      gap: 0.4rem;
-      padding: 0.25rem 0.4rem;
-      border-radius: 6px;
+      gap: 0.3rem;
+      padding: 0.12rem 0.3rem;
+      border-radius: 5px;
       cursor: pointer;
-      transition: background var(--transition), transform var(--transition), color var(--transition);
+      transition: background var(--transition), color var(--transition);
       margin-bottom: 0;
-      font-size: 0.9rem;
+      font-size: 0.82rem;
+      min-height: 26px;
+      content-visibility: auto;
+      contain-intrinsic-size: auto 28px;
     }
 
     .tree-row:hover {
@@ -495,37 +509,58 @@
       border: 1px solid color-mix(in srgb, var(--accent) 65%, var(--border));
     }
 
-    .tree-icon {
-      width: 20px;
-      text-align: center;
+    .tree-chevron {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0;
+      width: 16px;
+      height: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
       flex: none;
+      transition: transform 0.15s ease;
+      border-radius: 3px;
+    }
+    .tree-chevron:hover {
+      background: var(--surface3);
+    }
+    .tree-chevron.open {
+      transform: rotate(90deg);
     }
 
-    .tree-copy {
-      min-width: 0;
-      flex: 1;
+    .tree-icon {
+      width: 18px;
+      text-align: center;
+      flex: none;
+      font-size: 0.85rem;
     }
 
     .tree-name {
-      font-size: 0.95rem;
+      font-size: 0.82rem;
       font-weight: 600;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      min-width: 0;
+      flex: 1;
     }
 
-    .tree-meta {
-      color: var(--text-muted);
-      font-size: 0.78rem;
-      margin-top: 0.12rem;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+    .tree-type-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex: none;
+      display: inline-block;
     }
-
-    .tree-row.folder-row {
-      padding-right: 0.45rem;
-    }
+    .tree-type-dot.type-quiz { background: var(--accent); }
+    .tree-type-dot.type-bank { background: var(--purple); }
+    .tree-type-dot.type-index { background: var(--blue); }
+    .tree-type-dot.type-html { background: var(--text-muted); }
+    .tree-type-dot.type-folder { background: var(--text-muted); opacity: 0.5; }
 
     .tree-row .tree-actions {
       display: flex;
@@ -540,15 +575,15 @@
     }
 
     .tree-add-btn {
-      width: 28px;
-      height: 28px;
-      min-height: 28px;
-      border-radius: 8px;
+      width: 22px;
+      height: 22px;
+      min-height: 22px;
+      border-radius: 6px;
       padding: 0;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-size: 1rem;
+      font-size: 0.85rem;
       font-weight: 700;
     }
 
@@ -624,6 +659,11 @@
       flex-wrap: wrap;
       gap: 0.55rem;
       margin-bottom: 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: var(--surface);
+      padding: 0.5rem 0 0.25rem;
     }
 
     .tab-btn {
@@ -1051,9 +1091,9 @@
     .context-menu {
       position: fixed;
       z-index: 140;
-      min-width: 160px;
-      max-width: 320px;
-      padding: 0.3rem;
+      min-width: 150px;
+      max-width: 280px;
+      padding: 0.2rem;
       display: none;
       box-shadow: var(--shadow);
     }
@@ -1063,11 +1103,11 @@
     }
 
     .context-menu-title {
-      padding: 0.3rem 0.5rem 0.4rem;
+      padding: 0.2rem 0.4rem 0.25rem;
       color: var(--text-muted);
-      font-size: 0.72rem;
+      font-size: 0.65rem;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.06em;
     }
 
     .context-menu button {
@@ -1076,10 +1116,10 @@
       border: 0;
       background: transparent;
       color: var(--text);
-      border-radius: 6px;
-      padding: 0.5rem 0.65rem;
+      border-radius: 5px;
+      padding: 0.35rem 0.5rem;
       cursor: pointer;
-      font-size: 0.88rem;
+      font-size: 0.8rem;
     }
 
     .context-menu button:hover {
@@ -1092,7 +1132,7 @@
 
     .context-divider {
       height: 1px;
-      margin: 0.25rem 0;
+      margin: 0.15rem 0;
       background: var(--border);
     }
 
@@ -1161,6 +1201,48 @@
       color: var(--text-muted);
       text-align: center;
       background: var(--surface2);
+    }
+
+    .sidebar.comfortable {
+      padding: 1rem;
+    }
+    .sidebar.comfortable .sidebar-header {
+      margin-bottom: 1rem;
+    }
+    .sidebar.comfortable .search-wrap {
+      margin-bottom: 0.9rem;
+    }
+    .sidebar.comfortable .search-input,
+    .sidebar.comfortable .text-input {
+      padding: 0.8rem 0.9rem;
+      padding-left: 2.7rem;
+    }
+    .sidebar.comfortable .search-wrap svg {
+      width: 18px; height: 18px; left: 0.95rem;
+    }
+    .sidebar.comfortable .filter-row {
+      gap: 0.55rem; margin-bottom: 0.9rem;
+    }
+    .sidebar.comfortable .filter-btn {
+      padding: 0.55rem 0.8rem; font-size: 0.84rem;
+    }
+    .sidebar.comfortable .tree-wrap {
+      padding-top: 0.9rem;
+    }
+    .sidebar.comfortable .file-tree ul {
+      margin-left: 0.95rem; padding-left: 0.9rem;
+    }
+    .sidebar.comfortable .tree-row {
+      padding: 0.25rem 0.4rem; font-size: 0.9rem; min-height: 38px;
+    }
+    .sidebar.comfortable .tree-name {
+      font-size: 0.95rem;
+    }
+    .sidebar.comfortable .tree-icon {
+      width: 20px; font-size: 1rem;
+    }
+    .sidebar.comfortable .tree-add-btn {
+      width: 28px; height: 28px; font-size: 1rem;
     }
 
     @media (max-width: 1200px) {
@@ -1240,7 +1322,7 @@
         <div class="brand-mark">MU</div>
         <div class="brand-copy">
           <div class="brand-title">Admin Dashboard</div>
-          <div class="brand-subtitle"> <span id="save-indicator">ready</span></div>
+          <div class="brand-subtitle"><span class="save-indicator-dot" id="save-indicator-dot"></span> <span id="save-indicator">ready</span></div>
         </div>
       </div>
       <div class="topbar-actions">
@@ -1258,9 +1340,10 @@
               <h2>Project Files</h2>
               <div class="sidebar-subtitle" id="sidebar-summary">Loading files...</div>
             </div>
-            <div style="display: flex; gap: 0.4rem; align-items: center;">
-              <button class="icon-btn" onclick="openCreateModal()" title="Create New...">+</button>
-              <button class="icon-btn" onclick="refreshWorkspace()" title="Refresh">↻</button>
+            <div style="display: flex; gap: 0.25rem; align-items: center;">
+              <button class="icon-btn" onclick="openCreateModal()" title="Create New..." style="width:30px;height:30px;font-size:0.9rem;">+</button>
+              <button class="icon-btn" onclick="toggleDensity()" id="density-toggle" title="Toggle density" style="width:30px;height:30px;font-size:0.85rem;">⊞</button>
+              <button class="icon-btn" onclick="refreshWorkspace()" title="Refresh" style="width:30px;height:30px;font-size:0.9rem;">↻</button>
             </div>
           </div>
 
@@ -1459,10 +1542,20 @@
       return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
 
+    function updateSaveDot() {
+      const dot = document.getElementById('save-indicator-dot');
+      if (!dot) return;
+      dot.className = 'save-indicator-dot';
+      if (state.dirty) dot.classList.add('dirty');
+      else if (state.syncState === 'syncing') dot.classList.add('syncing');
+      else if (state.syncState === 'sync-failed') dot.classList.add('failed');
+    }
+
     function setDirty(dirty) {
       state.dirty = !!dirty;
       const indicator = document.getElementById('save-indicator');
       if (indicator) indicator.textContent = state.dirty ? 'unsaved changes' : (state.syncState === 'needs-sync' ? 'saved, sync recommended' : 'ready');
+      updateSaveDot();
       renderStatusStrip();
     }
 
@@ -1477,6 +1570,7 @@
         else if (syncState === 'sync-failed') indicator.textContent = 'sync failed';
         else indicator.textContent = 'ready';
       }
+      updateSaveDot();
       renderStatusStrip();
     }
 
@@ -1537,6 +1631,30 @@
       if (isCollapsed) {
         document.querySelector('.main-grid')?.classList.add('sidebar-collapsed');
         document.querySelector('.sidebar')?.classList.add('collapsed');
+      }
+    }
+
+    function toggleDensity() {
+      const sidebar = document.querySelector('.sidebar');
+      const btn = document.getElementById('density-toggle');
+      if (!sidebar) return;
+      const isCompact = !sidebar.classList.contains('comfortable');
+      sidebar.classList.toggle('comfortable', !isCompact);
+      localStorage.setItem('admin-density', isCompact ? 'compact' : 'comfortable');
+      if (btn) btn.textContent = isCompact ? '⊞' : '⊟';
+    }
+
+    function restoreDensity() {
+      const saved = localStorage.getItem('admin-density') || 'compact';
+      const sidebar = document.querySelector('.sidebar');
+      const btn = document.getElementById('density-toggle');
+      if (!sidebar) return;
+      if (saved === 'comfortable') {
+        sidebar.classList.add('comfortable');
+        if (btn) btn.textContent = '⊟';
+      } else {
+        sidebar.classList.remove('comfortable');
+        if (btn) btn.textContent = '⊞';
       }
     }
 
@@ -2103,10 +2221,13 @@
       renderTree();
     }
 
+    let _searchDebounceTimer;
+
     function setSearch(value) {
       state.search = String(value || '').toLowerCase();
       saveUiPrefs();
-      renderTree();
+      clearTimeout(_searchDebounceTimer);
+      _searchDebounceTimer = setTimeout(renderTree, 150);
     }
 
     function getFilteredFiles() {
@@ -2169,33 +2290,32 @@
       const items = sortTreeEntries(node).map(([name, item]) => {
         if (item.kind === 'folder') {
           const open = state.search ? true : state.openFolders.has(item.path);
+          const fId = 'fol-' + item.path.replace(/[^a-z0-9]/gi, '_');
+          const childrenHtml = open ? renderTreeLevel(item.children, item.path) : '';
           return `
-            <li>
+            <li id="${fId}">
               <div class="tree-row folder-row" onclick="toggleFolder('${escapeHtml(item.path)}')" oncontextmenu="openFolderContextMenu(event, '${escapeHtml(item.path)}')">
-                <div class="tree-icon">${open ? '📂' : '📁'}</div>
-                <div class="tree-copy">
-                  <div class="tree-name">${escapeHtml(name)}</div>
-                  <div class="tree-meta">${escapeHtml(item.path || 'root')}</div>
-                </div>
-                <div class="tree-actions">
-                  <button class="mini-btn tree-add-btn" onclick="openFolderQuickAdd(event, '${escapeHtml(item.path)}')" title="Add here">+</button>
-                </div>
+                <button class="tree-chevron ${open ? 'open' : ''}" onclick="event.stopPropagation();toggleFolder('${escapeHtml(item.path)}')">▶</button>
+                <span class="tree-icon">${open ? '📂' : '📁'}</span>
+                <span class="tree-name">${escapeHtml(name)}</span>
+                <span class="tree-type-dot type-folder"></span>
+                <span class="tree-actions">
+                  <button class="mini-btn tree-add-btn" onclick="event.stopPropagation();openFolderQuickAdd(event, '${escapeHtml(item.path)}')" title="Add here">+</button>
+                </span>
               </div>
-              <ul style="display:${open ? 'block' : 'none'}">${renderTreeLevel(item.children, item.path)}</ul>
+              ${open ? `<ul class="file-tree">${childrenHtml}</ul>` : ''}
             </li>
           `;
         }
         const file = item.record;
         const active = state.currentFile === file.path ? 'active' : '';
-        const subMeta = [file.type, file.uid || file.title || ''].filter(Boolean).join(' • ');
+        const tip = `${file.title || file.name} | ${file.type}${file.uid ? ' | ' + file.uid : ''}${file.question_count ? ' | ' + file.question_count + ' questions' : ''}`;
         return `
           <li>
-            <div class="tree-row ${active}" onclick="requestLoadFile('${escapeHtml(file.path)}')" oncontextmenu="openFileContextMenu(event, '${escapeHtml(file.path)}')">
-              <div class="tree-icon">${escapeHtml(file.icon || '📄')}</div>
-              <div class="tree-copy">
-                <div class="tree-name">${escapeHtml(file.name)}</div>
-                <div class="tree-meta">${escapeHtml(subMeta)}</div>
-              </div>
+            <div class="tree-row ${active}" onclick="requestLoadFile('${escapeHtml(file.path)}')" oncontextmenu="openFileContextMenu(event, '${escapeHtml(file.path)}')" title="${escapeHtml(tip)}">
+              <span class="tree-icon">${escapeHtml(file.icon || '📄')}</span>
+              <span class="tree-name">${escapeHtml(file.name)}</span>
+              <span class="tree-type-dot type-${escapeHtml(file.type === 'html' ? 'html' : file.type)}"></span>
             </div>
           </li>
         `;
@@ -2204,9 +2324,41 @@
     }
 
     function toggleFolder(path) {
-      if (state.openFolders.has(path)) state.openFolders.delete(path);
-      else state.openFolders.add(path);
+      const wasOpen = state.openFolders.has(path);
+      if (wasOpen) {
+        state.openFolders.delete(path);
+      } else {
+        state.openFolders.add(path);
+      }
       saveUiPrefs();
+
+      // Lazy expand/collapse: find the <li> by ID and insert/remove children
+      const fId = 'fol-' + path.replace(/[^a-z0-9]/gi, '_');
+      const li = document.getElementById(fId);
+      if (li) {
+        const existing = li.querySelector('ul');
+        if (existing) {
+          existing.remove();
+        } else if (!wasOpen) {
+          const filtered = getFilteredFiles();
+          const allTree = buildTreeFromFiles(filtered);
+          const parts = path.split('/');
+          let cursor = allTree;
+          for (const p of parts) {
+            if (cursor[p]?.kind === 'folder') cursor = cursor[p].children;
+          }
+          const html = renderTreeLevel(cursor, path);
+          if (html) {
+            // renderTreeLevel returns <ul class="file-tree">...</ul>
+            li.insertAdjacentHTML('beforeend', html);
+          }
+        }
+        const chevron = li.querySelector('.tree-chevron');
+        const icon = li.querySelector('.tree-icon');
+        if (chevron) chevron.classList.toggle('open', !wasOpen);
+        if (icon) icon.textContent = wasOpen ? '📁' : '📂';
+        return;
+      }
       renderTree();
     }
 
@@ -2298,7 +2450,7 @@
       openContextMenu(event, file?.title || filePath, [
         { label: 'Open', onclick: `closeContextMenu(); requestLoadFile('${escapeHtml(filePath)}')` },
         { label: 'Preview', onclick: `closeContextMenu(); requestLoadFile('${escapeHtml(filePath)}', { tab: 'preview' })` },
-        { label: 'Open Parent Folder', onclick: `closeContextMenu(); expandFolderForFile('${escapeHtml(filePath)}')` },
+        { label: 'Open Parent Folder', onclick: `closeContextMenu(); expandFolderForFile('${escapeHtml(filePath)}'); saveUiPrefs(); renderTree();` },
         { divider: true },
         { label: 'Duplicate', onclick: `closeContextMenu(); openDuplicateModal('', '${escapeHtml(filePath)}')` },
         { label: 'Move/Rename', onclick: `closeContextMenu(); requestLoadFile('${escapeHtml(filePath)}', { afterLoadAction: 'openMoveModal' })` },
@@ -2323,8 +2475,6 @@
           state.openFolders.add(current);
         });
       }
-      saveUiPrefs();
-      renderTree();
     }
 
     function renderActivity() {
@@ -2577,15 +2727,13 @@
 
       let content = '';
       if (state.currentTab === 'preview') {
-        content = `
-          <div class="preview-toolbar">
+        content = `<div class="preview-toolbar">
             <button class="mini-btn" onclick="renderFilePanel()">Reload Preview</button>
             <button class="mini-btn" onclick="openInBrowser(previewUrl(encodePath(state.currentFile)))">Open in Browser</button>
             <button class="mini-btn" onclick="openInBrowser('/' + encodePath(state.currentFile))">Open Real File</button>
             ${state.currentFile.includes('/') ? `<button class="mini-btn" onclick="openInBrowser('/' + encodePath(state.currentFile.slice(0, state.currentFile.lastIndexOf('/')) + '/index.html'))">Open Parent Index</button>` : ''}
           </div>
-          <iframe class="preview-frame" src="${pUrl}" style="flex: 1; min-height: 0;" title="Preview"></iframe>
-        `;
+          <div id="preview-frame-container" style="flex:1;display:flex;min-height:0;"></div>`;
       } else if (state.currentTab === 'editor' && canStructuredEdit) {
         content = renderStructuredEditor(meta);
       } else if (state.currentTab === 'metadata') {
@@ -2630,6 +2778,32 @@
           ${content}
         </div>
       `;
+      // Preview iframe recycling — cache and reuse across tab switches
+      if (state.currentTab === 'preview') {
+        const container = document.getElementById('preview-frame-container');
+        if (container) {
+          const cached = document.getElementById('cached-preview-frame');
+          if (cached && cached.dataset.path === state.currentFile) {
+            container.appendChild(cached);
+          } else {
+            const old = document.getElementById('cached-preview-frame');
+            if (old) old.remove();
+            const iframe = document.createElement('iframe');
+            iframe.id = 'cached-preview-frame';
+            iframe.className = 'preview-frame';
+            iframe.dataset.path = state.currentFile;
+            iframe.src = previewUrl(encodePath(state.currentFile)) + `?v=${Date.now()}`;
+            iframe.style.cssText = 'flex:1;min-height:0;border:1px solid var(--border);border-radius:10px;background:#fff;';
+            iframe.title = 'Preview';
+            container.appendChild(iframe);
+          }
+        }
+      } else {
+        // Cache the iframe off-screen when not on preview tab
+        const cached = document.getElementById('cached-preview-frame');
+        if (cached && cached.parentNode) cached.remove();
+      }
+
       renderStatusStrip();
       renderValidationPanel();
     }
@@ -2723,7 +2897,7 @@
       const collapsed = state.collapsedQuestions.has(index);
       const summary = `${(question.question || 'Untitled question').slice(0, 90)}${(question.question || '').length > 90 ? '…' : ''}`;
       return `
-        <div class="editor-card ${collapsed ? 'collapsed' : ''}">
+        <div class="editor-card ${collapsed ? 'collapsed' : ''}" data-qidx="${index}">
           <div class="editor-card-header">
             <div>
               <div class="editor-card-title">Question ${index + 1}</div>
@@ -2879,6 +3053,8 @@
       }, 350);
     }
 
+    let _editorDebounceTimer;
+
     function syncQuizBankEditor() {
       if (!state.currentData) return;
       const meta = state.currentData.meta;
@@ -2906,13 +3082,18 @@
       meta.icon = meta.type === 'bank' ? icon : undefined;
       meta.questions = questions;
       meta.question_count = questions.length;
-      const configName = meta.type === 'bank' ? 'BANK_CONFIG' : 'QUIZ_CONFIG';
-      const arrayName = meta.type === 'bank' ? 'QUESTION_BANK' : 'QUESTIONS';
-      let updated = state.currentData.content;
-      updated = replaceAssignedBlock(updated, configName, '{', '}', meta.config);
-      updated = replaceAssignedBlock(updated, arrayName, '[', ']', questions);
-      state.currentData.content = updated;
-      updateRawAndMeta();
+      // Debounce the expensive serialization + content string rebuild
+      clearTimeout(_editorDebounceTimer);
+      _editorDebounceTimer = setTimeout(() => {
+        if (!state.currentData) return;
+        const configName = meta.type === 'bank' ? 'BANK_CONFIG' : 'QUIZ_CONFIG';
+        const arrayName = meta.type === 'bank' ? 'QUESTION_BANK' : 'QUESTIONS';
+        let updated = state.currentData.content;
+        updated = replaceAssignedBlock(updated, configName, '{', '}', meta.config);
+        updated = replaceAssignedBlock(updated, arrayName, '[', ']', questions);
+        state.currentData.content = updated;
+        updateRawAndMeta();
+      }, 200);
     }
 
     function syncIndexEditor() {
@@ -2940,41 +3121,51 @@
       meta.description = description;
       meta.quizzes = cards;
       meta.question_count = cards.length;
-      let updated = state.currentData.content;
-      updated = replaceAssignedBlock(updated, 'QUIZZES', '[', ']', cards);
-      if (title) {
-        updated = updated.replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(title)}</title>`);
-        updated = updated.replace(/<div class="topbar-title">[\s\S]*?<\/div>/i, `<div class="topbar-title">${escapeHtml(title)}</div>`);
-      }
-      const heroPattern = /<header class="hero">[\s\S]*?<\/header>/i;
-      if (heroPattern.test(updated)) {
-        updated = updated.replace(
-          heroPattern,
-          `<header class="hero">\n      <h1>${heroTitle}</h1>\n      <p>${escapeHtml(description)}</p>\n    </header>`
-        );
-      }
-      state.currentData.content = updated;
-      updateRawAndMeta();
+      clearTimeout(_editorDebounceTimer);
+      _editorDebounceTimer = setTimeout(() => {
+        if (!state.currentData) return;
+        let updated = state.currentData.content;
+        updated = replaceAssignedBlock(updated, 'QUIZZES', '[', ']', cards);
+        if (title) {
+          updated = updated.replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(title)}</title>`);
+          updated = updated.replace(/<div class="topbar-title">[\s\S]*?<\/div>/i, `<div class="topbar-title">${escapeHtml(title)}</div>`);
+        }
+        const heroPattern = /<header class="hero">[\s\S]*?<\/header>/i;
+        if (heroPattern.test(updated)) {
+          updated = updated.replace(
+            heroPattern,
+            `<header class="hero">\n      <h1>${heroTitle}</h1>\n      <p>${escapeHtml(description)}</p>\n    </header>`
+          );
+        }
+        state.currentData.content = updated;
+        updateRawAndMeta();
+      }, 200);
     }
 
     function toggleQuestionCollapse(index) {
-      if (state.collapsedQuestions.has(index)) state.collapsedQuestions.delete(index);
-      else state.collapsedQuestions.add(index);
-      renderFilePanel();
-      setTab('editor');
+      if (state.collapsedQuestions.has(index)) {
+        state.collapsedQuestions.delete(index);
+      } else {
+        state.collapsedQuestions.add(index);
+      }
+      const card = document.querySelector(`.editor-card[data-qidx="${index}"]`);
+      if (card) {
+        card.classList.toggle('collapsed', state.collapsedQuestions.has(index));
+      } else {
+        renderFilePanel();
+        setTab('editor');
+      }
     }
 
     function collapseAllQuestions() {
       const count = state.currentData?.meta?.questions?.length || 0;
       state.collapsedQuestions = new Set(Array.from({ length: count }, (_value, index) => index));
-      renderFilePanel();
-      setTab('editor');
+      document.querySelectorAll('.editor-card').forEach(card => card.classList.add('collapsed'));
     }
 
     function expandAllQuestions() {
       state.collapsedQuestions = new Set();
-      renderFilePanel();
-      setTab('editor');
+      document.querySelectorAll('.editor-card').forEach(card => card.classList.remove('collapsed'));
     }
 
     function moveQuestion(index, delta) {
@@ -4546,31 +4737,69 @@
 
     function setupKeyboard() {
       window.addEventListener('keydown', (event) => {
-        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
-          if (state.currentFile) {
-            event.preventDefault();
-            saveFile();
-          }
+        const ctrl = event.ctrlKey || event.metaKey;
+        const key = event.key;
+        const tag = document.activeElement?.tagName?.toLowerCase();
+
+        // Ctrl+S — Save
+        if (ctrl && key.toLowerCase() === 's' && state.currentFile) {
+          event.preventDefault();
+          saveFile();
           return;
         }
-        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        // Ctrl+K — Quick Open
+        if (ctrl && key.toLowerCase() === 'k') {
           event.preventDefault();
           openQuickOpenModal();
           return;
         }
-        if (event.key === 'Escape' && state.modalOpen) {
-          closeModal();
+        // Ctrl+E — Editor tab
+        if (ctrl && key.toLowerCase() === 'e') {
+          event.preventDefault();
+          if (state.currentData) setTab('editor');
           return;
         }
-        if (event.key === 'Escape' && state.contextMenu) {
-          closeContextMenu();
+        // Ctrl+P — Preview tab
+        if (ctrl && key.toLowerCase() === 'p') {
+          event.preventDefault();
+          if (state.currentData) setTab('preview');
           return;
         }
-        if (event.key === '/' && !state.modalOpen) {
-          const tag = document.activeElement?.tagName?.toLowerCase();
-          if (!['input', 'textarea', 'select'].includes(tag)) {
-            event.preventDefault();
-            document.getElementById('file-search')?.focus();
+        // Ctrl+Shift+F — Cycle filter
+        if (ctrl && event.shiftKey && key.toLowerCase() === 'f') {
+          event.preventDefault();
+          const idx = FILTERS.findIndex(f => f.key === state.filter);
+          setFilter(FILTERS[(idx + 1) % FILTERS.length].key);
+          return;
+        }
+        // N — New file (when not in input/textarea)
+        if (key.toLowerCase() === 'n' && !ctrl && !['input', 'textarea', 'select'].includes(tag) && !state.modalOpen) {
+          event.preventDefault();
+          openCreateModal();
+          return;
+        }
+        // Escape — Close modals / context menus
+        if (key === 'Escape') {
+          if (state.modalOpen) { closeModal(); return; }
+          if (state.contextMenu) { closeContextMenu(); return; }
+        }
+        // / — Focus search
+        if (key === '/' && !state.modalOpen && !['input', 'textarea', 'select'].includes(tag)) {
+          event.preventDefault();
+          document.getElementById('file-search')?.focus();
+          return;
+        }
+        // ↑/↓ — Navigate tree items (when search is focused)
+        if ((key === 'ArrowDown' || key === 'ArrowUp') && document.activeElement?.id === 'file-search') {
+          event.preventDefault();
+          const rows = document.querySelectorAll('.tree-row');
+          if (!rows.length) return;
+          const active = document.querySelector('.tree-row.active');
+          let idx = active ? Array.from(rows).indexOf(active) : -1;
+          idx = key === 'ArrowDown' ? Math.min(idx + 1, rows.length - 1) : Math.max(idx - 1, 0);
+          if (idx >= 0) {
+            rows[idx].scrollIntoView({ block: 'nearest' });
+            rows[idx].click();
           }
         }
       });
@@ -4596,13 +4825,20 @@
     async function boot() {
       restoreTheme();
       restoreSidebar();
+      restoreDensity();
       setupKeyboard();
       initTauriDragDrop();
       renderActivity();
       await refreshWorkspace({ preserveCurrent: false });
 
+      // Listen for file-change events from Rust (replaces polling)
+      try {
+        window.__TAURI__?.event?.listen?.('files-changed', () => {
+          pollWorkspace();
+        });
+      } catch (_) {}
+      // Fallback: still poll when window gains focus (for external edits)
       window.addEventListener('focus', () => pollWorkspace());
-      setInterval(() => { if(document.hasFocus()) pollWorkspace(); }, 3000);
       const lastFile = localStorage.getItem('admin-last-file');
       if (lastFile && state.files.some(file => file.path === lastFile)) {
         await loadFile(lastFile, { silent: true });
