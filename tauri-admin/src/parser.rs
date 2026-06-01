@@ -232,7 +232,7 @@ fn mk_warn(msg: &str, field: &str, code: &str, idx: Option<usize>) -> Validation
     ValidationIssue { level: "warning".into(), message: msg.to_string(), field: field.to_string(), code: Some(code.to_string()), index: idx }
 }
 
-fn validate_question_list(questions: &Value, prefix: &str) -> Vec<ValidationIssue> {
+fn validate_question_list(questions: &Value, prefix: &str, is_flashcard: bool) -> Vec<ValidationIssue> {
     let mut issues = Vec::new();
     let arr = match questions.as_array() {
         Some(a) => a,
@@ -242,16 +242,23 @@ fn validate_question_list(questions: &Value, prefix: &str) -> Vec<ValidationIssu
         issues.push(mk_warn("This file has no questions yet.", prefix, "questions_empty", None));
         return issues;
     }
-    for (i, q) in arr.iter().enumerate() {
-        let text = q.get("question").and_then(|v| v.as_str()).unwrap_or("").trim().to_string();
-        let opts: Vec<String> = q.get("options").and_then(|v| v.as_array())
-            .map(|a| a.iter().map(|o| o.as_str().unwrap_or("").trim().to_string()).collect())
-            .unwrap_or_default();
-        let correct = q.get("correct").and_then(|v| v.as_i64()).unwrap_or(0) as usize;
-        if text.is_empty() { issues.push(mk_err(&format!("Question {} is missing its prompt.", i+1), &format!("{}.{}.question", prefix, i), "question_missing_text", Some(i))); }
-        if opts.len() < 2 { issues.push(mk_err(&format!("Question {} needs at least 2 options.", i+1), &format!("{}.{}.options", prefix, i), "question_too_few_options", Some(i))); }
-        else if opts.iter().any(|o| o.is_empty()) { issues.push(mk_warn(&format!("Question {} has blank option text.", i+1), &format!("{}.{}.options", prefix, i), "question_blank_option", Some(i))); }
-        if correct >= opts.len().max(1) { issues.push(mk_err(&format!("Question {} has an invalid correct answer.", i+1), &format!("{}.{}.correct", prefix, i), "question_invalid_correct", Some(i))); }
+    if is_flashcard {
+        for (i, q) in arr.iter().enumerate() {
+            let front = q.get("front").and_then(|v| v.as_str()).unwrap_or("").trim().to_string();
+            if front.is_empty() { issues.push(mk_err(&format!("Card {} is missing front text.", i+1), &format!("{}.{}.front", prefix, i), "card_missing_front", Some(i))); }
+        }
+    } else {
+        for (i, q) in arr.iter().enumerate() {
+            let text = q.get("question").and_then(|v| v.as_str()).unwrap_or("").trim().to_string();
+            let opts: Vec<String> = q.get("options").and_then(|v| v.as_array())
+                .map(|a| a.iter().map(|o| o.as_str().unwrap_or("").trim().to_string()).collect())
+                .unwrap_or_default();
+            let correct = q.get("correct").and_then(|v| v.as_i64()).unwrap_or(0) as usize;
+            if text.is_empty() { issues.push(mk_err(&format!("Question {} is missing its prompt.", i+1), &format!("{}.{}.question", prefix, i), "question_missing_text", Some(i))); }
+            if opts.len() < 2 { issues.push(mk_err(&format!("Question {} needs at least 2 options.", i+1), &format!("{}.{}.options", prefix, i), "question_too_few_options", Some(i))); }
+            else if opts.iter().any(|o| o.is_empty()) { issues.push(mk_warn(&format!("Question {} has blank option text.", i+1), &format!("{}.{}.options", prefix, i), "question_blank_option", Some(i))); }
+            if correct >= opts.len().max(1) { issues.push(mk_err(&format!("Question {} has an invalid correct answer.", i+1), &format!("{}.{}.correct", prefix, i), "question_invalid_correct", Some(i))); }
+        }
     }
     issues
 }
@@ -267,15 +274,15 @@ pub fn validate_dashboard_content(_rel_path: &str, content: &str, original_uid: 
             let uid = meta.uid.as_deref().unwrap_or("").trim().to_string();
             if uid.is_empty() { issues.push(mk_err("Quiz UID is required.", "uid", "uid_missing", None)); }
             else if !original_uid.is_empty() && original_uid != uid { issues.push(mk_warn("UID changed from the saved file. This can orphan learner progress.", "uid", "uid_changed", None)); }
-            if let Some(ref q) = meta.questions { issues.extend(validate_question_list(q, "questions")); }
+            if let Some(ref q) = meta.questions { issues.extend(validate_question_list(q, "questions", false)); }
         }
         FileType::Bank => {
             if !content.contains("/* [BANK_CONFIG_START] */") { issues.push(mk_err("Bank config markers are missing.", "config", "bank_config_markers", None)); }
             if !content.contains("/* [QUESTION_BANK_START] */") { issues.push(mk_err("Question bank markers are missing.", "questions", "bank_question_markers", None)); }
             let uid = meta.uid.as_deref().unwrap_or("").trim().to_string();
             if uid.is_empty() { issues.push(mk_err("Bank UID is required.", "uid", "uid_missing", None)); }
-            else if !original_uid.is_empty() && original_uid != uid { issues.push(mk_warn("UID changed from saved file. This can orphan learner progress.", "uid", "uid_changed", None)); }
-            if let Some(ref q) = meta.questions { issues.extend(validate_question_list(q, "questions")); }
+            else if !original_uid.is_empty() && original_uid != uid { issues.push(mk_warn("UID changed from the saved file. This can orphan learner progress.", "uid", "uid_changed", None)); }
+            if let Some(ref q) = meta.questions { issues.extend(validate_question_list(q, "questions", false)); }
         }
         FileType::Flashcard => {
             if !content.contains("/* [FLASHCARD_CONFIG_START] */") { issues.push(mk_err("Flashcard config markers are missing.", "config", "flashcard_config_markers", None)); }
@@ -283,7 +290,7 @@ pub fn validate_dashboard_content(_rel_path: &str, content: &str, original_uid: 
             let uid = meta.uid.as_deref().unwrap_or("").trim().to_string();
             if uid.is_empty() { issues.push(mk_err("Flashcard UID is required.", "uid", "uid_missing", None)); }
             else if !original_uid.is_empty() && original_uid != uid { issues.push(mk_warn("UID changed from the saved file. This can orphan learner progress.", "uid", "uid_changed", None)); }
-            if let Some(ref q) = meta.questions { issues.extend(validate_question_list(q, "questions")); }
+            if let Some(ref q) = meta.questions { issues.extend(validate_question_list(q, "questions", true)); }
         }
         FileType::Index => {
             if meta.quizzes.as_ref().and_then(|v| v.as_array()).is_none() {
