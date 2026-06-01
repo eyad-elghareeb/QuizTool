@@ -1494,6 +1494,7 @@
       { key: 'all', label: 'All' },
       { key: 'quiz', label: 'Quiz' },
       { key: 'bank', label: 'Bank' },
+      { key: 'flashcard', label: 'Flashcard' },
       { key: 'index', label: 'Index' },
       { key: 'html', label: 'Other HTML' },
     ];
@@ -2406,6 +2407,7 @@
       openContextMenu(event, folderPath === '.' ? 'Root actions' : `${folderPath} actions`, [
         { label: 'New Quiz Here', onclick: `closeContextMenu(); openNewFileWizard({ folder: '${escapeHtml(folderPath)}', type: 'quiz' })` },
         { label: 'New Bank Here', onclick: `closeContextMenu(); openNewFileWizard({ folder: '${escapeHtml(folderPath)}', type: 'bank' })` },
+        { label: 'New Flashcard Deck Here', onclick: `closeContextMenu(); openNewFileWizard({ folder: '${escapeHtml(folderPath)}', type: 'flashcard' })` },
         { label: 'New Folder Here', onclick: `closeContextMenu(); openNewFolderModal('${escapeHtml(folderPath)}')` },
         state.currentFile ? { label: 'Duplicate Active File Here', onclick: `closeContextMenu(); openDuplicateModal('${escapeHtml(folderPath)}')` } : null,
       ]);
@@ -2416,6 +2418,7 @@
       openContextMenu(event, folderPath === '.' ? 'Root folder' : folderPath, [
         { label: 'New Quiz Here', onclick: `closeContextMenu(); openNewFileWizard({ folder: '${escapeHtml(folderPath)}', type: 'quiz' })` },
         { label: 'New Bank Here', onclick: `closeContextMenu(); openNewFileWizard({ folder: '${escapeHtml(folderPath)}', type: 'bank' })` },
+        { label: 'New Flashcard Deck Here', onclick: `closeContextMenu(); openNewFileWizard({ folder: '${escapeHtml(folderPath)}', type: 'flashcard' })` },
         { label: 'New Folder Here', onclick: `closeContextMenu(); openNewFolderModal('${escapeHtml(folderPath)}')` },
         state.currentFile ? { label: 'Duplicate Active File Here', onclick: `closeContextMenu(); openDuplicateModal('${escapeHtml(folderPath)}')` } : null,
         { divider: true },
@@ -2455,6 +2458,7 @@
         { label: 'Duplicate', onclick: `closeContextMenu(); openDuplicateModal('', '${escapeHtml(filePath)}')` },
         { label: 'Move/Rename', onclick: `closeContextMenu(); requestLoadFile('${escapeHtml(filePath)}', { afterLoadAction: 'openMoveModal' })` },
         (file?.type === 'quiz' || file?.type === 'bank') ? { label: 'Convert Quiz/Bank', onclick: `closeContextMenu(); requestLoadFile('${escapeHtml(filePath)}', { afterLoadAction: 'convertFile' })` } : null,
+        file?.type === 'flashcard' ? { label: 'Convert to Quiz', onclick: `closeContextMenu(); requestLoadFile('${escapeHtml(filePath)}', { afterLoadAction: 'convertFile' })` } : null,
         { divider: true },
         { label: 'Copy Path', onclick: `closeContextMenu(); copyTextValue('${escapeHtml(filePath)}', 'Path')` },
         { label: 'Delete', danger: true, onclick: `closeContextMenu(); requestLoadFile('${escapeHtml(filePath)}', { afterLoadAction: 'openDeleteModal' })` },
@@ -2822,7 +2826,7 @@
     }
 
     function renderStructuredEditor(meta) {
-      if (meta.type === 'quiz' || meta.type === 'bank') {
+      if (meta.type === 'quiz' || meta.type === 'bank' || meta.type === 'flashcard') {
         return renderQuizBankEditor(meta);
       }
       if (meta.type === 'index') {
@@ -2844,7 +2848,8 @@
     }
 
     function renderQuizBankEditor(meta) {
-      const isBank = meta.type === 'bank';
+      const isBank = meta.type === 'bank' || meta.type === 'flashcard';
+      const isFlashcard = meta.type === 'flashcard';
       const questions = meta.questions || [];
       const topFields = `
         <div class="editor-grid">
@@ -2874,8 +2879,8 @@
         ${topFields}
           <div class="panel-grid">
             ${renderMetaCard('Questions', questions.length)}
-            ${renderMetaCard('Mode', isBank ? 'Bank' : 'Quiz')}
-            ${renderMetaCard('Engine', isBank ? 'bank-engine.js' : 'quiz-engine.js')}
+            ${renderMetaCard('Mode', isFlashcard ? 'Flashcard' : (isBank ? 'Bank' : 'Quiz'))}
+            ${renderMetaCard('Engine', isFlashcard ? 'flashcard-engine.js' : (isBank ? 'bank-engine.js' : 'quiz-engine.js'))}
           </div>
           <div class="editor-toolbar">
             <div class="muted">Collapse large banks to scan and reorder them faster.</div>
@@ -3624,9 +3629,10 @@
     function renderNewFileModal() {
       const wizard = collectWizardState();
       state.wizard = wizard;
-      const isBank = wizard.type === 'bank';
+      const isBank = wizard.type === 'bank' || wizard.type === 'flashcard';
+      const isFlashcard = wizard.type === 'flashcard';
       const cloneOptions = state.files
-        .filter(file => file.type === 'quiz' || file.type === 'bank')
+        .filter(file => file.type === 'quiz' || file.type === 'bank' || file.type === 'flashcard')
         .map(file => `<option value="${escapeHtml(file.path)}" ${file.path === wizard.clonePath ? 'selected' : ''}>${escapeHtml(file.title)} (${escapeHtml(file.path)})</option>`)
         .join('');
       
@@ -3671,7 +3677,7 @@
         }).join('');
       }
 
-      const filteredFiles = state.files.filter(file => file.type === 'quiz' || file.type === 'bank');
+      const filteredFiles = state.files.filter(file => file.type === 'quiz' || file.type === 'bank' || file.type === 'flashcard');
       const combineTreeData = buildTreeFromFiles(filteredFiles);
       const combineChecklist = `<ul style="padding: 0; margin: 0; list-style-type: none; display: grid; gap: 0.4rem;">${renderCombineTreeLevel(combineTreeData) || '<div class="muted" style="padding: 0.5rem;">No quizzes found in this project.</div>'}</ul>`;
       
@@ -3689,6 +3695,7 @@
                   <select class="select-input" id="file-type" onchange="onFileTypeChange(); syncWizardSummary()">
                     <option value="quiz" ${wizard.type === 'quiz' ? 'selected' : ''}>Quiz</option>
                     <option value="bank" ${wizard.type === 'bank' ? 'selected' : ''}>Question Bank</option>
+                    <option value="flashcard" ${wizard.type === 'flashcard' ? 'selected' : ''}>Flashcard Deck</option>
                   </select>
                 </div>
                 <div class="field">
@@ -3708,8 +3715,8 @@
                   <input class="text-input" id="file-name" value="${escapeHtml(wizard.filename)}" placeholder="Auto: ${escapeHtml(slugifyClient(wizard.title || 'untitled'))}" oninput="syncWizardSummary()">
                 </div>
                 <div class="field" id="bank-icon-wrap" style="display:${isBank ? 'grid' : 'none'};">
-                  <label>Bank Icon</label>
-                  <input class="text-input" id="file-icon" value="${escapeHtml(wizard.icon || '🗃️')}" oninput="syncWizardSummary()">
+                  <label>${isFlashcard ? 'Icon' : 'Bank Icon'}</label>
+                  <input class="text-input" id="file-icon" value="${escapeHtml(wizard.icon || (isFlashcard ? '🃏' : '🗃️'))}" oninput="syncWizardSummary()">
                 </div>
               </div>
               <div class="modal-actions">
@@ -3787,7 +3794,7 @@
         </div>
       `;
       openModal({
-        title: 'Create New Quiz or Bank',
+        title: 'Create New Quiz, Bank, or Flashcard',
         subtitle: 'Use import helpers and folder-aware defaults to build files faster.',
         body,
         onOpen: () => syncWizardSummary(),
@@ -3834,7 +3841,11 @@
     function onFileTypeChange() {
       const type = document.getElementById('file-type').value;
       const wrap = document.getElementById('bank-icon-wrap');
-      if (wrap) wrap.style.display = type === 'bank' ? 'grid' : 'none';
+      if (wrap) wrap.style.display = (type === 'bank' || type === 'flashcard') ? 'grid' : 'none';
+      const iconInput = document.getElementById('file-icon');
+      if (iconInput && !iconInput.value) {
+        iconInput.value = type === 'flashcard' ? '🃏' : '🗃️';
+      }
     }
 
     function renderModalQuestionList() {

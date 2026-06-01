@@ -15,6 +15,7 @@ fn main() {
     let files_to_copy = [
         "quiz-engine.js",
         "bank-engine.js",
+        "flashcard-engine.js",
         "index-engine.js",
         "index-engine.css",
         "sync-engine.js",

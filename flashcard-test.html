@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+(function(){var t=localStorage.getItem('flashcard-theme')||'dark';var s=document.createElement('style');s.textContent='html,body{background:'+(t==='light'?'#f3f0eb':'#0d1117')+';color:'+(t==='light'?'#1c1917':'#e6edf3')+';margin:0;padding:0;overflow:hidden;height:100%}';document.head.appendChild(s)})();
+</script>
+<title>Flashcard Test Deck</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="favicon.svg">
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
+</script>
+</head>
+<body>
+<script>
+/* [FLASHCARD_CONFIG_START] */
+var BANK_CONFIG = {
+  uid: "flashcard_test_deck_001",
+  title: "Comprehensive Test Deck",
+  description: "Tests all card types: basic, cloze, multi-cloze, long content, images, and edge cases.",
+  icon: "🧪"
+};
+/* [FLASHCARD_CONFIG_END] */
+
+/* [FLASHCARD_BANK_START] */
+var FLASHCARD_BANK = [
+  // ── Basic Cards ──────────────────────────────────────────────
+  {
+    type: "basic",
+    front: "What is the powerhouse of the cell?",
+    back: "Mitochondria — the organelle responsible for ATP production through oxidative phosphorylation.",
+    tags: ["biology", "cell-biology"],
+    id: "basic-001"
+  },
+  {
+    type: "basic",
+    front: "What does DNA stand for?",
+    back: "Deoxyribonucleic Acid — the molecule that carries genetic instructions for development, functioning, growth, and reproduction.",
+    tags: ["biology", "genetics"],
+    id: "basic-002"
+  },
+  {
+    type: "basic",
+    front: "What is the largest organ in the human body?",
+    back: "The skin (integumentary system) — adult skin covers approximately 1.5–2 square meters.",
+    tags: ["anatomy"],
+    id: "basic-003"
+  },
+  {
+    type: "basic",
+    front: "What is Newton's First Law of Motion?",
+    back: "An object at rest stays at rest and an object in motion stays in motion with the same speed and in the same direction unless acted upon by an unbalanced force (Law of Inertia).",
+    tags: ["physics", "mechanics"],
+    id: "basic-004"
+  },
+
+  // ── Large Content Card (tests scroll/large-text class) ───────
+  {
+    type: "basic",
+    front: "Describe the entire process of cellular respiration including glycolysis, the Krebs cycle, and the electron transport chain.",
+    back: "Cellular respiration has three main stages:\n\n1. Glycolysis (cytoplasm): Glucose (6C) → 2 Pyruvate (3C) + 2 ATP + 2 NADH. No oxygen required.\n\n2. Krebs Cycle (mitochondrial matrix): Pyruvate → Acetyl-CoA → enters cycle. Produces 2 ATP, 6 NADH, 2 FADH₂, and releases CO₂.\n\n3. Electron Transport Chain (inner mitochondrial membrane): NADH and FADH₂ donate electrons. Oxygen is the final electron acceptor. Produces ~34 ATP via chemiosmosis.\n\nTotal yield: ~36–38 ATP per glucose molecule.",
+    tags: ["biology", "biochemistry", "detailed"],
+    id: "basic-005"
+  },
+
+  // ── Single Cloze ─────────────────────────────────────────────
+  {
+    type: "cloze",
+    text: "The {{c1::mitochondria}} is the powerhouse of the cell.",
+    tags: ["biology"],
+    id: "cloze-001"
+  },
+  {
+    type: "cloze",
+    text: "Blood is pumped by the {{c1::heart}} through the {{c2::circulatory system}} to deliver oxygen and nutrients.",
+    tags: ["anatomy", "cardiology"],
+    id: "cloze-002"
+  },
+
+  // ── Multi-Cloze (3–5 deletions) ──────────────────────────────
+  {
+    type: "cloze",
+    text: "The {{c1::nephron}} is the functional unit of the {{c2::kidney}}. It consists of the {{c3::glomerulus}} and the {{c4::tubule}} system, which filters blood and produces {{c5::urine}}.",
+    tags: ["anatomy", "renal"],
+    id: "cloze-003"
+  },
+  {
+    type: "cloze",
+    text: "In {{c1::photosynthesis}}, plants convert {{c2::carbon dioxide}} and {{c3::water}} into {{c4::glucose}} and {{c5::oxygen}} using sunlight energy captured by {{c6::chlorophyll}}.",
+    tags: ["biology", "botany"],
+    id: "cloze-004"
+  },
+  {
+    type: "cloze",
+    text: "The {{c1::cerebrum}} is the largest part of the {{c2::brain}}, divided into {{c3::left}} and {{c4::right}} hemispheres connected by the {{c5::corpus callosum}}. Each hemisphere has four lobes: {{c6::frontal}}, {{c7::parietal}}, {{c8::temporal}}, and {{c9::occipital}}.",
+    tags: ["anatomy", "neuroanatomy"],
+    id: "cloze-005"
+  },
+
+  // ── Edge Cases ───────────────────────────────────────────────
+  {
+    type: "basic",
+    front: "42",
+    back: "The answer to the ultimate question of life, the universe, and everything.",
+    tags: ["trivia", "hitchhikers"],
+    id: "edge-001"
+  },
+  {
+    type: "basic",
+    front: "Short Q?",
+    back: "Yes.",
+    tags: ["minimal"],
+    id: "edge-002"
+  },
+  {
+    type: "cloze",
+    text: "A {{c1::single}} deletion test.",
+    tags: ["cloze-single"],
+    id: "cloze-edge-001"
+  },
+  {
+    type: "cloze",
+    text: "The {{c1::cardiac cycle}} consists of two main phases:\n1. {{c2::Systole}} — contraction phase where the heart pumps blood out\n2. {{c3::Diastole}} — relaxation phase where the heart fills with blood\n\nThe {{c4::SA node}} acts as the natural pacemaker, initiating each cycle.\nHeart rate is measured in {{c5::beats per minute}} (bpm).",
+    tags: ["cloze-single"],
+    id: "cloze-edge-001"
+  },
+  {
+    type: "basic",
+    front: "What are the four fundamental forces of nature?",
+    back: "1. Gravitational force\n2. Electromagnetic force\n3. Strong nuclear force\n4. Weak nuclear force\n\nThe strong force holds atomic nuclei together while the weak force is responsible for radioactive decay.",
+    tags: ["physics", "fundamental"],
+    id: "basic-006"
+  },
+  {
+    type: "basic",
+    front: "What is the primary function of red blood cells (erythrocytes)?",
+    back: "Erythrocytes transport oxygen from the lungs to tissues and carbon dioxide from tissues back to the lungs. They contain hemoglobin, an iron-containing protein that binds oxygen. Mature red blood cells lack a nucleus and mitochondria, lasting approximately 120 days in circulation before being broken down in the spleen.",
+    tags: ["physiology", "hematology"],
+    id: "basic-007"
+  }
+];
+/* [FLASHCARD_BANK_END] */
+</script>
+<script>
+(function () {
+  window.__FLASHCARD_ENGINE_BASE = '../'.repeat(
+    Math.max(0, location.pathname.split('/').filter(Boolean).length - 2)
+  );
+  document.write('<scr' + 'ipt src="' + window.__FLASHCARD_ENGINE_BASE + 'flashcard-engine.js"><\/scr' + 'ipt>');
+})();
+</script>
+</body>
+</html>

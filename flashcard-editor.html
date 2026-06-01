@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flashcard Editor — QuizTool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:         #0d1117;
+  --surface:    #161b22;
+  --surface2:   #1c2330;
+  --border:     #30363d;
+  --text:       #e6edf3;
+  --text-muted: #8b949e;
+  --accent:     #f0a500;
+  --accent-dim: rgba(240,165,0,0.12);
+  --correct:    #2ea043;
+  --correct-bg: rgba(46,160,67,0.12);
+  --wrong:      #da3633;
+  --wrong-bg:   rgba(218,54,51,0.12);
+  --radius:     12px;
+  --shadow:     0 4px 24px rgba(0,0,0,0.4);
+  --transition: 0.2s ease;
+}
+[data-theme="light"] {
+  --bg:         #f3f0eb;
+  --surface:    #ffffff;
+  --surface2:   #f8f6f1;
+  --border:     #d0ccc5;
+  --text:       #1c1917;
+  --text-muted: #78716c;
+  --accent:     #c27803;
+  --accent-dim: rgba(194,120,3,0.10);
+  --correct:    #16a34a;
+  --correct-bg: rgba(22,163,74,0.10);
+  --wrong:      #dc2626;
+  --wrong-bg:   rgba(220,38,38,0.10);
+  --shadow:     0 4px 24px rgba(0,0,0,0.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; transition: background var(--transition), color var(--transition); }
+.container { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
+.topbar { display: flex; align-items: center; padding: 0.75rem 1.5rem; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; }
+.topbar-title { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; flex: 1; }
+.back-btn { display: flex; align-items: center; gap: 0.5rem; color: var(--text-muted); text-decoration: none; font-weight: 600; transition: color var(--transition); }
+.back-btn:hover { color: var(--text); }
+.icon-btn { width: 36px; height: 36px; border-radius: 8px; background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--text-muted); transition: all var(--transition); font-size: 1rem; cursor: pointer; }
+.icon-btn:hover { color: var(--text); border-color: var(--accent); }
+h1 { font-family: 'Playfair Display', serif; font-size: clamp(1.8rem, 4vw, 2.5rem); margin-bottom: 0.5rem; text-align: center; }
+h1 span { color: var(--accent); }
+.header { text-align: center; margin-bottom: 2.5rem; }
+.header p { color: var(--text-muted); font-size: 1rem; }
+.stats-bar { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+.stat-item { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.75rem 1.25rem; text-align: center; flex: 1; min-width: 120px; }
+.stat-item .sv { font-size: 1.5rem; font-weight: 700; color: var(--accent); display: block; }
+.stat-item .sl { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.tabs { display: flex; gap: 0.5rem; margin-bottom: 2rem; flex-wrap: wrap; }
+.tab-btn { padding: 0.6rem 1.2rem; border-radius: var(--radius); background: var(--surface); border: 1.5px solid var(--border); color: var(--text-muted); font-size: 0.9rem; font-weight: 500; transition: all var(--transition); cursor: pointer; }
+.tab-btn:hover { border-color: var(--accent); color: var(--accent); }
+.tab-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+.section { display: none; }
+.section.active { display: block; }
+.form-group { margin-bottom: 1.5rem; }
+label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--text); }
+input, textarea, select { width: 100%; padding: 0.85rem 1rem; border-radius: var(--radius); border: 1.5px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 1rem; transition: all var(--transition); }
+input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+textarea { resize: vertical; min-height: 80px; }
+.hint { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.4rem; }
+.card-entry { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.5rem; position: relative; }
+.card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.card-number { position: absolute; top: -12px; left: 1rem; background: var(--accent); color: #000; font-weight: 700; padding: 0.2rem 0.75rem; border-radius: 6px; font-size: 0.8rem; }
+.delete-btn { background: var(--wrong-bg); border: 1px solid var(--wrong); color: var(--wrong); padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.8rem; }
+.delete-btn:hover { background: var(--wrong); color: #fff; }
+.btn-add { width: 100%; padding: 1rem; border: 2px dashed var(--border); background: transparent; color: var(--text-muted); border-radius: var(--radius); cursor: pointer; font-weight: 600; font-size: 1rem; transition: all var(--transition); margin-bottom: 1.5rem; }
+.btn-add:hover { border-color: var(--accent); color: var(--accent); }
+.btn-primary { width: 100%; padding: 1rem; border-radius: var(--radius); background: var(--accent); color: #000; font-weight: 700; font-size: 1rem; border: none; cursor: pointer; transition: opacity var(--transition); }
+.btn-primary:hover { opacity: 0.88; }
+.btn-secondary { padding: 0.85rem 1.5rem; border-radius: var(--radius); background: var(--surface); border: 1.5px solid var(--border); color: var(--text); font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: all var(--transition); }
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+.preview-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-top: 1.5rem; }
+.preview-panel h3 { margin-bottom: 1rem; font-family: 'Playfair Display', serif; }
+.preview-panel pre { max-height: 400px; overflow: auto; padding: 1rem; background: var(--surface2); border-radius: 8px; font-family: monospace; font-size: 0.85rem; white-space: pre-wrap; }
+.preview-actions { display: flex; gap: 1rem; margin-top: 1rem; flex-wrap: wrap; }
+.import-dropzone { border: 2px dashed var(--border); border-radius: var(--radius); padding: 3rem 2rem; text-align: center; color: var(--text-muted); transition: all var(--transition); cursor: pointer; }
+.import-dropzone:hover, .import-dropzone.dragover { border-color: var(--accent); background: var(--accent-dim); }
+.import-dropzone svg { width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.5; }
+.type-select-row { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+.type-option { flex: 1; padding: 0.5rem; border-radius: 8px; border: 1.5px solid var(--border); background: var(--surface2); color: var(--text-muted); font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all var(--transition); text-align: center; }
+.type-option:hover { border-color: var(--accent); color: var(--accent); }
+.type-option.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+.toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.75rem 1.5rem; font-size: 0.95rem; font-weight: 500; box-shadow: var(--shadow); z-index: 9999; transition: transform 0.3s ease; white-space: nowrap; }
+.toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="favicon.svg">
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
+</script>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="#" onclick="navigateBack(event)" class="back-btn">← Back</a>
+  <div class="topbar-title">🃏 Flashcard Editor</div>
+  <button class="icon-btn" onclick="toggleTheme()" id="theme-toggle" title="Toggle theme">☀</button>
+</div>
+
+<div class="container">
+  <header class="header">
+    <h1>Edit Your <span>Flashcard Deck</span></h1>
+    <p>Upload an HTML flashcard deck file, edit cards, then export</p>
+  </header>
+
+  <div class="stats-bar">
+    <div class="stat-item">
+      <span class="sv" id="stat-cards">0</span>
+      <span class="sl">Cards</span>
+    </div>
+    <div class="stat-item">
+      <span class="sv" id="stat-title">Untitled</span>
+      <span class="sl">Title</span>
+    </div>
+    <div class="stat-item">
+      <span class="sv" id="stat-basic">0</span>
+      <span class="sl">Basic</span>
+    </div>
+    <div class="stat-item">
+      <span class="sv" id="stat-cloze">0</span>
+      <span class="sl">Cloze</span>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('config')">⚙️ Config</button>
+    <button class="tab-btn" onclick="switchTab('cards')">🃏 Cards</button>
+    <button class="tab-btn" onclick="switchTab('import')">📥 Import</button>
+    <button class="tab-btn" onclick="switchTab('export')">💾 Export</button>
+  </div>
+
+  <div class="section active" id="tab-config">
+    <div class="form-group">
+      <label for="cfg-uid">Deck UID</label>
+      <input type="text" id="cfg-uid" placeholder="e.g., my-deck-001" oninput="updateConfig()">
+    </div>
+    <div class="form-group">
+      <label for="cfg-title">Title</label>
+      <input type="text" id="cfg-title" value="My Flashcard Deck" oninput="updateConfig()">
+    </div>
+    <div class="form-group">
+      <label for="cfg-description">Description</label>
+      <textarea id="cfg-description" rows="3" oninput="updateConfig()">Study and memorize with flashcards.</textarea>
+    </div>
+    <div class="form-group">
+      <label for="cfg-icon">Icon (emoji)</label>
+      <input type="text" id="cfg-icon" value="🃏" oninput="updateConfig()" style="max-width: 100px;">
+    </div>
+  </div>
+
+  <div class="section" id="tab-cards">
+    <div id="card-entries-container"></div>
+    <button class="btn-add" onclick="addCardEntry()">+ Add Card</button>
+  </div>
+
+  <div class="section" id="tab-import">
+    <div class="import-dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="17 8 12 3 7 8"></polyline>
+        <line x1="12" y1="3" x2="12" y2="15"></line>
+      </svg>
+      <h3>Upload Flashcard Deck HTML File</h3>
+      <p>Drag &amp; drop or click to browse</p>
+      <div style="margin-top: 1rem; font-size: 0.85rem; color: var(--text-muted);">
+        Loads files with <code>FLASHCARD_BANK</code> data array
+      </div>
+      <input type="file" id="file-input" accept=".html,.htm" style="display: none;" onchange="handleFileUpload(event)">
+    </div>
+    <div class="form-group" style="margin-top: 1.5rem;">
+      <label for="import-text">Or paste JSON configuration</label>
+      <textarea id="import-text" rows="8" placeholder='{"uid": "my-deck", "title": "My Deck", "description": "...", "icon": "🃏", "cards": [...]}'></textarea>
+      <button class="btn-secondary" style="margin-top: 0.75rem;" onclick="importFromText()">📥 Import from JSON</button>
+    </div>
+  </div>
+
+  <div class="section" id="tab-export">
+    <div id="upload-status" style="display: none; margin-bottom: 1rem; padding: 0.75rem 1rem; background: var(--correct-bg); border: 1px solid var(--correct); border-radius: var(--radius);">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+        <span style="color: var(--correct); font-weight: 500;">✓ Editing uploaded file — structure preserved on export</span>
+        <button class="btn-secondary" onclick="clearUploadedHTML()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; white-space: nowrap;">Use Default Template</button>
+      </div>
+    </div>
+    <div class="preview-panel" style="margin-top:0">
+      <h3>📄 Generated Configuration</h3>
+      <pre id="export-preview"></pre>
+      <div class="preview-actions">
+        <button class="btn-secondary" onclick="exportJSON()">📋 Copy JSON</button>
+        <button class="btn-secondary" onclick="downloadJSON()">💾 Download JSON</button>
+        <button class="btn-secondary" onclick="generateHTML()">🌐 Generate HTML</button>
+      </div>
+    </div>
+    <div class="preview-panel" id="html-output" style="display:none">
+      <h3>✅ Generated HTML</h3>
+      <pre id="html-code"></pre>
+      <div class="preview-actions">
+        <button class="btn-secondary" onclick="downloadHTML()">💾 Download HTML File</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let deckConfig = {
+  uid: '',
+  title: 'My Flashcard Deck',
+  description: 'Study and memorize with flashcards.',
+  icon: '🃏',
+};
+let cards = [];
+let cardCounter = 0;
+let uploadedHTML = '';
+
+function escapeHtml(t) { if (!t) return ''; var d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+function init() {
+  loadTheme();
+  updateStats();
+  updateExportPreview();
+  if (!cards.length) addCardEntry();
+}
+
+function loadTheme() {
+  var s = localStorage.getItem('quiz-theme');
+  if (s) document.documentElement.setAttribute('data-theme', s);
+  updateThemeIcon();
+}
+function toggleTheme() {
+  var d = document.documentElement.getAttribute('data-theme') === 'dark';
+  var t = d ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  localStorage.setItem('quiz-theme', t);
+  updateThemeIcon();
+  updateStats();
+}
+function updateThemeIcon() {
+  var btn = document.getElementById('theme-toggle');
+  if (btn) btn.textContent = document.documentElement.getAttribute('data-theme') === 'dark' ? '☀' : '☾';
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
+  document.querySelectorAll('.tab-btn').forEach(function(b) {
+    if (b.textContent.includes(name === 'config' ? '⚙️' : name === 'cards' ? '🃏' : name === 'import' ? '📥' : '💾')) b.classList.add('active');
+  });
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'export') updateExportPreview();
+}
+
+function updateConfig() {
+  deckConfig.uid = document.getElementById('cfg-uid').value.trim();
+  deckConfig.title = document.getElementById('cfg-title').value.trim();
+  deckConfig.description = document.getElementById('cfg-description').value.trim();
+  deckConfig.icon = document.getElementById('cfg-icon').value.trim() || '🃏';
+  updateStats();
+  updateExportPreview();
+}
+
+function addCardEntry(data) {
+  var container = document.getElementById('card-entries-container');
+  var qNum = ++cardCounter;
+  var cd = data || { type: 'basic', front: '', back: '', text: '', tags: [] };
+  var div = document.createElement('div');
+  div.className = 'card-entry';
+  div.dataset.index = cards.length;
+  var tagsStr = Array.isArray(cd.tags) ? cd.tags.join(', ') : (cd.tags || '');
+  div.innerHTML =
+    '<span class="card-number">Card ' + qNum + '</span>' +
+    '<div class="card-header">' +
+      '<div style="display:flex;gap:0.5rem;align-items:center;">' +
+        '<label style="margin:0;font-size:0.8rem;">Type:</label>' +
+        '<select class="card-type-sel" onchange="onCardTypeChange(this)" style="width:auto;padding:0.3rem 0.6rem;font-size:0.8rem;">' +
+          '<option value="basic"' + (cd.type === 'basic' ? ' selected' : '') + '>Basic</option>' +
+          '<option value="cloze"' + (cd.type === 'cloze' ? ' selected' : '') + '>Cloze</option>' +
+        '</select>' +
+      '</div>' +
+      '<button class="delete-btn" onclick="deleteCard(this)">🗑 Delete</button>' +
+    '</div>' +
+    '<div class="form-group fields-basic" style="' + (cd.type === 'cloze' ? 'display:none' : '') + '">' +
+      '<label>Front (term / question)</label>' +
+      '<textarea class="card-front" rows="2" placeholder="Enter the front text..." oninput="updateCardData()">' + escapeHtml(cd.front || '') + '</textarea>' +
+    '</div>' +
+    '<div class="form-group fields-basic" style="' + (cd.type === 'cloze' ? 'display:none' : '') + '">' +
+      '<label>Back (answer / definition)</label>' +
+      '<textarea class="card-back" rows="2" placeholder="Enter the back text..." oninput="updateCardData()">' + escapeHtml(cd.back || '') + '</textarea>' +
+    '</div>' +
+    '<div class="form-group fields-cloze" style="' + (cd.type === 'basic' ? 'display:none' : '') + '">' +
+      '<label>Cloze Text</label>' +
+      '<textarea class="card-cloze" rows="3" placeholder="Use {{c1::answer}} for cloze deletions..." oninput="updateCardData()">' + escapeHtml(cd.text || '') + '</textarea>' +
+      '<div class="hint">Use {{c1::answer}}, {{c2::answer}} etc.</div>' +
+    '</div>' +
+    '<div class="form-group">' +
+      '<label>Tags (comma-separated)</label>' +
+      '<input type="text" class="card-tags" placeholder="e.g., biology, anatomy" value="' + escapeHtml(tagsStr) + '" oninput="updateCardData()">' +
+    '</div>';
+  container.appendChild(div);
+  cards.push(cd);
+  updateStats();
+  updateExportPreview();
+}
+
+function onCardTypeChange(sel) {
+  var entry = sel.closest('.card-entry');
+  var isBasic = sel.value === 'basic';
+  entry.querySelectorAll('.fields-basic').forEach(function(el) { el.style.display = isBasic ? 'block' : 'none'; });
+  entry.querySelectorAll('.fields-cloze').forEach(function(el) { el.style.display = isBasic ? 'none' : 'block'; });
+  updateCardData();
+}
+
+function deleteCard(btn) {
+  var entry = btn.closest('.card-entry');
+  cards.splice(parseInt(entry.dataset.index), 1);
+  entry.remove();
+  renumberCards();
+  updateStats();
+  updateExportPreview();
+}
+
+function renumberCards() {
+  cardCounter = 0;
+  document.querySelectorAll('.card-entry').forEach(function(entry, i) {
+    entry.dataset.index = i;
+    entry.querySelector('.card-number').textContent = 'Card ' + (++cardCounter);
+  });
+}
+
+function updateCardData() {
+  document.querySelectorAll('.card-entry').forEach(function(entry, i) {
+    var type = entry.querySelector('.card-type-sel').value;
+    var tagsStr = entry.querySelector('.card-tags').value || '';
+    var tags = tagsStr.split(',').map(function(t) { return t.trim(); }).filter(function(t) { return t; });
+    cards[i] = {
+      type: type,
+      front: type === 'basic' ? (entry.querySelector('.card-front').value || '') : '',
+      back: type === 'basic' ? (entry.querySelector('.card-back').value || '') : '',
+      text: type === 'cloze' ? (entry.querySelector('.card-cloze').value || '') : '',
+      tags: tags
+    };
+  });
+  updateStats();
+  updateExportPreview();
+}
+
+function updateStats() {
+  document.getElementById('stat-cards').textContent = cards.length;
+  var t = deckConfig.title || 'Untitled';
+  document.getElementById('stat-title').textContent = t.length > 15 ? t.slice(0, 15) + '\u2026' : t;
+  var basic = cards.filter(function(c) { return c.type === 'basic'; }).length;
+  var cloze = cards.filter(function(c) { return c.type === 'cloze'; }).length;
+  document.getElementById('stat-basic').textContent = basic;
+  document.getElementById('stat-cloze').textContent = cloze;
+}
+
+/* IMPORT */
+var dropzone = document.getElementById('dropzone');
+['dragenter','dragover','dragleave','drop'].forEach(function(ev) { dropzone.addEventListener(ev, function(e) { e.preventDefault(); e.stopPropagation(); }); });
+['dragenter','dragover'].forEach(function(ev) { dropzone.addEventListener(ev, function() { dropzone.classList.add('dragover'); }); });
+['dragleave','drop'].forEach(function(ev) { dropzone.addEventListener(ev, function() { dropzone.classList.remove('dragover'); }); });
+dropzone.addEventListener('drop', function(e) { var f = e.dataTransfer.files[0]; if (f) processFile(f); });
+
+function handleFileUpload(e) { var f = e.target.files[0]; if (f) processFile(f); }
+function processFile(file) {
+  var r = new FileReader();
+  r.onload = function(e) {
+    if (file.name.match(/\.html?$/i)) importFromHTML(e.target.result);
+    else showToast('❌ Please upload an HTML file');
+  };
+  r.readAsText(file);
+}
+
+function importFromHTML(content) {
+  uploadedHTML = content;
+  document.getElementById('upload-status').style.display = 'block';
+  try {
+    var cfgMatch = content.match(/const\s+BANK_CONFIG\s*=\s*\{/);
+    if (cfgMatch) {
+      var op = cfgMatch.index + cfgMatch[0].length - 1;
+      var depth = 0, end = -1;
+      for (var i = op; i < content.length; i++) {
+        if (content[i] === '{') depth++;
+        else if (content[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
+      }
+      if (end !== -1) {
+        var cfgStr = content.substring(op, end + 1);
+        try { var cfg = JSON.parse(cfgStr); if (cfg.uid) document.getElementById('cfg-uid').value = cfg.uid; if (cfg.title) document.getElementById('cfg-title').value = cfg.title; if (cfg.description) document.getElementById('cfg-description').value = cfg.description; if (cfg.icon) document.getElementById('cfg-icon').value = cfg.icon; updateConfig(); } catch(e) {}
+      }
+    }
+    var bankMatch = content.match(/const\s+FLASHCARD_BANK\s*=\s*\[/);
+    if (bankMatch) {
+      var op2 = bankMatch.index + bankMatch[0].length - 1;
+      var depth2 = 0, end2 = -1;
+      for (var j = op2; j < content.length; j++) {
+        if (content[j] === '[') depth2++;
+        else if (content[j] === ']') { depth2--; if (depth2 === 0) { end2 = j; break; } }
+      }
+      if (end2 !== -1) {
+        var bankStr = content.substring(op2, end2 + 1);
+        try {
+          var parsed = JSON.parse(bankStr);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            loadCardsIntoEditor(parsed);
+            showToast('✅ Deck imported: ' + parsed.length + ' cards');
+            switchTab('config');
+            return;
+          }
+        } catch(e) {}
+      }
+    }
+    showToast('✅ File loaded. No flashcard data found.');
+  } catch(e) { showToast('❌ Import failed: ' + e.message); }
+}
+
+function loadCardsIntoEditor(data) {
+  cards = [];
+  cardCounter = 0;
+  document.getElementById('card-entries-container').innerHTML = '';
+  data.forEach(function(c) {
+    addCardEntry({
+      type: c.type || 'basic',
+      front: c.front || '',
+      back: c.back || '',
+      text: c.text || '',
+      tags: c.tags || []
+    });
+  });
+}
+
+function clearUploadedHTML() { uploadedHTML = ''; document.getElementById('upload-status').style.display = 'none'; showToast('✓ Using default template'); }
+
+function importFromText() {
+  var text = document.getElementById('import-text').value.trim();
+  if (!text) return showToast('❌ Paste JSON first');
+  try {
+    var j = JSON.parse(text);
+    if (j.uid) document.getElementById('cfg-uid').value = j.uid;
+    if (j.title) document.getElementById('cfg-title').value = j.title;
+    if (j.description) document.getElementById('cfg-description').value = j.description;
+    if (j.icon) document.getElementById('cfg-icon').value = j.icon;
+    updateConfig();
+    if (j.cards && j.cards.length) loadCardsIntoEditor(j.cards);
+    showToast('✅ JSON imported!');
+    document.getElementById('import-text').value = '';
+  } catch(e) { showToast('❌ Invalid JSON: ' + e.message); }
+}
+
+/* EXPORT */
+function updateExportPreview() {
+  var el = document.getElementById('export-preview');
+  if (!el) return;
+  el.textContent = JSON.stringify({
+    uid: deckConfig.uid,
+    title: deckConfig.title,
+    description: deckConfig.description,
+    icon: deckConfig.icon,
+    cards: cards.map(function(c) {
+      if (c.type === 'basic') return { type: 'basic', front: c.front, back: c.back, tags: c.tags };
+      return { type: 'cloze', text: c.text, tags: c.tags };
+    })
+  }, null, 2);
+}
+function exportJSON() {
+  updateExportPreview();
+  navigator.clipboard.writeText(document.getElementById('export-preview').textContent)
+    .then(function() { showToast('✅ Copied!'); })
+    .catch(function() { showToast('❌ Copy failed'); });
+}
+function downloadJSON() {
+  updateExportPreview();
+  dlBlob(document.getElementById('export-preview').textContent, 'application/json', (deckConfig.uid || 'flashcard-deck') + '-config.json');
+  showToast('✅ JSON downloaded!');
+}
+
+function generateHTML() {
+  updateCardData();
+  var cfg = { uid: deckConfig.uid, title: deckConfig.title, description: deckConfig.description, icon: deckConfig.icon };
+  var cfgJ = JSON.stringify(cfg, null, 2);
+  var cardsJ = JSON.stringify(cards, null, 2);
+  var html;
+
+  if (uploadedHTML) {
+    html = uploadedHTML;
+    html = html.replace(/<title>[^<]*<\/title>/i, '<title>' + escapeHtml(cfg.title) + '</title>');
+    var cfgS = '/* [FLASHCARD_CONFIG_START] */', cfgE = '/* [FLASHCARD_CONFIG_END] */';
+    var si = html.indexOf(cfgS), ei = html.indexOf(cfgE);
+    if (si !== -1 && ei !== -1) html = html.slice(0, si + cfgS.length) + '\nvar BANK_CONFIG = ' + cfgJ + ';\n' + html.slice(ei);
+    var bankS = '/* [FLASHCARD_BANK_START] */', bankE = '/* [FLASHCARD_BANK_END] */';
+    var bi = html.indexOf(bankS), bei = html.indexOf(bankE);
+    if (bi !== -1 && bei !== -1) html = html.slice(0, bi + bankS.length) + '\nvar FLASHCARD_BANK = ' + cardsJ + ';\n' + html.slice(bei);
+  } else {
+    html = '<!DOCTYPE html>\n<html lang="en" data-theme="dark">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<script>\n(function(){var t=localStorage.getItem(\'flashcard-theme\')||\'dark\';var s=document.createElement(\'style\');s.textContent=\'html,body{background:\'+(t===\'light\'?\'#f3f0eb\':\'#0d1117\')+\';color:\'+(t===\'light\'?\'#1c1917\':\'#e6edf3\')+\';margin:0;padding:0;overflow:hidden;height:100%}\';document.head.appendChild(s)})();\n<\/script>\n<title>' + escapeHtml(cfg.title) + '</title>\n</head>\n<body>\n<script>\n/* ────────────────────────────────────────────────────────────────\n   FLASHCARD DECK DATA  — only edit below this line\n──────────────────────────────────────────────────────────────────*/\n\n/* [FLASHCARD_CONFIG_START] */\nvar BANK_CONFIG = ' + cfgJ + ';\n/* [FLASHCARD_CONFIG_END] */\n\n/* [FLASHCARD_BANK_START] */\nvar FLASHCARD_BANK = ' + cardsJ + ';\n/* [FLASHCARD_BANK_END] */\n<\/script>\n<script>\n(function () {\n  window.__FLASHCARD_ENGINE_BASE = \'../\'.repeat(\n    Math.max(0, location.pathname.split(\'/\').filter(Boolean).length - 2)\n  );\n  document.write(\'<scr\' + \'ipt src="\' + window.__FLASHCARD_ENGINE_BASE + \'flashcard-engine.js"><\\/scr\' + \'ipt>\');\n})();\n<\/script>\n</body>\n</html>';
+  }
+
+  document.getElementById('html-code').textContent = html;
+  document.getElementById('html-output').style.display = 'block';
+  document.getElementById('html-output').scrollIntoView({ behavior: 'smooth' });
+  showToast('✅ HTML generated!');
+}
+
+function downloadHTML() {
+  var content = document.getElementById('html-code').textContent;
+  var title = deckConfig.title || 'Flashcard Deck';
+  var safeName = title.replace(/[^a-z0-9\s-]/gi, '').trim().replace(/\s+/g, '-').toLowerCase();
+  dlBlob(content, 'text/html', (safeName || 'flashcard-deck') + '.html');
+  showToast('💾 ' + (safeName || 'flashcard-deck') + '.html downloaded!');
+}
+
+function dlBlob(content, type, filename) {
+  var blob = new Blob([content], { type: type });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(url); }, 100);
+}
+
+function showToast(msg) {
+  var existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  var t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function() { t.classList.add('show'); }, 10);
+  setTimeout(function() { t.classList.remove('show'); setTimeout(function() { t.remove(); }, 300); }, 2800);
+}
+
+function navigateBack(e) {
+  e.preventDefault();
+  if (window.history.length > 1) window.history.back();
+  else window.location.href = 'index.html';
+}
+
+init();
+</script>
+</body>
+</html>

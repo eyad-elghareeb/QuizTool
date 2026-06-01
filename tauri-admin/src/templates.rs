@@ -140,6 +140,43 @@ const QUESTION_BANK = {questions_json};
 "##, fouc = FOUC_SCRIPT, title = title, config_json = config_json, questions_json = questions_json)
 }
 
+pub fn create_flashcard_html(config: &Value, questions: &Value) -> String {
+    let title = config.get("title").and_then(|v| v.as_str()).unwrap_or("Flashcards");
+    let config_json = serde_json::to_string_pretty(config).unwrap_or_default();
+    let questions_json = serde_json::to_string_pretty(questions).unwrap_or_default();
+    format!(r##"<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+{fouc}
+</script>
+<title>{title}</title>
+</head>
+<body>
+<script>
+
+/* [FLASHCARD_CONFIG_START] */
+var BANK_CONFIG = {config_json};
+/* [FLASHCARD_CONFIG_END] */
+
+/* [FLASHCARD_BANK_START] */
+var FLASHCARD_BANK = {questions_json};
+/* [FLASHCARD_BANK_END] */
+
+</script>
+<script>
+(function(){{
+  window.__FLASHCARD_ENGINE_BASE='../'.repeat(Math.max(0,location.pathname.split('/').filter(Boolean).length-2));
+  document.write('<scr'+'ipt src="'+window.__FLASHCARD_ENGINE_BASE+'flashcard-engine.js"><\/scr'+'ipt>');
+}})();
+</script>
+</body>
+</html>
+"##, fouc = FOUC_SCRIPT, title = title, config_json = config_json, questions_json = questions_json)
+}
+
 struct IndexCtx {
     page_title: String,
     topbar_title: String,

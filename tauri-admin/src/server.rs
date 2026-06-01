@@ -56,6 +56,7 @@ fn lookup_embedded(filename: &str) -> Option<(&'static [u8], &'static str)> {
     match filename {
         "quiz-engine.js"       => Some((engine_bytes!("quiz-engine.js"),       "application/javascript; charset=utf-8")),
         "bank-engine.js"       => Some((engine_bytes!("bank-engine.js"),       "application/javascript; charset=utf-8")),
+        "flashcard-engine.js"  => Some((engine_bytes!("flashcard-engine.js"),  "application/javascript; charset=utf-8")),
         "index-engine.js"      => Some((engine_bytes!("index-engine.js"),      "application/javascript; charset=utf-8")),
         "index-engine.css"     => Some((engine_bytes!("index-engine.css"),     "text/css; charset=utf-8")),
         "sync-engine.js"       => Some((engine_bytes!("sync-engine.js"),       "application/javascript; charset=utf-8")),
@@ -103,15 +104,9 @@ fn handle_request(state: &Arc<ServerState>, req: &tiny_http::Request) -> tiny_ht
 fn try_serve(state: &Arc<ServerState>, path: PathBuf) -> Option<(Vec<u8>, &'static str)> {
     let path_str = path.to_string_lossy().to_string().replace('\\', "/");
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("").to_string();
+    let is_root = !path_str.contains('/');
 
-    // 1. Try embedded engines first (exact path match at root)
-    if !path_str.contains('/') {
-        if let Some((bytes, mime)) = lookup_embedded(&path_str) {
-            return Some((bytes.to_vec(), mime));
-        }
-    }
-
-    // 2. Serve from disk
+    // 1. Try disk first (project's own copy takes priority)
     let candidate = state.root.join(&path);
     if candidate.is_file() {
         let ext = ext_from_path(&candidate);
@@ -123,11 +118,10 @@ fn try_serve(state: &Arc<ServerState>, path: PathBuf) -> Option<(Vec<u8>, &'stat
                     rel.components().count().saturating_sub(1)
                 };
                 let prefix = "../".repeat(depth);
-                
-                // Rewrite window.__QUIZ_ENGINE_BASE for proper engine resolution
-                let replacement = format!("window.__QUIZ_ENGINE_BASE='{}';", prefix);
-                let rewritten = state.re_base.replace(&content, replacement.as_str()).into_owned();
-                
+                // Rewrite window.__QUIZ_ENGINE_BASE or __FLASHCARD_ENGINE_BASE for proper engine resolution
+                let rewritten = state.re_base.replace(&content, |caps: &regex::Captures| {
+                    format!("window.{}__ENGINE_BASE='{}';", caps[1].to_string(), prefix)
+                }).into_owned();
                 return Some((rewritten.into_bytes(), "text/html; charset=utf-8"));
             }
         } else {
@@ -138,15 +132,20 @@ fn try_serve(state: &Arc<ServerState>, path: PathBuf) -> Option<(Vec<u8>, &'stat
         }
     }
 
-    // 3. Fallback for shared assets by filename (handles subfolder requests)
-    if !filename.is_empty() {
+    // 2. Fall back to embedded engine (always an exact filename match)
+    if let Some((bytes, mime)) = lookup_embedded(&path_str) {
+        return Some((bytes.to_vec(), mime));
+    }
+
+    // 3. For subfolder paths, also try the bare filename in embedded
+    if !is_root {
         if let Some((bytes, mime)) = lookup_embedded(&filename) {
             return Some((bytes.to_vec(), mime));
         }
     }
 
     // 4. Fallback for user assets in project root (e.g. icon-*.png)
-    if path.components().count() > 1 {
+    if !is_root {
         let root_candidate = state.root.join(&filename);
         if root_candidate.is_file() {
             let ext = ext_from_path(&root_candidate);
@@ -184,9 +183,9 @@ impl QuizServer {
         let root = project_root.clone();
 
         thread::spawn(move || {
-            // Updated regex to handle nested parens in .repeat() by matching up to the semicolon
+            // Updated regex to handle both quiz-engine and flashcard-engine base paths
             let re_base = Regex::new(
-                r#"(?s)window\.__QUIZ_ENGINE_BASE\s*=\s*[^;]*;"#
+                r#"(?s)window\.__(QUIZ|FLASHCARD)_ENGINE_BASE\s*=\s*[^;]*;"#
             ).unwrap();
 
             let state = Arc::new(ServerState { root, re_base });

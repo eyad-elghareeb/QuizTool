@@ -5,7 +5,7 @@ use regex::Regex;
 use serde_json::Value;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum FileType { Quiz, Bank, Index, Html }
+pub enum FileType { Quiz, Bank, Index, Html, Flashcard }
 
 impl FileType {
     pub fn as_str(&self) -> &'static str {
@@ -14,6 +14,7 @@ impl FileType {
             FileType::Bank => "bank",
             FileType::Index => "index",
             FileType::Html => "html",
+            FileType::Flashcard => "flashcard",
         }
     }
 }
@@ -136,6 +137,25 @@ pub fn parse_file_metadata(content: &str) -> FileMeta {
             };
         }
     }
+    if (content.contains("/* [FLASHCARD_BANK_START] */") || content.contains("FLASHCARD_BANK"))
+        && content.contains("BANK_CONFIG")
+    {
+        if let Some(cfg) = parse_literal(content, "BANK_CONFIG", '{', '}') {
+            if cfg.is_object() {
+                let questions = parse_literal(content, "FLASHCARD_BANK", '[', ']');
+                let qc = questions.as_ref().and_then(|v| v.as_array()).map(|a| a.len()).unwrap_or(0);
+                return FileMeta {
+                    file_type: FileType::Flashcard,
+                    uid: cfg.get("uid").and_then(|v| v.as_str()).map(String::from),
+                    title: cfg.get("title").and_then(|v| v.as_str()).map(String::from),
+                    description: cfg.get("description").and_then(|v| v.as_str()).map(String::from),
+                    icon: cfg.get("icon").and_then(|v| v.as_str()).map(String::from),
+                    hero_title: None, question_count: qc,
+                    config: Some(cfg), questions, quizzes: None,
+                };
+            }
+        }
+    }
     if let Some(cfg) = parse_literal(content, "BANK_CONFIG", '{', '}') {
         if cfg.is_object() {
             let questions = parse_literal(content, "QUESTION_BANK", '[', ']');
@@ -182,6 +202,7 @@ pub fn infer_icon(ft: &FileType, filename: &str) -> &'static str {
         FileType::Index => "🏠",
         FileType::Quiz => "📝",
         FileType::Bank => "🗃️",
+        FileType::Flashcard => "🃏",
         FileType::Html => if filename == "index.html" { "🏠" } else { "📄" },
     }
 }
@@ -254,6 +275,14 @@ pub fn validate_dashboard_content(_rel_path: &str, content: &str, original_uid: 
             let uid = meta.uid.as_deref().unwrap_or("").trim().to_string();
             if uid.is_empty() { issues.push(mk_err("Bank UID is required.", "uid", "uid_missing", None)); }
             else if !original_uid.is_empty() && original_uid != uid { issues.push(mk_warn("UID changed from saved file. This can orphan learner progress.", "uid", "uid_changed", None)); }
+            if let Some(ref q) = meta.questions { issues.extend(validate_question_list(q, "questions")); }
+        }
+        FileType::Flashcard => {
+            if !content.contains("/* [FLASHCARD_CONFIG_START] */") { issues.push(mk_err("Flashcard config markers are missing.", "config", "flashcard_config_markers", None)); }
+            if !content.contains("/* [FLASHCARD_BANK_START] */") { issues.push(mk_err("Flashcard bank markers are missing.", "questions", "flashcard_bank_markers", None)); }
+            let uid = meta.uid.as_deref().unwrap_or("").trim().to_string();
+            if uid.is_empty() { issues.push(mk_err("Flashcard UID is required.", "uid", "uid_missing", None)); }
+            else if !original_uid.is_empty() && original_uid != uid { issues.push(mk_warn("UID changed from the saved file. This can orphan learner progress.", "uid", "uid_changed", None)); }
             if let Some(ref q) = meta.questions { issues.extend(validate_question_list(q, "questions")); }
         }
         FileType::Index => {

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+(function(){var t=localStorage.getItem('flashcard-theme')||'dark';var s=document.createElement('style');s.textContent='html,body{background:'+(t==='light'?'#f3f0eb':'#0d1117')+';color:'+(t==='light'?'#1c1917':'#e6edf3')+';margin:0;padding:0;overflow:hidden;height:100%}';document.head.appendChild(s)})();
+</script>
+<title>Flashcard Deck</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="favicon.svg">
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
+</script>
+</head>
+<body>
+<script>
+/* ────────────────────────────────────────────────────────────────
+   FLASHCARD DECK DATA  — only edit below this line
+──────────────────────────────────────────────────────────────────*/
+
+/* [FLASHCARD_CONFIG_START] */
+var BANK_CONFIG = {
+  uid: "",
+  title: "Flashcard Deck",
+  description: "Study your flashcards.",
+  icon: "🃏",
+};
+/* [FLASHCARD_CONFIG_END] */
+
+/* ─────────────────────────────────────────────────────────────────
+   FLASHCARD_BANK ARRAY
+   Format for each card:
+   Basic card:
+   {
+     type: "basic",
+     front: "Question / term",
+     back: "Answer / definition",
+     tags: ["tag1", "tag2"],
+     id: "unique-id"
+   }
+   Cloze card:
+   {
+     type: "cloze",
+     text: "The {{c1::mitochondria}} is the {{c2::powerhouse}} of the cell.",
+     tags: ["biology"],
+     id: "bio-003"
+   }
+──────────────────────────────────────────────────────────────────*/
+/* [FLASHCARD_BANK_START] */
+var FLASHCARD_BANK = [
+  {
+    type: "basic",
+    front: "What is the powerhouse of the cell?",
+    back: "Mitochondria",
+    tags: ["biology"],
+    id: "bio-001"
+  },
+];
+/* [FLASHCARD_BANK_END] */
+</script>
+<script>
+/* Engine loader — computes correct relative path for any folder depth */
+(function () {
+  window.__FLASHCARD_ENGINE_BASE = '../'.repeat(
+    Math.max(0, location.pathname.split('/').filter(Boolean).length - 2)
+  );
+  document.write('<scr' + 'ipt src="' + window.__FLASHCARD_ENGINE_BASE + 'flashcard-engine.js"><\/scr' + 'ipt>');
+})();
+</script>
+</body>
+</html>

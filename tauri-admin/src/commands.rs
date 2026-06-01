@@ -131,8 +131,9 @@ fn build_summary(root: &Path) -> Value {
     let quiz_count = files.iter().filter(|f| f["type"] == "quiz").count();
     let bank_count = files.iter().filter(|f| f["type"] == "bank").count();
     let index_count = files.iter().filter(|f| f["type"] == "index").count();
+    let flashcard_count = files.iter().filter(|f| f["type"] == "flashcard").count();
     let total_q: u64 = files.iter()
-        .filter(|f| f["type"] == "quiz" || f["type"] == "bank")
+        .filter(|f| f["type"] == "quiz" || f["type"] == "bank" || f["type"] == "flashcard")
         .filter_map(|f| f["question_count"].as_u64()).sum();
     let folders = scan_folders(root);
     json!({
@@ -140,6 +141,7 @@ fn build_summary(root: &Path) -> Value {
         "quizCount": quiz_count,
         "bankCount": bank_count,
         "indexCount": index_count,
+        "flashcardCount": flashcard_count,
         "folderCount": folders.len(),
         "totalQuestions": total_q,
     })
@@ -265,7 +267,7 @@ pub fn create_file(
 ) -> Result<Value, String> {
     let root = root(&state);
     let ft = r#type.to_lowercase();
-    if ft != "quiz" && ft != "bank" { return Err("Type must be quiz or bank.".into()); }
+    if ft != "quiz" && ft != "bank" && ft != "flashcard" { return Err("Type must be quiz, bank, or flashcard.".into()); }
     if title.trim().is_empty() { return Err("Title is required.".into()); }
     let folder_rel = normalize(folder.as_deref().unwrap_or("."));
     let folder_path = resolve_must_exist(&root, &folder_rel)?;
@@ -277,12 +279,20 @@ pub fn create_file(
     let uid = templates::derive_uid(&folder_rel, stem);
     let desc = description.as_deref().unwrap_or("");
     let q_val = questions.unwrap_or_else(|| json!([]));
-    let cfg = if ft == "quiz" {
-        json!({"uid": uid, "title": title, "description": desc})
-    } else {
-        json!({"uid": uid, "title": title, "description": desc, "icon": icon.as_deref().unwrap_or("🗃️")})
+    let html = match ft.as_str() {
+        "quiz" => templates::create_quiz_html(
+            &json!({"uid": uid, "title": title, "description": desc}),
+            &q_val,
+        ),
+        "flashcard" => templates::create_flashcard_html(
+            &json!({"uid": uid, "title": title, "description": desc, "icon": icon.as_deref().unwrap_or("🃏")}),
+            &q_val,
+        ),
+        _ => templates::create_bank_html(
+            &json!({"uid": uid, "title": title, "description": desc, "icon": icon.as_deref().unwrap_or("🗃️")}),
+            &q_val,
+        ),
     };
-    let html = if ft == "quiz" { templates::create_quiz_html(&cfg, &q_val) } else { templates::create_bank_html(&cfg, &q_val) };
     std::fs::write(&file_path, html).map_err(|e| e.to_string())?;
     let rel = to_posix(&file_path, &root);
     Ok(json!({ "message": format!("Created {} file \"{}\".", ft, file_path.file_name().unwrap_or_default().to_string_lossy()), "path": rel, "uid": uid }))
@@ -321,6 +331,11 @@ pub fn duplicate_file(path: String, folder: Option<String>, filename: Option<Str
             let mut cfg = meta.config.unwrap_or_else(|| json!({}));
             cfg["uid"] = json!(new_uid);
             templates::create_bank_html(&cfg, &meta.questions.unwrap_or_else(|| json!([])))
+        }
+        parser::FileType::Flashcard => {
+            let mut cfg = meta.config.unwrap_or_else(|| json!({}));
+            cfg["uid"] = json!(new_uid);
+            templates::create_flashcard_html(&cfg, &meta.questions.unwrap_or_else(|| json!([])))
         }
         _ => src_content,
     };
