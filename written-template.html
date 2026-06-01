@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+(function(){var t=localStorage.getItem('quiz-theme')||'dark';var s=document.createElement('style');s.textContent='html,body{background:'+(t==='light'?'#f3f0eb':'#0d1117')+';color:'+(t==='light'?'#1c1917':'#e6edf3')+';margin:0;padding:0;overflow:hidden;height:100%}';document.head.appendChild(s)})();
+</script>
+<title>Written Assessment</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="favicon.svg">
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
+</script>
+</head>
+<body>
+<script>
+/* ────────────────────────────────────────────────────────────────
+   WRITTEN ASSESSMENT DATA  — only edit below this line
+   ──────────────────────────────────────────────────────────────────*/
+
+/* [WRITTEN_CONFIG_START] */
+const WRITTEN_CONFIG = {
+  uid: "",
+  title: "Written Assessment",
+  description: "Answer the questions in your own words, and get AI feedback.",
+  icon: "📝"
+};
+/* [WRITTEN_CONFIG_END] */
+
+/* ─────────────────────────────────────────────────────────────────
+   WRITTEN_QUESTIONS ARRAY
+   Format for each question:
+   {
+     id: "unique-question-id",
+     question: "Your question text",
+     modelAnswer: "Expected/Model Answer text",
+     rubric: "Optional grading rubric points for AI context",
+     explanation: "Why this answer is structured this way / extra background",
+     tags: ["tag1", "tag2"]
+   }
+   ──────────────────────────────────────────────────────────────────*/
+/* [WRITTEN_QUESTIONS_START] */
+const WRITTEN_QUESTIONS = [
+  {
+    id: "wq-1",
+    question: "Explain the main difference between aerobic and anaerobic respiration.",
+    modelAnswer: "Aerobic respiration requires oxygen to produce energy (ATP) from glucose, resulting in carbon dioxide, water, and up to 36-38 ATP per glucose molecule. Anaerobic respiration occurs in the absence of oxygen, produces much less energy (usually 2 ATP), and yields lactic acid or ethanol.",
+    rubric: "Must mention oxygen requirement, approximate ATP yield difference, and end-products (lactic acid/ethanol vs CO2/H2O).",
+    explanation: "Aerobic respiration utilizes the Krebs cycle and electron transport chain, while anaerobic respiration relies solely on glycolysis and fermentation.",
+    tags: ["biology", "respiration"]
+  }
+];
+/* [WRITTEN_QUESTIONS_END] */
+</script>
+<script>
+/* Engine loader — computes correct relative path for any folder depth */
+(function () {
+  window.__WRITTEN_ENGINE_BASE = '../'.repeat(
+    Math.max(0, location.pathname.split('/').filter(Boolean).length - 2)
+  );
+  window.__WRITTEN_ENGINE_VERSION = '2026-06-01-ai-fallback-ui';
+  document.write('<scr' + 'ipt src="' + window.__WRITTEN_ENGINE_BASE + 'written-engine.js?v=' + window.__WRITTEN_ENGINE_VERSION + '"><\/scr' + 'ipt>');
+})();
+</script>
+</body>
+</html>

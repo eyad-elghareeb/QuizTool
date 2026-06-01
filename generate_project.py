@@ -155,6 +155,7 @@ self.addEventListener('install', function (event) {
         'quiz-engine.js',
         'bank-engine.js',
         'flashcard-engine.js',
+        'written-engine.js',
         'index-engine.js',
         'sync-engine.js',
         'index-engine.css',
@@ -275,6 +276,7 @@ function handleAsset(event, request) {
           'quiz-engine.js',
           'bank-engine.js',
           'flashcard-engine.js',
+          'written-engine.js',
           'index-engine.js',
           'sync-engine.js',
           'index-engine.css',
@@ -350,6 +352,7 @@ INDEX_ENGINE_CSS = read_file('index-engine.css')
 QUIZ_ENGINE_JS = read_file('quiz-engine.js')
 BANK_ENGINE_JS = read_file('bank-engine.js')
 FLASHCARD_ENGINE_JS = read_file('flashcard-engine.js')
+WRITTEN_ENGINE_JS = read_file('written-engine.js')
 SYNC_ENGINE_JS = read_file('sync-engine.js')
 
 # Read sync scripts from QuizTool's own scripts/ folder (self-contained, no MU61S8 dependency)
@@ -387,6 +390,15 @@ def parse_quiz_file(filepath):
         except:
             pass
     
+    # Try WRITTEN_CONFIG
+    match = re.search(r'/\\*\\s*\\[WRITTEN_CONFIG_START\\]\\s*\\*/[\\s\\S]*?(?:const|var)\\s+WRITTEN_CONFIG\\s*=\\s*({[\\s\\S]*?});[\\s\\S]*?/\\*\\s*\\[WRITTEN_CONFIG_END\\]\\s*\\*/', content)
+    if match:
+        try:
+            config = eval(match.group(1))
+            return {'type': 'written', 'config': config}
+        except:
+            pass
+
     # Try FLASHCARD_CONFIG first (flashcard files use FLASHCARD_CONFIG markers)
     match = re.search(r'/\\*\\s*\\[FLASHCARD_CONFIG_START\\]\\s*\\*/[\\s\\S]*?(?:const|var)\\s+BANK_CONFIG\\s*=\\s*({[\\s\\S]*?});[\\s\\S]*?/\\*\\s*\\[FLASHCARD_CONFIG_END\\]\\s*\\*/', content)
     if match:
@@ -425,8 +437,8 @@ def scan_folder(folder_path):
         if parsed:
             config = parsed['config']
             rel_path = html_file.name
-            type_icon = config.get('icon', '\\U0001F4DD' if parsed['type'] == 'quiz' else ('\\U0001F0CF' if parsed['type'] == 'flashcard' else '\\U0001F5C3\\uFE0F'))
-            type_label = {'quiz': 'Quiz', 'bank': 'Bank', 'flashcard': 'Flashcard'}.get(parsed['type'], 'Quiz')
+            type_icon = config.get('icon', '\\U0001F4DD' if parsed['type'] == 'quiz' else ('\\U0001F0CF' if parsed['type'] == 'flashcard' else ('\\u270D\\uFE0F' if parsed['type'] == 'written' else '\\U0001F5C3\\uFE0F')))
+            type_label = {'quiz': 'Quiz', 'bank': 'Bank', 'flashcard': 'Flashcard', 'written': 'Written'}.get(parsed['type'], 'Quiz')
             quizzes.append({
                 'title': config.get('title', html_file.stem),
                 'description': config.get('description', ''),
@@ -860,6 +872,7 @@ def build_project_zip(config):
         'quiz-engine.js',
         'bank-engine.js',
         'flashcard-engine.js',
+        'written-engine.js',
         'sync-engine.js',
         'tracker-map.json',
         'favicon.svg',
@@ -950,6 +963,7 @@ def build_project_zip(config):
         zf.writestr('quiz-engine.js', QUIZ_ENGINE_JS)
         zf.writestr('bank-engine.js', BANK_ENGINE_JS)
         zf.writestr('flashcard-engine.js', FLASHCARD_ENGINE_JS)
+        zf.writestr('written-engine.js', WRITTEN_ENGINE_JS)
         zf.writestr('sync-engine.js', SYNC_ENGINE_JS)
 
         # --- Static assets ---

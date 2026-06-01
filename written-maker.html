@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Written Assessment Maker — QuizTool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:         #0d1117;
+  --surface:    #161b22;
+  --surface2:   #1c2330;
+  --border:     #30363d;
+  --text:       #e6edf3;
+  --text-muted: #8b949e;
+  --accent:     #f0a500;
+  --accent-dim: rgba(240,165,0,0.12);
+  --correct:    #2ea043;
+  --correct-bg: rgba(46,160,67,0.12);
+  --wrong:      #da3633;
+  --wrong-bg:   rgba(218,54,51,0.12);
+  --radius:     12px;
+  --shadow:     0 4px 24px rgba(0,0,0,0.4);
+  --transition: 0.2s ease;
+}
+[data-theme="light"] {
+  --bg:         #f3f0eb;
+  --surface:    #ffffff;
+  --surface2:   #f8f6f1;
+  --border:     #d0ccc5;
+  --text:       #1c1917;
+  --text-muted: #78716c;
+  --accent:     #c27803;
+  --accent-dim: rgba(194,120,3,0.10);
+  --correct:    #16a34a;
+  --correct-bg: rgba(22,163,74,0.10);
+  --wrong:      #dc2626;
+  --wrong-bg:   rgba(220,38,38,0.10);
+  --shadow:     0 4px 24px rgba(0,0,0,0.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  transition: background var(--transition), color var(--transition);
+}
+.container { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+.topbar {
+  display: flex; align-items: center;
+  padding: 0.75rem 1.5rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 10;
+}
+.topbar-title { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; flex: 1; }
+.back-btn { display: flex; align-items: center; gap: 0.5rem; color: var(--text-muted); text-decoration: none; font-weight: 600; transition: color var(--transition); }
+.back-btn:hover { color: var(--text); }
+.icon-btn { width: 36px; height: 36px; border-radius: 8px; background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--text-muted); transition: all var(--transition); font-size: 1rem; cursor: pointer; }
+.icon-btn:hover { color: var(--text); border-color: var(--accent); }
+h1 { font-family: 'Playfair Display', serif; font-size: 2rem; margin-bottom: 2rem; text-align: center; }
+.form-group { margin-bottom: 1.5rem; }
+label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--text); }
+input, textarea { width: 100%; padding: 0.85rem 1rem; border-radius: var(--radius); border: 1.5px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 1rem; transition: all var(--transition); }
+input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+textarea { resize: vertical; }
+.question-entry {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+.question-number {
+  position: absolute; top: -12px; left: 1rem;
+  background: var(--accent); color: #000;
+  font-weight: 700; padding: 0.2rem 0.75rem;
+  border-radius: 6px; font-size: 0.8rem;
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.question-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.delete-btn {
+  background: var(--wrong-bg);
+  border: 1px solid var(--wrong);
+  color: var(--wrong);
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+.delete-btn:hover { background: var(--wrong); color: #fff; }
+.btn-add {
+  width: 100%; padding: 1rem;
+  border: 2px dashed var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all var(--transition);
+  margin-bottom: 2rem;
+}
+.btn-add:hover { border-color: var(--accent); color: var(--accent); }
+.btn-generate {
+  width: 100%; padding: 1rem;
+  border-radius: var(--radius);
+  background: var(--accent); color: #000;
+  font-weight: 700; font-size: 1rem;
+  border: none; cursor: pointer;
+  transition: opacity var(--transition);
+}
+.btn-generate:hover { opacity: 0.88; }
+.output-area {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.output-area pre {
+  max-height: 300px;
+  overflow: auto;
+  padding: 1rem;
+  background: var(--surface2);
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+}
+.hint { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.35rem; }
+@media (max-width: 768px) { .container { padding: 1.5rem 1rem; } }
+</style>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="favicon.svg">
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
+</script>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="#" onclick="navigateToIndex(event)" class="back-btn">← Back to Hub</a>
+  <div class="topbar-title">📝 Written Assessment Maker</div>
+  <button class="icon-btn" onclick="toggleTheme()" id="theme-toggle" title="Toggle theme">☀</button>
+  <button class="icon-btn" onclick="resetForm()" title="Reset Form">↻</button>
+</div>
+
+<div class="container">
+  <h1>Create Written Assessment</h1>
+
+  <div class="form-group">
+    <label>Assessment Title</label>
+    <input type="text" id="quiz-title" placeholder="Enter title..." value="My Written Assessment">
+  </div>
+
+  <div class="form-group">
+    <label>Assessment Description</label>
+    <textarea id="quiz-description" rows="2" placeholder="Short description about this assessment...">Test your conceptual understanding and get AI grading evaluations.</textarea>
+  </div>
+
+  <div class="form-group">
+    <label>Assessment Icon (emoji)</label>
+    <input type="text" id="quiz-icon" placeholder="e.g., 📝" value="📝" style="max-width: 100px;">
+  </div>
+
+  <div id="questions-container">
+    <!-- Questions will be added here -->
+  </div>
+
+  <button class="btn-add" onclick="addQuestion()">+ Add Question</button>
+
+  <button class="btn-generate" onclick="generateQuiz()">📥 Generate Written Assessment</button>
+
+  <div class="output-area" id="output-area" style="display: none;">
+    <h3 style="margin-bottom: 1rem;">✅ Generated Assessment Code:</h3>
+    <pre id="output-code"></pre>
+    <button class="btn-generate" style="margin-top: 1rem;" onclick="downloadQuiz()">💾 Download as HTML File</button>
+  </div>
+</div>
+
+<script>
+let questionCount = 0;
+
+function init() {
+  const savedTheme = localStorage.getItem('quiz-theme');
+  if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+  updateThemeIcon();
+  addQuestion();
+}
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  const newTheme = isDark ? 'light' : 'dark';
+  html.setAttribute('data-theme', newTheme);
+  localStorage.setItem('quiz-theme', newTheme);
+  updateThemeIcon();
+}
+
+function updateThemeIcon() {
+  const btn = document.getElementById('theme-toggle');
+  if (btn) btn.textContent = document.documentElement.getAttribute('data-theme') === 'dark' ? '☀' : '☾';
+}
+
+function addQuestion() {
+  questionCount++;
+  const container = document.getElementById('questions-container');
+  const card = document.createElement('div');
+  card.className = 'question-entry';
+  card.id = `q-card-${questionCount}`;
+  card.innerHTML = `
+    <span class="question-number">
+      Question ${questionCount}
+    </span>
+    <div class="question-header">
+      <span style="color:var(--text-muted);font-size:0.85rem;">Enter question details</span>
+      <button class="delete-btn" onclick="deleteQuestion(${questionCount})">✕ Delete</button>
+    </div>
+
+    <div class="form-group">
+      <label>Question Prompt</label>
+      <textarea id="q-${questionCount}-question" rows="3" placeholder="Explain photosynthesis..."></textarea>
+    </div>
+
+    <div class="form-group">
+      <label>Model Answer (AI will grade against this)</label>
+      <textarea id="q-${questionCount}-modelAnswer" rows="3" placeholder="Photosynthesis converts CO2, H2O, and light into Glucose and O2..."></textarea>
+    </div>
+
+    <div class="form-group">
+      <label>Grading Rubric Constraints (Optional, guide the AI grading quality)</label>
+      <textarea id="q-${questionCount}-rubric" rows="2" placeholder="e.g., Must mention chlorophyll, water photolysis, and glucose synthesis."></textarea>
+    </div>
+
+    <div class="form-group">
+      <label>Explanation / Extra background (Optional)</label>
+      <textarea id="q-${questionCount}-explanation" rows="2" placeholder="Photosynthesis is split into light-dependent and light-independent cycles..."></textarea>
+    </div>
+
+    <div class="form-group">
+      <label>Tags (comma-separated)</label>
+      <input type="text" id="q-${questionCount}-tags" placeholder="e.g., biology, process" value="">
+    </div>
+  `;
+  container.appendChild(card);
+}
+
+function deleteQuestion(id) {
+  const el = document.getElementById(`q-card-${id}`);
+  if (el) el.remove();
+}
+
+function generateQuiz() {
+  const title = document.getElementById('quiz-title').value || 'Written Assessment';
+  const description = document.getElementById('quiz-description').value || '';
+  const icon = document.getElementById('quiz-icon').value || '📝';
+
+  const questionsList = [];
+  document.querySelectorAll('.question-entry').forEach(entry => {
+    const id = entry.id.replace('q-card-', '');
+    const qText = document.getElementById(`q-${id}-question`)?.value || '';
+    const mAnswer = document.getElementById(`q-${id}-modelAnswer`)?.value || '';
+    const rubricText = document.getElementById(`q-${id}-rubric`)?.value || '';
+    const expText = document.getElementById(`q-${id}-explanation`)?.value || '';
+    const tagsStr = document.getElementById(`q-${id}-tags`)?.value || '';
+
+    if (!qText && !mAnswer) return;
+
+    const tags = tagsStr.split(',').map(t => t.trim()).filter(t => t);
+
+    questionsList.push({
+      id: 'wq-' + Date.now().toString(36) + '-' + id,
+      question: qText,
+      modelAnswer: mAnswer,
+      rubric: rubricText,
+      explanation: expText,
+      tags: tags
+    });
+  });
+
+  if (questionsList.length === 0) {
+    alert('Please add at least one question!');
+    return;
+  }
+
+  const output = {
+    config: {
+      uid: 'wr-' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
+      title: title,
+      description: description,
+      icon: icon
+    },
+    questions: questionsList
+  };
+
+  document.getElementById('output-area').style.display = 'block';
+  document.getElementById('output-code').textContent = JSON.stringify(output, null, 2);
+  window.generatedQuiz = output;
+}
+
+function downloadQuiz() {
+  if (!window.generatedQuiz) return;
+
+  fetch('written-template.html')
+    .then(res => {
+      if (!res.ok) throw new Error('Could not find written-template.html (Status: ' + res.status + ')');
+      return res.text();
+    })
+    .then(template => {
+      const configJson = 'const WRITTEN_CONFIG = ' + JSON.stringify(window.generatedQuiz.config, null, 2) + ';';
+      const questionsJson = 'const WRITTEN_QUESTIONS = ' + JSON.stringify(window.generatedQuiz.questions, null, 2) + ';';
+
+      let modified = template;
+
+      const cfgStart = '/* [WRITTEN_CONFIG_START] */';
+      const cfgEnd = '/* [WRITTEN_CONFIG_END] */';
+      const cfgI1 = modified.indexOf(cfgStart);
+      const cfgI2 = modified.indexOf(cfgEnd);
+      if (cfgI1 !== -1 && cfgI2 !== -1) {
+        modified = modified.substring(0, cfgI1 + cfgStart.length) + '\n' + configJson + '\n' + modified.substring(cfgI2);
+      }
+
+      const qStart = '/* [WRITTEN_QUESTIONS_START] */';
+      const qEnd = '/* [WRITTEN_QUESTIONS_END] */';
+      const qI1 = modified.indexOf(qStart);
+      const qI2 = modified.indexOf(qEnd);
+      if (qI1 !== -1 && qI2 !== -1) {
+        modified = modified.substring(0, qI1 + qStart.length) + '\n' + questionsJson + '\n' + modified.substring(qI2);
+      }
+
+      modified = modified.replace(/<title>.*?<\/title>/, '<title>' + window.generatedQuiz.config.title + '</title>');
+
+      const blob = new Blob([modified], {type: 'text/html'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const safeName = window.generatedQuiz.config.title
+        .replace(/[^a-z0-9\s-]/gi, '')
+        .trim()
+        .replace(/\s+/g, '-')
+        .toLowerCase();
+      a.download = (safeName || 'written-assessment') + '.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function() { URL.revokeObjectURL(url); }, 100);
+      showToast('✅ Assessment generated and download started!');
+    })
+    .catch(function(err) {
+      console.error(err);
+      alert('Error generating assessment file: ' + err.message + '\n\nEnsure written-template.html is in the same folder.');
+    });
+}
+
+function resetForm() {
+  if (confirm('Are you sure you want to reset the form? All entered data will be lost.')) {
+    questionCount = 0;
+    document.getElementById('quiz-title').value = 'My Written Assessment';
+    document.getElementById('quiz-description').value = 'Test your conceptual understanding and get AI grading evaluations.';
+    document.getElementById('quiz-icon').value = '📝';
+    document.getElementById('questions-container').innerHTML = '';
+    document.getElementById('output-area').style.display = 'none';
+    document.getElementById('output-code').textContent = '';
+    window.generatedQuiz = null;
+    addQuestion();
+    showToast('Form reset!');
+  }
+}
+
+function showToast(msg) {
+  const toast = document.createElement('div');
+  toast.textContent = msg;
+  toast.style.cssText = 'position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);padding:0.75rem 1.5rem;border-radius:var(--radius);color:var(--text);font-weight:500;box-shadow:var(--shadow);z-index:9999;transition:opacity 0.3s ease;';
+  document.body.appendChild(toast);
+  setTimeout(function() {
+    toast.style.opacity = '0';
+    setTimeout(function() { toast.remove(); }, 300);
+  }, 2200);
+}
+
+function navigateToIndex(event) {
+  event.preventDefault();
+  window.location.href = 'index.html';
+}
+
+init();
+</script>
+</body>
+</html>
