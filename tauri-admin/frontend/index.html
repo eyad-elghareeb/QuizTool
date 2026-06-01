@@ -1403,6 +1403,7 @@
       '/admin/delete-file': { cmd: 'delete_file', method: 'POST' },
       '/admin/delete-folder': { cmd: 'delete_folder', method: 'POST' },
       '/admin/convert-file': { cmd: 'convert_file', method: 'POST' },
+      '/admin/convert-to-flashcard': { cmd: 'convert_to_flashcard', method: 'POST' },
       '/admin/run-sync': { cmd: 'run_sync', method: 'POST' },
       '/admin/git-commit': { cmd: 'git_commit', method: 'POST' },
       '/admin/git-pull': { cmd: 'git_pull', method: 'POST' },
@@ -2458,6 +2459,7 @@
         { label: 'Duplicate', onclick: `closeContextMenu(); openDuplicateModal('', '${escapeHtml(filePath)}')` },
         { label: 'Move/Rename', onclick: `closeContextMenu(); requestLoadFile('${escapeHtml(filePath)}', { afterLoadAction: 'openMoveModal' })` },
         (file?.type === 'quiz' || file?.type === 'bank') ? { label: 'Convert Quiz/Bank', onclick: `closeContextMenu(); requestLoadFile('${escapeHtml(filePath)}', { afterLoadAction: 'convertFile' })` } : null,
+        (file?.type === 'quiz' || file?.type === 'bank') ? { label: 'Convert to Flashcard', onclick: `closeContextMenu(); requestLoadFile('${escapeHtml(filePath)}', { afterLoadAction: 'convertToFlashcard' })` } : null,
         file?.type === 'flashcard' ? { label: 'Convert to Quiz', onclick: `closeContextMenu(); requestLoadFile('${escapeHtml(filePath)}', { afterLoadAction: 'convertFile' })` } : null,
         { divider: true },
         { label: 'Copy Path', onclick: `closeContextMenu(); copyTextValue('${escapeHtml(filePath)}', 'Path')` },
@@ -2726,8 +2728,8 @@
       }
       const meta = state.currentData.meta || {};
       const pUrl = previewUrl(encodePath(state.currentFile)) + `?v=${Date.now()}`;
-      const canStructuredEdit = ['quiz', 'bank', 'index'].includes(meta.type);
-      const isExportable = ['quiz', 'bank'].includes(meta.type);
+      const canStructuredEdit = ['quiz', 'bank', 'flashcard', 'index'].includes(meta.type);
+      const isExportable = ['quiz', 'bank', 'flashcard'].includes(meta.type);
 
       let content = '';
       if (state.currentTab === 'preview') {
@@ -2870,8 +2872,8 @@
           </div>
           ${isBank ? `
             <div class="field" style="max-width:300px;">
-              <label>Icon</label>
-              <input class="text-input" id="cfg-icon" value="${escapeHtml(meta.config?.icon || '🗃️')}" oninput="syncQuizBankEditor()">
+              <label>${isFlashcard ? 'Icon' : 'Bank Icon'}</label>
+              <input class="text-input" id="cfg-icon" value="${escapeHtml(meta.config?.icon || (isFlashcard ? '🃏' : '🗃️'))}" oninput="syncQuizBankEditor()">
             </div>
           ` : ''}
       `;
@@ -3080,19 +3082,20 @@
       meta.config.uid = uid;
       meta.config.title = title;
       meta.config.description = description;
-      if (meta.type === 'bank') meta.config.icon = icon;
+      if (meta.type === 'bank' || meta.type === 'flashcard') meta.config.icon = icon;
       meta.uid = uid;
       meta.title = title;
       meta.description = description;
-      meta.icon = meta.type === 'bank' ? icon : undefined;
+      meta.icon = (meta.type === 'bank' || meta.type === 'flashcard') ? icon : undefined;
       meta.questions = questions;
       meta.question_count = questions.length;
       // Debounce the expensive serialization + content string rebuild
       clearTimeout(_editorDebounceTimer);
       _editorDebounceTimer = setTimeout(() => {
         if (!state.currentData) return;
-        const configName = meta.type === 'bank' ? 'BANK_CONFIG' : 'QUIZ_CONFIG';
-        const arrayName = meta.type === 'bank' ? 'QUESTION_BANK' : 'QUESTIONS';
+        const isFlashcard = meta.type === 'flashcard';
+        const configName = isFlashcard ? 'BANK_CONFIG' : (meta.type === 'bank' ? 'BANK_CONFIG' : 'QUIZ_CONFIG');
+        const arrayName = isFlashcard ? 'FLASHCARD_BANK' : (meta.type === 'bank' ? 'QUESTION_BANK' : 'QUESTIONS');
         let updated = state.currentData.content;
         updated = replaceAssignedBlock(updated, configName, '{', '}', meta.config);
         updated = replaceAssignedBlock(updated, arrayName, '[', ']', questions);
@@ -3366,8 +3369,10 @@
 
     async function convertFile() {
       if (!state.currentFile) return;
+      const meta = state.currentData?.meta;
+      const isFlashcard = meta?.type === 'flashcard';
       openModal({
-        title: 'Convert Quiz / Bank',
+        title: isFlashcard ? 'Convert Flashcard Deck' : 'Convert Quiz / Bank',
         subtitle: 'This keeps the UID and existing questions while swapping the engine type.',
         body: `
           <div class="empty-state" style="text-align:left;">
@@ -3390,6 +3395,35 @@
       closeModal();
       showToast(result.message || 'File converted.', 'success');
       logActivity('Converted file', `${state.currentFile}\n${result.message || ''}`, 'success');
+      scheduleSync();
+    }
+
+    async function convertToFlashcard() {
+      if (!state.currentFile) return;
+      openModal({
+        title: 'Convert to Flashcard Deck',
+        subtitle: 'This keeps the UID and existing questions while converting to flashcard format.',
+        body: `
+          <div class="empty-state" style="text-align:left;">
+            Convert <strong>${escapeHtml(state.currentFile)}</strong> to a flashcard deck now?
+          </div>
+          <div class="modal-actions">
+            <button class="btn" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="confirmConvertToFlashcard()">Convert to Flashcard</button>
+          </div>
+        `,
+      });
+    }
+
+    async function confirmConvertToFlashcard() {
+      const result = await fetchJson('/admin/convert-to-flashcard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: state.currentFile }),
+      });
+      closeModal();
+      showToast(result.message || 'Converted to flashcard.', 'success');
+      logActivity('Converted to flashcard', `${state.currentFile}\n${result.message || ''}`, 'success');
       scheduleSync();
     }
 

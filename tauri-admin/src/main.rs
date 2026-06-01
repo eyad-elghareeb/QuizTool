@@ -199,6 +199,7 @@ fn main() {
             commands::delete_file,
             commands::delete_folder,
             commands::convert_file,
+            commands::convert_to_flashcard,
             commands::run_sync,
             commands::git_commit,
             commands::git_pull,

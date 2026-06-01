@@ -416,7 +416,34 @@ pub fn convert_file(path: String, state: State<ProjectRoot>) -> Result<Value, St
             std::fs::write(&p, html).map_err(|e| e.to_string())?;
             Ok(json!({ "message": "Converted question bank to quiz while preserving UID." }))
         }
-        _ => Err("Only quiz and bank files can be converted.".into()),
+        parser::FileType::Flashcard => {
+            let cfg = json!({"uid": uid, "title": meta.title.as_deref().unwrap_or(stem), "description": meta.description.as_deref().unwrap_or(""), "icon": "🗃️"});
+            let html = templates::create_quiz_html(&cfg, &meta.questions.unwrap_or_else(|| json!([])));
+            std::fs::write(&p, html).map_err(|e| e.to_string())?;
+            Ok(json!({ "message": "Converted flashcard deck to quiz while preserving UID." }))
+        }
+        _ => Err("Unsupported file type for conversion.".into()),
+    }
+}
+
+#[tauri::command]
+pub fn convert_to_flashcard(path: String, state: State<ProjectRoot>) -> Result<Value, String> {
+    let root = root(&state);
+    let p = resolve_must_exist(&root, &path)?;
+    let content = std::fs::read_to_string(&p).map_err(|e| e.to_string())?;
+    let meta = parser::parse_file_metadata(&content);
+    let stem = p.file_stem().and_then(|s| s.to_str()).unwrap_or("file");
+    let folder_rel = to_posix(p.parent().unwrap_or(&root), &root);
+    let uid = meta.uid.as_deref().unwrap_or("").to_string();
+    let uid = if uid.is_empty() { templates::derive_uid(&folder_rel, stem) } else { uid };
+    match meta.file_type {
+        parser::FileType::Quiz | parser::FileType::Bank => {
+            let cfg = json!({"uid": uid, "title": meta.title.as_deref().unwrap_or(stem), "description": meta.description.as_deref().unwrap_or(""), "icon": "🃏"});
+            let html = templates::create_flashcard_html(&cfg, &meta.questions.unwrap_or_else(|| json!([])));
+            std::fs::write(&p, html).map_err(|e| e.to_string())?;
+            Ok(json!({ "message": "Converted to flashcard deck while preserving UID." }))
+        }
+        _ => Err("Only quiz and bank files can be converted to flashcard.".into()),
     }
 }
 
