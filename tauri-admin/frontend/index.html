@@ -3577,13 +3577,14 @@
 
     function collectWizardState() {
       const previous = state.wizard || {};
+      const currentType = document.getElementById('file-type')?.value || previous.type || 'quiz';
       return {
-        type: document.getElementById('file-type')?.value || previous.type || 'quiz',
+        type: currentType,
         folder: document.getElementById('file-folder')?.value || previous.folder || '.',
         title: document.getElementById('file-title')?.value || previous.title || '',
         description: document.getElementById('file-description')?.value || previous.description || '',
         filename: document.getElementById('file-name')?.value || previous.filename || '',
-        icon: document.getElementById('file-icon')?.value || previous.icon || '🗃️',
+        icon: document.getElementById('file-icon')?.value || previous.icon || (currentType === 'flashcard' ? '🃏' : '🗃️'),
         sourceMode: document.getElementById('file-source-mode')?.value || previous.sourceMode || 'manual',
         sourceRaw: document.getElementById('file-import-raw')?.value || previous.sourceRaw || '',
         clonePath: document.getElementById('file-clone-path')?.value || previous.clonePath || '',
@@ -3650,7 +3651,7 @@
         title: previous.title || '',
         description: previous.description || '',
         filename: previous.filename || '',
-        icon: previous.icon || '🗃️',
+        icon: previous.icon || (type === 'flashcard' ? '🃏' : '🗃️'),
         sourceMode: previous.sourceMode || 'manual',
         sourceRaw: previous.sourceRaw || '',
         clonePath: previous.clonePath || '',
@@ -3877,8 +3878,10 @@
       const wrap = document.getElementById('bank-icon-wrap');
       if (wrap) wrap.style.display = (type === 'bank' || type === 'flashcard') ? 'grid' : 'none';
       const iconInput = document.getElementById('file-icon');
-      if (iconInput && !iconInput.value) {
-        iconInput.value = type === 'flashcard' ? '🃏' : '🗃️';
+      if (iconInput) {
+        const cur = iconInput.value;
+        if (type === 'flashcard' && (!cur || cur === '🗃️')) iconInput.value = '🃏';
+        else if (type !== 'flashcard' && (!cur || cur === '🃏')) iconInput.value = '🗃️';
       }
     }
 
@@ -4136,10 +4139,10 @@
       }
       const payload = await fetchJson(`/admin/load-file?path=${encodeURIComponent(sourcePath)}`);
       state.modalQuestions = clone(payload.meta?.questions || []).map(question => ({
-        question: question.question || '',
+        question: question.question || question.front || '',
         options: question.options || ['', '', '', ''],
         correct: Number(question.correct || 0),
-        explanation: question.explanation || '',
+        explanation: question.explanation || question.back || '',
       }));
       showToast(`Loaded ${state.modalQuestions.length} questions from ${sourcePath}.`, 'success');
       setModalTab('questions');
@@ -4171,10 +4174,10 @@
       }
       
       let standardized = allQuestions.map(q => ({
-        question: q.question || '',
+        question: q.question || q.front || '',
         options: q.options || ['', '', '', ''],
         correct: Number(q.correct || 0),
-        explanation: q.explanation || '',
+        explanation: q.explanation || q.back || '',
       }));
       
       let dupesCount = 0;
@@ -4521,8 +4524,18 @@
       const title = wizard.title;
       const description = wizard.description;
       const filename = wizard.filename;
-      const icon = wizard.icon || '🗃️';
+      const icon = wizard.icon || (wizard.type === 'flashcard' ? '🃏' : '🗃️');
       const questions = state.modalQuestions;
+
+      // Convert quiz-format questions to flashcard format when creating a deck
+      const payloadQuestions = type === 'flashcard'
+        ? questions.map(q => ({
+            type: 'basic',
+            front: q.question || '',
+            back: q.explanation || (q.options?.[q.correct] || ''),
+            tags: [],
+          }))
+        : questions;
 
       if (!title) {
         showToast('Title is required.', 'warn');
@@ -4547,7 +4560,7 @@
         const result = await fetchJson('/admin/create-file', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type, folder, title, description, filename, icon, questions }),
+          body: JSON.stringify({ type, folder, title, description, filename, icon, questions: payloadQuestions }),
         });
         createdPath = result.path || '';
         showToast(result.message || 'File created.', 'success');
