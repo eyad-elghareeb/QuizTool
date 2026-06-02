@@ -18,7 +18,8 @@
   var state = {
     answers: {},
     evaluations: {},
-    flagged: {}
+    flagged: {},
+    photoAnswers: {}
   };
 
   var STORAGE = {
@@ -301,6 +302,7 @@
       '.loading{position:absolute;inset:0;z-index:20;display:none;place-items:center;background:rgba(13,17,23,.72);backdrop-filter:blur(5px)}[data-theme="light"] .loading{background:rgba(243,240,235,.72)}.loading.active{display:grid}.loading-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;box-shadow:var(--shadow);text-align:center;max-width:360px}.spinner{width:42px;height:42px;border:4px solid var(--border);border-top-color:var(--accent);border-radius:50%;margin:0 auto 14px;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}.empty{padding:22px;border:1px dashed var(--border);border-radius:12px;background:var(--surface-2);color:var(--muted)}.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:0.65rem 1.2rem;font-size:.88rem;font-weight:500;box-shadow:var(--shadow);z-index:9999;transition:transform .3s ease,opacity .3s ease;white-space:nowrap;display:flex;align-items:center;gap:.5rem;max-width:90%}.toast.show{transform:translateX(-50%) translateY(0)}',
       '.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:none;align-items:center;justify-content:center;padding:1rem}.modal-overlay.open{display:flex}.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.25rem 1.5rem;max-width:400px;width:100%;box-shadow:var(--shadow);animation:slideUp .25s ease}.modal h3{font-family:"Playfair Display",Georgia,serif;font-size:1.2rem;margin:0 0 .5rem}.modal p{color:var(--muted);font-size:.88rem;line-height:1.5;margin:0 0 1rem}.modal-actions{display:flex;gap:.65rem}.modal-actions .btn-cancel{flex:1;padding:.6rem .75rem;border-radius:10px;background:var(--surface2);border:1.5px solid var(--border);color:var(--text);font-weight:600;font-size:.85rem;transition:all var(--fast)}.modal-actions .btn-cancel:hover{border-color:var(--accent)}.modal-actions .btn-confirm{flex:1;padding:.6rem .75rem;border-radius:10px;background:var(--correct);border:none;color:#fff;font-weight:700;font-size:.85rem;transition:all var(--fast)}.modal-actions .btn-confirm:hover{opacity:.85}.modal-actions .btn-confirm.danger{background:var(--bad);border-color:var(--bad)}@keyframes slideUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}',
       '.result-screen{flex-direction:column;height:100%;overflow:hidden;background:var(--bg)}.result-topbar{display:flex;align-items:center;gap:1rem;padding:0.75rem 1.25rem;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}.result-topbar h2{font-family:"Playfair Display",Georgia,serif;font-size:1.1rem;margin:0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.result-topbar .topbar-actions{margin-left:auto}.result-body{flex:1;overflow-y:auto;padding:1.5rem;display:flex;flex-direction:column;gap:1.5rem;max-width:820px;margin:0 auto;width:100%}.result-body::-webkit-scrollbar{width:6px}.result-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}.score-banner{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.75rem 2rem;display:flex;align-items:center;gap:2rem;flex-wrap:wrap;box-shadow:var(--shadow)}.score-circle{width:110px;height:110px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;border:4px solid var(--accent);flex-shrink:0;background:var(--accent-dim)}.score-circle .pct{font-size:1.8rem;font-weight:700;color:var(--accent);line-height:1}.score-circle .lbl{font-size:0.65rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em}.score-details{flex:1;min-width:180px}.score-details h3{font-family:"Playfair Display",Georgia,serif;font-size:1.4rem;margin:0 0 0.75rem}.score-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:0.65rem}.score-stat{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:0.65rem 0.85rem;transition:border-color var(--fast)}.score-stat:hover{border-color:var(--accent)}.score-stat .n{font-size:1.2rem;font-weight:700}.score-stat .t{font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.03em}.n.green{color:var(--correct)}.n.red{color:var(--wrong)}.n.blue{color:var(--flag)}.result-tabs{display:flex;gap:0.5rem;flex-wrap:wrap}.tab-btn{padding:0.45rem 1rem;border-radius:8px;background:var(--surface);border:1.5px solid var(--border);color:var(--text-muted);font-size:0.85rem;font-weight:500;transition:all var(--fast)}.tab-btn:hover{border-color:var(--accent);color:var(--accent)}.tab-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}.result-list{display:flex;flex-direction:column;gap:1rem}.result-item{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color var(--fast)}.result-item.pass{border-color:var(--correct)}.result-item.fail{border-color:var(--wrong)}.result-item.skipped{border-color:var(--border)}.result-item-header{display:flex;align-items:flex-start;gap:0.75rem;padding:1rem 1.25rem;cursor:pointer;user-select:none}.result-status-icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.9rem;font-weight:700;margin-top:0.15rem}.result-item.pass .result-status-icon{background:var(--correct-bg);color:var(--correct)}.result-item.fail .result-status-icon{background:var(--wrong-bg);color:var(--wrong)}.result-item.skipped .result-status-icon{background:var(--surface2);color:var(--text-muted)}.result-q-meta{flex:1;min-width:0}.result-q-num{font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.2rem;font-weight:600}.result-q-text{font-size:0.95rem;font-weight:500;line-height:1.5;word-break:break-word}.expand-arrow{color:var(--text-muted);font-size:0.8rem;margin-top:0.2rem;transition:transform .2s;flex-shrink:0}.result-item-header.open .expand-arrow{transform:rotate(180deg)}.result-item-body{display:none;padding:0 1.25rem 1.1rem;border-top:1px solid var(--border)}.result-item-body.open{display:block}.answer-row{display:flex;align-items:flex-start;gap:0.65rem;padding:0.6rem 0.75rem;border-radius:8px;margin-top:0.5rem;font-size:0.88rem;flex-direction:column}.answer-row.user-answer{background:var(--wrong-bg)}.answer-row.model-answer{background:var(--correct-bg)}.answer-row .ar-label{font-size:0.72rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;white-space:nowrap;opacity:0.7}.answer-row .ar-text{white-space:pre-wrap;line-height:1.55;width:100%}.explanation-box{margin-top:0.75rem;padding:0.75rem 1rem;background:var(--surface2);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;font-size:0.875rem;line-height:1.6;color:var(--text-muted);white-space:pre-wrap}.explanation-box strong{color:var(--text);font-size:0.8rem;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:0.25rem}.result-actions{display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem}.btn-restart{display:flex;align-items:center;gap:0.5rem;padding:0.85rem 1.75rem;border-radius:var(--radius);background:var(--accent);color:#000;font-weight:700;font-size:0.95rem;border:1.5px solid var(--accent);transition:all var(--fast);text-decoration:none;cursor:pointer}.btn-restart:hover{opacity:0.85;transform:translateY(-1px)}.btn-restart.btn-secondary{background:var(--surface2);color:var(--text);border-color:var(--border)}.btn-restart.btn-secondary:hover{border-color:var(--accent);color:var(--accent);opacity:1}.pdf-export-section{margin-top:1.5rem;margin-bottom:1rem;padding:1rem;border-radius:var(--radius);background:var(--surface);border:1.5px solid var(--border)}.export-options{display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;margin-bottom:0.85rem}.export-option{display:flex;align-items:center;gap:0.5rem;padding:0.45rem 0.65rem;border-radius:6px;background:var(--surface2);border:1.5px solid var(--border);cursor:pointer;transition:all var(--fast);flex:1;min-width:120px}.export-option:hover{border-color:var(--accent);background:var(--accent-dim)}.export-option input[type="checkbox"]{display:none}.export-option input[type="checkbox"]:checked+.export-checkbox-visual{border-color:var(--accent);background:var(--accent)}.export-option input[type="checkbox"]:checked+.export-checkbox-visual svg{display:block}.export-checkbox-visual{width:16px;height:16px;border-radius:4px;border:2px solid var(--border);background:var(--surface);transition:all var(--fast);flex-shrink:0;display:flex;align-items:center;justify-content:center}.export-checkbox-visual svg{display:none;width:10px;height:10px;stroke:#000;stroke-width:3;fill:none}.export-label{font-size:0.82rem;font-weight:500;color:var(--text);flex:1}.export-badge{font-size:0.65rem;padding:0.1rem 0.4rem;border-radius:3px;background:var(--accent-dim);color:var(--accent);font-weight:600}.btn-export-pdf{display:flex;align-items:center;gap:0.5rem;padding:0.85rem 1.75rem;border-radius:var(--radius);background:var(--surface2);color:var(--text);border:1.5px solid var(--border);font-weight:700;font-size:0.95rem;transition:all var(--fast);text-decoration:none;width:100%;justify-content:center;cursor:pointer}.btn-export-pdf:hover{border-color:var(--accent);color:var(--accent);opacity:1}',
+      '.camera-overlay-open{overflow:hidden}.photo-preview-box{padding:12px;text-align:center}.photo-preview-img{max-height:220px;border-radius:8px;max-width:100%;display:block;margin:0 auto;object-fit:contain;background:var(--surface-2)}.photo-preview-actions{display:flex;justify-content:center;gap:8px;margin-top:10px}.feedback-photo{max-width:100%;max-height:300px;border-radius:8px;display:block;margin:0 auto;border:1px solid var(--border)}#camera-video{display:block}#camera-modal .modal{max-width:520px}#camera-crop-section{text-align:center}.crop-container{position:relative;display:inline-block;overflow:hidden;border-radius:10px;background:#000;max-width:100%;max-height:60vh;user-select:none;-webkit-user-select:none;touch-action:none}.crop-container img{display:block;max-width:100%;max-height:60vh;margin:0 auto}.crop-overlay{position:absolute;inset:0;pointer-events:none}.crop-box{position:absolute;border:2px solid var(--accent);cursor:move;pointer-events:auto;touch-action:none;box-shadow:0 0 0 9999px rgba(0,0,0,.55)}.crop-handle{position:absolute;width:28px;height:28px;background:rgba(255,255,255,.9);border:2.5px solid var(--accent);border-radius:4px;z-index:2;pointer-events:auto;touch-action:none;box-sizing:border-box}.crop-handle.nw{top:-14px;left:-14px;cursor:nw-resize}.crop-handle.ne{top:-14px;right:-14px;cursor:ne-resize}.crop-handle.sw{bottom:-14px;left:-14px;cursor:sw-resize}.crop-handle.se{bottom:-14px;right:-14px;cursor:se-resize}.crop-info{text-align:center;color:var(--muted);font-size:.82rem;margin-top:8px}',
       '@media (orientation: portrait) and (max-width:860px){.layout{grid-template-columns:1fr}.nav-pane{border-left:0;border-top:1px solid var(--border);max-height:200px}.nav-grid-wrap{display:flex;overflow-x:auto;overflow-y:hidden;padding-bottom:10px}.nav-grid{grid-template-columns:repeat(auto-fill,minmax(42px,1fr));grid-template-rows:42px;grid-auto-flow:column;gap:5px}.nav-btn{width:42px;height:42px;min-width:42px;aspect-ratio:unset;border-radius:6px}}',
       '@media (max-width:860px){.config-grid,.compare-grid{grid-template-columns:1fr}.layout{grid-template-columns:1fr}.nav-pane{border-left:0;border-top:1px solid var(--border);max-height:200px}.nav-grid-wrap{display:flex;overflow-x:auto;overflow-y:hidden;padding-bottom:10px}.nav-grid{grid-template-columns:repeat(auto-fill,minmax(42px,1fr));grid-template-rows:42px;grid-auto-flow:column;gap:5px}.nav-btn{width:42px;height:42px;min-width:42px;aspect-ratio:unset;border-radius:6px}.content{padding:16px}.manual-bar{align-items:center}.action-row{justify-content:flex-start}.manual-bar .action-row{justify-content:center}}',
       '@media (max-width:640px){.topbar{padding:0.5rem 0.75rem;gap:0.5rem}.topbar-title{font-size:0.95rem}}',
@@ -379,10 +381,20 @@
       '        </section>',
       '        <section class="panel answer-panel" id="answer-panel">',
       '          <textarea id="answer-input" placeholder="Write your answer here..."></textarea>',
+      '          <div id="photo-answer-area" style="display:none">',
+      '            <div class="photo-preview-box">',
+      '              <img class="photo-preview-img" id="photo-preview-img">',
+      '              <div class="photo-preview-actions">',
+      '                <button class="btn btn-secondary" id="photo-retake-btn" type="button">📷 Retake</button>',
+      '                <button class="btn btn-secondary" id="photo-remove-btn" type="button">Remove</button>',
+      '              </div>',
+      '            </div>',
+      '          </div>',
       '          <div class="answer-foot">',
       '            <div class="counter" id="answer-counter">0 words | 0 characters</div>',
       '            <div class="action-row">',
       '              <button class="btn btn-secondary" id="skip-question" type="button">Skip</button>',
+      '              <button class="btn btn-secondary" id="photo-toggle" type="button">📷 Photo</button>',
       '              <button class="btn btn-secondary" id="self-grade" type="button">Manual Grade</button>',
       '              <button class="btn btn-primary" id="ai-grade" type="button">Grade with AI</button>',
       '            </div>',
@@ -512,6 +524,42 @@
       '    </div>',
       '  </div>',
       '</section>',
+      '<input type="file" id="photo-file-input" accept="image/*" style="display:none">',
+      '<div class="modal-overlay" id="camera-modal">',
+      '  <div class="modal" style="max-width:520px">',
+      '    <div class="dash-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">',
+      '      <h3 style="margin:0">📷 Capture Answer Photo</h3>',
+      '      <button class="icon-btn" id="camera-close-btn" type="button" title="Close">✕</button>',
+      '    </div>',
+      '    <div id="camera-viewfinder-section">',
+      '      <video id="camera-video" autoplay playsinline style="width:100%;border-radius:10px;background:#000;max-height:60vh;display:block"></video>',
+      '      <canvas id="camera-canvas" style="display:none"></canvas>',
+      '      <div style="display:flex;justify-content:center;gap:1rem;margin-top:1rem;align-items:center">',
+      '        <button class="btn btn-secondary" id="camera-upload-btn" type="button">📁 Upload</button>',
+      '        <button class="btn btn-primary" id="camera-capture-btn" type="button" style="width:56px;height:56px;border-radius:50%;font-size:1.8rem;padding:0;display:flex;align-items:center;justify-content:center">●</button>',
+      '        <button class="btn btn-icon" id="camera-switch-btn" type="button" title="Switch camera">🔄</button>',
+      '      </div>',
+      '    </div>',
+      '    <div id="camera-crop-section" style="display:none">',
+      '      <div class="crop-container" id="crop-container">',
+      '        <img id="crop-image" alt="Crop preview">',
+      '        <div class="crop-overlay">',
+      '          <div class="crop-box" id="crop-box">',
+      '            <div class="crop-handle nw"></div>',
+      '            <div class="crop-handle ne"></div>',
+      '            <div class="crop-handle sw"></div>',
+      '            <div class="crop-handle se"></div>',
+      '          </div>',
+      '        </div>',
+      '      </div>',
+      '      <div class="crop-info">Drag the box or resize handles to select the answer area</div>',
+      '      <div style="display:flex;justify-content:center;gap:1rem;margin-top:1rem">',
+      '        <button class="btn btn-secondary" id="crop-retake-btn" type="button">Retake</button>',
+      '        <button class="btn btn-primary" id="crop-use-btn" type="button">Crop &amp; Use</button>',
+      '      </div>',
+      '    </div>',
+      '  </div>',
+      '</div>',
       '<div id="toast" class="toast"></div>'
     ].join('');
 
@@ -569,6 +617,23 @@
         feedback: 'Manual grading selected. Compare your response with the model answer, then choose Pass or Fail for the final mark.'
       });
     });
+    $('#photo-toggle').addEventListener('click', openCamera);
+    $('#camera-close-btn').addEventListener('click', closeCamera);
+    $('#camera-capture-btn').addEventListener('click', capturePhoto);
+    $('#crop-use-btn').addEventListener('click', cropAndUse);
+    $('#crop-retake-btn').addEventListener('click', function () {
+      $('#camera-crop-section').style.display = 'none';
+      $('#camera-viewfinder-section').style.display = 'block';
+      if (!_cameraStream) openCamera();
+    });
+    $('#camera-upload-btn').addEventListener('click', openFilePicker);
+    $('#camera-switch-btn').addEventListener('click', switchCamera);
+    $('#photo-remove-btn').addEventListener('click', removePhoto);
+    $('#photo-retake-btn').addEventListener('click', openCamera);
+    $('#photo-file-input').addEventListener('change', handlePhotoFile);
+    $('#camera-modal').addEventListener('click', function (e) {
+      if (e.target === this) closeCamera();
+    });
     $('#ai-grade').addEventListener('click', submitForAiGrade);
     $('#mark-pass').addEventListener('click', function () {
       markVerdict('pass');
@@ -604,7 +669,7 @@
   }
 
   function updateResumeButton() {
-    var hasSaved = Object.keys(state.answers).length || Object.keys(state.evaluations).length || Object.keys(state.flagged).length;
+    var hasSaved = Object.keys(state.answers).length || Object.keys(state.evaluations).length || Object.keys(state.flagged).length || Object.keys(state.photoAnswers || {}).length;
     $('#resume-last').disabled = !hasSaved;
   }
 
@@ -624,7 +689,7 @@
       var evaluation = state.evaluations[index];
       var passed = evaluation ? isPassed(evaluation) : null;
       var isFlagged = !!state.flagged[index];
-      var isAnswered = !!state.answers[index];
+      var isAnswered = !!(state.answers[index] || (state.photoAnswers && state.photoAnswers[index] && state.photoAnswers[index].data));
 
       if (evaluation) doneCount++;
       if (isFlagged) flaggedCount++;
@@ -664,8 +729,20 @@
     });
 
     var input = $('#answer-input');
-    input.value = state.answers[index] || '';
-    updateCounter();
+    var photoArea = $('#photo-answer-area');
+    var hasPhotoAnswer = state.photoAnswers && state.photoAnswers[index] && state.photoAnswers[index].data;
+
+    if (hasPhotoAnswer) {
+      input.style.display = 'none';
+      photoArea.style.display = 'block';
+      $('#photo-preview-img').src = 'data:' + state.photoAnswers[index].mimeType + ';base64,' + state.photoAnswers[index].data;
+      $('#answer-counter').textContent = '📷 Photo answer';
+    } else {
+      input.style.display = '';
+      photoArea.style.display = 'none';
+      input.value = state.answers[index] || '';
+      updateCounter();
+    }
     updateFlagButton();
 
     var evaluation = state.evaluations[index];
@@ -677,7 +754,7 @@
     }
 
     renderQuestionList();
-    input.focus({ preventScroll: true });
+    if (!hasPhotoAnswer) input.focus({ preventScroll: true });
   }
 
   function onAnswerInput() {
@@ -717,15 +794,17 @@
   function createManualEvaluation(options) {
     options = options || {};
     var answer = ($('#answer-input').value || '').trim();
-    state.answers[currentIndex] = $('#answer-input').value;
+    var photo = state.photoAnswers && state.photoAnswers[currentIndex] && state.photoAnswers[currentIndex].data;
+    var hasContent = !!(answer || photo);
+    state.answers[currentIndex] = answer;
     state.evaluations[currentIndex] = {
       score: null,
-      passed: !!answer,
-      strengths: answer ? ['Answer attempted and ready for self review.'] : [],
-      gaps: answer ? [] : ['No answer was written before self grading.'],
+      passed: hasContent,
+      strengths: hasContent ? ['Answer attempted and ready for self review.'] : [],
+      gaps: hasContent ? [] : ['No answer was provided before self grading.'],
       feedback: options.feedback || 'Compare your response with the model answer, then choose Pass or Fail for the final mark.',
       source: options.source || 'Manual grade',
-      manualVerdict: answer ? 'pass' : 'fail'
+      manualVerdict: hasContent ? 'pass' : 'fail'
     };
     renderFeedback(state.evaluations[currentIndex]);
     renderQuestionList();
@@ -736,11 +815,12 @@
   function submitForAiGrade() {
     var apiKey = ($('#api-key').value || _readKey() || '').trim();
     var answer = ($('#answer-input').value || '').trim();
-    if (!answer) {
-      showToast('Write an answer before requesting AI grading.');
+    var photo = state.photoAnswers && state.photoAnswers[currentIndex] && state.photoAnswers[currentIndex].data;
+    if (!answer && !photo) {
+      showToast('Write an answer or capture a photo before requesting AI grading.');
       return;
     }
-    if (answer.length < 10 && answer.split(/\s+/).length < 3) {
+    if (!photo && answer.length < 10 && answer.split(/\s+/).length < 3) {
       showToast('Very short answer — AI grading will work but results may be limited. Consider writing more detail.');
     }
     if (!apiKey) {
@@ -752,12 +832,12 @@
       return;
     }
 
-    state.answers[currentIndex] = $('#answer-input').value;
+    state.answers[currentIndex] = answer;
     _writeKey(apiKey);
     localStorage.setItem(STORAGE.model, $('#model-select').value);
     setLoading(true);
 
-    gradeWithGemini(questions[currentIndex], answer, apiKey, $('#model-select').value)
+    gradeWithGemini(questions[currentIndex], photo ? null : answer, apiKey, $('#model-select').value)
       .then(function (evaluation) {
         state.evaluations[currentIndex] = evaluation;
         renderFeedback(evaluation);
@@ -779,6 +859,7 @@
   }
 
   function gradeWithGemini(question, answer, apiKey, model) {
+    var hasPhotoAnswer = state.photoAnswers && state.photoAnswers[currentIndex] && state.photoAnswers[currentIndex].data;
     var prompt = [
       'You are grading a written educational answer. Be fair and consider partial credit.',
       'Return valid JSON only with keys: score, passed, strengths, gaps, feedback.',
@@ -792,14 +873,17 @@
       question.modelAnswer || '(No model answer supplied.)',
       '',
       question.rubric ? 'RUBRIC:\n' + question.rubric + '\n' : '',
-      'STUDENT ANSWER:',
-      answer
+      hasPhotoAnswer ? 'The student\'s handwritten answer is provided as an attached image. Transcribe it first, then evaluate against the model answer.' : 'STUDENT ANSWER:\n' + answer
     ].join('\n');
 
     return tryGeminiRequests(prompt, apiKey, buildGeminiAttempts(model))
       .then(function (result) {
-        var parsed = parseJsonResponse(extractGeminiText(result.payload));
-        return normalizeEvaluation(parsed, result.label);
+        var text = extractGeminiText(result.payload);
+        try {
+          return normalizeEvaluation(parseJsonResponse(text), result.label);
+        } catch (parseError) {
+          throw new Error('Gemini returned a prose response instead of the expected JSON format.' + (text ? ' Response start: "' + text.substring(0, 100) + '".' : ''));
+        }
       });
   }
 
@@ -839,6 +923,15 @@
     var body = {
       contents: [{ parts: [{ text: prompt }] }]
     };
+    var photo = state.photoAnswers && state.photoAnswers[currentIndex];
+    if (photo && photo.data) {
+      body.contents[0].parts.push({
+        inlineData: {
+          mimeType: photo.mimeType || 'image/jpeg',
+          data: photo.data
+        }
+      });
+    }
     if (attempt.jsonMode) {
       body.generationConfig = { responseMimeType: 'application/json' };
     }
@@ -946,7 +1039,12 @@
     var question = questions[currentIndex];
     $('#answer-panel').style.display = 'none';
     $('#feedback').classList.add('active');
-    $('#feedback-user').textContent = state.answers[currentIndex] || '(No answer written.)';
+    var photo = state.photoAnswers && state.photoAnswers[currentIndex];
+    if (photo && photo.data) {
+      $('#feedback-user').innerHTML = '<img src="data:' + photo.mimeType + ';base64,' + photo.data + '" class="feedback-photo">';
+    } else {
+      $('#feedback-user').textContent = state.answers[currentIndex] || '(No answer written.)';
+    }
     $('#feedback-model').textContent = question.modelAnswer || '(No model answer supplied.)';
 
     var passed = isPassed(evaluation);
@@ -1127,6 +1225,7 @@
     state.answers = {};
     state.evaluations = {};
     state.flagged = {};
+    state.photoAnswers = {};
     localStorage.removeItem(STORAGE.progress);
     currentIndex = 0;
     showScreen('start-screen');
@@ -1308,6 +1407,7 @@
     state.answers = {};
     state.evaluations = {};
     state.flagged = {};
+    state.photoAnswers = {};
     localStorage.removeItem(STORAGE.progress);
     closeResetModal();
     currentIndex = 0;
@@ -1413,6 +1513,284 @@
       showToast('Storage full. Clear old tracker data to keep saving.');
     }
   }
+
+// --- Camera & Photo functions ---
+var _cameraStream = null;
+var _useFrontCamera = false;
+var _capturedDataUrl = null;
+var _cropBox = null; // { left, top, width, height } in display px
+var _cropDragType = null; // 'move', 'nw', 'ne', 'sw', 'se' or null
+var _cropDragStartX = 0;
+var _cropDragStartY = 0;
+var _cropStartBox = null;
+
+function hasPhoto(index) {
+  return state.photoAnswers && state.photoAnswers[index] && state.photoAnswers[index].data;
+}
+
+function _renderCropBox() {
+  if (!_cropBox) return;
+  var box = $('#crop-box');
+  box.style.left = _cropBox.left + 'px';
+  box.style.top = _cropBox.top + 'px';
+  box.style.width = _cropBox.width + 'px';
+  box.style.height = _cropBox.height + 'px';
+}
+
+function _getPointerPos(e) {
+  var container = $('#crop-container');
+  var rect = container.getBoundingClientRect();
+  var cx = e.touches ? e.touches[0].clientX : e.clientX;
+  var cy = e.touches ? e.touches[0].clientY : e.clientY;
+  return { x: cx - rect.left, y: cy - rect.top };
+}
+
+function _startCropDrag(e) {
+  if (e.type === 'mousedown' && e.button !== 0) return;
+  e.preventDefault();
+  _cropDragType = 'move';
+  var pos = _getPointerPos(e);
+  _cropDragStartX = pos.x;
+  _cropDragStartY = pos.y;
+  _cropStartBox = { left: _cropBox.left, top: _cropBox.top, width: _cropBox.width, height: _cropBox.height };
+  document.addEventListener('mousemove', _onCropMove);
+  document.addEventListener('mouseup', _endCropDrag);
+  document.addEventListener('touchmove', _onCropMove, { passive: false });
+  document.addEventListener('touchend', _endCropDrag);
+}
+
+function _startCropResize(e, handle) {
+  if (e.type === 'mousedown' && e.button !== 0) return;
+  e.preventDefault();
+  _cropDragType = handle;
+  var pos = _getPointerPos(e);
+  _cropDragStartX = pos.x;
+  _cropDragStartY = pos.y;
+  _cropStartBox = { left: _cropBox.left, top: _cropBox.top, width: _cropBox.width, height: _cropBox.height };
+  document.addEventListener('mousemove', _onCropMove);
+  document.addEventListener('mouseup', _endCropDrag);
+  document.addEventListener('touchmove', _onCropMove, { passive: false });
+  document.addEventListener('touchend', _endCropDrag);
+}
+
+function _onCropMove(e) {
+  e.preventDefault();
+  var maxW = $('#crop-container').clientWidth;
+  var maxH = $('#crop-container').clientHeight;
+  var pos = _getPointerPos(e);
+  var dx = pos.x - _cropDragStartX;
+  var dy = pos.y - _cropDragStartY;
+  var b = _cropStartBox;
+  var min = 40;
+
+  var l = b.left, t = b.top, r = b.left + b.width, bm = b.top + b.height;
+
+  switch (_cropDragType) {
+    case 'move':
+      l = b.left + dx; t = b.top + dy;
+      r = l + b.width; bm = t + b.height;
+      break;
+    case 'se':
+      r = b.left + b.width + dx; bm = b.top + b.height + dy;
+      break;
+    case 'sw':
+      l = b.left + dx; r = b.left + b.width; bm = b.top + b.height + dy;
+      break;
+    case 'ne':
+      t = b.top + dy; r = b.left + b.width + dx; bm = b.top + b.height;
+      break;
+    case 'nw':
+      l = b.left + dx; t = b.top + dy; r = b.left + b.width; bm = b.top + b.height;
+      break;
+  }
+
+  l = Math.max(0, Math.min(l, maxW - min));
+  t = Math.max(0, Math.min(t, maxH - min));
+  r = Math.max(l + min, Math.min(r, maxW));
+  bm = Math.max(t + min, Math.min(bm, maxH));
+
+  _cropBox.left = l;
+  _cropBox.top = t;
+  _cropBox.width = r - l;
+  _cropBox.height = bm - t;
+  _renderCropBox();
+}
+
+function _endCropDrag() {
+  _cropDragType = null;
+  document.removeEventListener('mousemove', _onCropMove);
+  document.removeEventListener('mouseup', _endCropDrag);
+  document.removeEventListener('touchmove', _onCropMove);
+  document.removeEventListener('touchend', _endCropDrag);
+}
+
+function _initCrop() {
+  var img = $('#crop-image');
+  var naturalW = img.naturalWidth;
+  var naturalH = img.naturalHeight;
+  var displayW = img.clientWidth || naturalW;
+  var displayH = img.clientHeight || naturalH;
+  if (!displayW || !displayH) return;
+  var pad = 0.05;
+  var w = Math.round(displayW * (1 - pad * 2));
+  var h = Math.round(displayH * (1 - pad * 2));
+  _cropBox = {
+    left: Math.round((displayW - w) / 2),
+    top: Math.round((displayH - h) / 2),
+    width: w,
+    height: h
+  };
+  _renderCropBox();
+
+  // Bind drag events on the crop box
+  var box = $('#crop-box');
+  box.addEventListener('mousedown', _startCropDrag);
+  box.addEventListener('touchstart', _startCropDrag, { passive: false });
+
+  // Bind resize events on handles
+  document.querySelectorAll('.crop-handle').forEach(function (el) {
+    var handle = el.classList.contains('nw') ? 'nw' :
+                 el.classList.contains('ne') ? 'ne' :
+                 el.classList.contains('sw') ? 'sw' : 'se';
+    el.addEventListener('mousedown', function (e) { e.stopPropagation(); _startCropResize(e, handle); });
+    el.addEventListener('touchstart', function (e) { e.stopPropagation(); _startCropResize(e, handle); }, { passive: false });
+  });
+}
+
+function _showCropSection(imgSrc) {
+  _capturedDataUrl = imgSrc;
+  $('#camera-viewfinder-section').style.display = 'none';
+  $('#camera-crop-section').style.display = 'block';
+  var cropImg = $('#crop-image');
+  cropImg.src = imgSrc;
+  if (cropImg.complete && cropImg.naturalWidth) {
+    _initCrop();
+  } else {
+    cropImg.addEventListener('load', _initCrop, { once: true });
+  }
+}
+
+function applyCrop() {
+  if (!_capturedDataUrl || !_cropBox) return;
+  var img = new Image();
+  img.onload = function () {
+    var displayW = $('#crop-image').clientWidth || img.naturalWidth;
+    var displayH = $('#crop-image').clientHeight || img.naturalHeight;
+    var sx = (_cropBox.left / displayW) * img.naturalWidth;
+    var sy = (_cropBox.top / displayH) * img.naturalHeight;
+    var sw = (_cropBox.width / displayW) * img.naturalWidth;
+    var sh = (_cropBox.height / displayH) * img.naturalHeight;
+    var c = document.createElement('canvas');
+    c.width = sw;
+    c.height = sh;
+    var ctx = c.getContext('2d');
+    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+    var cropped = c.toDataURL('image/jpeg', 0.85);
+    state.photoAnswers[currentIndex] = {
+      data: cropped.replace(/^data:image\/\w+;base64,/, ''),
+      mimeType: 'image/jpeg'
+    };
+    closeCamera();
+    showQuestion(currentIndex);
+    showToast('Photo captured.');
+  };
+  img.src = _capturedDataUrl;
+}
+
+function openCamera() {
+  if (!window.isSecureContext && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+    showToast('Camera requires HTTPS or localhost. Use Upload instead.');
+    openFilePicker();
+    return;
+  }
+  _capturedDataUrl = null;
+  $('#camera-modal').classList.add('open');
+  $('#camera-crop-section').style.display = 'none';
+  $('#camera-viewfinder-section').style.display = 'block';
+
+  var constraints = {
+    video: { facingMode: _useFrontCamera ? 'user' : 'environment' }
+  };
+
+  navigator.mediaDevices.getUserMedia(constraints)
+    .then(function (stream) {
+      _cameraStream = stream;
+      var video = $('#camera-video');
+      video.srcObject = stream;
+    })
+    .catch(function (err) {
+      closeCamera();
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        showToast('Camera permission denied. Use Upload instead.');
+      } else if (err.name === 'NotFoundError') {
+        showToast('No camera found. Use Upload instead.');
+      } else {
+        showToast('Camera error: ' + (err.message || 'unknown'));
+      }
+      openFilePicker();
+    });
+}
+
+function closeCamera() {
+  if (_cameraStream) {
+    _cameraStream.getTracks().forEach(function (track) { track.stop(); });
+    _cameraStream = null;
+  }
+  _capturedDataUrl = null;
+  $('#camera-modal').classList.remove('open');
+}
+
+function capturePhoto() {
+  var video = $('#camera-video');
+  var canvas = $('#camera-canvas');
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  var ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0);
+  var dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+  _showCropSection(dataUrl);
+}
+
+function cropAndUse() {
+  applyCrop();
+}
+
+function switchCamera() {
+  _useFrontCamera = !_useFrontCamera;
+  if (_cameraStream) {
+    _cameraStream.getTracks().forEach(function (track) { track.stop(); });
+    _cameraStream = null;
+  }
+  openCamera();
+}
+
+function openFilePicker() {
+  $('#photo-file-input').click();
+}
+
+function handlePhotoFile(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) {
+    showToast('Please select an image file.');
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function (e) {
+    var dataUrl = e.target.result;
+    $('#camera-modal').classList.add('open');
+    _showCropSection(dataUrl);
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+
+function removePhoto() {
+  delete state.photoAnswers[currentIndex];
+  showQuestion(currentIndex);
+  showToast('Photo removed.');
+}
+
 
   function init() {
     initAssets();
