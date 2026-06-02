@@ -68,9 +68,11 @@
   }
 
   var MODELS = [
-    ['gemini-2.5-flash-lite', 'Gemini 2.5 Flash-Lite (fastest, cheapest)'],
-    ['gemini-2.5-flash', 'Gemini 2.5 Flash (fast, stronger)'],
-    ['gemma-4-26b-a4b-it', 'Gemma 4 26B IT (fast open model)']
+    ['gemma-4-26b-a4b-it', 'Gemma 4 26B IT (default, fast open model)'],
+    ['gemma-4-31b-it', 'Gemma 4 31B IT (larger, stronger open model)'],
+    ['gemini-3.1-flash-lite', 'Gemini 3.1 Flash-Lite (fast, stable Gemini)'],
+    ['gemini-2.5-flash-lite', 'Gemini 2.5 Flash-Lite (older, deprecating soon)'],
+    ['gemini-2.5-flash', 'Gemini 2.5 Flash (older, deprecating soon)']
   ];
 
   function pickField(obj) {
