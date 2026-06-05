@@ -394,11 +394,12 @@
       '#ai-context-body .opt-line{padding-left:.5rem;font-size:.8rem}\n' +
       /* Chat area */
       '#ai-chat-area{flex:1;overflow-y:auto;padding:.5rem 1rem;display:flex;flex-direction:column;gap:.4rem;min-height:160px;scroll-behavior:smooth}\n' +
-      '.chat-msg{max-width:92%;padding:.45rem .75rem;border-radius:10px;font-size:.85rem;line-height:1.5;word-wrap:break-word;animation:fadeIn .2s ease}\n' +
+       '.chat-msg{max-width:92%;padding:.45rem .75rem;border-radius:10px;font-size:.85rem;line-height:1.5;word-wrap:break-word;animation:fadeIn .2s ease;unicode-bidi:plaintext}\n' +
       '.user-msg{align-self:flex-end;background:var(--accent-dim);border:1px solid rgba(240,165,0,0.2)}\n' +
       '.ai-msg{align-self:flex-start;background:var(--surface2);border:1px solid var(--border)}\n' +
       '.chat-msg .msg-label{font-size:.68rem;font-weight:600;margin-bottom:3px;opacity:.55}\n' +
-      '.chat-msg p{margin:0 0 .3rem}\n' +
+       '.chat-msg .msg-body *{unicode-bidi:plaintext}\n' +
+       '.chat-msg p{margin:0 0 .3rem}\n' +
       '.chat-msg p:last-child{margin-bottom:0}\n' +
       '.chat-msg ul,.chat-msg ol{margin:.25rem 0;padding-left:1.2rem}\n' +
       '.chat-msg li{margin-bottom:.15rem}\n' +
@@ -435,8 +436,9 @@
       '#study-notes-header .arrow.open{transform:rotate(180deg)}\n' +
       '#study-notes-body{display:none;padding:0 1rem 1rem;font-size:.85rem;line-height:1.6;border-top:1px solid var(--border);max-height:400px;overflow-y:auto}\n' +
       '#study-notes-body.open{display:block;padding-top:1rem}\n' +
-      '#study-notes-body .notes-content{white-space:pre-wrap;word-wrap:break-word;line-height:1.6}\n' +
-      '#study-notes-body .notes-content p{margin:0 0 .3rem}\n' +
+       '#study-notes-body .notes-content{white-space:pre-wrap;word-wrap:break-word;line-height:1.6;unicode-bidi:plaintext}\n' +
+       '#study-notes-body .notes-content *{unicode-bidi:plaintext}\n' +
+       '#study-notes-body .notes-content p{margin:0 0 .3rem}\n' +
       '#study-notes-body .notes-content p:last-child{margin-bottom:0}\n' +
       '#study-notes-body .notes-content ul,.notes-content ol{margin:.3rem 0;padding-left:1.3rem}\n' +
       '#study-notes-body .notes-content li{margin-bottom:.15rem}\n' +
@@ -508,10 +510,10 @@
           '</div>' +
           '<div id="ai-context-body"></div>' +
         '</div>' +
-        '<div id="ai-chat-area" class="ai-chat-area"></div>' +
+        '<div id="ai-chat-area" class="ai-chat-area" dir="auto"></div>' +
         '<div id="ai-chat-error"></div>' +
         '<div id="ai-input-wrap">' +
-          '<textarea id="ai-input" placeholder="Ask anything about this question..." rows="1"></textarea>' +
+          '<textarea id="ai-input" dir="auto" placeholder="Ask anything about this question..." rows="1"></textarea>' +
           '<button id="ai-send-btn">Ask</button>' +
         '</div>' +
       '</div>';
@@ -543,7 +545,7 @@
 
     var div = document.createElement('div');
     div.className = 'chat-msg ' + (role === 'user' ? 'user-msg' : 'ai-msg');
-    div.innerHTML = '<div class="msg-label">' + (role === 'user' ? 'You' : 'AI') + '</div><div class="msg-body">' + _renderMarkdown(text) + '</div>';
+    div.innerHTML = '<div class="msg-label">' + (role === 'user' ? 'You' : 'AI') + '</div><div class="msg-body" dir="auto">' + _renderMarkdown(text) + '</div>';
     chatArea.appendChild(div);
     chatArea.scrollTop = chatArea.scrollHeight;
   }
@@ -576,12 +578,12 @@
     // Populate question context (collapsed by default)
     var ctx = _$('ai-context-body');
     var keys = ['A','B','C','D','E','F','G','H'];
-    var html = '<div class="q-label">' + _escapeHtml(questionObj.question || '') + '</div>';
+    var html = '<div class="q-label" dir="auto">' + _escapeHtml(questionObj.question || '') + '</div>';
     if (questionObj.options && Array.isArray(questionObj.options)) {
       questionObj.options.forEach(function (opt, i) {
         var chk = '';
         if (typeof questionObj.correct === 'number' && i === questionObj.correct) chk = ' ✓';
-        html += '<div class="opt-line">' + (keys[i] || i) + '. ' + _escapeHtml(opt) + chk + '</div>';
+        html += '<div class="opt-line" dir="auto">' + (keys[i] || i) + '. ' + _escapeHtml(opt) + chk + '</div>';
       });
     }
     ctx.innerHTML = html;
@@ -591,7 +593,7 @@
     chatArea.innerHTML =
       '<div class="chat-msg ai-msg">' +
         '<div class="msg-label">AI</div>' +
-        '<div class="msg-body">' + _renderMarkdown('Hi! Ask me anything about this question — I can explain concepts, clarify why an answer is right or wrong, or dive deeper into any topic.') +
+        '<div class="msg-body" dir="auto">' + _renderMarkdown('Hi! Ask me anything about this question — I can explain concepts, clarify why an answer is right or wrong, or dive deeper into any topic.') +
         '</div>' +
       '</div>';
 
@@ -887,6 +889,7 @@
       .then(function (text) {
         _$('notes-loading').style.display = 'none';
         _$('notes-content').innerHTML = _renderMarkdown(text);
+        _$('notes-content').setAttribute('dir', 'auto');
         // Add regenerate button
         var regenBtn = document.createElement('button');
         regenBtn.className = 'regenerate-btn';
