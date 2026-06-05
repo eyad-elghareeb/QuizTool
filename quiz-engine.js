@@ -1175,6 +1175,7 @@ input[type=radio]:checked + .option-label .option-key {
     </div>
     <div class="topbar-actions">
       <div class="icon-btn hl-mode-btn" role="button" tabindex="0" onclick="toggleHighlighterMode()" title="Highlighter Mode (H)">🖍<span class="hl-last-dot" style="background:rgba(255,213,79,0.8);"></span><div class="hl-color-picker" id="hl-color-picker-1"><button class="hl-color-btn cb-1 selected" onclick="hlSelectColor(1); event.stopPropagation();" title="Yellow (1)"></button><button class="hl-color-btn cb-2" onclick="hlSelectColor(2); event.stopPropagation();" title="Green (2)"></button><button class="hl-color-btn cb-3" onclick="hlSelectColor(3); event.stopPropagation();" title="Blue (3)"></button><button class="hl-color-btn cb-4" onclick="hlSelectColor(4); event.stopPropagation();" title="Red (4)"></button><button class="hl-erase-btn" onclick="hlSelectColor(0); event.stopPropagation();" title="Eraser">🧹</button><button class="hl-close-btn" onclick="disableHighlighterMode(); event.stopPropagation();" title="Close Highlighter">✕</button></div></div>
+      <button class="icon-btn" onclick="openAiAssistant()" title="Ask AI (needs internet)">🤖</button>
       <a href="#" class="icon-btn" title="Back to Hub" onclick="navigateToIndex(event); return false;">🏠</a>
       <button class="icon-btn theme-toggle-btn" onclick="toggleTheme()" title="Toggle theme">☀</button>
       <button class="icon-btn danger" onclick="confirmResetProgress()" title="Reset Progress">↻</button>
@@ -1222,6 +1223,7 @@ input[type=radio]:checked + .option-label .option-key {
     <h2>📊 Quiz Results</h2>
     <div class="topbar-actions">
       <div class="icon-btn hl-mode-btn" role="button" tabindex="0" onclick="toggleHighlighterMode()" title="Highlighter Mode (H)">🖍<span class="hl-last-dot" style="background:rgba(255,213,79,0.8);"></span><div class="hl-color-picker" id="hl-color-picker-2"><button class="hl-color-btn cb-1 selected" onclick="hlSelectColor(1); event.stopPropagation();" title="Yellow (1)"></button><button class="hl-color-btn cb-2" onclick="hlSelectColor(2); event.stopPropagation();" title="Green (2)"></button><button class="hl-color-btn cb-3" onclick="hlSelectColor(3); event.stopPropagation();" title="Blue (3)"></button><button class="hl-color-btn cb-4" onclick="hlSelectColor(4); event.stopPropagation();" title="Red (4)"></button><button class="hl-erase-btn" onclick="hlSelectColor(0); event.stopPropagation();" title="Eraser">🧹</button><button class="hl-close-btn" onclick="disableHighlighterMode(); event.stopPropagation();" title="Close Highlighter">✕</button></div></div>
+      <button class="icon-btn" onclick="openAiAssistant()" title="Ask AI (needs internet)">🤖</button>
       <a href="#" class="icon-btn" title="Back to Hub" onclick="navigateToIndex(event); return false;">🏠</a>
       <button class="icon-btn theme-toggle-btn" onclick="toggleTheme()" title="Toggle theme">☀</button>
       <button class="icon-btn danger" onclick="confirmResetProgress()" title="Reset Progress">↻</button>
@@ -2268,6 +2270,20 @@ function buildResults() {
   else grade = '💪 Don\'t Give Up!';
   document.getElementById('res-grade').textContent = grade;
 
+  // Study notes placeholder (injected by ai-assistant-engine if API key exists)
+  var notesPlaceholder = document.getElementById('study-notes-placeholder');
+  if (!notesPlaceholder) {
+    notesPlaceholder = document.createElement('div');
+    notesPlaceholder.id = 'study-notes-placeholder';
+    var scoreBanner = document.querySelector('.score-banner');
+    if (scoreBanner && scoreBanner.parentNode) {
+      scoreBanner.parentNode.insertBefore(notesPlaceholder, scoreBanner.nextSibling);
+    }
+  }
+  if (localStorage.getItem('gemini_api_key')) {
+    _ensureAiAssistant(function() { AiAssistant.maybeRenderNotesCard(QUESTIONS, state.answers); });
+  }
+
   renderResultItems('all');
   updateExportBadges();
 }
@@ -2500,6 +2516,22 @@ function showToast(msg, actions = []) {
     toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
   }
   // If there are actions, don't auto-hide - let user dismiss manually
+}
+
+/* ── AI ASSISTANT (lazy-loaded) ──────────────────────────── */
+function _ensureAiAssistant(cb) {
+  if (window.AiAssistant) { cb(); return; }
+  var s = document.createElement('script');
+  s.src = (window.__QUIZ_ENGINE_BASE || '') + 'ai-assistant-engine.js';
+  s.onload = cb;
+  s.onerror = function() { showToast('AI Assistant requires internet connection'); };
+  document.body.appendChild(s);
+}
+
+function openAiAssistant() {
+  var q = QUESTIONS[state.current];
+  if (!q) return;
+  _ensureAiAssistant(function() { AiAssistant.openAssistant(q); });
 }
 
 /* ── LOCAL STORAGE SAVE/RESTORE ──────────────────────────── */
