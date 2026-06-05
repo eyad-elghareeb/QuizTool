@@ -941,10 +941,44 @@
   function gradeWithGemini(question, answer, apiKey, model, cancelSignal) {
     var hasPhotoAnswer = state.photoAnswers && state.photoAnswers[currentIndex] && state.photoAnswers[currentIndex].data;
     var prompt = [
-      'You are grading a written educational answer. Be fair and consider partial credit.',
+      'You are grading a MEDICAL exam written answer. BE FORGIVING — this is a learning tool, not a high-stakes exam.',
       'Return valid JSON only with keys: score, passed, strengths, gaps, feedback.',
-      'score is a number from 0 to 100. Set passed to true when the answer shows reasonable understanding — generally score ≥ 60 is a pass, but use your judgment for borderline responses. If the rubric sets a different bar, follow the rubric.',
-      'Be generous with partial credit. If the answer is mostly correct but has minor errors, set passed to true and note the gaps.',
+      '',
+      'CORE PRINCIPLE: When in doubt, GIVE THE STUDENT THE BENEFIT. Partial credit should be the default, not the exception.',
+      '',
+      'GRADING METHODOLOGY — APPLY IN THIS ORDER:',
+      '1. Break the model answer into distinct key points (facts, items, concepts, steps, numbered items).',
+      '2. Count how many key points the student\'s answer covers correctly. Do NOT require exact wording — recognize synonyms, paraphrases, and clinical equivalents.',
+      '3. score = (covered points / total key points) × 100. ALWAYS round the score UP to the nearest 5. Example: 47% → 50%, 52% → 55%, 43% → 45%.',
+      '4. Now apply a GENEROSITY BONUS: add 5 extra points to the score (capped at 100). So a student who scored 43% → rounded to 45% → bonus to 50% = pass.',
+      '5. Set passed = true when score >= 45 after rounding. Students near the threshold should pass.',
+      '',
+      'QUESTION-TYPE-SPECIFIC RULES:',
+      '- Enumeration (list/mention/enumerate X): Award 1 point per correct item. If the question asks for 5 and the student gives 3 correct = 60%. If 2 correct but the third is partially described = 55%. If only 1 correct but well described = 40% — feedback should be encouraging.',
+      '- Explanation/\"give reason\" questions: If the student identifies the core mechanism correctly, even if the explanation is incomplete, that is a pass. A partial explanation showing directional understanding = 60%.',
+      '- Definition questions: If the student captures the essential meaning (even in simpler words), that is a pass. Exact memorized phrasing is NOT required.',
+      '- Clinical features/signs/symptoms: If the student lists most key features but misses some minor ones, that is still a pass. Getting the most important features right is sufficient.',
+      '',
+      'WHAT NEVER TO PENALIZE FOR:',
+      '- Paraphrasing, using simpler language, or different sentence structure',
+      '- Reordering of listed items (order does not matter)',
+      '- Including extra information that is not contradictory',
+      '- Minor spelling errors (e.g., "dyspnea" vs "dispnea", "systolic" vs "systollic")',
+      '- Missing extremely minor or obscure details from a long model answer',
+      '- Giving more detail than the model answer on some points',
+      '- Using abbreviations or acronyms that are clinically acceptable',
+      '',
+      'STRENGTHS field: Always list at least 2 specific things the student got right. Be specific — reference their actual wording. This encourages the student.',
+      'GAPS field: List missing elements constructively (\"Could also mention...\"). If the answer is fully correct, return an empty array [].',
+      'FEEDBACK field: Write 1-2 sentences of encouraging, constructive advice. Start with something positive, then suggest what to review.',
+      '',
+      'EXAMPLES OF PASSING BORDERLINE ANSWERS:',
+      '- Got 3 out of 6 key points but those 3 were the most important ones → pass (score 60)',
+      '- Listed items in wrong order but all correct → pass (score 90)',
+      '- Used simpler wording but conveyed the correct medical concept → pass (score 75)',
+      '- Explained the mechanism correctly but omitted one minor step → pass (score 65)',
+      '- Answered with bullet points instead of prose → pass (score based on content)',
+      '- Missed 1 item out of 5 in an enumeration → pass (score 80)',
       '',
       'QUESTION:',
       question.question,
@@ -1133,8 +1167,8 @@
     if (typeof raw.passed === 'boolean') {
       passed = raw.passed;
     } else if (score !== null) {
-      passed = score >= 60;
-      if (score >= 55 && score < 60) passed = true;
+      passed = score >= 50;
+      if (score >= 40 && score < 50) passed = true;
     } else {
       passed = false;
     }
