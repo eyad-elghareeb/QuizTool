@@ -438,6 +438,7 @@
       '            <div class="action-row">',
       '              <button class="btn btn-secondary fail-choice" id="mark-fail" type="button">Fail</button>',
       '              <button class="btn btn-secondary pass-choice" id="mark-pass" type="button">Pass</button>',
+      '              <button class="btn btn-secondary" id="retry-question" type="button">↺ Retry</button>',
       '              <button class="btn btn-primary" id="next-question" type="button">Next</button>',
       '            </div>',
       '          </div>',
@@ -713,6 +714,7 @@
     $('#mark-fail').addEventListener('click', function () {
       markVerdict('fail');
     });
+    $('#retry-question').addEventListener('click', retryQuestion);
     $('#next-question').addEventListener('click', goNext);
     $('#theme-result').addEventListener('click', toggleTheme);
     $('#reset-result').addEventListener('click', confirmResetProgress);
@@ -1242,6 +1244,19 @@
     renderQuestionList();
     saveProgress();
     showToast('Marked ' + verdict + '.');
+  }
+
+  function retryQuestion() {
+    delete state.answers[currentIndex];
+    delete state.evaluations[currentIndex];
+    if (state.photoAnswers) delete state.photoAnswers[currentIndex];
+    state.flagged[currentIndex] = false;
+    delete state.flagged[currentIndex];
+    saveProgress();
+    showQuestion(currentIndex);
+    renderQuestionList();
+    updateResumeButton();
+    showToast('Question cleared. Try again.');
   }
 
   function goNext() {
