@@ -34,6 +34,10 @@
   var _gradingAbortController = null;
   var _loadingTimerInterval = null;
   var _loadingStartTime = 0;
+  var _cachedContentName = null; // Gemini explicit cache name for the active session
+  var _cacheModelId = null;       // model ID the active cache was created for
+  var _cacheRefreshCount = 0;    // refreshes used this session (cap: 1)
+  var _cacheRefreshing  = false; // guard against concurrent refreshes
 
   var _OK = [0x71, 0x75, 0x69, 0x7A, 0x74, 0x6F, 0x6F, 0x6C]; // "quiztool"
 
@@ -718,6 +722,13 @@
     $('#next-question').addEventListener('click', goNext);
     $('#theme-result').addEventListener('click', toggleTheme);
     $('#reset-result').addEventListener('click', confirmResetProgress);
+
+    // Release the cache if the user closes the tab, navigates away, or the
+    // browser suspends the page. keepalive: true (set in _deleteGradingCache)
+    // lets the DELETE request outlive the page unload.
+    window.addEventListener('pagehide', function () {
+      _deleteGradingCache();
+    });
   }
 
   function modelIsAvailable(modelId) {
@@ -740,6 +751,18 @@
     showScreen('practice-screen');
     renderQuestionList();
     showQuestion(currentIndex);
+
+    // Pre-warm the context cache in the background. All questions in this
+    // session will share it. Safe to ignore errors — gradeWithGemini always
+    // sends systemInstruction as a fallback on every request.
+    var apiKey = _readKey();
+    if (apiKey) {
+      var modelEl = $('#model-select');
+      var modelId = (modelEl && modelEl.value) || localStorage.getItem(STORAGE.model) || MODELS[0][0];
+      _cacheRefreshCount = 0;
+      _cacheRefreshing   = false;
+      _createGradingCache(apiKey, modelId);
+    }
   }
 
   function updateResumeButton() {
@@ -940,59 +963,192 @@
       });
   }
 
+  // ── _buildSysPrompt ───────────────────────────────────────────────────────
+  // Returns the fixed grading system instruction text.
+  // Kept as a function so both gradeWithGemini (fallback path) and
+  // _createGradingCache (cache path) always use the same source of truth.
+  function _buildSysPrompt() {
+    return [
+      'You are an expert medical education grading assistant. Your role is to evaluate student written exam answers fairly, consistently, and constructively.',
+      '',
+      '# GRADING PHILOSOPHY',
+      'This is a formative LEARNING TOOL, not a high-stakes summative exam. You are a generous grader.',
+      'Core rule: when uncertain whether the student has covered a point, give them the benefit of the doubt.',
+      'Partial understanding is valuable and must be rewarded.',
+      '',
+      '# OUTPUT REQUIREMENTS',
+      'You MUST respond with a single raw JSON object and absolutely nothing else.',
+      'No markdown fences, no backticks, no preamble, no explanation, no trailing text.',
+      'The JSON object must contain exactly these keys:',
+      '  "score"         : integer 0–100, or null if the answer cannot be assessed at all',
+      '  "passed"        : boolean — true when final score >= 45',
+      '  "strengths"     : array of strings, minimum 2 items; name specific things the student got right',
+      '  "gaps"          : array of strings; missing points phrased constructively ("Could also mention…"); use [] if fully correct',
+      '  "feedback"      : string; 1–2 sentences of encouraging, personalised advice',
+      '  "transcription" : string — ONLY include this key when grading a handwritten/photo answer; omit entirely for text answers',
+      '',
+      '# GRADING METHODOLOGY — FOLLOW THESE STEPS IN ORDER',
+      'Step 1. Decompose the model answer into N distinct key points (individual facts, mechanisms, steps, list items, or concepts).',
+      'Step 2. For each key point, determine whether the student covered it. Accept synonyms, paraphrases, and clinical equivalents. Do NOT require verbatim wording.',
+      'Step 3. Compute raw score = (number of covered key points ÷ N) × 100.',
+      'Step 4. Round the raw score UP to the nearest multiple of 5. Examples: 47 → 50, 52 → 55, 43 → 45, 80 → 80.',
+      'Step 5. Apply a GENEROSITY BONUS of +5 points, capped at 100. Example: raw 43 → rounded 45 → final 50.',
+      'Step 6. Set passed = true if final score >= 45.',
+      '',
+      '# QUESTION-TYPE RULES',
+      '',
+      'Enumeration questions ("list / state / mention / enumerate X items"):',
+      '  • Award 1 point per clearly correct item; 0.5 points for partially described items.',
+      '  • If the question specifies a number (e.g., "list 5"), score against those 5 only — extra items are ignored.',
+      '  • Missing minor items from a long comprehensive list does not automatically fail the answer.',
+      '',
+      'Explanation / "give reason" / "explain why" questions:',
+      '  • Correct identification of the core mechanism or concept = pass, even if the explanation is incomplete.',
+      '  • Showing directional understanding (right concept, imprecise expression) = score 60.',
+      '',
+      'Definition questions:',
+      '  • Capturing the essential meaning in the student\'s own words = pass.',
+      '  • Verbatim memorised phrasing is NEVER required.',
+      '',
+      'Clinical features / signs / symptoms questions:',
+      '  • Correctly identifying the most important features = pass.',
+      '  • Missing rare, minor, or late features from a comprehensive list does not fail the answer.',
+      '',
+      '# NEVER PENALISE FOR ANY OF THE FOLLOWING',
+      '• Paraphrasing or using simpler/non-technical language that conveys the same meaning',
+      '• Reordering list items — order does not matter unless the question specifically demands it',
+      '• Including additional correct information that is not in the model answer',
+      '• Minor spelling errors (e.g., "dyspnea" vs "dispnea", "systollic" vs "systolic")',
+      '• Missing obscure or very minor details from a long comprehensive model answer',
+      '• Providing more detail than the model answer on certain points',
+      '• Using clinically accepted abbreviations or acronyms',
+      '• Writing in bullet points or numbered lists instead of prose',
+      '',
+      '# FIELD GUIDANCE',
+      'strengths: Be concrete and specific — reference the student\'s actual wording or concept to show the feedback is personalised. Never write generic praise like "Good attempt."',
+      'gaps:      Frame constructively — "Could also mention…", "A stronger answer would include…", "Worth adding…". Return [] if the answer is fully correct.',
+      'feedback:  Open with a positive observation, then point the student to what they should review or add. Keep it under 60 words.',
+      '',
+      '# CALIBRATION EXAMPLES — THESE ANSWERS ALL PASS',
+      '• Covered the 3 most clinically important points out of 6 → score 60, passed: true',
+      '• Listed all items in wrong order but all correct → score 90, passed: true',
+      '• Used simpler wording that conveyed the correct medical concept → score 75, passed: true',
+      '• Explained the mechanism correctly but omitted one minor step → score 65, passed: true',
+      '• Missed 1 item out of 5 in an enumeration → score 80, passed: true',
+      '• Wrote in bullet points instead of prose → score based on content alone, passed: true',
+    ].join('\n');
+  }
+
+  // ── Context cache management ───────────────────────────────────────────────
+  // Creates an explicit Gemini context cache at session start so the fixed
+  // system instruction is uploaded once and reused across all questions.
+  // Falls back silently — gradeWithGemini always sends systemInstruction too,
+  // so every question works even if cache creation failed or expired.
+
+  function _createGradingCache(apiKey, modelId, ttl) {
+    _cachedContentName = null;
+    _cacheModelId = null;
+    var body = {
+      model: 'models/' + modelId,
+      systemInstruction: { parts: [{ text: _buildSysPrompt() }] },
+      ttl: ttl || '3600s'   // 1-hour default; halved on refresh
+    };
+    return fetch(
+      'https://generativelanguage.googleapis.com/v1beta/cachedContents?key=' + encodeURIComponent(apiKey),
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+    )
+    .then(function (response) {
+      return response.json().then(function (data) {
+        if (!response.ok) {
+          // Expected for models that don't support caching (e.g. Gemma) or if
+          // the prompt is below the 1 024-token minimum — silently fall back.
+          console.warn('[written-engine] Cache creation failed (' + response.status + '):', data && data.error && data.error.message);
+          return;
+        }
+        if (data && data.name) {
+          _cachedContentName = data.name;
+          _cacheModelId = modelId;
+          console.log('[written-engine] Context cache ready:', _cachedContentName);
+        }
+      });
+    })
+    .catch(function (err) {
+      console.warn('[written-engine] Cache creation error:', err && err.message);
+    });
+  }
+
+  function _deleteGradingCache() {
+    if (!_cachedContentName) return;
+    var name = _cachedContentName;
+    var apiKey = _readKey();
+    _cachedContentName = null;
+    _cacheModelId = null;
+    if (!apiKey) return;
+    // Fire-and-forget — billing stops when the cache is deleted, so we try but
+    // don't block the UI on it. Caches also auto-expire after their TTL.
+    fetch(
+      'https://generativelanguage.googleapis.com/v1beta/' + name + '?key=' + encodeURIComponent(apiKey),
+      { method: 'DELETE', keepalive: true }
+    ).catch(function () {});
+  }
+
+  // ── _refreshGradingCache ────────────────────────────────────────────────────
+  // Called when the cache expires mid-session (400/404 on a cachedContent
+  // request). Recreates it with a halved TTL (1800s) so subsequent questions
+  // continue to benefit from caching. Capped at one refresh per session — if
+  // the second window also expires the user has been working for 90+ minutes
+  // and the fallback systemInstruction path handles everything cleanly.
+  function _refreshGradingCache() {
+    if (_cacheRefreshing || _cacheRefreshCount >= 1) return;
+    var apiKey = _readKey();
+    if (!apiKey) return;
+    var modelEl = $('#model-select');
+    var modelId = (modelEl && modelEl.value) || localStorage.getItem(STORAGE.model) || MODELS[0][0];
+    _cacheRefreshing = true;
+    _cacheRefreshCount++;
+    console.log('[written-engine] TTL expired mid-session — refreshing cache with 1800s TTL.');
+    var p = _createGradingCache(apiKey, modelId, '1800s');
+    if (p && p.finally) {
+      p.finally(function () { _cacheRefreshing = false; });
+    } else {
+      _cacheRefreshing = false;
+    }
+  }
+
   function gradeWithGemini(question, answer, apiKey, model, cancelSignal) {
     var hasPhotoAnswer = state.photoAnswers && state.photoAnswers[currentIndex] && state.photoAnswers[currentIndex].data;
-    var prompt = [
-      'You are grading a MEDICAL exam written answer. BE FORGIVING — this is a learning tool, not a high-stakes exam.',
-      'Return valid JSON only with keys: score, passed, strengths, gaps, feedback.',
-      '',
-      'CORE PRINCIPLE: When in doubt, GIVE THE STUDENT THE BENEFIT. Partial credit should be the default, not the exception.',
-      '',
-      'GRADING METHODOLOGY — APPLY IN THIS ORDER:',
-      '1. Break the model answer into distinct key points (facts, items, concepts, steps, numbered items).',
-      '2. Count how many key points the student\'s answer covers correctly. Do NOT require exact wording — recognize synonyms, paraphrases, and clinical equivalents.',
-      '3. score = (covered points / total key points) × 100. ALWAYS round the score UP to the nearest 5. Example: 47% → 50%, 52% → 55%, 43% → 45%.',
-      '4. Now apply a GENEROSITY BONUS: add 5 extra points to the score (capped at 100). So a student who scored 43% → rounded to 45% → bonus to 50% = pass.',
-      '5. Set passed = true when score >= 45 after rounding. Students near the threshold should pass.',
-      '',
-      'QUESTION-TYPE-SPECIFIC RULES:',
-      '- Enumeration (list/mention/enumerate X): Award 1 point per correct item. If the question asks for 5 and the student gives 3 correct = 60%. If 2 correct but the third is partially described = 55%. If only 1 correct but well described = 40% — feedback should be encouraging.',
-      '- Explanation/\"give reason\" questions: If the student identifies the core mechanism correctly, even if the explanation is incomplete, that is a pass. A partial explanation showing directional understanding = 60%.',
-      '- Definition questions: If the student captures the essential meaning (even in simpler words), that is a pass. Exact memorized phrasing is NOT required.',
-      '- Clinical features/signs/symptoms: If the student lists most key features but misses some minor ones, that is still a pass. Getting the most important features right is sufficient.',
-      '',
-      'WHAT NEVER TO PENALIZE FOR:',
-      '- Paraphrasing, using simpler language, or different sentence structure',
-      '- Reordering of listed items (order does not matter)',
-      '- Including extra information that is not contradictory',
-      '- Minor spelling errors (e.g., "dyspnea" vs "dispnea", "systolic" vs "systollic")',
-      '- Missing extremely minor or obscure details from a long model answer',
-      '- Giving more detail than the model answer on some points',
-      '- Using abbreviations or acronyms that are clinically acceptable',
-      '',
-      'STRENGTHS field: Always list at least 2 specific things the student got right. Be specific — reference their actual wording. This encourages the student.',
-      'GAPS field: List missing elements constructively (\"Could also mention...\"). If the answer is fully correct, return an empty array [].',
-      'FEEDBACK field: Write 1-2 sentences of encouraging, constructive advice. Start with something positive, then suggest what to review.',
-      '',
-      'EXAMPLES OF PASSING BORDERLINE ANSWERS:',
-      '- Got 3 out of 6 key points but those 3 were the most important ones → pass (score 60)',
-      '- Listed items in wrong order but all correct → pass (score 90)',
-      '- Used simpler wording but conveyed the correct medical concept → pass (score 75)',
-      '- Explained the mechanism correctly but omitted one minor step → pass (score 65)',
-      '- Answered with bullet points instead of prose → pass (score based on content)',
-      '- Missed 1 item out of 5 in an enumeration → pass (score 80)',
-      '',
-      'QUESTION:',
+
+    // ── System instruction ─────────────────────────────────────────────────
+    // Sent on every request as a fallback. requestGemini replaces it with a
+    // cached-content reference when _cachedContentName is available.
+    var sysPrompt = _buildSysPrompt();
+
+    // ── User message (the actual grading request) ──────────────────────────
+    var userPromptParts = [
+      '## QUESTION',
       question.question,
       '',
-      'MODEL ANSWER:',
+      '## MODEL ANSWER',
       question.modelAnswer || '(No model answer supplied.)',
-      '',
-      question.rubric ? 'RUBRIC:\n' + question.rubric + '\n' : '',
-      hasPhotoAnswer ? 'The student\'s handwritten answer is provided as an attached image. Transcribe the handwriting to text, then evaluate the transcribed text against the model answer. Include the full transcription as a "transcription" field (string). "strengths" and "gaps" must be arrays of strings with at least 2 items each.' : 'STUDENT ANSWER:\n' + answer
-    ].join('\n');
+      ''
+    ];
+    if (question.rubric) {
+      userPromptParts.push('## RUBRIC');
+      userPromptParts.push(question.rubric);
+      userPromptParts.push('');
+    }
+    if (hasPhotoAnswer) {
+      userPromptParts.push('## STUDENT\'S ANSWER');
+      userPromptParts.push('The student\'s handwritten answer is attached as an image. First, transcribe every word of the handwriting accurately into the "transcription" field. Then evaluate the transcribed text against the model answer using your grading methodology. The "strengths" and "gaps" arrays must each contain at least 2 items.');
+    } else {
+      userPromptParts.push('## STUDENT\'S ANSWER');
+      userPromptParts.push(answer);
+    }
+    userPromptParts.push('');
+    userPromptParts.push('Apply your grading methodology now and return the JSON object only.');
+    var userPrompt = userPromptParts.join('\n');
 
-    return tryGeminiRequests(prompt, apiKey, buildGeminiAttempts(model), cancelSignal)
+    return tryGeminiRequests({ sysPrompt: sysPrompt, userPrompt: userPrompt }, apiKey, buildGeminiAttempts(model), cancelSignal)
       .then(function (result) {
         var text = extractGeminiText(result.payload);
         try {
@@ -1023,7 +1179,7 @@
     return attempts.slice(0, 2);
   }
 
-  function tryGeminiRequests(prompt, apiKey, attempts, cancelSignal) {
+  function tryGeminiRequests(promptObj, apiKey, attempts, cancelSignal) {
     var lastError = null;
     var chain = Promise.reject(new Error('AI grading did not start.'));
     attempts.forEach(function (attempt, index) {
@@ -1033,7 +1189,7 @@
           if (index === attempts.length - 1) throw err;
           return Promise.reject(err);
         }
-        return requestGemini(prompt, apiKey, attempt, cancelSignal)
+        return requestGemini(promptObj, apiKey, attempt, cancelSignal)
           .catch(function (error) {
             lastError = error;
             if (index === attempts.length - 1) throw lastError;
@@ -1044,11 +1200,28 @@
     return chain;
   }
 
-  function requestGemini(prompt, apiKey, attempt, cancelSignal) {
-    var body = {
-      contents: [{ parts: [{ text: prompt }] }]
-    };
+  function requestGemini(promptObj, apiKey, attempt, cancelSignal) {
     var photo = state.photoAnswers && state.photoAnswers[currentIndex];
+    // Use the explicit cache when it exists and matches the current model.
+    // If _cacheModelId differs (user switched models mid-session) fall back
+    // to the full systemInstruction path for that request.
+    var useCachedContent = !!(_cachedContentName && _cacheModelId === attempt.model);
+    var body;
+
+    if (useCachedContent) {
+      // Cache path: user turn only — systemInstruction is baked into the cache.
+      body = {
+        cachedContent: _cachedContentName,
+        contents: [{ parts: [{ text: promptObj.userPrompt }] }]
+      };
+    } else {
+      // Fallback path: send the full system instruction on every request.
+      body = {
+        systemInstruction: { parts: [{ text: promptObj.sysPrompt }] },
+        contents: [{ parts: [{ text: promptObj.userPrompt }] }]
+      };
+    }
+
     if (photo && photo.data) {
       body.contents[0].parts.push({
         inlineData: {
@@ -1057,9 +1230,27 @@
         }
       });
     }
+
+    // Low temperature for deterministic, consistent grading.
+    // responseSchema enforces the JSON shape at the API level in JSON mode,
+    // eliminating parse failures caused by stray prose or markdown fences.
+    var genConfig = { temperature: 0.1 };
     if (attempt.jsonMode) {
-      body.generationConfig = { responseMimeType: 'application/json' };
+      genConfig.responseMimeType = 'application/json';
+      genConfig.responseSchema = {
+        type: 'object',
+        properties: {
+          score:          { type: 'integer', nullable: true },
+          passed:         { type: 'boolean' },
+          strengths:      { type: 'array', items: { type: 'string' } },
+          gaps:           { type: 'array', items: { type: 'string' } },
+          feedback:       { type: 'string' },
+          transcription:  { type: 'string', nullable: true }
+        },
+        required: ['score', 'passed', 'strengths', 'gaps', 'feedback']
+      };
     }
+    body.generationConfig = genConfig;
 
     var maxWaitMs = _getMaxWaitMs();
     var fetchController = new AbortController();
@@ -1090,6 +1281,15 @@
             payload = text ? JSON.parse(text) : null;
           } catch (error) {}
           if (!response.ok) {
+            // If we used a cached-content reference and Gemini rejected it
+            // (expired, wrong model, unsupported), clear it so the next retry
+            // in the chain automatically falls back to the full systemInstruction.
+            if (useCachedContent && (response.status === 400 || response.status === 404)) {
+              console.warn('[written-engine] Cache miss/expired — falling back to direct systemInstruction.');
+              _cachedContentName = null;
+              _cacheModelId = null;
+              _refreshGradingCache(); // background refresh for subsequent questions
+            }
             var message = payload && payload.error && payload.error.message ? payload.error.message : text;
             throw new Error('Gemini ' + attempt.model + ' returned HTTP ' + response.status + ': ' + (message || response.statusText));
           }
@@ -1270,6 +1470,7 @@
 
   function showResultsScreen() {
     localStorage.removeItem(STORAGE.progress);
+    _deleteGradingCache(); // session over — release the cache
     buildResults();
     showScreen('result-screen');
   }
@@ -1390,6 +1591,7 @@
   }
 
   function restartAssessment() {
+    _deleteGradingCache(); // old session over — release the cache
     state.answers = {};
     state.evaluations = {};
     state.flagged = {};
