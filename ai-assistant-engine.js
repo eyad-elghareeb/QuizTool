@@ -267,37 +267,37 @@
 
     // Code blocks (```lang ... ```)
     text = text.replace(/```(\w*)\n?([\s\S]*?)```/g, function (m, lang, code) {
-      return '<pre><code>' + code.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</code></pre>';
+      return '<pre dir="auto"><code dir="auto">' + code.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</code></pre>';
     });
 
     // Inline code
-    text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+    text = text.replace(/`([^`]+)`/g, '<code dir="auto">$1</code>');
 
     // Headings
-    text = text.replace(/^##### (.+)$/gm, '<h6>$1</h6>');
-    text = text.replace(/^#### (.+)$/gm, '<h5>$1</h5>');
-    text = text.replace(/^### (.+)$/gm, '<h4>$1</h4>');
-    text = text.replace(/^## (.+)$/gm, '<h3>$1</h3>');
-    text = text.replace(/^# (.+)$/gm, '<h2>$1</h2>');
+    text = text.replace(/^##### (.+)$/gm, '<h6 dir="auto">$1</h6>');
+    text = text.replace(/^#### (.+)$/gm, '<h5 dir="auto">$1</h5>');
+    text = text.replace(/^### (.+)$/gm, '<h4 dir="auto">$1</h4>');
+    text = text.replace(/^## (.+)$/gm, '<h3 dir="auto">$1</h3>');
+    text = text.replace(/^# (.+)$/gm, '<h2 dir="auto">$1</h2>');
 
     // Blockquotes
-    text = text.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+    text = text.replace(/^&gt; (.+)$/gm, '<blockquote dir="auto">$1</blockquote>');
 
     // Bold
-    text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    text = text.replace(/\*\*(.+?)\*\*/g, '<strong dir="auto">$1</strong>');
 
     // Italic
-    text = text.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<em>$1</em>');
+    text = text.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<em dir="auto">$1</em>');
 
     // Links
-    text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a dir="auto" href="$2" target="_blank" rel="noopener">$1</a>');
 
     // Unordered lists (line-by-line then wrap)
-    text = text.replace(/^- (.+)$/gm, '<!--ul--><li>$1</li>');
+    text = text.replace(/^- (.+)$/gm, '<!--ul--><li dir="auto">$1</li>');
     text = text.replace(/(?:<!--ul--><li>.*?<\/li>\n?)+/g, function (m) { return '<ul>' + m.replace(/<!--ul-->/g,'') + '</ul>'; });
 
     // Ordered lists
-    text = text.replace(/^\d+\. (.+)$/gm, '<!--ol--><li>$1</li>');
+    text = text.replace(/^\d+\. (.+)$/gm, '<!--ol--><li dir="auto">$1</li>');
     text = text.replace(/(?:<!--ol--><li>.*?<\/li>\n?)+/g, function (m) { return '<ol>' + m.replace(/<!--ol-->/g,'') + '</ol>'; });
 
     // Clean up leftover markers
@@ -316,7 +316,7 @@
     if (!/<(h[2-6]|pre|ul|ol|blockquote|hr|table)[>\s]/i.test(text)) {
       var paragraphs = text.split(/\n\s*\n/);
       if (paragraphs.length > 1) {
-        text = paragraphs.map(function (p) { return '<p>' + p.replace(/\n/g, '<br>') + '</p>'; }).join('\n');
+        text = paragraphs.map(function (p) { return '<p dir="auto">' + p.replace(/\n/g, '<br>') + '</p>'; }).join('\n');
       }
     }
 
