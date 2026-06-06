@@ -330,20 +330,44 @@
     return text;
   }
 
-  /* ── Build prompts ────────────────────────────────────────────── */
-  function _buildQContext(question) {
-    if (!question) return '';
-    var ctx = '## Current Question\n' + (question.question || '');
-    if (question.options && Array.isArray(question.options)) {
+  /* ── Build prompts (system + user separated) ──────────────────── */
+  function _buildSysPrompt() {
+    return [
+      'You are a medical quiz tutor and study assistant.',
+      '',
+      'Your purpose is to help students understand medical concepts, clarify doubts, and deepen their knowledge through clear, focused explanations.',
+      '',
+      '# RULES',
+      '• Answer in 1-3 short sentences or a few bullet points.',
+      '• Be direct and concise. No introductions, no conclusions, no fluff.',
+      '• When explaining concepts, reference the specific question context provided by the user.',
+      '• If you need more information to give a precise answer, ask a focused follow-up question.',
+      '• Always maintain an encouraging, educational tone.',
+      '• Use clear language appropriate for medical students.',
+      '',
+      '# SCOPE',
+      '• Focus on medical and health sciences education.',
+      '• For questions outside this scope, politely redirect to the question at hand.'
+    ].join('\n');
+  }
+
+  function _buildUserPrompt(questionObj, userQuery) {
+    var parts = [];
+    var ctx = '## Current Question\n' + (questionObj.question || '');
+    if (questionObj.options && Array.isArray(questionObj.options)) {
       var keys = ['A','B','C','D','E','F','G','H'];
-      question.options.forEach(function (opt, i) {
+      questionObj.options.forEach(function (opt, i) {
         ctx += '\n' + (keys[i] || i) + '. ' + opt;
       });
-      if (typeof question.correct === 'number' && question.options[question.correct]) {
-        ctx += '\n\nCorrect answer: ' + (keys[question.correct] || question.correct) + '. ' + question.options[question.correct];
+      if (typeof questionObj.correct === 'number' && questionObj.options[questionObj.correct]) {
+        ctx += '\n\nCorrect answer: ' + (keys[questionObj.correct] || questionObj.correct) + '. ' + questionObj.options[questionObj.correct];
       }
     }
-    return ctx;
+    parts.push(ctx);
+    parts.push('');
+    parts.push('## My Question');
+    parts.push(userQuery);
+    return parts.join('\n');
   }
 
   function _buildNotesPrompt(questions, answers) {
@@ -625,16 +649,23 @@
       return;
     }
 
-    // Build system prompt (includes question context)
-    var qContext = _buildQContext(_currentQuestion);
-    var systemPrompt = 'You are a medical quiz tutor. The user is studying:\n\n' + qContext + '\n\nAnswer in 1-3 short sentences or a few bullet points. Be direct. No introductions, no conclusions, no fluff.';
+    // ── System prompt: fixed AI persona (never changes per question) ─
+    // Separated from user content so the AI listens better to what the
+    // user actually asked, not the surrounding instruction scaffolding.
+    var systemPrompt = _buildSysPrompt();
 
-    // Build conversation contents for Gemini
+    // ── Build conversation contents ──────────────────────────────
     var contents = _chatHistory.map(function (msg) {
       return { role: msg.role, parts: [{ text: msg.text }] };
     });
-    // Append new user message
-    contents.push({ role: 'user', parts: [{ text: question }] });
+    // First turn: include structured question context so the AI has full
+    // context. Follow-up turns: just the user's question — context is in
+    // conversation history, and they may ask unrelated medical questions.
+    if (_chatHistory.length === 0) {
+      contents.push({ role: 'user', parts: [{ text: _buildUserPrompt(_currentQuestion, question) }] });
+    } else {
+      contents.push({ role: 'user', parts: [{ text: question }] });
+    }
 
     var model = _getSavedModel();
     if (!modelIsAvailable(model)) model = MODELS[0][0];
