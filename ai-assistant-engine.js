@@ -658,14 +658,9 @@
     var contents = _chatHistory.map(function (msg) {
       return { role: msg.role, parts: [{ text: msg.text }] };
     });
-    // First turn: include structured question context so the AI has full
-    // context. Follow-up turns: just the user's question — context is in
-    // conversation history, and they may ask unrelated medical questions.
-    if (_chatHistory.length === 0) {
-      contents.push({ role: 'user', parts: [{ text: _buildUserPrompt(_currentQuestion, question) }] });
-    } else {
-      contents.push({ role: 'user', parts: [{ text: question }] });
-    }
+    // Always include the current question in context so the AI never loses
+    // sight of the question details, even after multiple follow-up turns.
+    contents.push({ role: 'user', parts: [{ text: _buildUserPrompt(_currentQuestion, question) }] });
 
     var model = _getSavedModel();
     if (!modelIsAvailable(model)) model = MODELS[0][0];
