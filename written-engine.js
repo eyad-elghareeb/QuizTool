@@ -1054,8 +1054,8 @@
       ttl: ttl || '3600s'   // 1-hour default; halved on refresh
     };
     return fetch(
-      'https://generativelanguage.googleapis.com/v1beta/cachedContents?key=' + encodeURIComponent(apiKey),
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+      'https://generativelanguage.googleapis.com/v1beta/cachedContents',
+      { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey }, body: JSON.stringify(body) }
     )
     .then(function (response) {
       return response.json().then(function (data) {
@@ -1087,8 +1087,8 @@
     // Fire-and-forget — billing stops when the cache is deleted, so we try but
     // don't block the UI on it. Caches also auto-expire after their TTL.
     fetch(
-      'https://generativelanguage.googleapis.com/v1beta/' + name + '?key=' + encodeURIComponent(apiKey),
-      { method: 'DELETE', keepalive: true }
+      'https://generativelanguage.googleapis.com/v1beta/' + name,
+      { method: 'DELETE', headers: { 'x-goog-api-key': apiKey }, keepalive: true }
     ).catch(function () {});
   }
 
@@ -1268,9 +1268,9 @@
       cancelSignal.addEventListener('abort', cancelCleanup);
     }
 
-    return fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(attempt.model) + ':generateContent?key=' + encodeURIComponent(apiKey), {
+    return fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(attempt.model) + ':generateContent', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify(body),
       signal: fetchController.signal
     })
@@ -1821,7 +1821,7 @@
       return;
     }
     $('#settings-status').textContent = 'Testing...';
-    fetch('https://generativelanguage.googleapis.com/v1beta/models?key=' + encodeURIComponent(value))
+    fetch('https://generativelanguage.googleapis.com/v1beta/models', { headers: { 'x-goog-api-key': value } })
       .then(function (r) { return r.json(); })
       .then(function (data) {
         if (data && data.models && data.models.length) {

@@ -139,9 +139,9 @@
       generationConfig: { temperature: 0.3 }
     };
 
-    return fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(apiKey), {
+    return fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify(body),
       signal: controller.signal
     })
@@ -209,9 +209,9 @@
       contents: contents,
       generationConfig: { temperature: 0.3 }
     };
-    return fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(apiKey), {
+    return fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify(body),
       signal: controller.signal
     })
@@ -831,7 +831,7 @@
       return;
     }
     _$('ai-settings-status').textContent = 'Testing...';
-    fetch('https://generativelanguage.googleapis.com/v1beta/models?key=' + encodeURIComponent(value))
+    fetch('https://generativelanguage.googleapis.com/v1beta/models', { headers: { 'x-goog-api-key': value } })
       .then(function (r) { return r.json(); })
       .then(function (data) {
         if (data && data.models && data.models.length) {
