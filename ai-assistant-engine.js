@@ -19,10 +19,11 @@
   /* ── Models ──────────────────────────────────────────────────── */
   var MODELS = [
     ['gemini-3.1-flash-lite', 'Gemini 3.1 Flash-Lite (default, fast & modern)'],
+    ['gemini-3.5-flash',      'Gemini 3.5 Flash (latest, strongest Flash)'],
+    ['gemini-3.1-pro',        'Gemini 3.1 Pro (most capable, premium)'],
     ['gemma-4-26b-a4b-it',    'Gemma 4 26B IT (open model, strong & free)'],
     ['gemma-4-31b-it',        'Gemma 4 31B IT (larger open model)'],
-    ['gemini-2.5-flash-lite', 'Gemini 2.5 Flash-Lite (older, deprecating soon)'],
-    ['gemini-2.5-flash',      'Gemini 2.5 Flash (older, deprecating soon)']
+    ['gemini-2.5-flash',      'Gemini 2.5 Flash (older fallback)']
   ];
 
   /* ── Obfuscation ──────────────────────────────────────────────── */
