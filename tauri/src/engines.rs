@@ -7,6 +7,9 @@ pub const INDEX_ENGINE_CSS: &str = include_str!("../../index-engine.css");
 pub const QUIZ_ENGINE_JS: &str = include_str!("../../quiz-engine.js");
 pub const BANK_ENGINE_JS: &str = include_str!("../../bank-engine.js");
 pub const SYNC_ENGINE_JS: &str = include_str!("../../sync-engine.js");
+pub const FLASHCARD_ENGINE_JS: &str = include_str!("../../flashcard-engine.js");
+pub const WRITTEN_ENGINE_JS: &str = include_str!("../../written-engine.js");
+pub const AI_ASSISTANT_ENGINE_JS: &str = include_str!("../../ai-assistant-engine.js");
 
 pub const FAVICON_SVG: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <rect width="100" height="100" rx="22" fill="#0d1117"/>

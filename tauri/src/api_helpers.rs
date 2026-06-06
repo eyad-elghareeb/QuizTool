@@ -121,37 +121,70 @@ pub struct GithubUserInfo {
 }
 
 pub fn github_verify(token: &str) -> GithubUserInfo {
-    match gh_request("GET", "/user", token, None) {
-        Ok((status, data)) => {
-            if status != 200 {
-                return GithubUserInfo {
-                    ok: false,
-                    username: String::new(),
-                    name: String::new(),
-                    avatar: String::new(),
-                    repos_count: 0,
-                    error: data.get("message").and_then(|v| v.as_str()).unwrap_or("Invalid token").to_string(),
-                };
-            }
-            // Check scopes via a separate request to get headers
-            // ureq v2 doesn't expose response headers easily, but we can check a simple endpoint
-            GithubUserInfo {
-                ok: true,
-                username: data.get("login").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-                name: data.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-                avatar: data.get("avatar_url").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-                repos_count: data.get("public_repos").and_then(|v| v.as_u64()).unwrap_or(0),
-                error: String::new(),
-            }
+    // Check scopes via response headers
+    let agent = ureq::AgentBuilder::new()
+        .timeout_connect(std::time::Duration::from_secs(10))
+        .build();
+    let resp = match agent.get("https://api.github.com/user")
+        .set("Authorization", &format!("token {}", token))
+        .set("Accept", "application/vnd.github+json")
+        .set("User-Agent", "QuizTool-Generator")
+        .set("X-GitHub-Api-Version", "2022-11-28")
+        .call()
+    {
+        Ok(r) => r,
+        Err(ureq::Error::Status(code, resp)) => {
+            let body = resp.into_string().unwrap_or_default();
+            let msg = serde_json::from_str::<Value>(&body).ok()
+                .and_then(|v| v.get("message").and_then(|m| m.as_str()))
+                .unwrap_or("Invalid token");
+            return GithubUserInfo {
+                ok: false, username: String::new(), name: String::new(),
+                avatar: String::new(), repos_count: 0, error: msg.to_string(),
+            };
         }
-        Err(e) => GithubUserInfo {
-            ok: false,
-            username: String::new(),
-            name: String::new(),
-            avatar: String::new(),
-            repos_count: 0,
-            error: e,
+        Err(e) => return GithubUserInfo {
+            ok: false, username: String::new(), name: String::new(),
+            avatar: String::new(), repos_count: 0, error: format!("HTTP error: {}", e),
         },
+    };
+
+    let status = resp.status();
+    if status != 200 {
+        return GithubUserInfo {
+            ok: false, username: String::new(), name: String::new(),
+            avatar: String::new(), repos_count: 0,
+            error: format!("GitHub returned status {}", status),
+        };
+    }
+
+    // Validate that the token has 'repo' and 'workflow' scopes
+    let scopes_str = resp.header("X-OAuth-Scopes").unwrap_or("");
+    let scopes: Vec<&str> = scopes_str.split(',').map(|s| s.trim()).collect();
+    let has_repo = scopes.iter().any(|s| *s == "repo");
+    let has_workflow = scopes.iter().any(|s| *s == "workflow");
+    if !has_repo || !has_workflow {
+        let missing: Vec<&str> = vec![
+            if !has_repo { "repo" } else { "" },
+            if !has_workflow { "workflow" } else { "" },
+        ].into_iter().filter(|s| !s.is_empty()).collect();
+        return GithubUserInfo {
+            ok: false, username: String::new(), name: String::new(),
+            avatar: String::new(), repos_count: 0,
+            error: format!("Token missing required scopes: {}. Allowed: {}", missing.join(", "), scopes_str),
+        };
+    }
+
+    let body_text = resp.into_string().unwrap_or_default();
+    let data: Value = serde_json::from_str(&body_text).unwrap_or(Value::Null);
+
+    GithubUserInfo {
+        ok: true,
+        username: data.get("login").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+        name: data.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+        avatar: data.get("avatar_url").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+        repos_count: data.get("public_repos").and_then(|v| v.as_u64()).unwrap_or(0),
+        error: String::new(),
     }
 }
 
@@ -246,7 +279,7 @@ pub fn github_publish(token: &str, config_json: &Value, visibility: &str) -> Res
     });
     std::fs::write(deploy_dir.join("deploy.json"), serde_json::to_string_pretty(&deploy_meta).unwrap_or_default()).ok();
 
-    // Git operations
+    // Git operations with GIT_ASKPASS for secure token handling
     let git_env = prepare_git_env();
     run_git(&temp_dir, &["init"], &git_env)?;
     run_git(&temp_dir, &["config", "user.name", &username], &git_env)?;
@@ -256,10 +289,34 @@ pub fn github_publish(token: &str, config_json: &Value, visibility: &str) -> Res
     run_git(&temp_dir, &["branch", "-M", "main"], &git_env)?;
 
     let remote_url = format!("https://{}@github.com/{}/{}.git", username, username, repo_name);
-    // Remove existing origin if any, then add
     let _ = run_git(&temp_dir, &["remote", "remove", "origin"], &git_env);
     run_git(&temp_dir, &["remote", "add", "origin", &remote_url], &git_env)?;
-    run_git(&temp_dir, &["push", "-u", "origin", "main"], &git_env)?;
+
+    // Push via GIT_ASKPASS to avoid embedding token in .git/config
+    let askpass_dir = temp_dir.join(".git").join("askpass");
+    let _ = std::fs::create_dir_all(&askpass_dir);
+    let askpass_script = askpass_dir.join("askpass.bat");
+    let _ = std::fs::write(&askpass_script,
+        "@echo off\necho %1 | findstr /i \"Username\" >nul\nif %errorlevel%==0 (echo %GIT_USERNAME%) else (echo %GIT_PASSWORD%)\n"
+    );
+
+    let push_result = std::process::Command::new("git")
+        .args(["push", "-u", "origin", "main"])
+        .current_dir(&temp_dir)
+        .env("GIT_USERNAME", &username)
+        .env("GIT_PASSWORD", token)
+        .env("GIT_ASKPASS", askpass_script.to_string_lossy().as_ref())
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .output()
+        .map_err(|e| format!("Failed to run git push: {}", e))?;
+
+    let _ = std::fs::remove_file(&askpass_script);
+    let _ = std::fs::remove_dir(&askpass_dir);
+
+    if !push_result.status.success() {
+        let stderr = String::from_utf8_lossy(&push_result.stderr);
+        return Err(format!("Git push failed: {}", stderr.trim()));
+    }
 
     // Enable Pages
     std::thread::sleep(std::time::Duration::from_secs(2));

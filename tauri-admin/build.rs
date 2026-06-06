@@ -17,6 +17,7 @@ fn main() {
         "bank-engine.js",
         "flashcard-engine.js",
         "written-engine.js",
+        "ai-assistant-engine.js",
         "index-engine.js",
         "index-engine.css",
         "sync-engine.js",

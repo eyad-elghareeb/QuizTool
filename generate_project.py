@@ -277,6 +277,7 @@ function handleAsset(event, request) {
           'bank-engine.js',
           'flashcard-engine.js',
           'written-engine.js',
+          'ai-assistant-engine.js',
           'index-engine.js',
           'sync-engine.js',
           'index-engine.css',
@@ -353,6 +354,7 @@ QUIZ_ENGINE_JS = read_file('quiz-engine.js')
 BANK_ENGINE_JS = read_file('bank-engine.js')
 FLASHCARD_ENGINE_JS = read_file('flashcard-engine.js')
 WRITTEN_ENGINE_JS = read_file('written-engine.js')
+AI_ASSISTANT_ENGINE_JS = read_file('ai-assistant-engine.js')
 SYNC_ENGINE_JS = read_file('sync-engine.js')
 
 # Read sync scripts from QuizTool's own scripts/ folder (self-contained, no MU61S8 dependency)
@@ -873,6 +875,7 @@ def build_project_zip(config):
         'bank-engine.js',
         'flashcard-engine.js',
         'written-engine.js',
+        'ai-assistant-engine.js',
         'sync-engine.js',
         'tracker-map.json',
         'favicon.svg',
@@ -964,6 +967,7 @@ def build_project_zip(config):
         zf.writestr('bank-engine.js', BANK_ENGINE_JS)
         zf.writestr('flashcard-engine.js', FLASHCARD_ENGINE_JS)
         zf.writestr('written-engine.js', WRITTEN_ENGINE_JS)
+        zf.writestr('ai-assistant-engine.js', AI_ASSISTANT_ENGINE_JS)
         zf.writestr('sync-engine.js', SYNC_ENGINE_JS)
 
         # --- Static assets ---

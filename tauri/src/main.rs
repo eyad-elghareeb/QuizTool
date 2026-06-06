@@ -32,11 +32,6 @@ fn generate_zip(config: generator::ProjectConfig) -> Result<Vec<u8>, String> {
     generator::build_project_zip(&config)
 }
 
-#[tauri::command]
-fn preview_project(config: generator::ProjectConfig) -> generator::ProjectStats {
-    generator::preview_project(&config)
-}
-
 // ══════════════════════════════════════════════════════════════════════════════
 //  GITHUB COMMANDS
 // ══════════════════════════════════════════════════════════════════════════════
@@ -96,11 +91,20 @@ fn download_local(
     };
     let safe_name = api_helpers::safe_project_slug(&project_name);
 
-    let project_dir = std::env::temp_dir().join(&safe_name);
-    let _ = std::fs::remove_dir_all(&project_dir);
+    // Persist to sibling directory of QuizTool root, not temp dir
+    let exe_dir = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+    let projects_dir = if exe_dir.join("index-engine.js").exists() || exe_dir.join("manifest.webmanifest").exists() {
+        exe_dir.parent().unwrap_or(&exe_dir).to_path_buf()
+    } else {
+        exe_dir
+    };
+    let project_dir = projects_dir.join(&safe_name);
     std::fs::create_dir_all(&project_dir).map_err(|e| format!("Failed to create dir: {}", e))?;
 
-    // Extract ZIP
+    // Extract ZIP — overwrite in-place, preserve user-added content
     let cursor = std::io::Cursor::new(&zip_bytes);
     let mut archive = zip::ZipArchive::new(cursor).map_err(|e| format!("Failed to read ZIP: {}", e))?;
     for i in 0..archive.len() {
@@ -190,7 +194,6 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             generate_zip,
-            preview_project,
             github_verify,
             github_publish,
             netlify_verify,

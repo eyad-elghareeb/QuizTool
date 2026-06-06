@@ -152,7 +152,8 @@ self.addEventListener('install', function (event) {{
     var scope = self.registration.scope;
     var cache = await caches.open(CACHE_NAME);
     var REQUIRED = [
-      'quiz-engine.js', 'bank-engine.js', 'index-engine.js', 'sync-engine.js',
+      'quiz-engine.js', 'bank-engine.js', 'flashcard-engine.js', 'written-engine.js',
+      'index-engine.js', 'sync-engine.js',
       'index-engine.css', 'index.html', 'tracker-map.json', 'manifest.webmanifest', 'favicon.svg'
     ];
     await Promise.all(REQUIRED.map(function (rel) {{
@@ -229,7 +230,8 @@ async function handleAsset(event, request) {{
     if (url.origin === self.location.origin && url.href.indexOf(scope) === 0) {{
       var filename = url.pathname.split('/').pop();
       var SHARED = [
-        'quiz-engine.js', 'bank-engine.js', 'index-engine.js', 'sync-engine.js',
+        'quiz-engine.js', 'bank-engine.js', 'flashcard-engine.js', 'written-engine.js',
+        'index-engine.js', 'sync-engine.js',
         'index-engine.css', 'manifest.webmanifest', 'favicon.svg',
         'icon-48.png', 'icon-72.png', 'icon-96.png', 'icon-144.png', 'icon-192.png', 'icon-512.png',
         'tracker-map.json'
@@ -389,6 +391,8 @@ pub fn build_project_zip(config: &ProjectConfig) -> Result<Vec<u8>, String> {
         "index-engine.css".into(),
         "quiz-engine.js".into(),
         "bank-engine.js".into(),
+        "flashcard-engine.js".into(),
+        "written-engine.js".into(),
         "sync-engine.js".into(),
         "tracker-map.json".into(),
         "favicon.svg".into(),
@@ -494,6 +498,8 @@ pub fn build_project_zip(config: &ProjectConfig) -> Result<Vec<u8>, String> {
     add_str(&mut zip, "quiz-engine.js", engines::QUIZ_ENGINE_JS)?;
     add_str(&mut zip, "bank-engine.js", engines::BANK_ENGINE_JS)?;
     add_str(&mut zip, "sync-engine.js", engines::SYNC_ENGINE_JS)?;
+    add_str(&mut zip, "flashcard-engine.js", engines::FLASHCARD_ENGINE_JS)?;
+    add_str(&mut zip, "written-engine.js", engines::WRITTEN_ENGINE_JS)?;
 
     // Static assets
     add_str(&mut zip, "favicon.svg", engines::FAVICON_SVG)?;
