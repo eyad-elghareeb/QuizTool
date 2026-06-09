@@ -1253,18 +1253,21 @@
 
 
   window.closeReviewMode = function(fromPopState) {
+    var didBack = false;
     if (!fromPopState && (_activeDashboard === 'review' || document.getElementById('review-iframe'))) {
       if (_activeDashboard === 'review') {
         history.back();
-        return;
+        didBack = true;
       }
     }
     _activeDashboard = null;
     var iframe = document.getElementById('review-iframe');
     if (iframe) {
       iframe.remove();
-      // Re-open dashboard instantly when exiting review to show changes!
-      openTrackerDashboard(null, true);
+      // Only re-open tracker if we didn't trigger history.back (popstate handles it)
+      if (!didBack) {
+        openTrackerDashboard(null, true);
+      }
     }
   };
 

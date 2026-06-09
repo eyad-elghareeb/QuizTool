@@ -799,19 +799,19 @@ var SyncEngine = {
     webrtc: {
         deviceId: (function() {
             try {
-                var id = sessionStorage.getItem('quiztool-sync-device-id');
-                if (!id) { id = Math.random().toString(36).substr(2, 6).toUpperCase(); sessionStorage.setItem('quiztool-sync-device-id', id); }
+                var id = localStorage.getItem('quiztool-sync-device-id');
+                if (!id) { id = Math.random().toString(36).substr(2, 6).toUpperCase(); localStorage.setItem('quiztool-sync-device-id', id); }
                 return id;
             } catch(e) { return Math.random().toString(36).substr(2, 6).toUpperCase(); }
         })(),
         deviceName: (function() {
             try {
-                var name = sessionStorage.getItem('quiztool-sync-device-name');
+                var name = localStorage.getItem('quiztool-sync-device-name');
                 if (!name) {
                     var adj = ['Red','Blue','Gold','Swift','Calm','Bold','Wise','Keen'];
                     var noun = ['Owl','Fox','Bear','Wolf','Hawk','Lion','Stag','Lynx'];
                     name = adj[Math.floor(Math.random()*adj.length)] + ' ' + noun[Math.floor(Math.random()*noun.length)];
-                    sessionStorage.setItem('quiztool-sync-device-name', name);
+                    localStorage.setItem('quiztool-sync-device-name', name);
                 }
                 return name;
             } catch(e) { return 'Device'; }
