@@ -1415,6 +1415,7 @@
       '/admin/read-saved-token': { cmd: 'read_saved_token', method: 'GET', queryParam: 'provider' },
       '/admin/save-token': { cmd: 'save_token', method: 'POST' },
       '/admin/parse-json-questions': { cmd: 'parse_json_questions', method: 'POST' },
+      '/admin/load-exports-batch': { cmd: 'load_exports_batch', method: 'POST' },
     };
 
     async function fetchJson(url, options = {}) {
@@ -3593,36 +3594,24 @@
     }
 
     function openPdfExporterModal() {
-      const port = window.__QUIZ_SERVER_PORT || 5500;
-      const currentPath = state.currentFile ? encodeURIComponent(state.currentFile) : '';
       openModal({
         title: 'PDF Exporter',
-        subtitle: 'Load a quiz file to generate a print-ready PDF.',
+        subtitle: 'Combine multiple quizzes into a single PDF with cover page and chapters.',
         body: `
-          <div style="display:flex; flex-direction:column; height:80vh;">
+          <div style="display:flex; flex-direction:column; height:82vh;">
             <div style="flex-shrink:0; display:flex; gap:0.5rem; align-items:center; padding-bottom:0.75rem; border-bottom:1px solid var(--border); margin-bottom:0.75rem;">
-              <input type="text" id="pdf-exporter-url" class="text-input" placeholder="gyn/dep/l1-anatomy.html" value="${escapeHtml(state.currentFile || '')}" style="flex:1;">
-              <button class="btn btn-primary" onclick="loadPdfExporter()">Load</button>
-              <button class="btn" onclick="closeModal()">Close</button>
+              <button class="btn btn-primary" onclick="openPdfExporterStandalone()">Open Full PDF Exporter</button>
+              <span class="muted" style="font-size:0.85rem;">Opens the enhanced PDF exporter with multi-quiz support, cover page, chapters, and styling options.</span>
             </div>
-            <iframe id="pdf-exporter-iframe" style="flex:1; min-height:0; border:1px solid var(--border); border-radius:10px; background:#fff;" src="about:blank"></iframe>
+            <iframe id="pdf-exporter-iframe" style="flex:1; min-height:0; border:1px solid var(--border); border-radius:10px; background:#fff;" src="/admin/pdf-exporter"></iframe>
           </div>
         `
       });
-      window.setTimeout(() => loadPdfExporter(), 100);
     }
 
-    function loadPdfExporter() {
-      const port = window.__QUIZ_SERVER_PORT || 5500;
-      const urlInput = document.getElementById('pdf-exporter-url');
-      const iframe = document.getElementById('pdf-exporter-iframe');
-      if (!urlInput || !iframe) return;
-      let rawUrl = urlInput.value.trim();
-      if (!rawUrl) { showToast('Enter a file path.', 'warn'); return; }
-      if (!rawUrl.startsWith('http://') && !rawUrl.startsWith('https://')) {
-        rawUrl = `http://127.0.0.1:${port}/${rawUrl.replace(/^\//, '')}`;
-      }
-      iframe.src = `/admin/pdf-exporter?url=${encodeURIComponent(rawUrl)}`;
+    function openPdfExporterStandalone() {
+      closeModal();
+      openInBrowser('/admin/pdf-exporter');
     }
 
     function openModal({ title, subtitle = '', body, onOpen = null }) {

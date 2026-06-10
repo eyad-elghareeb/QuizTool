@@ -1,269 +1,1292 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PDF Exporter - Built-in</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <style>
-    :root {
-      --bg: #0d1117; --surface: #161b22; --surface2: #1c2330; --border: #30363d;
-      --text: #e6edf3; --text-muted: #8b949e; --accent: #f0a500; --correct: #2ea043;
-      --wrong: #da3633; --radius: 12px; --shadow: 0 4px 24px rgba(0,0,0,0.4);
-    }
-    [data-theme="light"] {
-      --bg: #f3f0eb; --surface: #ffffff; --surface2: #f8f6f1; --border: #d0ccc5;
-      --text: #1c1917; --text-muted: #78716c; --accent: #c27803; --shadow: 0 4px 24px rgba(0,0,0,0.1);
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { margin: 0; font-family: 'Outfit', sans-serif; color: var(--text); background: var(--bg); line-height: 1.6; min-height: 100vh; display: flex; flex-direction: column; }
-    .topbar { position: sticky; top: 0; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.75rem 1.5rem; display: flex; align-items: center; justify-content: space-between; z-index: 100; }
-    .topbar-title { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; }
-    .container { max-width: 900px; margin: 2rem auto; padding: 0 1.5rem; width: 100%; flex: 1; }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem; margin-bottom: 2rem; box-shadow: var(--shadow); }
-    .controls { display: flex; flex-wrap: wrap; gap: 1.25rem; margin-bottom: 2rem; background: var(--surface2); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border); align-items: center; justify-content: center; }
-    .btn { padding: 0.6rem 1.2rem; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-weight: 600; cursor: pointer; transition: 0.2s; font-family: 'Outfit', sans-serif; }
-    .btn:hover { border-color: var(--accent); color: var(--accent); }
-    .btn-primary { background: var(--accent); color: #000; border-color: var(--accent); }
-    .btn-success { background: var(--correct); color: white; border-color: var(--correct); }
-    .status-msg { margin-top: 1rem; font-weight: 500; text-align: center; }
-    .status-msg.error { color: var(--wrong); }
-    .status-msg.success { color: var(--correct); }
-    .toggle-wrap { display: flex; align-items: center; gap: 0.5rem; user-select: none; cursor: pointer; font-weight: 500; }
-    .toggle-wrap input { cursor: pointer; }
-    
-    /* Preview & Print Area */
-    #print-area { background: white; color: black; padding: 2.5rem; border-radius: 8px; box-shadow: var(--shadow); display: none; margin-top: 2rem; }
-    [data-theme="dark"] #print-area { color: black; }
-    
-    .quiz-header { text-align: center; border-bottom: 2px solid #000; margin-bottom: 2rem; padding-bottom: 1rem; }
-    .quiz-header h1 { font-family: 'Playfair Display', serif; font-size: 2.2rem; margin-bottom: 0.5rem; }
-    .quiz-header p { font-size: 1.1rem; color: #444; }
-    
-    .question-item { margin-bottom: 2rem; page-break-inside: avoid; }
-    .question-text { font-size: 1.15rem; font-weight: 600; margin-bottom: 0.75rem; }
-    .options-list { list-style: none; margin-left: 1rem; }
-    .option-item { margin-bottom: 0.4rem; display: flex; gap: 0.75rem; }
-    .option-letter { font-weight: 700; min-width: 1.5rem; }
-    .answer-key { margin-top: 0.75rem; padding: 0.75rem; background: #f0f0f0; border-left: 4px solid #000; font-size: 0.95rem; }
-    .answer-key.hidden { display: none; }
-    .answer-key strong { color: #d32f2f; }
-    
-    /* 2-Column Layout */
-    .textbook-layout { column-count: 2; column-gap: 2.5rem; column-rule: 1px solid #ccc; }
-    .textbook-layout .quiz-header { column-span: all; margin-bottom: 1.5rem; padding-bottom: 0.75rem; }
-    .textbook-layout .question-item { break-inside: avoid; margin-bottom: 1.5rem; }
-    
-    /* Styled Mode */
-    .styled-output .quiz-header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: #fff; border-radius: 16px; padding: 2.5rem 2rem; border: none; }
-    .styled-output .quiz-header h1 { color: #fff; }
-    .styled-output .quiz-header p { color: rgba(255,255,255,0.8); }
-    .styled-output .question-item { background: #fff; border: 1.5px solid #e0e0e0; border-radius: 14px; padding: 1.25rem 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-    .styled-output .q-badge { display: inline-block; background: var(--accent); color: #000; font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 6px; margin-bottom: 0.65rem; text-transform: uppercase; letter-spacing: 0.04em; }
-    .styled-output .option-item { border: 1.5px solid #e8e8e8; background: #fafafa; border-radius: 10px; padding: 0.75rem 1rem; }
-    .styled-output .option-letter { width: 26px; height: 26px; border-radius: 7px; background: #f0f0f0; border: 1.5px solid #d0d0d0; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; }
-    
-    /* MCQ Notes Mode */
-    .mcq-notes-layout .question-item { margin-bottom: 0.75rem; }
-    .mcq-notes-layout .question-text { font-size: 0.9rem; margin-bottom: 0.35rem; }
-    .mcq-notes-layout .compact-answer { font-size: 0.9rem; font-weight: 600; color: var(--correct); margin-left: 20px; }
-    
-    @media print {
-      body { background: white !important; color: black !important; }
-      .topbar, .card, .controls, .no-print { display: none !important; }
-      .container { max-width: none; margin: 0; padding: 0; }
-      #print-area { display: block !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; }
-      .styled-output .question-item { box-shadow: none !important; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDF Exporter - QuizTool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;700;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+:root {
+  --bg: #0d1117; --surface: #161b22; --surface2: #1c2330; --surface3: #11161d;
+  --border: #30363d; --border2: #21262d;
+  --text: #e6edf3; --text-muted: #8b949e; --text-dim: #6e7681;
+  --accent: #f0a500; --accent-dim: rgba(240,165,0,0.12);
+  --accent-glow: rgba(240,165,0,0.25);
+  --radius: 10px; --radius-sm: 6px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  --transition: 0.2s ease;
+  --wrong: #da3633; --success: #2ea043; --blue: #58a6ff; --purple: #d2a8ff;
+}
+[data-theme="light"] {
+  --bg: #f3f0eb; --surface: #ffffff; --surface2: #f8f6f1; --surface3: #f0ece5;
+  --border: #d0ccc5; --border2: #e0dcd5;
+  --text: #1c1917; --text-muted: #78716c; --text-dim: #a39e97;
+  --accent: #c27803; --accent-dim: rgba(194,120,3,0.10);
+  --shadow: 0 4px 24px rgba(0,0,0,0.10);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);
+  line-height:1.6;min-height:100vh;display:flex;flex-direction:column;
+  transition:background var(--transition),color var(--transition);
+}
+.no-print{display:block}
+
+/* Topbar */
+.topbar{
+  display:flex;align-items:center;padding:0.65rem 1.25rem;
+  background:var(--surface);border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:100;gap:0.75rem;
+}
+.topbar-title{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700;flex:1;min-width:0}
+.icon-btn{
+  width:36px;height:36px;border-radius:8px;background:var(--surface2);
+  border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
+  color:var(--text-muted);transition:all var(--transition);font-size:1.05rem;
+  cursor:pointer;text-decoration:none;flex-shrink:0;
+}
+.icon-btn:hover{color:var(--text);border-color:var(--accent)}
+.icon-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
+
+/* Layout */
+.container{max-width:960px;margin:0 auto;padding:0 1.25rem;flex:1;width:100%}
+.two-col{display:grid;grid-template-columns:1fr 340px;gap:1.25rem;align-items:start}
+.two-col-rev{grid-template-columns:340px 1fr}
+@media(max-width:900px){.two-col,.two-col-rev{grid-template-columns:1fr}}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.25rem;box-shadow:var(--shadow)}
+.card h3{font-size:1rem;font-weight:700;margin-bottom:0.75rem;display:flex;align-items:center;gap:0.5rem}
+.card h3 .badge{font-size:0.7rem;background:var(--accent-dim);color:var(--accent);padding:0.15rem 0.5rem;border-radius:999px;font-weight:600}
+
+/* Sections */
+.section{display:none}
+.section.active{display:block}
+.section-header{display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;padding-bottom:0.75rem;border-bottom:1px solid var(--border)}
+.section-header h2{font-size:1.2rem;font-weight:700;font-family:'Playfair Display',serif;flex:1}
+
+/* Buttons */
+.btn{
+  padding:0.6rem 1.25rem;border-radius:var(--radius);font-weight:600;font-size:0.9rem;
+  transition:all var(--transition);cursor:pointer;border:1px solid transparent;
+  font-family:'Outfit',sans-serif;display:inline-flex;align-items:center;gap:0.45rem;
+}
+.btn-primary{background:var(--accent);color:#000;border-color:var(--accent)}
+.btn-primary:hover{opacity:0.9;transform:translateY(-1px)}
+.btn-primary:disabled{opacity:0.4;cursor:not-allowed;transform:none}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
+.btn-success{background:var(--success);color:#fff;border-color:var(--success)}
+.btn-success:hover{opacity:0.9}
+.btn-danger{color:var(--wrong);border-color:var(--border)}
+.btn-danger:hover{background:rgba(218,54,51,0.12);border-color:var(--wrong)}
+.btn-sm{padding:0.35rem 0.75rem;font-size:0.82rem}
+.btn-xs{padding:0.2rem 0.5rem;font-size:0.75rem}
+
+/* Inputs */
+.text-input,.select-input{
+  width:100%;padding:0.55rem 0.75rem;border-radius:var(--radius-sm);
+  border:1px solid var(--border);background:var(--surface2);color:var(--text);
+  outline:none;transition:border-color var(--transition);font-family:'Outfit',sans-serif;font-size:0.9rem;
+}
+.text-input:focus,.select-input:focus{border-color:var(--accent)}
+.text-input-sm{padding:0.35rem 0.55rem;font-size:0.85rem}
+select.select-input{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 0.75rem center;background-size:1em;padding-right:2.2rem;cursor:pointer}
+label{font-weight:600;font-size:0.85rem;display:flex;flex-direction:column;gap:0.3rem}
+label .hint{font-weight:400;font-size:0.78rem;color:var(--text-muted)}
+
+/* Grid layouts */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem}
+.form-grid-3{grid-template-columns:1fr 1fr 1fr}
+@media(max-width:640px){.form-grid,.form-grid-3{grid-template-columns:1fr}}
+.form-group{display:flex;flex-direction:column;gap:0.3rem}
+.form-group.full{grid-column:1/-1}
+.form-row{display:flex;flex-wrap:wrap;gap:0.6rem;align-items:center}
+
+/* Toggle / Checkbox */
+.toggle-wrap{display:flex;align-items:center;gap:0.5rem;cursor:pointer;user-select:none;flex-direction:row}
+.toggle-wrap input[type="checkbox"]{width:17px;height:17px;accent-color:var(--accent);cursor:pointer}
+.toggle-group{display:flex;flex-wrap:wrap;gap:0.5rem;padding:0.6rem 0.75rem;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border2)}
+
+/* File selector */
+.file-selector{max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface3)}
+.file-item{
+  display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.65rem;
+  cursor:pointer;transition:background var(--transition);border-bottom:1px solid var(--border2);
+  font-size:0.85rem;
+}
+.file-item:hover{background:var(--surface2)}
+.file-item.selected{background:var(--accent-dim);color:var(--accent)}
+.file-item input[type="checkbox"]{accent-color:var(--accent);cursor:pointer}
+.file-icon{font-size:1rem;width:22px;text-align:center;flex-shrink:0}
+.file-path{color:var(--text-muted);font-size:0.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.file-count{color:var(--text-dim);font-size:0.75rem;white-space:nowrap}
+
+/* Selected quizzes list (reorderable) */
+.selected-list{display:flex;flex-direction:column;gap:0.35rem;max-height:300px;overflow-y:auto}
+.selected-item{
+  display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.65rem;
+  background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);
+  cursor:grab;font-size:0.88rem;transition:border-color var(--transition);
+}
+.selected-item:hover{border-color:var(--accent)}
+.selected-item .drag-handle{color:var(--text-dim);cursor:grab;font-size:0.85rem}
+.selected-item .item-title{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.selected-item .item-qcount{color:var(--text-dim);font-size:0.78rem;white-space:nowrap}
+.selected-item .remove-btn{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:1rem;padding:0.2rem;transition:color var(--transition)}
+.selected-item .remove-btn:hover{color:var(--wrong)}
+.selected-empty{text-align:center;padding:2rem;color:var(--text-muted);font-size:0.9rem;border:1px dashed var(--border);border-radius:var(--radius-sm)}
+
+/* Status */
+.status-msg{text-align:center;margin-top:0.75rem;padding:0.6rem;border-radius:var(--radius-sm);font-weight:500;font-size:0.88rem;display:none}
+.status-msg.info{display:block;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent)}
+.status-msg.success{display:block;background:rgba(46,160,67,0.1);color:var(--success);border:1px solid var(--success)}
+.status-msg.error{display:block;background:rgba(218,54,51,0.1);color:var(--wrong);border:1px solid var(--wrong)}
+.status-msg.loading{display:flex;align-items:center;justify-content:center;gap:0.5rem;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent)}
+
+/* Summary strip */
+.summary-strip{
+  display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;
+  padding:0.65rem 1rem;background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--radius-sm);margin-bottom:1rem;font-size:0.85rem;
+}
+.summary-stat{display:flex;align-items:center;gap:0.3rem}
+.summary-stat strong{color:var(--accent)}
+
+/* Tabs */
+.styled-tabs{display:flex;gap:0;background:var(--surface2);border-radius:var(--radius);padding:3px;margin-bottom:1rem;border:1px solid var(--border)}
+.styled-tab{flex:1;padding:0.55rem 1rem;border:none;background:transparent;color:var(--text-muted);
+  font-family:'Outfit',sans-serif;font-weight:600;font-size:0.85rem;border-radius:8px;
+  cursor:pointer;transition:all var(--transition);text-align:center;display:flex;align-items:center;justify-content:center;gap:0.35rem;
+}
+.styled-tab:hover{color:var(--text)}
+.styled-tab.active{background:var(--accent);color:#000;box-shadow:0 2px 8px var(--accent-glow)}
+
+/* Progress bar */
+.progress-bar{height:4px;background:var(--border2);border-radius:4px;overflow:hidden;margin:1rem 0}
+.progress-fill{height:100%;background:var(--accent);border-radius:4px;transition:width 0.3s ease;width:0%}
+
+/* Spinner */
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--accent-dim);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle}
+
+/* ─────────── PREVIEW / PRINT STYLES ─────────── */
+#print-area{background:white;color:black;padding:0;border-radius:8px;box-shadow:var(--shadow);display:none;margin-top:1.5rem}
+#print-area .pdf-page{max-width:210mm;margin:0 auto;padding:2.5cm 2cm;font-family:'Inter',sans-serif;line-height:1.7}
+#print-area .pdf-page.font-serif{font-family:'Georgia','Times New Roman',serif}
+#print-area .pdf-page.font-mono{font-family:'JetBrains Mono','Consolas',monospace;font-size:0.9rem}
+#print-area .pdf-page.font-system{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+
+/* Cover page */
+.cover-page{text-align:center;padding:4cm 2cm 3cm;position:relative;min-height:80vh;display:flex;flex-direction:column;justify-content:center;page-break-after:always}
+.cover-page .cover-icon{font-size:4rem;margin-bottom:1.5rem;display:block}
+.cover-page .cover-title{font-family:'Playfair Display',serif;font-size:2.8rem;font-weight:900;margin-bottom:0.75rem;line-height:1.2;color:#1a1a1a}
+.cover-page .cover-subtitle{font-size:1.2rem;color:#555;margin-bottom:2rem;font-weight:400}
+.cover-page .cover-meta{color:#888;font-size:0.9rem;margin-top:2rem}
+.cover-page .cover-meta span{display:inline-block;margin:0 0.75rem}
+.cover-page .cover-divider{width:80px;height:3px;background:var(--accent);margin:1.5rem auto;border-radius:3px}
+.cover-page .cover-description{max-width:500px;margin:0 auto;color:#666;font-size:0.95rem;line-height:1.7}
+.cover-deco-top{position:absolute;top:0;left:0;right:0;height:6px;background:linear-gradient(90deg,var(--accent),#f0a50055,transparent)}
+.cover-deco-bottom{position:absolute;bottom:0;left:0;right:0;height:4px;background:linear-gradient(90deg,transparent,#f0a50055,var(--accent))}
+
+/* Table of contents */
+.toc-page{page-break-after:always;padding:2cm 2cm}
+.toc-page h2{font-family:'Playfair Display',serif;font-size:1.8rem;margin-bottom:1.5rem;border-bottom:2px solid #000;padding-bottom:0.5rem}
+.toc-item{display:flex;align-items:center;padding:0.5rem 0;border-bottom:1px dotted #ddd;font-size:0.95rem}
+.toc-item .toc-num{font-weight:700;min-width:2.5rem;color:var(--accent)}
+.toc-item .toc-title{flex:1}
+.toc-item .toc-pages{color:#999;font-size:0.85rem;min-width:3rem;text-align:right}
+
+/* Quiz header / chapter header */
+.chapter-page{page-break-before:always;padding:1cm 0 0.5cm;margin-bottom:1.5rem}
+.chapter-page .chapter-number{font-size:0.85rem;color:#999;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.25rem}
+.chapter-page .chapter-title{font-family:'Playfair Display',serif;font-size:2rem;font-weight:700;margin-bottom:0.5rem}
+.chapter-page .chapter-desc{color:#666;font-size:1rem}
+.chapter-divider{height:2px;background:linear-gradient(90deg,#000,#0000);margin:0.75rem 0 1.5rem;width:60%}
+
+.quiz-header{text-align:center;border-bottom:2px solid #000;margin-bottom:1.5rem;padding-bottom:0.75rem}
+.quiz-header h1{font-family:'Playfair Display',serif;font-size:2rem;margin-bottom:0.3rem}
+.quiz-header p{font-size:1rem;color:#555}
+
+/* Questions */
+.question-item{margin-bottom:1.5rem;page-break-inside:avoid}
+.question-text{font-size:1rem;font-weight:600;margin-bottom:0.6rem;line-height:1.6}
+.question-number{color:var(--accent);font-weight:700;margin-right:0.25rem}
+.options-list{list-style:none;margin-left:0.5rem}
+.option-item{display:flex;gap:0.65rem;margin-bottom:0.3rem;padding:0 0.5rem}
+.option-letter{font-weight:700;min-width:1.5rem;color:#333}
+.option-text{flex:1}
+.answer-key{margin-top:0.5rem;padding:0.6rem 0.75rem;background:#f5f5f5;border-left:3px solid #000;font-size:0.88rem;border-radius:0 6px 6px 0}
+.answer-key.hidden{display:none}
+.answer-key strong{color:#d32f2f}
+.answer-key .expl{color:#555;margin-top:0.3rem;font-size:0.85rem}
+
+/* 2-Column Textbook Layout */
+.textbook-layout{column-count:2;column-gap:2.5rem;column-rule:1px solid #ddd}
+.textbook-layout .quiz-header,.textbook-layout .chapter-page{column-span:all}
+.textbook-layout .question-item{break-inside:avoid;margin-bottom:1.25rem}
+.textbook-layout .question-text{font-size:0.92rem}
+.textbook-layout .option-item{font-size:0.88rem}
+.textbook-layout .answer-key{font-size:0.82rem;padding:0.4rem 0.6rem}
+
+/* Styled output */
+.styled-output .quiz-header{background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff;border-radius:14px;padding:2rem 1.5rem;border:none}
+.styled-output .quiz-header h1{color:#fff;font-size:2.2rem}
+.styled-output .quiz-header p{color:rgba(255,255,255,0.75)}
+.styled-output .question-item{background:#fff;border:1.5px solid #e8e8e8;border-radius:12px;padding:1.1rem 1.25rem;box-shadow:0 2px 8px rgba(0,0,0,0.05)}
+.styled-output .q-badge{display:inline-block;background:var(--accent);color:#000;font-size:0.68rem;font-weight:700;padding:0.18rem 0.55rem;border-radius:5px;margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:0.04em}
+.styled-output .question-text{font-size:0.98rem}
+.styled-output .option-item{border:1.5px solid #eee;background:#fafafa;border-radius:8px;padding:0.55rem 0.75rem;margin-bottom:0.35rem}
+.styled-output .option-letter{width:24px;height:24px;border-radius:6px;background:#f0f0f0;border:1.5px solid #d0d0d0;display:flex;align-items:center;justify-content:center;font-size:0.7rem;flex-shrink:0}
+.styled-output .answer-key{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-left:4px solid #22c55e;border-radius:0 8px 8px 0}
+.styled-output .answer-key strong{color:#16a34a;text-transform:uppercase;font-size:0.8rem;letter-spacing:0.04em;display:block;margin-bottom:0.2rem}
+.styled-output .chapter-number{color:rgba(255,255,255,0.6)}
+.styled-output.chapter-page .chapter-title{font-size:2.2rem}
+
+/* MCQ Notes */
+.mcq-notes-layout .question-item{margin-bottom:0.6rem;break-inside:avoid}
+.mcq-notes-layout .question-text{font-size:0.88rem;margin-bottom:0.2rem;font-weight:600}
+.mcq-notes-layout .compact-answer{font-size:0.88rem;color:#16a34a;font-weight:500;margin-left:1.2rem}
+.mcq-notes-layout .quiz-header{margin-bottom:1rem}
+.mcq-notes-layout.textbook-layout{column-count:2;column-gap:2rem}
+.mcq-notes-layout.styled-output .question-item{padding:0.45rem 0.65rem;border-radius:6px;background:#fafafa;border:1px solid #eee}
+.mcq-notes-layout.styled-output .compact-answer{background:rgba(22,163,74,0.08);padding:0.1rem 0.4rem;border-radius:3px;display:inline-block}
+
+/* Compact */
+.compact-layout .question-item{margin-bottom:0.8rem}
+.compact-layout .question-text{font-size:0.9rem;margin-bottom:0.3rem}
+.compact-layout .option-item{padding:0.15rem 0.3rem;margin-bottom:0.1rem;font-size:0.85rem}
+.compact-layout .answer-key{padding:0.3rem 0.5rem;font-size:0.8rem}
+
+/* Written content styles */
+.written-item .written-answer-space{
+  min-height:3.5cm;margin:0.75rem 0 0.5rem 1.5rem;
+  border-bottom:1px solid #ccc;background:repeating-linear-gradient(transparent,transparent 1.8em,#e0e0e0 1.8em,#e0e0e0 1.85em);
+  page-break-inside:avoid;
+}
+.written-item .answer-key{margin-left:1.5rem}
+.written-layout .written-answer-space{min-height:2.5cm}
+.written-layout.styled-output .written-answer-space{background:repeating-linear-gradient(transparent,transparent 1.8em,#f0f0f0 1.8em,#f0f0f0 1.85em)}
+.written-layout .question-item{page-break-inside:avoid;margin-bottom:2rem}
+.written-layout .question-text{font-weight:600;margin-bottom:0.3rem}
+
+/* Detailed */
+.detailed-layout .question-item{margin-bottom:2rem}
+.detailed-layout .question-text{font-size:1.1rem;font-weight:700}
+.detailed-layout .option-item{padding:0.5rem 0.75rem;background:#fafafa;border:1px solid #eee;border-radius:6px;margin-bottom:0.35rem}
+.detailed-layout .answer-key{padding:0.75rem 1rem;background:#f8f8f8;border-left:4px solid var(--accent)}
+
+/* Page numbers */
+.page-number-footer{text-align:center;font-size:0.75rem;color:#999;margin-top:1.5rem;padding-top:0.75rem;border-top:1px solid #eee}
+
+/* Answer key sections */
+.end-chapter-answers,.end-book-answers{page-break-before:always;padding:1.5rem 0}
+.end-chapter-answers h3,.end-book-answers h3{font-family:'Playfair Display',serif;font-size:1.5rem;margin-bottom:1rem;border-bottom:1px solid #ccc;padding-bottom:0.5rem}
+.answer-entry{display:flex;gap:0.75rem;padding:0.3rem 0;font-size:0.9rem;border-bottom:1px dotted #eee}
+.answer-entry .a-num{font-weight:700;min-width:2.5rem;color:var(--accent)}
+.answer-entry .a-answer{font-weight:600}
+.answer-entry .a-explain{color:#666;font-size:0.85rem}
+
+@media print{
+  @page{margin:1.5cm 1.8cm;size:auto}
+  @page:first{margin-top:0}
+  .no-print{display:none!important}
+  html,body{background:white!important;color:black!important;margin:0;padding:0;font-size:11pt}
+  .container{max-width:none;margin:0;padding:0}
+  #print-area{display:block!important;box-shadow:none!important;padding:0!important;margin:0!important;border-radius:0;background:white}
+  #print-area .pdf-page{padding:0;max-width:none}
+  .cover-page{min-height:100vh;padding:4cm 2cm;page-break-after:always}
+  .toc-page{page-break-after:always}
+  .chapter-page{page-break-before:always;page-break-after:avoid}
+  .quiz-header{page-break-after:avoid}
+  .question-item{page-break-inside:avoid;orphans:3;widows:3}
+  .answer-key{page-break-inside:avoid}
+  .textbook-layout{column-count:2;column-gap:1.8rem;column-rule:1px solid #ddd}
+  .textbook-layout .quiz-header,.textbook-layout .chapter-page{column-span:all}
+  .textbook-layout .question-item{break-inside:avoid}
+  .styled-output .question-item{box-shadow:none!important;break-inside:avoid;border:1px solid #e0e0e0}
+  .end-chapter-answers,.end-book-answers{page-break-before:always}
+  .written-item .written-answer-space{min-height:4cm}
+  .cover-deco-top,.cover-deco-bottom{display:none}
+  a{text-decoration:none;color:inherit}
+}
+
+/* Responsive */
+@media(max-width:640px){
+  .topbar{padding:0.5rem 0.75rem}
+  .container{padding:0 0.75rem}
+  .card{padding:0.85rem}
+  .form-grid{grid-template-columns:1fr}
+}
+
+/* Misc */
+.flex{display:flex;align-items:center;gap:0.5rem}
+.flex-wrap{flex-wrap:wrap}
+.gap-sm{gap:0.35rem}
+.gap-md{gap:0.75rem}
+.mt-1{margin-top:0.75rem}
+.mb-1{margin-bottom:0.75rem}
+.text-muted{color:var(--text-muted)}
+.text-center{text-align:center}
+.w-full{width:100%}
+.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+</style>
 </head>
 <body>
-  <div class="topbar no-print">
-    <div class="topbar-title">Built-in PDF Exporter</div>
-    <button class="btn" onclick="toggleTheme()">☀️</button>
+<div class="topbar no-print">
+  <div class="topbar-title">PDF Exporter</div>
+  <div style="display:flex;gap:0.35rem;align-items:center">
+    <span id="export-mode-badge" style="font-size:0.75rem;padding:0.2rem 0.5rem;border-radius:999px;background:var(--accent-dim);color:var(--accent);font-weight:600;display:none">Multi-Quiz</span>
+    <button class="icon-btn" onclick="toggleTheme()" id="theme-toggle">☀</button>
   </div>
-  
-  <div class="container">
+</div>
+
+<div class="container no-print">
+  <!-- Step tabs -->
+  <div class="styled-tabs" id="main-tabs">
+    <button class="styled-tab active" data-step="select" onclick="switchStep('select')">📂 Select Quizzes</button>
+    <button class="styled-tab" data-step="cover" onclick="switchStep('cover')">📖 Cover Page</button>
+    <button class="styled-tab" data-step="style" onclick="switchStep('style')">🎨 Styling</button>
+    <button class="styled-tab" data-step="export" onclick="switchStep('export')">📄 Export</button>
+  </div>
+
+  <!-- STEP 1: Select Quizzes -->
+  <div class="section active" id="step-select">
+    <div class="two-col">
+      <div class="card">
+        <h3>📁 Project Quizzes <span class="badge" id="total-files-badge">0 available</span></h3>
+        <div class="search-wrap" style="position:relative;margin-bottom:0.5rem">
+          <input type="text" class="text-input" id="file-search" placeholder="Filter quizzes..." oninput="filterFileList()" style="padding-left:2rem">
+          <span style="position:absolute;left:0.65rem;top:50%;transform:translateY(-50%);color:var(--text-dim);font-size:0.85rem">🔍</span>
+        </div>
+        <div class="file-selector" id="file-list"></div>
+        <div class="status-msg" id="file-status"></div>
+      </div>
+      <div>
+        <div class="card">
+          <h3>📋 Selected Quizzes <span class="badge" id="selected-count-badge">0</span></h3>
+          <div class="selected-list" id="selected-list">
+            <div class="selected-empty">Select quizzes from the list to add them here. Drag to reorder.</div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:0.75rem">
+          <h3>🔗 Or Load from URL</h3>
+          <div class="form-row">
+            <input type="text" class="text-input" id="url-input" placeholder="https://example.com/quiz.html" style="flex:1">
+            <button class="btn btn-secondary btn-sm" onclick="loadFromUrl()">Load</button>
+          </div>
+          <div id="url-status" class="status-msg"></div>
+        </div>
+      </div>
+    </div>
+    <div class="text-center mt-1">
+      <button class="btn btn-primary" onclick="switchStep('cover')" id="next-to-cover">Continue → Cover Page</button>
+    </div>
+  </div>
+
+  <!-- STEP 2: Cover Page -->
+  <div class="section" id="step-cover">
     <div class="card">
-      <h2 style="margin-top:0">Export Quiz to PDF</h2>
-      <p class="muted" style="margin-bottom:1.5rem;">Rendering logic synced with QuizTool PDF Exporter.</p>
-      
-      <div style="display: flex; gap: 0.5rem;">
-        <input type="text" id="quiz-url" style="flex:1; padding: 0.7rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text);" placeholder="Enter quiz URL...">
-        <button class="btn btn-primary" onclick="loadFromUrl()">Load Quiz</button>
+      <h3>📖 Cover Page Settings</h3>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Document Title <span class="hint">Appears on cover &amp; PDF metadata</span></label>
+          <input type="text" class="text-input" id="cover-title" placeholder="e.g. Surgery MCQ Compendium" value="Quiz Compilation">
+        </div>
+        <div class="form-group">
+          <label>Subtitle</label>
+          <input type="text" class="text-input" id="cover-subtitle" placeholder="e.g. 500+ Board-Style Questions">
+        </div>
+        <div class="form-group">
+          <label>Author</label>
+          <input type="text" class="text-input" id="cover-author" placeholder="Your name">
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="text" class="text-input" id="cover-date">
+        </div>
+        <div class="form-group">
+          <label>Icon / Emoji</label>
+          <input type="text" class="text-input" id="cover-icon" placeholder="📚" value="📚" style="text-align:center;font-size:1.5rem">
+        </div>
+        <div class="form-group">
+          <label>Include Cover Page</label>
+          <label class="toggle-wrap" style="flex-direction:row;font-weight:400;padding-top:0.3rem">
+            <input type="checkbox" id="include-cover" checked onchange="toggleCoverField()"> Show cover page in PDF
+          </label>
+        </div>
+        <div class="form-group full">
+          <label>Description <span class="hint">A short blurb for the cover</span></label>
+          <textarea class="text-input" id="cover-description" rows="2" placeholder="Brief description of this compilation..." style="resize:vertical"></textarea>
+        </div>
       </div>
-      <div id="status" class="status-msg"></div>
     </div>
-
-    <div id="preview-controls" class="controls" style="display: none;">
-      <label class="toggle-wrap"><input type="checkbox" id="show-answers" checked onchange="updatePreview()"> <span>Show Answers</span></label>
-      <label class="toggle-wrap"><input type="checkbox" id="two-column" onchange="updatePreview()"> <span>2-Column</span></label>
-      <label class="toggle-wrap"><input type="checkbox" id="styled-mode" onchange="updatePreview()"> <span>✨ Styled</span></label>
-      <label class="toggle-wrap"><input type="checkbox" id="mcq-notes-mode" onchange="updatePreview()"> <span>📝 MCQ Notes</span></label>
-      
-      <div style="margin-left: auto; display: flex; align-items: center; gap: 1rem;">
-        <label class="toggle-wrap" title="Lower quality is safer for very long quizzes"><input type="checkbox" id="high-quality"> <span>HQ (Scale 2)</span></label>
-        <button class="btn btn-success" onclick="generatePdfFile()">💾 Save PDF File</button>
-        <button class="btn btn-primary" onclick="window.print()">🖨️ Print Dialog</button>
-      </div>
+    <div class="card">
+      <h3>📑 Table of Contents</h3>
+      <label class="toggle-wrap" style="flex-direction:row;font-weight:400">
+        <input type="checkbox" id="include-toc" checked> Include Table of Contents page
+      </label>
     </div>
-    
-    <div id="print-area"></div>
+    <div class="text-center mt-1 flex flex-wrap" style="justify-content:center;gap:0.75rem">
+      <button class="btn btn-secondary" onclick="switchStep('select')">← Back</button>
+      <button class="btn btn-primary" onclick="switchStep('style')">Continue → Styling</button>
+    </div>
   </div>
 
-  <script>
-    let quizData = { config: {}, questions: [] };
+  <!-- STEP 3: Styling -->
+  <div class="section" id="step-style">
+    <div class="card">
+      <h3>🎨 Layout &amp; Style</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Style</label>
+          <select class="select-input" id="style-mode" onchange="updateStyleDepends()">
+            <option value="standard">Standard</option>
+            <option value="styled">✨ Styled</option>
+            <option value="written">✍️ Written / Essay</option>
+            <option value="mcqnotes">📝 MCQ Notes</option>
+            <option value="compact">Compact</option>
+            <option value="detailed">Detailed</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Layout</label>
+          <select class="select-input" id="layout-mode">
+            <option value="single">Single Column</option>
+            <option value="twocol">Two Column</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Font</label>
+          <select class="select-input" id="font-mode">
+            <option value="sans">Sans-serif (Inter)</option>
+            <option value="serif">Serif (Georgia)</option>
+            <option value="mono">Monospace</option>
+            <option value="system">System</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Page Size</label>
+          <select class="select-input" id="page-size">
+            <option value="a4">A4</option>
+            <option value="letter">Letter</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Orientation</label>
+          <select class="select-input" id="page-orientation">
+            <option value="portrait">Portrait</option>
+            <option value="landscape">Landscape</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Question Numbering</label>
+          <select class="select-input" id="numbering-mode">
+            <option value="global">Global (1–N)</option>
+            <option value="perchapter">Per Chapter</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Answer Key</label>
+          <select class="select-input" id="answers-mode">
+            <option value="inline">Inline (after each question)</option>
+            <option value="endchapter">End of Each Chapter</option>
+            <option value="endbook">End of Book</option>
+            <option value="none">Hidden</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Show Explanations</label>
+          <label class="toggle-wrap" style="flex-direction:row;font-weight:400;padding-top:0.3rem">
+            <input type="checkbox" id="show-explanations" checked> Include explanations
+          </label>
+        </div>
+      </div>
+    </div>
+    <div class="text-center mt-1 flex flex-wrap" style="justify-content:center;gap:0.75rem">
+      <button class="btn btn-secondary" onclick="switchStep('cover')">← Back</button>
+      <button class="btn btn-primary" onclick="switchStep('export')">Continue → Export</button>
+    </div>
+  </div>
 
-    async function loadFromUrl() {
-      const url = document.getElementById('quiz-url').value.trim();
-      if (!url) return;
-      const status = document.getElementById('status');
-      status.textContent = 'Fetching quiz file...';
-      status.className = 'status-msg';
+  <!-- STEP 4: Export -->
+  <div class="section" id="step-export">
+    <div class="summary-strip" id="export-summary">
+      <span class="summary-stat">📄 <strong id="export-count">0</strong> quizzes</span>
+      <span class="summary-stat">❓ <strong id="export-questions">0</strong> questions</span>
+      <span class="summary-stat">📐 <strong id="export-style">Standard</strong></span>
+      <span class="summary-stat">📄 <strong id="export-pagesize">A4</strong></span>
+    </div>
+    <div class="two-col">
+      <div>
+        <button class="btn btn-primary w-full" onclick="generatePreview()" id="preview-btn">👁️ Generate Preview</button>
+        <div id="generate-status" class="status-msg"></div>
+        <div class="progress-bar" id="progress-bar-wrap" style="display:none">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-sm" style="flex-direction:column">
+        <button class="btn btn-success w-full" onclick="nativePrintPdf()" id="print-btn" disabled style="font-size:1rem;padding:0.8rem">🖨️ Native Browser Print <span style="font-size:0.75rem;font-weight:400;display:block;opacity:0.8">Best quality — uses your browser's PDF engine</span></button>
+        <button class="btn btn-secondary w-full" onclick="downloadPdf()" id="download-btn" disabled>💾 Download PDF (html2pdf)</button>
+      </div>
+    </div>
+    <div style="margin-top:0.75rem;padding:0.6rem 0.85rem;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:0.82rem;color:var(--text-muted)">
+      💡 <strong>Native Browser Print</strong> produces vector-quality PDFs with proper fonts, handles large documents, and lets you choose orientation/save location. <strong>Download PDF</strong> uses html2pdf (raster-based) — better for quick single-quiz exports.
+    </div>
+  </div>
+</div>
 
-      try {
-        const resp = await fetch(url);
-        if (!resp.ok) throw new Error(`HTTP error! status: ${resp.status}`);
-        const content = await resp.text();
-        
-        const findBlock = (start, end, fallbackRegex) => {
-          const startIdx = content.indexOf(start);
-          const endIdx = content.indexOf(end);
-          if (startIdx !== -1 && endIdx !== -1) {
-            const block = content.slice(startIdx + start.length, endIdx);
-            const match = block.match(/(const|let|var)\s+\w+\s*=\s*([\s\S]*?);?$/);
-            if (match) return match[2].trim();
-          }
-          const generalMatch = content.match(fallbackRegex);
-          return generalMatch ? generalMatch[2].trim() : null;
+<div class="container" id="preview-container">
+  <div id="print-area">
+    <div class="pdf-page" id="pdf-content"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════════════════
+const state = {
+  selectedQuizzes: [],     // { path, meta: { title, description, uid, question_count, icon, questions } }
+  allFiles: [],            // raw file list from project
+  cover: {
+    title: 'Quiz Compilation',
+    subtitle: '',
+    author: '',
+    date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+    icon: '📚',
+    description: '',
+    include: true,
+  },
+  toc: { include: true },
+  style: {
+    mode: 'standard',      // standard | styled | mcqnotes | compact | detailed
+    layout: 'single',      // single | twocol
+    font: 'sans',          // sans | serif | mono | system
+    pageSize: 'a4',        // a4 | letter
+    orientation: 'portrait',
+    numbering: 'global',   // global | perchapter
+    answers: 'inline',     // inline | endchapter | endbook | none
+    showExplanations: true,
+  },
+  previewGenerated: false,
+  isTauri: false,
+  isGenerating: false,
+  allQuestionsLoad: [],    // cached loaded question data
+  questionGlobalOffset: 0,
+};
+
+const letters = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P'];
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TAURI DETECTION & IPC
+// ═══════════════════════════════════════════════════════════════════════════════
+function detectTauri() {
+  return typeof window.__TAURI__ !== 'undefined' && window.__TAURI__ !== null;
+}
+
+async function tauriInvoke(cmd, args = {}) {
+  try {
+    return await window.__TAURI__.core.invoke(cmd, args);
+  } catch (err) {
+    let parsed = null;
+    if (typeof err === 'string') { try { parsed = JSON.parse(err); } catch(_) {} }
+    if (parsed && parsed.message) throw new Error(parsed.message);
+    throw new Error(typeof err === 'string' ? err : JSON.stringify(err));
+  }
+}
+
+async function loadProjectFiles() {
+  if (!state.isTauri) return;
+  try {
+    const result = await tauriInvoke('list_files');
+    const files = (result.files || []).filter(f => f.type === 'quiz' || f.type === 'bank' || f.type === 'flashcard' || f.type === 'written');
+    state.allFiles = files;
+    renderFileList();
+    document.getElementById('total-files-badge').textContent = `${files.length} available`;
+  } catch (err) {
+    showFileStatus(err.message, 'error');
+  }
+}
+
+async function loadSelectedQuizzes() {
+  if (state.selectedQuizzes.length === 0) return;
+  const paths = state.selectedQuizzes.map(q => q.path);
+  try {
+    if (state.isTauri) {
+      const result = await tauriInvoke('load_exports_batch', { paths });
+      const loaded = result.files || [];
+      state.allQuestionsLoad = loaded.map(f => {
+        const cfg = f.meta.config ? (typeof f.meta.config === 'string' ? JSON.parse(f.meta.config) : f.meta.config) : {};
+        const qs = f.meta.questions ? (typeof f.meta.questions === 'string' ? JSON.parse(f.meta.questions) : f.meta.questions) : [];
+        return {
+          path: f.path,
+          meta: f.meta,
+          config: cfg,
+          questions: qs,
+          isWritten: f.meta.type === 'written' || !!cfg.WRITTEN_CONFIG,
         };
-
-        const configJson = findBlock('/* [QUIZ_CONFIG_START] */', '/* [QUIZ_CONFIG_END] */', /(const|let|var)\s+QUIZ_CONFIG\s*=\s*([\s\S]*?);?(\n|\r|$)/) ||
-                          findBlock('/* [BANK_CONFIG_START] */', '/* [BANK_CONFIG_END] */', /(const|let|var)\s+BANK_CONFIG\s*=\s*([\s\S]*?);?(\n|\r|$)/);
-        
-        const questionsJson = findBlock('/* [QUESTIONS_START] */', '/* [QUESTIONS_END] */', /(const|let|var)\s+QUESTIONS\s*=\s*([\s\S]*?);?(\n|\r|$)/) ||
-                             findBlock('/* [QUESTION_BANK_START] */', '/* [QUESTION_BANK_END] */', /(const|let|var)\s+QUESTION_BANK\s*=\s*([\s\S]*?);?(\n|\r|$)/);
-
-        if (!configJson || !questionsJson) throw new Error('Could not find quiz data blocks in the file.');
-
-        quizData.config = new Function('return ' + configJson)();
-        quizData.questions = new Function('return ' + questionsJson)();
-
-        status.textContent = `Loaded "${quizData.config.title}" (${quizData.questions.length} questions).`;
-        status.className = 'status-msg success';
-        document.getElementById('preview-controls').style.display = 'flex';
-        updatePreview();
-      } catch (err) {
-        status.textContent = `Error: ${err.message}`;
-        status.className = 'status-msg error';
-      }
-    }
-
-    function updatePreview() {
-      const showAnswers = document.getElementById('show-answers').checked;
-      const useTwoColumn = document.getElementById('two-column').checked;
-      const useStyled = document.getElementById('styled-mode').checked;
-      const useMcqNotes = document.getElementById('mcq-notes-mode').checked;
-      const letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
-      const area = document.getElementById('print-area');
-      
-      area.className = '';
-      if (useTwoColumn) area.classList.add('textbook-layout');
-      if (useStyled) area.classList.add('styled-output');
-      if (useMcqNotes) area.classList.add('mcq-notes-layout');
-
-      let html = '';
-      
-      // Header
-      if (useStyled) {
-        html += `<div class="quiz-header">
-          ${quizData.config.icon ? `<div style="font-size:2.5rem; margin-bottom:0.5rem;">${quizData.config.icon}</div>` : ''}
-          <h1>${quizData.config.title}</h1>
-          <p>${quizData.config.description || ''}</p>
-        </div>`;
-      } else {
-        html += `<div class="quiz-header">
-          <h1>${quizData.config.title}</h1>
-          <p>${quizData.config.description || ''}</p>
-        </div>`;
-      }
-
-      quizData.questions.forEach((q, i) => {
-        if (useMcqNotes) {
-          html += `<div class="question-item">
-            <div class="question-text">${i + 1}. ${q.question}</div>
-            <div class="compact-answer">${letters[q.correct]}. ${q.options[q.correct]}</div>
-          </div>`;
-        } else if (useStyled) {
-          html += `<div class="question-item">
-            <div class="q-badge">Question ${i + 1}</div>
-            <div class="question-text">${q.question}</div>
-            <div class="options-list">
-              ${q.options.map((opt, oi) => `<div class="option-item"><span class="option-letter">${letters[oi]}</span><span class="option-text">${opt}</span></div>`).join('')}
-            </div>
-            ${showAnswers ? `<div class="answer-key"><strong>✓ Correct: ${letters[q.correct]}. ${q.options[q.correct]}</strong>${q.explanation ? `<div style="margin-top:0.4rem; font-size:0.85rem; color:#555;">${q.explanation}</div>` : ''}</div>` : ''}
-          </div>`;
-        } else {
-          html += `<div class="question-item">
-            <div class="question-text">${i + 1}. ${q.question}</div>
-            <div class="options-list">
-              ${q.options.map((opt, oi) => `<div class="option-item"><span class="option-letter">${letters[oi]}.</span><span class="option-text">${opt}</span></div>`).join('')}
-            </div>
-            <div class="answer-key ${showAnswers ? '' : 'hidden'}"><strong>Correct Answer: ${letters[q.correct]}</strong>${q.explanation ? `<div style="margin-top:0.4rem;">${q.explanation}</div>` : ''}</div>
-          </div>`;
-        }
       });
-
-      area.innerHTML = html;
-      area.style.display = 'block';
-    }
-
-    async function generatePdfFile() {
-      const element = document.getElementById('print-area');
-      const filename = (quizData.config.title || 'quiz').toLowerCase().replace(/[^a-z0-9]/g, '-') + '.pdf';
-      const useHq = document.getElementById('high-quality').checked;
-      
-      const opt = { 
-        margin: 0.5, 
-        filename, 
-        image: { type: 'jpeg', quality: 0.98 }, 
-        html2canvas: { 
-          scale: useHq ? 2 : 1, 
-          useCORS: true,
-          logging: false 
-        }, 
-        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' } 
-      };
-      
-      try {
-        const btn = document.querySelector('.btn-success');
-        btn.disabled = true; btn.textContent = 'Generating...';
-        await html2pdf().set(opt).from(element).save();
-        btn.disabled = false; btn.textContent = '💾 Save PDF File';
-      } catch (err) { 
-        console.error(err);
-        alert('Error: ' + err.message + '\n\nTry disabling "HQ" mode or use the "Print Dialog" button for very long quizzes.');
-        const btn = document.querySelector('.btn-success');
-        btn.disabled = false; btn.textContent = '💾 Save PDF File';
+    } else {
+      // Fallback: fetch each URL
+      state.allQuestionsLoad = [];
+      for (const q of state.selectedQuizzes) {
+        try {
+          const resp = await fetch(q.path);
+          if (!resp.ok) continue;
+          const content = await resp.text();
+          const parsed = parseContent(content);
+          if (parsed) {
+            state.allQuestionsLoad.push({ path: q.path, ...parsed });
+          }
+        } catch(e) { console.warn('Failed to load', q.path, e); }
       }
     }
+    updateExportSummary();
+  } catch (err) {
+    console.error('Failed to load quiz data:', err);
+    showGenerateStatus('Failed to load quiz data: ' + err.message, 'error');
+  }
+}
 
-    function toggleTheme() {
-      const html = document.documentElement;
-      const newTheme = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-      html.setAttribute('data-theme', newTheme);
-      localStorage.setItem('quiz-theme', newTheme);
+// ═══════════════════════════════════════════════════════════════════════════════
+// CONTENT PARSING (standalone fallback)
+// ═══════════════════════════════════════════════════════════════════════════════
+function parseContent(content) {
+  const extract = (start, end, fallback) => {
+    const si = content.indexOf(start);
+    const ei = content.indexOf(end);
+    if (si !== -1 && ei !== -1) {
+      const block = content.slice(si + start.length, ei).trim();
+      const m = block.match(/(?:const|let|var)\s+\w+\s*=\s*([\s\S]*?);?$/);
+      if (m) try { return JSON.parse(m[1]); } catch(_) { try { return new Function('return ' + m[1])(); } catch(_2) {} }
+    }
+    const gm = content.match(fallback);
+    if (gm) try { return JSON.parse(gm[2]); } catch(_) { try { return new Function('return ' + gm[2])(); } catch(_2) {} }
+    return null;
+  };
+  let isWritten = false;
+  let config = extract('/* [QUIZ_CONFIG_START] */', '/* [QUIZ_CONFIG_END] */', /(?:const|let|var)\s+QUIZ_CONFIG\s*=\s*([\s\S]*?);?(?:\n|\r|$)/)
+            || extract('/* [BANK_CONFIG_START] */', '/* [BANK_CONFIG_END] */', /(?:const|let|var)\s+BANK_CONFIG\s*=\s*([\s\S]*?);?(?:\n|\r|$)/);
+  let questions = extract('/* [QUESTIONS_START] */', '/* [QUESTIONS_END] */', /(?:const|let|var)\s+QUESTIONS\s*=\s*([\s\S]*?);?(?:\n|\r|$)/)
+               || extract('/* [QUESTION_BANK_START] */', '/* [QUESTION_BANK_END] */', /(?:const|let|var)\s+QUESTION_BANK\s*=\s*([\s\S]*?);?(?:\n|\r|$)/);
+  // Try written content format
+  if (!config || !questions) {
+    config = extract('/* [WRITTEN_CONFIG_START] */', '/* [WRITTEN_CONFIG_END] */', /(?:const|let|var)\s+WRITTEN_CONFIG\s*=\s*([\s\S]*?);?(?:\n|\r|$)/);
+    questions = extract('/* [WRITTEN_QUESTIONS_START] */', '/* [WRITTEN_QUESTIONS_END] */', /(?:const|let|var)\s+WRITTEN_QUESTIONS\s*=\s*([\s\S]*?);?(?:\n|\r|$)/);
+    if (config && questions) isWritten = true;
+  }
+  if (!config || !questions) return null;
+  return { config, questions, isWritten };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FILE LIST RENDERING
+// ═══════════════════════════════════════════════════════════════════════════════
+function renderFileList() {
+  const container = document.getElementById('file-list');
+  const q = (document.getElementById('file-search').value || '').toLowerCase();
+  const filtered = state.allFiles.filter(f => (f.title || f.path).toLowerCase().includes(q));
+  if (filtered.length === 0) {
+    container.innerHTML = '<div style="padding:1.5rem;text-align:center;color:var(--text-muted);font-size:0.85rem">No quiz files found.</div>';
+    return;
+  }
+  const selectedPaths = new Set(state.selectedQuizzes.map(s => s.path));
+  container.innerHTML = filtered.map(f => {
+    const sel = selectedPaths.has(f.path) ? 'selected' : '';
+    const icon = f.icon || (f.type === 'bank' ? '🗃️' : f.type === 'written' ? '✍️' : f.type === 'flashcard' ? '🃏' : '📝');
+    const qc = f.question_count || '?';
+    return `<div class="file-item ${sel}" onclick="toggleFileSelect('${f.path.replace(/'/g, "\\'")}')">
+      <input type="checkbox" ${sel ? 'checked' : ''} onchange="toggleFileSelect('${f.path.replace(/'/g, "\\'")}')">
+      <span class="file-icon">${icon}</span>
+      <span class="truncate" style="flex:1;font-weight:600">${esc(f.title || f.path)}</span>
+      <span class="file-path">${esc(f.path)}</span>
+      <span class="file-count">${qc} Q</span>
+    </div>`;
+  }).join('');
+}
+
+function toggleFileSelect(path) {
+  const idx = state.selectedQuizzes.findIndex(s => s.path === path);
+  const file = state.allFiles.find(f => f.path === path);
+  if (!file) return;
+  if (idx === -1) {
+    state.selectedQuizzes.push({ path: file.path, meta: file });
+  } else {
+    state.selectedQuizzes.splice(idx, 1);
+  }
+  renderFileList();
+  renderSelectedList();
+}
+
+function filterFileList() { renderFileList(); }
+
+function showFileStatus(msg, type) {
+  const el = document.getElementById('file-status');
+  el.textContent = msg;
+  el.className = 'status-msg ' + type;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SELECTED LIST (reorderable)
+// ═══════════════════════════════════════════════════════════════════════════════
+function renderSelectedList() {
+  const container = document.getElementById('selected-list');
+  const badge = document.getElementById('selected-count-badge');
+  badge.textContent = state.selectedQuizzes.length;
+  if (state.selectedQuizzes.length === 0) {
+    container.innerHTML = '<div class="selected-empty">Select quizzes from the list to add them here. Drag to reorder.</div>';
+    return;
+  }
+  container.innerHTML = state.selectedQuizzes.map((q, i) => `
+    <div class="selected-item" draggable="true" data-index="${i}">
+      <span class="drag-handle">⠿</span>
+      <span class="file-icon">${q.meta.icon || (q.meta.type === 'bank' ? '🗃️' : q.meta.type === 'written' ? '✍️' : q.meta.type === 'flashcard' ? '🃏' : '📝')}</span>
+      <span class="item-title">${esc(q.meta.title || q.path)}</span>
+      <span class="item-qcount">${q.meta.question_count || '?'} Q</span>
+      <button class="remove-btn" onclick="removeSelected(${i})" title="Remove">✕</button>
+    </div>
+  `).join('');
+  // Drag events
+  container.querySelectorAll('.selected-item').forEach(el => {
+    el.addEventListener('dragstart', handleDragStart);
+    el.addEventListener('dragover', handleDragOver);
+    el.addEventListener('drop', handleDrop);
+    el.addEventListener('dragend', handleDragEnd);
+  });
+}
+
+let dragIndex = null;
+function handleDragStart(e) {
+  dragIndex = parseInt(e.target.closest('.selected-item').dataset.index);
+  e.dataTransfer.effectAllowed = 'move';
+  e.target.style.opacity = '0.5';
+}
+function handleDragOver(e) {
+  e.preventDefault();
+  const target = e.target.closest('.selected-item');
+  if (!target) return;
+  const idx = parseInt(target.dataset.index);
+  if (idx === dragIndex) return;
+  const rect = target.getBoundingClientRect();
+  const mid = rect.top + rect.height / 2;
+  if (e.clientY < mid) {
+    target.parentNode.insertBefore(target.parentNode.children[dragIndex], target);
+  } else {
+    target.parentNode.insertBefore(target.parentNode.children[dragIndex], target.nextSibling);
+  }
+}
+function handleDrop(e) {
+  e.preventDefault();
+  const items = state.selectedQuizzes;
+  const targetEl = e.target.closest('.selected-item');
+  if (!targetEl) return;
+  const targetIdx = parseInt(targetEl.dataset.index);
+  if (dragIndex !== null && dragIndex !== targetIdx) {
+    const [moved] = items.splice(dragIndex, 1);
+    items.splice(targetIdx, 0, moved);
+    state.selectedQuizzes = items;
+    renderSelectedList();
+  }
+  dragIndex = null;
+}
+function handleDragEnd(e) {
+  e.target.style.opacity = '1';
+  dragIndex = null;
+}
+
+function removeSelected(idx) {
+  state.selectedQuizzes.splice(idx, 1);
+  renderSelectedList();
+  renderFileList();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// URL LOADING (standalone)
+// ═══════════════════════════════════════════════════════════════════════════════
+async function loadFromUrl() {
+  const input = document.getElementById('url-input');
+  const status = document.getElementById('url-status');
+  let url = input.value.trim();
+  if (!url) { showUrlStatus('Enter a URL.', 'error'); return; }
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  showUrlStatus('<span class="spinner"></span> Fetching...', 'loading');
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const content = await resp.text();
+    const parsed = parseContent(content);
+    if (!parsed) throw new Error('No quiz data found in page');
+    const title = parsed.config.title || 'Quiz from URL';
+    const qc = parsed.questions ? parsed.questions.length : 0;
+    // Add as a pseudo-file
+    const pseudo = {
+      path: url,
+      meta: { title, question_count: qc, type: parsed.isWritten ? 'written' : (parsed.config.BANK_CONFIG ? 'bank' : 'quiz'), icon: parsed.config.icon || null },
+      config: parsed.config,
+      questions: parsed.questions,
+      isWritten: parsed.isWritten,
+    };
+    state.allQuestionsLoad.push(pseudo);
+    state.selectedQuizzes.push({ path: url, meta: pseudo.meta });
+    showUrlStatus(`Loaded "${title}" (${qc} questions)`, 'success');
+    renderSelectedList();
+    updateExportSummary();
+  } catch (err) {
+    showUrlStatus('Error: ' + err.message, 'error');
+  }
+}
+
+function showUrlStatus(msg, type) {
+  const el = document.getElementById('url-status');
+  el.innerHTML = msg;
+  el.className = 'status-msg ' + type;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STEP NAVIGATION
+// ═══════════════════════════════════════════════════════════════════════════════
+function switchStep(step) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('step-' + step).classList.add('active');
+  document.querySelectorAll('.styled-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.step === step);
+  });
+}
+
+function toggleCoverField() {
+  const checked = document.getElementById('include-cover').checked;
+  state.cover.include = checked;
+}
+
+function updateStyleDepends() {
+  const mode = document.getElementById('style-mode').value;
+  const isMcq = mode === 'mcqnotes';
+  const isWritten = mode === 'written';
+  document.getElementById('answers-mode').value = isMcq || isWritten ? 'none' : 'inline';
+  document.getElementById('show-explanations').disabled = isMcq || isWritten;
+  if (isMcq || isWritten) document.getElementById('show-explanations').checked = true;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// EXPORT SUMMARY
+// ═══════════════════════════════════════════════════════════════════════════════
+function updateExportSummary() {
+  const totalQ = state.allQuestionsLoad.reduce((sum, f) => sum + (f.questions ? f.questions.length : 0), 0);
+  document.getElementById('export-count').textContent = state.allQuestionsLoad.length;
+  document.getElementById('export-questions').textContent = totalQ;
+  document.getElementById('export-style').textContent = state.style.mode.charAt(0).toUpperCase() + state.style.mode.slice(1);
+  document.getElementById('export-pagesize').textContent = state.pageSize?.toUpperCase() || 'A4';
+  document.getElementById('export-mode-badge').style.display = state.allQuestionsLoad.length > 1 ? 'inline' : 'none';
+  const btn = document.getElementById('next-to-cover');
+  if (btn) btn.textContent = state.selectedQuizzes.length > 0
+    ? `Continue → Cover Page (${state.selectedQuizzes.length} selected)`
+    : 'Continue → Cover Page';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PREVIEW GENERATION
+// ═══════════════════════════════════════════════════════════════════════════════
+async function generatePreview() {
+  // Gather cover settings
+  state.cover.title = document.getElementById('cover-title').value || 'Quiz Compilation';
+  state.cover.subtitle = document.getElementById('cover-subtitle').value || '';
+  state.cover.author = document.getElementById('cover-author').value || '';
+  state.cover.date = document.getElementById('cover-date').value || new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  state.cover.icon = document.getElementById('cover-icon').value || '📚';
+  state.cover.description = document.getElementById('cover-description').value || '';
+  state.cover.include = document.getElementById('include-cover').checked;
+  state.toc.include = document.getElementById('include-toc').checked;
+  state.style.mode = document.getElementById('style-mode').value;
+  state.style.layout = document.getElementById('layout-mode').value;
+  state.style.font = document.getElementById('font-mode').value;
+  state.style.pageSize = document.getElementById('page-size').value;
+  state.style.orientation = document.getElementById('page-orientation').value;
+  state.style.numbering = document.getElementById('numbering-mode').value;
+  state.style.answers = document.getElementById('answers-mode').value;
+  state.style.showExplanations = document.getElementById('show-explanations').checked;
+
+  const status = document.getElementById('generate-status');
+  status.className = 'status-msg loading';
+  status.innerHTML = '<span class="spinner"></span> Loading quiz data...';
+
+  // Load data
+  await loadSelectedQuizzes();
+  if (state.allQuestionsLoad.length === 0) {
+    status.className = 'status-msg error';
+    status.textContent = 'No quiz data loaded. Select quizzes first.';
+    return;
+  }
+
+  status.innerHTML = '<span class="spinner"></span> Building preview...';
+
+  // Build PDF content
+  const content = buildPdfContent();
+  document.getElementById('pdf-content').innerHTML = content;
+  const area = document.getElementById('print-area');
+  area.style.display = 'block';
+
+  // Apply layout classes
+  area.className = '';
+  const cls = [];
+  if (state.style.layout === 'twocol' && state.style.mode !== 'mcqnotes') cls.push('textbook-layout');
+  if (state.style.mode === 'styled') cls.push('styled-output');
+  if (state.style.mode === 'written') cls.push('written-layout');
+  if (state.style.mode === 'mcqnotes') cls.push('mcq-notes-layout');
+  if (state.style.mode === 'compact') cls.push('compact-layout');
+  if (state.style.mode === 'detailed') cls.push('detailed-layout');
+  cls.forEach(c => area.classList.add(c));
+
+  if (state.style.layout === 'twocol' && state.style.mode === 'mcqnotes') {
+    area.classList.add('textbook-layout');
+  }
+
+  // Font class
+  const page = document.getElementById('pdf-content');
+  page.className = 'pdf-page';
+  if (state.style.font === 'serif') page.classList.add('font-serif');
+  else if (state.style.font === 'mono') page.classList.add('font-mono');
+  else if (state.style.font === 'system') page.classList.add('font-system');
+
+  state.previewGenerated = true;
+  document.getElementById('download-btn').disabled = false;
+  document.getElementById('print-btn').disabled = false;
+
+  status.className = 'status-msg success';
+  const totalQ = state.allQuestionsLoad.reduce((s, f) => s + (f.questions ? f.questions.length : 0), 0);
+  status.innerHTML = `✅ Preview ready — ${state.allQuestionsLoad.length} quizzes, ${totalQ} questions`;
+
+  // Scroll to preview
+  document.getElementById('preview-container').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PDF CONTENT BUILDER
+// ═══════════════════════════════════════════════════════════════════════════════
+function buildPdfContent() {
+  const parts = [];
+
+  // ── Cover Page ──
+  if (state.cover.include) {
+    parts.push(renderCoverPage());
+  }
+
+  // ── Table of Contents ──
+  if (state.toc.include && state.allQuestionsLoad.length > 1) {
+    parts.push(renderToc());
+  }
+
+  // ── Quiz Chapters ──
+  let globalIdx = 0;
+  const allAnswers = []; // for end-of-book
+
+  state.allQuestionsLoad.forEach((quizData, ci) => {
+    const chapterStartIdx = globalIdx;
+    const questions = quizData.questions || [];
+    const config = quizData.config || {};
+
+    // Chapter header
+    if (state.allQuestionsLoad.length > 1) {
+      parts.push(`
+        <div class="chapter-page">
+          <div class="chapter-number">Chapter ${ci + 1}</div>
+          <div class="chapter-title">${esc(config.title || quizData.meta.title || 'Untitled')}</div>
+          ${config.description ? `<div class="chapter-desc">${esc(config.description)}</div>` : ''}
+          ${config.icon ? `<div style="font-size:2rem;margin-top:0.5rem">${config.icon}</div>` : ''}
+          <div class="chapter-divider"></div>
+        </div>
+      `);
+    } else {
+      parts.push(`
+        <div class="quiz-header">
+          ${config.icon ? `<div style="font-size:2.5rem;margin-bottom:0.3rem">${config.icon}</div>` : ''}
+          <h1>${esc(config.title || quizData.meta.title || 'Untitled')}</h1>
+          ${config.description ? `<p>${esc(config.description)}</p>` : ''}
+        </div>
+      `);
     }
 
-    (function() {
-      const params = new URLSearchParams(window.location.search);
-      const url = params.get('url');
-      if (url) { document.getElementById('quiz-url').value = url; loadFromUrl(); }
-      const theme = localStorage.getItem('quiz-theme');
-      if (theme) document.documentElement.setAttribute('data-theme', theme);
-    })();
-  </script>
+    // Questions
+    const chapterAnswers = [];
+    questions.forEach((q, qi) => {
+      const num = state.style.numbering === 'global' ? globalIdx + 1 : qi + 1;
+      const isWrittenMode = quizData.isWritten || state.style.mode === 'written';
+      const answerLetter = !isWrittenMode ? (letters[q.correct] || '?') : '';
+      const answerText = !isWrittenMode && q.options && q.options[q.correct] ? q.options[q.correct] : q.explanation || '';
+      chapterAnswers.push({ num: state.style.numbering === 'global' ? globalIdx + 1 : qi + 1, letter: answerLetter, text: answerText, explanation: q.explanation || '' });
+
+      if (state.style.mode === 'mcqnotes') {
+        parts.push(`
+          <div class="question-item">
+            <div class="question-text"><span class="question-number">${num}.</span> ${esc(q.question)}</div>
+            <div class="compact-answer">${answerLetter}. ${esc(answerText)}</div>
+          </div>
+        `);
+      } else if (quizData.isWritten || state.style.mode === 'written') {
+        const hasAnswerLines = !q.explanation || state.style.answers !== 'inline';
+        parts.push('<div class="question-item written-item">');
+        parts.push(`<div class="question-text"><span class="question-number">${num}.</span> ${esc(q.question)}</div>`);
+        if (state.style.answers === 'inline') {
+          if (q.explanation) {
+            parts.push(`<div class="answer-key"><strong>✍️ Model Answer</strong><div class="expl">${esc(q.explanation)}</div></div>`);
+          }
+        } else {
+          parts.push(`<div class="written-answer-space" data-q="${num}"></div>`);
+          if (q.explanation) {
+            parts.push(`<div class="answer-key" style="margin-top:0.5rem"><strong>✍️ Model Answer</strong><div class="expl">${esc(q.explanation)}</div></div>`);
+          }
+        }
+        parts.push('</div>');
+      } else {
+        parts.push('<div class="question-item">');
+        parts.push(`<div class="question-text"><span class="question-number">${num}.</span> ${esc(q.question)}</div>`);
+
+        if (q.options && q.options.length > 0) {
+          parts.push('<div class="options-list">');
+          q.options.forEach((opt, oi) => {
+            parts.push(`<div class="option-item"><span class="option-letter">${letters[oi] || oi}.</span><span class="option-text">${esc(opt)}</span></div>`);
+          });
+          parts.push('</div>');
+        }
+
+        // Inline answers
+        if (state.style.answers === 'inline') {
+          const showAns = true;
+          parts.push(`<div class="answer-key">
+            <strong>✓ ${answerLetter}. ${esc(answerText)}</strong>
+            ${q.explanation && state.style.showExplanations ? `<div class="expl">${esc(q.explanation)}</div>` : ''}
+          </div>`);
+        }
+
+        parts.push('</div>');
+      }
+
+      globalIdx++;
+    });
+
+    // End-of-chapter answers
+    if (state.style.answers === 'endchapter' && chapterAnswers.length > 0) {
+      parts.push('<div class="end-chapter-answers">');
+      parts.push(`<h3>📝 Answer Key — Chapter ${ci + 1}</h3>`);
+      chapterAnswers.forEach(a => {
+        const prefix = a.letter ? `${a.letter}. ` : '';
+        parts.push(`<div class="answer-entry"><span class="a-num">${a.num}.</span><span class="a-answer">${prefix}${esc(a.text)}</span>${a.explanation && state.style.showExplanations ? `<span class="a-explain">— ${esc(a.explanation)}</span>` : ''}</div>`);
+      });
+      parts.push('</div>');
+    }
+
+    allAnswers.push({ chapter: ci + 1, title: config.title || quizData.meta.title || 'Chapter ' + (ci + 1), answers: chapterAnswers });
+  });
+
+  // End-of-book answers
+  if (state.style.answers === 'endbook' && allAnswers.length > 0) {
+    parts.push('<div class="end-book-answers">');
+    parts.push('<h3>📝 Complete Answer Key</h3>');
+    allAnswers.forEach(ch => {
+      parts.push(`<h4 style="margin-top:1rem;margin-bottom:0.5rem;font-size:1.1rem">${esc(ch.title)}</h4>`);
+      ch.answers.forEach(a => {
+        const prefix = a.letter ? `${a.letter}. ` : '';
+        parts.push(`<div class="answer-entry"><span class="a-num">${a.num}.</span><span class="a-answer">${prefix}${esc(a.text)}</span>${a.explanation && state.style.showExplanations ? `<span class="a-explain">${esc(a.explanation)}</span>` : ''}</div>`);
+      });
+    });
+    parts.push('</div>');
+  }
+
+  return parts.join('\n');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COVER PAGE RENDERER
+// ═══════════════════════════════════════════════════════════════════════════════
+function renderCoverPage() {
+  return `
+    <div class="cover-page">
+      <div class="cover-deco-top"></div>
+      ${state.cover.icon ? `<span class="cover-icon">${state.cover.icon}</span>` : ''}
+      <div class="cover-divider"></div>
+      <h1 class="cover-title">${esc(state.cover.title)}</h1>
+      ${state.cover.subtitle ? `<p class="cover-subtitle">${esc(state.cover.subtitle)}</p>` : ''}
+      ${state.cover.description ? `<p class="cover-description">${esc(state.cover.description)}</p>` : ''}
+      <div class="cover-meta">
+        ${state.cover.author ? `<span>✍️ ${esc(state.cover.author)}</span>` : ''}
+        ${state.cover.date ? `<span>📅 ${esc(state.cover.date)}</span>` : ''}
+        <span>📄 ${state.allQuestionsLoad.length} quiz${state.allQuestionsLoad.length !== 1 ? 'zes' : ''}</span>
+        <span>❓ ${state.allQuestionsLoad.reduce((s, f) => s + (f.questions ? f.questions.length : 0), 0)} questions</span>
+      </div>
+      <div class="cover-deco-bottom"></div>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TABLE OF CONTENTS RENDERER
+// ═══════════════════════════════════════════════════════════════════════════════
+function renderToc() {
+  let html = '<div class="toc-page"><h2>📑 Table of Contents</h2>';
+  state.allQuestionsLoad.forEach((qd, i) => {
+    const title = (qd.config && qd.config.title) || (qd.meta && qd.meta.title) || 'Chapter ' + (i + 1);
+    const qc = (qd.questions && qd.questions.length) || 0;
+    html += `<div class="toc-item"><span class="toc-num">${i + 1}</span><span class="toc-title">${esc(title)}</span><span class="toc-pages">${qc} Q</span></div>`;
+  });
+  html += '</div>';
+  return html;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PDF DOWNLOAD
+// ═══════════════════════════════════════════════════════════════════════════════
+async function downloadPdf() {
+  if (!state.previewGenerated) {
+    showGenerateStatus('Generate the preview first.', 'error');
+    return;
+  }
+  if (state.isGenerating) return;
+
+  state.isGenerating = true;
+  const btn = document.getElementById('download-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Generating PDF...';
+
+  const progressBar = document.getElementById('progress-bar-wrap');
+  const progressFill = document.getElementById('progress-fill');
+  progressBar.style.display = 'block';
+  progressFill.style.width = '0%';
+
+  showGenerateStatus('<span class="spinner"></span> Generating PDF, please wait...', 'loading');
+
+  try {
+    const element = document.getElementById('print-area');
+    const s = state.style;
+    const w = s.pageSize === 'letter' ? 215.9 : 210; // mm
+    const h = s.pageSize === 'letter' ? 279.4 : 297;
+    const dim = s.orientation === 'landscape' ? { w: h, h: w } : { w, h };
+
+    const filename = (state.cover.title || 'quiz-compilation')
+      .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-{2,}/g, '-').replace(/^-|-$/g, '') + '.pdf';
+
+    const opt = {
+      margin: [0.4, 0.5, 0.4, 0.5],
+      filename,
+      image: { type: 'jpeg', quality: 0.95 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        width: dim.w * 3.78, // mm to px at 96dpi
+      },
+      jsPDF: {
+        unit: 'mm',
+        format: [dim.w, dim.h],
+        orientation: s.orientation === 'landscape' ? 'landscape' : 'portrait',
+      },
+      pagebreak: {
+        mode: ['avoid-all', 'css', 'legacy'],
+      },
+    };
+
+    // Simulate progress
+    let progress = 0;
+    const progInterval = setInterval(() => {
+      progress = Math.min(progress + 8, 85);
+      progressFill.style.width = progress + '%';
+    }, 400);
+
+    await html2pdf().set(opt).from(element).save();
+
+    clearInterval(progInterval);
+    progressFill.style.width = '100%';
+    setTimeout(() => { progressBar.style.display = 'none'; }, 800);
+
+    showGenerateStatus(`✅ PDF saved as "${filename}"`, 'success');
+  } catch (err) {
+    console.error(err);
+    showGenerateStatus('Error: ' + err.message + '<br><small>Try using the Print Dialog instead for large documents.</small>', 'error');
+  } finally {
+    state.isGenerating = false;
+    btn.disabled = false;
+    btn.textContent = '💾 Download PDF';
+  }
+}
+
+function showGenerateStatus(msg, type) {
+  const el = document.getElementById('generate-status');
+  el.innerHTML = msg;
+  el.className = 'status-msg ' + type;
+}
+
+function nativePrintPdf() {
+  if (!state.previewGenerated) {
+    showGenerateStatus('Generate the preview first.', 'error');
+    return;
+  }
+  // Ensure print-area is visible for print media queries
+  const area = document.getElementById('print-area');
+  area.style.display = 'block';
+  // Dispatch print with a small delay to ensure CSS transitions settle
+  setTimeout(() => window.print(), 150);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// THEME
+// ═══════════════════════════════════════════════════════════════════════════════
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  localStorage.setItem('quiz-theme', html.getAttribute('data-theme'));
+  document.getElementById('theme-toggle').textContent = isDark ? '☾' : '☀';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ESCAPE HTML
+// ═══════════════════════════════════════════════════════════════════════════════
+function esc(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════════════════
+(async function init() {
+  // Theme
+  const savedTheme = localStorage.getItem('quiz-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  document.getElementById('theme-toggle').textContent = savedTheme === 'dark' ? '☀' : '☾';
+
+  // Date
+  const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  document.getElementById('cover-date').value = today;
+
+  // Detect Tauri
+  state.isTauri = detectTauri();
+
+  // Check for URL query param (backward compat)
+  const params = new URLSearchParams(window.location.search);
+  const quizUrl = params.get('url') || params.get('quiz');
+  if (quizUrl) {
+    document.getElementById('url-input').value = quizUrl;
+    await loadFromUrl();
+    switchStep('style');
+  }
+
+  // Load project files (Tauri mode)
+  if (state.isTauri) {
+    await loadProjectFiles();
+  } else {
+    document.getElementById('file-list').innerHTML = '<div style="padding:1.5rem;text-align:center;color:var(--text-muted);font-size:0.85rem">📂 For project file browsing, open this tool from the Admin Dashboard.</div>';
+  }
+
+  updateExportSummary();
+  updateStyleDepends();
+})();
+</script>
 </body>
 </html>

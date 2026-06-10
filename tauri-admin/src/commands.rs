@@ -181,24 +181,32 @@ fn find_python() -> Option<String> {
 // ── Commands ──────────────────────────────────────────────────────────────────
 
 #[tauri::command]
-pub fn list_files(state: State<ProjectRoot>) -> Value {
-    let root = root(&state);
-    json!({ "files": collect_files(&root), "folders": scan_folders(&root) })
+pub async fn list_files(state: State<'_, ProjectRoot>) -> Result<Value, String> {
+    let root = state.0.lock().unwrap().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        json!({ "files": collect_files(&root), "folders": scan_folders(&root) })
+    })
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub fn project_state(state: State<ProjectRoot>) -> Value {
-    let root = root(&state);
-    let builtin_tools = json!([
-        {"id": "pdf-exporter", "label": "PDF Exporter", "description": "Export any quiz or bank to PDF"},
-    ]);
-    json!({
-        "projectName": get_project_name(&root),
-        "summary": build_summary(&root),
-        "git": git::get_git_status(&root),
-        "deploy": deploy::get_deploy_metadata(&root),
-        "builtinTools": builtin_tools,
+pub async fn project_state(state: State<'_, ProjectRoot>) -> Result<Value, String> {
+    let root = state.0.lock().unwrap().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let builtin_tools = json!([
+            {"id": "pdf-exporter", "label": "PDF Exporter", "description": "Export any quiz or bank to PDF"},
+        ]);
+        json!({
+            "projectName": get_project_name(&root),
+            "summary": build_summary(&root),
+            "git": git::get_git_status(&root),
+            "deploy": deploy::get_deploy_metadata(&root),
+            "builtinTools": builtin_tools,
+        })
     })
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -667,6 +675,35 @@ pub fn read_external_file(path: String) -> Result<Value, String> {
 /// Parse raw JSON/JS content and extract question items.
 /// This provides a reliable server-side fallback when the frontend parser fails.
 /// Handles: bare arrays, objects with `questions`/`QUESTION_BANK` keys, JS const assignments.
+#[tauri::command]
+pub fn load_exports_batch(paths: Vec<String>, state: State<ProjectRoot>) -> Result<Value, String> {
+    let root = root(&state);
+    let mut results = Vec::new();
+    for path in &paths {
+        let p = match resolve_must_exist(&root, path) {
+            Ok(p) => p,
+            Err(_) => continue,
+        };
+        if !p.is_file() { continue; }
+        let content = match std::fs::read_to_string(&p) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+        let meta = parser::parse_file_metadata(&content);
+        results.push(json!({
+            "path": path,
+            "meta": meta.to_json()
+        }));
+    }
+    let skipped = paths.len() - results.len();
+    Ok(json!({
+        "files": results,
+        "total_requested": paths.len(),
+        "total_loaded": results.len(),
+        "skipped": skipped,
+    }))
+}
+
 #[tauri::command]
 pub fn parse_json_questions(content: String) -> Result<Value, String> {
     // Remove BOM first (common in Windows-saved JSON files)
