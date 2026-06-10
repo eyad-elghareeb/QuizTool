@@ -88,7 +88,6 @@
     results: [],
     selectedIdx: -1,
     deepCache: {},
-    crawlPending: false,
     searchContent: false,
     contentCache: {}
   };
@@ -134,7 +133,6 @@
   function _crawlFolder(folderUrl, breadcrumbs) {
     if (_state.deepCache[folderUrl]) return;
     _state.deepCache[folderUrl] = { loading: true };
-    _state.crawlPending = true;
 
     var absUrl = _resolveUrl(folderUrl);
     fetch(absUrl)
@@ -180,7 +178,6 @@
           _crawlSearchTimer = setTimeout(function () { _performSearch(_state.query); }, 80);
         }
 
-        _state.crawlPending = childFolders.length > 0;
         childFolders.forEach(function (cf) {
           _crawlFolder(cf.url, newBc);
         });
@@ -282,12 +279,6 @@
     nextBatch();
   }
 
-  /* ── Get cached content text for a URL (lowercased) ────────── */
-  function _getContentText(url) {
-    var c = _state.contentCache[url];
-    return c && c.text ? c.text : '';
-  }
-
   /* ── Get matched question indices for a URL ────────────────── */
   function _getContentMatches(url, qLower) {
     var c = _state.contentCache[url];
@@ -332,7 +323,6 @@
             breadcrumbs: [],
             score: score,
             isFolder: quiz.tags && quiz.tags.indexOf('Folder') !== -1,
-            onlyContent: contentMatches.length > 0 && score === 8,
             contentMatches: contentMatches
           });
         }
@@ -359,7 +349,6 @@
             breadcrumbs: entry.breadcrumbs,
             score: score,
             isFolder: entry.isFolder,
-            onlyContent: contentMatches.length > 0 && score === 8,
             contentMatches: contentMatches
           });
         }
@@ -418,8 +407,6 @@
       if (r.contentMatches && r.contentMatches.length) {
         var qLabel = r.contentMatches.length === 1 ? 'Q' + r.contentMatches[0] : 'Q' + r.contentMatches[0] + '\u2013Q' + r.contentMatches[r.contentMatches.length - 1];
         html += '<div class="search-result-only-content"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Matched in <span>' + qLabel + '</span></div>';
-      } else if (r.onlyContent) {
-        html += '<div class="search-result-only-content"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Matched in questions</div>';
       }
       if (r.tags && r.tags.length) {
         html += '<div class="search-result-tags">';
