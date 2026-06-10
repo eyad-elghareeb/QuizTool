@@ -211,16 +211,26 @@
   /* ── Fetch + cache question text for a single URL ──────────── */
   function _crawlSingleContent(url) {
     if (_state.contentCache[url]) return Promise.resolve();
-    _state.contentCache[url] = { loading: true, text: '' };
+    _state.contentCache[url] = { loading: true, text: '', questions: [] };
     return fetch(url)
       .then(function (r) { return r.ok ? r.text() : ''; })
       .then(function (html) {
-        if (!html) { _state.contentCache[url] = { loading: false, text: '' }; return; }
-        var questions = _extractQuestions(html);
-        var text = questions ? questions.map(function (q) { return q.question || ''; }).join(' ').toLowerCase() : '';
-        _state.contentCache[url] = { loading: false, text: text };
+        if (!html) { _state.contentCache[url] = { loading: false, text: '', questions: [] }; return; }
+        var raw = _extractQuestions(html);
+        var questions = [];
+        var texts = [];
+        if (raw) {
+          for (var i = 0; i < raw.length; i++) {
+            var qt = (raw[i].question || '').toLowerCase();
+            if (qt) {
+              questions.push({ text: qt, index: i + 1 });
+              texts.push(qt);
+            }
+          }
+        }
+        _state.contentCache[url] = { loading: false, text: texts.join(' '), questions: questions };
       })
-      .catch(function () { _state.contentCache[url] = { loading: false, text: '' }; });
+      .catch(function () { _state.contentCache[url] = { loading: false, text: '', questions: [] }; });
   }
 
   var _contentBatchTimer;
@@ -278,6 +288,17 @@
     return c && c.text ? c.text : '';
   }
 
+  /* ── Get matched question indices for a URL ────────────────── */
+  function _getContentMatches(url, qLower) {
+    var c = _state.contentCache[url];
+    if (!c || !c.questions) return [];
+    var matches = [];
+    for (var i = 0; i < c.questions.length; i++) {
+      if (c.questions[i].text.indexOf(qLower) >= 0) matches.push(c.questions[i].index);
+    }
+    return matches;
+  }
+
   /* ── Perform search ────────────────────────────────────────── */
   function _performSearch(query) {
     _state.query = query;
@@ -296,10 +317,10 @@
     if (query.length >= 1 && _hasQUIZZES) {
       QUIZZES.forEach(function (quiz) {
         var score = _scoreEntry(quiz, qLower);
-        var onlyContent = false;
-        if (score === 0 && _state.searchContent) {
-          var content = _getContentText(_resolveUrl(quiz.url));
-          if (content && content.indexOf(qLower) >= 0) { score = 8; onlyContent = true; }
+        var contentMatches = [];
+        if (_state.searchContent) {
+          contentMatches = _getContentMatches(_resolveUrl(quiz.url), qLower);
+          if (score === 0 && contentMatches.length) score = 8;
         }
         if (score > 0) {
           addResult({
@@ -311,7 +332,8 @@
             breadcrumbs: [],
             score: score,
             isFolder: quiz.tags && quiz.tags.indexOf('Folder') !== -1,
-            onlyContent: onlyContent
+            onlyContent: contentMatches.length > 0 && score === 8,
+            contentMatches: contentMatches
           });
         }
       });
@@ -322,10 +344,10 @@
       if (!data || !data.entries) return;
       data.entries.forEach(function (entry) {
         var score = _scoreEntry(entry, qLower);
-        var onlyContent = false;
-        if (score === 0 && _state.searchContent) {
-          var content = _getContentText(entry.url);
-          if (content && content.indexOf(qLower) >= 0) { score = 8; onlyContent = true; }
+        var contentMatches = [];
+        if (_state.searchContent) {
+          contentMatches = _getContentMatches(entry.url, qLower);
+          if (score === 0 && contentMatches.length) score = 8;
         }
         if (score > 0) {
           addResult({
@@ -337,7 +359,8 @@
             breadcrumbs: entry.breadcrumbs,
             score: score,
             isFolder: entry.isFolder,
-            onlyContent: onlyContent
+            onlyContent: contentMatches.length > 0 && score === 8,
+            contentMatches: contentMatches
           });
         }
       });
@@ -392,8 +415,11 @@
       if (r.description) {
         html += '<div class="search-result-desc">' + _highlightMatch(r.description, query) + '</div>';
       }
-      if (r.onlyContent) {
-        html += '<div class="search-result-only-content"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Matched in questions</div>';
+      if (r.contentMatches && r.contentMatches.length) {
+        var qLabel = r.contentMatches.length === 1 ? 'Q' + r.contentMatches[0] : 'Q' + r.contentMatches[0] + '\u2013Q' + r.contentMatches[r.contentMatches.length - 1];
+        html += '<div class="search-result-only-content"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Matched in <span>' + qLabel + '</span></div>';
+      } else if (r.onlyContent) {
+        html += '<div class="search-result-only-content"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Matched in questions</div>';
       }
       if (r.tags && r.tags.length) {
         html += '<div class="search-result-tags">';
