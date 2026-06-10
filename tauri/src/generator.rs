@@ -153,7 +153,7 @@ self.addEventListener('install', function (event) {{
     var cache = await caches.open(CACHE_NAME);
     var REQUIRED = [
       'quiz-engine.js', 'bank-engine.js', 'flashcard-engine.js', 'written-engine.js',
-      'index-engine.js', 'sync-engine.js',
+      'index-engine.js', 'search-engine.js', 'sync-engine.js',
       'index-engine.css', 'index.html', 'tracker-map.json', 'manifest.webmanifest', 'favicon.svg'
     ];
     await Promise.all(REQUIRED.map(function (rel) {{
@@ -231,7 +231,7 @@ async function handleAsset(event, request) {{
       var filename = url.pathname.split('/').pop();
       var SHARED = [
         'quiz-engine.js', 'bank-engine.js', 'flashcard-engine.js', 'written-engine.js',
-        'index-engine.js', 'sync-engine.js',
+        'index-engine.js', 'search-engine.js', 'sync-engine.js',
         'index-engine.css', 'manifest.webmanifest', 'favicon.svg',
         'icon-48.png', 'icon-72.png', 'icon-96.png', 'icon-144.png', 'icon-192.png', 'icon-512.png',
         'tracker-map.json'
@@ -495,6 +495,7 @@ pub fn build_project_zip(config: &ProjectConfig) -> Result<Vec<u8>, String> {
     // Engine files
     add_str(&mut zip, "index-engine.js", engines::INDEX_ENGINE_JS)?;
     add_str(&mut zip, "index-engine.css", engines::INDEX_ENGINE_CSS)?;
+    add_str(&mut zip, "search-engine.js", engines::SEARCH_ENGINE_JS)?;
     add_str(&mut zip, "quiz-engine.js", engines::QUIZ_ENGINE_JS)?;
     add_str(&mut zip, "bank-engine.js", engines::BANK_ENGINE_JS)?;
     add_str(&mut zip, "sync-engine.js", engines::SYNC_ENGINE_JS)?;

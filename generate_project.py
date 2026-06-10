@@ -157,6 +157,7 @@ self.addEventListener('install', function (event) {
         'flashcard-engine.js',
         'written-engine.js',
         'index-engine.js',
+        'search-engine.js',
         'sync-engine.js',
         'index-engine.css',
         'index.html',
@@ -279,6 +280,7 @@ function handleAsset(event, request) {
           'written-engine.js',
           'ai-assistant-engine.js',
           'index-engine.js',
+          'search-engine.js',
           'sync-engine.js',
           'index-engine.css',
           'manifest.webmanifest',
@@ -350,6 +352,7 @@ self.addEventListener('fetch', function (event) {
 
 INDEX_ENGINE_JS = read_file('index-engine.js')
 INDEX_ENGINE_CSS = read_file('index-engine.css')
+SEARCH_ENGINE_JS = read_file('search-engine.js')
 QUIZ_ENGINE_JS = read_file('quiz-engine.js')
 BANK_ENGINE_JS = read_file('bank-engine.js')
 FLASHCARD_ENGINE_JS = read_file('flashcard-engine.js')
@@ -871,6 +874,7 @@ def build_project_zip(config):
     all_file_paths = [
         'index-engine.js',
         'index-engine.css',
+        'search-engine.js',
         'quiz-engine.js',
         'bank-engine.js',
         'flashcard-engine.js',
@@ -963,6 +967,7 @@ def build_project_zip(config):
         # --- Shared engines (root level) ---
         zf.writestr('index-engine.js', INDEX_ENGINE_JS)
         zf.writestr('index-engine.css', INDEX_ENGINE_CSS)
+        zf.writestr('search-engine.js', SEARCH_ENGINE_JS)
         zf.writestr('quiz-engine.js', QUIZ_ENGINE_JS)
         zf.writestr('bank-engine.js', BANK_ENGINE_JS)
         zf.writestr('flashcard-engine.js', FLASHCARD_ENGINE_JS)

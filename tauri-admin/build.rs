@@ -19,6 +19,7 @@ fn main() {
         "written-engine.js",
         "ai-assistant-engine.js",
         "index-engine.js",
+        "search-engine.js",
         "index-engine.css",
         "sync-engine.js",
         "favicon.svg",

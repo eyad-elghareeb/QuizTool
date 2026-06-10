@@ -101,6 +101,80 @@
     document.body.appendChild(s);
   };
 
+  /* ── Global Search (lazy-loaded) ──────────────────────────── */
+  var _hasQUIZZES = typeof QUIZZES !== 'undefined' && Array.isArray(QUIZZES);
+
+  // Inject search bar into topbar (visual click target that lazy-loads the engine)
+  if (_hasQUIZZES) {
+    var _searchBar = document.createElement('div');
+    _searchBar.id = 'search-bar';
+    _searchBar.className = 'search-bar';
+    _searchBar.innerHTML =
+      '<span class="search-bar-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></span>' +
+      '<input class="search-bar-input" id="search-bar-input" type="text" placeholder="Search quizzes..." onclick="openSearch()" readonly>' +
+      '<button class="icon-btn btn-search-mobile" id="btn-search-mobile" onclick="openSearch()" title="Search quizzes"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></button>';
+    // Inject search bar CSS (small — keep here so layout is ready immediately)
+    var _searchBarStyle = document.createElement('style');
+    _searchBarStyle.textContent =
+      '.search-bar{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:380px;max-width:calc(100% - 10rem);display:flex;align-items:center;z-index:1}' +
+      '.search-bar-input{width:100%;padding:0.4rem 0.7rem 0.4rem 1.85rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.8rem;font-family:\'Outfit\',sans-serif;outline:none;transition:border-color 0.2s var(--ease-out)}' +
+      '.search-bar-input:focus{border-color:var(--accent)}' +
+      '.search-bar-input::placeholder{color:var(--text-muted);font-size:0.75rem}' +
+      '.search-bar-icon{position:absolute;left:0.5rem;top:50%;transform:translateY(-50%);font-size:0.8rem;color:var(--text-muted);pointer-events:none}' +
+      '.btn-search-mobile{display:none}' +
+      '.topbar .topbar-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+      '@media(max-width:600px){.search-bar{position:static;transform:none;width:auto;flex:0 0 auto;margin:0;background:none}.search-bar-input,.search-bar-icon{display:none}.btn-search-mobile{display:flex;margin-right:0.25rem}}';
+    document.head.appendChild(_searchBarStyle);
+    var _ttl = document.querySelector('.topbar-title');
+    if (_ttl) {
+      _ttl.parentNode.insertBefore(_searchBar, _ttl.nextSibling);
+    }
+  }
+
+  var _searchLoading = false;
+
+  window.openSearch = function () {
+    if (typeof window.__searchEngineOpen === 'function') {
+      window.__searchEngineOpen();
+      return;
+    }
+    if (_searchLoading) return;
+    _searchLoading = true;
+    var depth = Math.max(0, location.pathname.split('/').filter(Boolean).length - 2);
+    var engineBase = depth > 0 ? '../'.repeat(depth) : './';
+    var s = document.createElement('script');
+    s.src = engineBase + 'search-engine.js';
+    s.onload = function () {
+      if (typeof window.__searchEngineOpen === 'function') {
+        window.__searchEngineOpen();
+      } else {
+        _searchLoading = false; // loaded but broken, allow retry
+      }
+    };
+    s.onerror = function () { _searchLoading = false; };
+    document.body.appendChild(s);
+  };
+
+  window.closeSearch = function () {
+    if (window.__searchEngineClose) window.__searchEngineClose();
+  };
+
+  // Keyboard shortcut for /
+  if (_hasQUIZZES) {
+    document.addEventListener('keydown', function (e) {
+      if ((e.key === '/' || e.key === 'Slash') && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+        var tag = e.target && e.target.tagName;
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA' && (!e.target || !e.target.isContentEditable)) {
+          e.preventDefault();
+          openSearch();
+        }
+      }
+      if (e.key === 'Escape' && window.__searchEngineState && window.__searchEngineState.open) {
+        window.closeSearch();
+      }
+    });
+  }
+
   /* ── Toast Function ───────────────────────────────────────── */
   var toastTimer;
   window.showToast = function(msg) {
@@ -145,6 +219,7 @@
 
   /* ── Render quizzes ────────────────────────────────────────── */
   function escHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  window.escHtml = escHtml;
 
   window.renderQuizzes = function () {
     var grid = document.getElementById('quiz-grid');
@@ -421,6 +496,7 @@
     // Strip common prefixes like "QuizTool - ", "MU61 Quiz - ", "Quiz Site - ", etc.
     return raw.replace(/^(?:QuizTool|MU61\s+Quiz|Mansoura\s+MCQ|Quiz\s+Site)\s*[-–—]\s*/i, '').trim();
   }
+  window.cleanTitle = cleanTitle;
 
   var _trackerMapPromise = null;
 

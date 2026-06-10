@@ -20,6 +20,7 @@ var PRECACHE_REL_PATHS = [
   'quiz-engine.js',
   'bank-engine.js',
   'index-engine.js',
+  'search-engine.js',
   'written-engine.js',
   'tracker-map.json',
   'index.html',

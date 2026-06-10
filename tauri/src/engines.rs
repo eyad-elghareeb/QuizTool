@@ -4,6 +4,7 @@
 
 pub const INDEX_ENGINE_JS: &str = include_str!("../../index-engine.js");
 pub const INDEX_ENGINE_CSS: &str = include_str!("../../index-engine.css");
+pub const SEARCH_ENGINE_JS: &str = include_str!("../../search-engine.js");
 pub const QUIZ_ENGINE_JS: &str = include_str!("../../quiz-engine.js");
 pub const BANK_ENGINE_JS: &str = include_str!("../../bank-engine.js");
 pub const SYNC_ENGINE_JS: &str = include_str!("../../sync-engine.js");
