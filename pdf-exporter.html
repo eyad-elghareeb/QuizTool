@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PDF Exporter - QuizTool</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;700;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=DM+Serif+Display:ital@0;1&family=Source+Serif+4:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
   --bg: #0d1117; --surface: #161b22; --surface2: #1c2330; --surface3: #11161d;
@@ -36,11 +36,12 @@ body{
 
 /* Topbar */
 .topbar{
-  display:flex;align-items:center;padding:0.65rem 1.25rem;
+  display:flex;align-items:center;padding:0.75rem 1.5rem;
   background:var(--surface);border-bottom:1px solid var(--border);
   position:sticky;top:0;z-index:100;gap:0.75rem;
+  box-shadow:0 1px 0 var(--border2);
 }
-.topbar-title{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700;flex:1;min-width:0}
+.topbar-title{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;flex:1;min-width:0;letter-spacing:-0.01em}
 .icon-btn{
   width:36px;height:36px;border-radius:8px;background:var(--surface2);
   border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
@@ -51,14 +52,15 @@ body{
 .icon-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
 
 /* Layout */
-.container{max-width:960px;margin:0 auto;padding:0 1.25rem;flex:1;width:100%}
+.container{max-width:960px;margin:0 auto;padding:1.25rem 1.25rem 2rem;flex:1;width:100%}
+.no-print .styled-tabs{margin-top:0.25rem}
 .two-col{display:grid;grid-template-columns:1fr 340px;gap:1.25rem;align-items:start}
 .two-col-rev{grid-template-columns:340px 1fr}
 @media(max-width:900px){.two-col,.two-col-rev{grid-template-columns:1fr}}
 
 /* Cards */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.25rem;box-shadow:var(--shadow)}
-.card h3{font-size:1rem;font-weight:700;margin-bottom:0.75rem;display:flex;align-items:center;gap:0.5rem}
+.card h3{font-size:0.95rem;font-weight:700;margin-bottom:0.85rem;display:flex;align-items:center;gap:0.5rem;letter-spacing:0.01em;color:var(--text)}
 .card h3 .badge{font-size:0.7rem;background:var(--accent-dim);color:var(--accent);padding:0.15rem 0.5rem;border-radius:999px;font-weight:600}
 
 /* Sections */
@@ -111,7 +113,7 @@ label .hint{font-weight:400;font-size:0.78rem;color:var(--text-muted)}
 .toggle-group{display:flex;flex-wrap:wrap;gap:0.5rem;padding:0.6rem 0.75rem;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border2)}
 
 /* File selector */
-.file-selector{max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface3)}
+.file-selector{min-height:200px;max-height:420px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface3);font-size:0.82rem}
 .file-item{
   display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.65rem;
   cursor:pointer;transition:background var(--transition);border-bottom:1px solid var(--border2);
@@ -156,13 +158,13 @@ label .hint{font-weight:400;font-size:0.78rem;color:var(--text-muted)}
 .summary-stat strong{color:var(--accent)}
 
 /* Tabs */
-.styled-tabs{display:flex;gap:0;background:var(--surface2);border-radius:var(--radius);padding:3px;margin-bottom:1rem;border:1px solid var(--border)}
-.styled-tab{flex:1;padding:0.55rem 1rem;border:none;background:transparent;color:var(--text-muted);
-  font-family:'Outfit',sans-serif;font-weight:600;font-size:0.85rem;border-radius:8px;
-  cursor:pointer;transition:all var(--transition);text-align:center;display:flex;align-items:center;justify-content:center;gap:0.35rem;
+.styled-tabs{display:flex;gap:0;background:var(--surface2);border-radius:var(--radius);padding:4px;margin-bottom:1.25rem;border:1px solid var(--border);box-shadow:inset 0 1px 3px rgba(0,0,0,0.15)}
+.styled-tab{flex:1;padding:0.6rem 0.85rem;border:none;background:transparent;color:var(--text-muted);
+  font-family:'Outfit',sans-serif;font-weight:600;font-size:0.8rem;border-radius:7px;
+  cursor:pointer;transition:all var(--transition);text-align:center;display:flex;align-items:center;justify-content:center;gap:0.35rem;letter-spacing:0.01em;
 }
-.styled-tab:hover{color:var(--text)}
-.styled-tab.active{background:var(--accent);color:#000;box-shadow:0 2px 8px var(--accent-glow)}
+.styled-tab:hover{color:var(--text);background:rgba(255,255,255,0.04)}
+.styled-tab.active{background:var(--accent);color:#000;box-shadow:0 2px 10px var(--accent-glow),0 1px 3px rgba(0,0,0,0.2);font-weight:700}
 
 /* Progress bar */
 .progress-bar{height:4px;background:var(--border2);border-radius:4px;overflow:hidden;margin:1rem 0}
@@ -173,13 +175,15 @@ label .hint{font-weight:400;font-size:0.78rem;color:var(--text-muted)}
 .spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--accent-dim);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle}
 
 /* ─────────── PREVIEW / PRINT STYLES ─────────── */
-#print-area{background:white;color:black;padding:0;border-radius:8px;box-shadow:var(--shadow);display:none;margin-top:1.5rem}
-#print-area .pdf-page{max-width:210mm;margin:0 auto;padding:2.5cm 2cm;font-family:'Inter',sans-serif;line-height:1.7;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
-#print-area .pdf-page.font-sans{font-family:'Inter','Outfit',sans-serif}
-#print-area .pdf-page.font-serif{font-family:'Source Serif 4','Georgia','Times New Roman',serif}
-#print-area .pdf-page.font-elegant{font-family:'DM Serif Display','Playfair Display',serif}
+#print-area{background:white;color:black;padding:0;border-radius:8px;box-shadow:var(--shadow);display:none;margin-top:1.5rem;margin-bottom:2rem}
+#print-area .pdf-page{max-width:210mm;margin:0 auto;padding:2.5cm 2cm;font-family:'Inter',sans-serif;line-height:1.7}
+#print-area .pdf-page.font-outfit{font-family:'Outfit',sans-serif}
+#print-area .pdf-page.font-playfair{font-family:'Playfair Display','Georgia',serif}
+#print-area .pdf-page.font-serif{font-family:'Georgia','Times New Roman',serif}
 #print-area .pdf-page.font-mono{font-family:'JetBrains Mono','Consolas',monospace;font-size:0.9rem}
 #print-area .pdf-page.font-system{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+#print-area .pdf-page.font-dm-serif{font-family:'DM Serif Display','Georgia',serif}
+#print-area .pdf-page.font-source-serif{font-family:'Source Serif 4','Georgia',serif}
 
 /* ── Premium Medical Cover Page ── */
 .cover-page {
@@ -208,6 +212,7 @@ label .hint{font-weight:400;font-size:0.78rem;color:var(--text-muted)}
     radial-gradient(ellipse at 50% 50%, rgba(46,160,67,0.04) 0%, transparent 60%);
   pointer-events: none;
 }
+/* Grid pattern overlay */
 .cover-page::after {
   content: '';
   position: absolute;
@@ -336,32 +341,43 @@ label .hint{font-weight:400;font-size:0.78rem;color:var(--text-muted)}
   align-items: center;
   gap: 0.35rem;
   font-weight: 300;
-  margin: 0;
-  padding: 0;
-  border: none;
 }
-.cover-page .cover-meta span:first-child{border:none}
 .cover-deco-top{display:none}
 .cover-deco-bottom{display:none}
+
+a.toc-item {
+  color: inherit;
+  text-decoration: none;
+}
+a.toc-item:hover .toc-title {
+  color: var(--accent);
+  text-decoration: underline;
+}
 
 /* Table of contents */
 .toc-page{page-break-after:always;padding:2cm 2cm}
 .toc-page h2{font-family:'Playfair Display',serif;font-size:1.8rem;margin-bottom:1.5rem;border-bottom:2px solid #000;padding-bottom:0.5rem}
-.toc-item{display:flex;align-items:center;padding:0.5rem 0;border-bottom:1px dotted #ddd;font-size:0.95rem}
-.toc-item .toc-num{font-weight:700;min-width:2.5rem;color:var(--accent)}
-.toc-item .toc-title{flex:1}
-.toc-item .toc-pages{color:#999;font-size:0.85rem;min-width:3rem;text-align:right}
+.toc-item{display:flex;align-items:center;padding:0.6rem 0.4rem;border-bottom:1px dotted #ddd;font-size:0.95rem;text-decoration:none;color:inherit;transition:background 0.15s ease;border-radius:4px}
+.toc-item:hover{background:#f5f5f5}
+.toc-item .toc-num{font-weight:800;min-width:2.5rem;color:#8B6914;font-variant-numeric:tabular-nums}
+.toc-item .toc-title{flex:1;font-weight:500}
+.toc-item .toc-pages{color:#888;font-size:0.85rem;min-width:4rem;text-align:right;font-variant-numeric:tabular-nums}
+.toc-item .toc-leader{flex:1;margin:0 0.5rem;border-bottom:1px dotted #ccc;height:1px;align-self:flex-end;margin-bottom:5px}
 
 /* Quiz header / chapter header */
-.chapter-page{page-break-before:always;padding:1cm 0 0.5cm;margin-bottom:1.5rem}
-.chapter-page .chapter-number{font-size:0.85rem;color:#999;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.25rem}
-.chapter-page .chapter-title{font-family:'Playfair Display',serif;font-size:2rem;font-weight:700;margin-bottom:0.5rem}
-.chapter-page .chapter-desc{color:#666;font-size:1rem}
-.chapter-divider{height:2px;background:linear-gradient(90deg,#000,#0000);margin:0.75rem 0 1.5rem;width:60%}
+.chapter-page{page-break-before:always;margin-bottom:1.5rem;background:linear-gradient(135deg,#0a1628,#162d3a);color:#fff;border-radius:0;position:relative;overflow:hidden;padding:0}
+.chapter-page::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--accent),rgba(240,165,0,0.3),transparent)}
+.chapter-page .chapter-inner{padding:1.4rem 1.8rem 1.2rem;position:relative;z-index:1}
+.chapter-page .chapter-number{font-size:0.72rem;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:0.2rem;font-weight:500}
+.chapter-page .chapter-title{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:#fff;margin-bottom:0.15rem}
+.chapter-page .chapter-desc{color:rgba(255,255,255,0.55);font-size:0.88rem}
+.chapter-divider{display:none}
 
-.quiz-header{text-align:center;border-bottom:2px solid #000;margin-bottom:1.5rem;padding-bottom:0.75rem}
-.quiz-header h1{font-family:'Playfair Display',serif;font-size:2rem;margin-bottom:0.3rem}
-.quiz-header p{font-size:1rem;color:#555}
+.quiz-header{margin-bottom:1.5rem;background:linear-gradient(135deg,#0a1628,#162d3a);color:#fff;position:relative;overflow:hidden;padding:0;text-align:center;padding:0}
+.quiz-header::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--accent),rgba(240,165,0,0.3),transparent)}
+.quiz-header .quiz-inner{padding:1.4rem 1.8rem 1.2rem;position:relative;z-index:1}
+.quiz-header h1{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:#fff;margin-bottom:0.15rem}
+.quiz-header p{color:rgba(255,255,255,0.55);font-size:0.88rem}
 
 /* Questions */
 .question-item{margin-bottom:1.5rem;page-break-inside:avoid}
@@ -373,7 +389,7 @@ label .hint{font-weight:400;font-size:0.78rem;color:var(--text-muted)}
 .option-text{flex:1}
 .answer-key{margin-top:0.5rem;padding:0.6rem 0.75rem;background:#f5f5f5;border-left:3px solid #000;font-size:0.88rem;border-radius:0 6px 6px 0}
 .answer-key.hidden{display:none}
-.answer-key strong{color:#d32f2f}
+.answer-key strong{color:#166534}
 .answer-key .expl{color:#555;margin-top:0.3rem;font-size:0.85rem}
 
 /* 2-Column Textbook Layout */
@@ -388,6 +404,7 @@ label .hint{font-weight:400;font-size:0.78rem;color:var(--text-muted)}
 .textbook-layout .question-text{font-size:0.92rem}
 .textbook-layout .option-item{font-size:0.88rem}
 .textbook-layout .answer-key{font-size:0.82rem;padding:0.4rem 0.6rem}
+.textbook-layout .cover-frame{height:auto!important}
 
 /* Styled output */
 .styled-output .quiz-header{background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff;border-radius:14px;padding:2rem 1.5rem;border:none}
@@ -447,16 +464,49 @@ label .hint{font-weight:400;font-size:0.78rem;color:var(--text-muted)}
 .answer-entry .a-answer{font-weight:600}
 .answer-entry .a-explain{color:#666;font-size:0.85rem}
 
+@page {
+  margin: 1.5cm 1.8cm;
+  @bottom-center {
+    content: counter(pg);
+    font-family: 'Outfit','Inter',sans-serif;
+    font-size: 8pt;
+    color: rgba(255,255,255,0.6);
+    font-weight: 500;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+@page cover-page {
+  margin: 0;
+  @bottom-center { content: none; }
+}
+@page toc-page {
+  margin: 2cm 1.8cm;
+  @bottom-center {
+    content: counter(pg, upper-roman);
+    font-family: 'Outfit','Inter',sans-serif;
+    font-size: 8pt;
+    color: #888;
+    font-weight: 500;
+  }
+}
+
 @media print{
-  @page{margin:1.5cm 1.8cm;size:auto}
-  @page:first{margin:0}
   .no-print{display:none!important}
-  html,body{background:white!important;color:black!important;margin:0;padding:0;font-size:11pt}
+  html,body{
+    background:white!important;
+    color:black!important;
+    margin:0;
+    padding:0;
+    font-size:11pt;
+    -webkit-print-color-adjust:exact!important;
+    print-color-adjust:exact!important;
+  }
   .container{max-width:none;margin:0;padding:0}
   #print-area{display:block!important;box-shadow:none!important;padding:0!important;margin:0!important;border-radius:0;background:white}
-  #print-area .pdf-page{padding:0;max-width:none}
-  .cover-page{min-height:100vh!important;padding:0!important;page-break-after:always}
-  .cover-frame{padding:3cm 2cm!important;width:85%!important;max-width:560px!important;height:auto!important;display:flex!important;flex-direction:column!important;align-items:center!important}
+  #print-area .pdf-page{padding:1.3cm 1.8cm 1.1cm;max-width:none}
+  .cover-page{min-height:100vh!important;padding:0!important;page-break-after:always;position:relative;z-index:10;background:linear-gradient(135deg,#0a1628,#0f2027,#162d3a,#0d1b2a)!important}
+  .cover-frame{border:none!important;padding:3cm 2cm!important;width:85%!important;max-width:560px!important;height:auto!important;display:flex!important;flex-direction:column!important;align-items:center!important;box-sizing:border-box}
   .cover-accent-bar{height:5px!important;display:block!important}
   .cover-accent-bar-bottom{height:3px!important;display:block!important}
   .cover-svg-bg,.cover-svg-corner{display:block!important}
@@ -464,9 +514,9 @@ label .hint{font-weight:400;font-size:0.78rem;color:var(--text-muted)}
   .cover-page .cover-subtitle{font-size:1rem!important;color:rgba(255,255,255,0.7)!important}
   .cover-page .cover-description{color:rgba(255,255,255,0.6)!important}
   .cover-page .cover-meta{color:rgba(255,255,255,0.5)!important;border-top-color:rgba(255,255,255,0.1)!important}
-  .toc-page{page-break-after:always}
-  .chapter-page{page-break-before:always;page-break-after:avoid}
-  .quiz-header{page-break-after:avoid}
+  .toc-page{page-break-after:always;padding:1.5cm 1.5cm!important}
+  .chapter-page{page-break-before:always;page-break-after:avoid;margin:-0.2cm -1.8cm 1.5rem;border-radius:0}
+  .quiz-header{page-break-after:avoid;margin:-0.2cm -1.8cm 1.5rem;border-radius:0;text-align:center}
   .question-item{page-break-inside:avoid;orphans:3;widows:3}
   .answer-key{page-break-inside:avoid}
   .textbook-layout{column-count:2;column-gap:1.8rem;column-rule:1px solid #ddd}
@@ -478,9 +528,53 @@ label .hint{font-weight:400;font-size:0.78rem;color:var(--text-muted)}
   .textbook-layout .end-book-answers{column-span:all}
   .textbook-layout .question-item{break-inside:avoid}
   .styled-output .question-item{box-shadow:none!important;break-inside:avoid;border:1px solid #e0e0e0}
-  .end-chapter-answers,.end-book-answers{page-break-before:always}
+  .end-chapter-answers,.end-book-answers{page-break-before:always;counter-reset:pg 0}
   .written-item .written-answer-space{min-height:4cm}
   a{text-decoration:none;color:inherit}
+  .cover-page{page:cover-page}
+  .toc-page{page:toc-page}
+  body{counter-reset:pg 0}
+  .page-num{display:none}
+  .chapter-page,.quiz-header,.end-book-answers,.end-chapter-answers{counter-reset:pg 0}
+}
+
+/* ── Print Header & Footer (position: fixed — repeats on every page) ── */
+.print-header,.print-footer{display:none}
+@media print{
+  .print-header,.print-footer{
+    display:flex;position:fixed;left:0;right:0;z-index:5;
+    font-family:'Outfit','Inter',sans-serif;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  .print-header{
+    top:0;height:1.1cm;align-items:center;padding:0 1.8cm;
+    background:linear-gradient(135deg,#0a1628,#162d3a);
+    border-bottom:2px solid rgba(240,165,0,0.5);
+  }
+  .print-header .ph-title{
+    font-size:8pt;font-weight:500;color:rgba(255,255,255,0.7);
+    letter-spacing:0.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .print-header .ph-accent{
+    position:absolute;bottom:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,var(--accent),rgba(240,165,0,0.3),transparent);
+  }
+  .print-footer{
+    bottom:0;height:0.9cm;align-items:center;padding:0 1.8cm;
+    background:linear-gradient(135deg,#0a1628,#162d3a);
+    border-top:2px solid rgba(240,165,0,0.5);
+  }
+  .print-footer .pf-left{
+    font-size:7.5pt;color:rgba(255,255,255,0.5);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .print-footer .pf-right{
+    font-size:8pt;color:rgba(255,255,255,0.6);font-weight:500;
+  }
+  .print-footer .pf-right .page-num{font-weight:700;color:var(--accent)}
+  .print-footer .pf-accent{
+    position:absolute;top:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(240,165,0,0.3),var(--accent));
+  }
 }
 
 /* Responsive */
@@ -500,16 +594,106 @@ label .hint{font-weight:400;font-size:0.78rem;color:var(--text-muted)}
 .mb-1{margin-bottom:0.75rem}
 .text-muted{color:var(--text-muted)}
 .text-center{text-align:center}
-.w-full{width:100%}
 .truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.w-full{width:100%}
+
+/* Tree styling inside file-selector */
+.file-tree, .file-tree ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.file-tree ul {
+  margin-left: 0.55rem;
+  padding-left: 0.5rem;
+  border-left: 1px solid var(--border);
+}
+.tree-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+  min-height: 28px;
+}
+.tree-row:hover {
+  background: var(--surface2);
+}
+.tree-row.selected {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+.tree-chevron {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  flex: none;
+  transition: transform 0.15s ease;
+  border-radius: 3px;
+}
+.tree-chevron:hover {
+  background: var(--surface3);
+}
+.tree-chevron.open {
+  transform: rotate(90deg);
+}
+.tree-icon {
+  width: 18px;
+  text-align: center;
+  flex: none;
+  font-size: 0.85rem;
+}
+.tree-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1;
+}
+.tree-path {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tree-type-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+  display: inline-block;
+}
+.tree-type-dot.type-quiz { background: var(--accent); }
+.tree-type-dot.type-bank { background: var(--purple); }
+.tree-type-dot.type-index { background: var(--blue); }
+.tree-type-dot.type-flashcard { background: var(--success); }
+.tree-type-dot.type-written { background: #d946ef; }
+.tree-type-dot.type-folder { background: var(--text-muted); opacity: 0.5; }
 </style>
 </head>
 <body>
 <div class="topbar no-print">
-  <div class="topbar-title">PDF Exporter</div>
-  <div style="display:flex;gap:0.35rem;align-items:center">
-    <span id="export-mode-badge" style="font-size:0.75rem;padding:0.2rem 0.5rem;border-radius:999px;background:var(--accent-dim);color:var(--accent);font-weight:600;display:none">Multi-Quiz</span>
-    <button class="icon-btn" onclick="toggleTheme()" id="theme-toggle">☀</button>
+  <div style="display:flex;align-items:center;gap:0.75rem;flex:1;min-width:0">
+    <div style="width:34px;height:34px;border-radius:8px;background:var(--accent);color:#17120a;display:grid;place-items:center;font-weight:800;font-size:0.9rem;flex-shrink:0">📄</div>
+    <div class="topbar-title">PDF Exporter</div>
+  </div>
+  <div style="display:flex;gap:0.45rem;align-items:center">
+    <span id="export-mode-badge" style="font-size:0.72rem;padding:0.2rem 0.55rem;border-radius:999px;background:var(--accent-dim);color:var(--accent);font-weight:700;display:none;letter-spacing:0.03em">MULTI-QUIZ</span>
+    <button class="icon-btn" onclick="toggleTheme()" id="theme-toggle" title="Toggle theme">☀</button>
   </div>
 </div>
 
@@ -551,7 +735,7 @@ label .hint{font-weight:400;font-size:0.78rem;color:var(--text-muted)}
         </div>
       </div>
     </div>
-    <div class="text-center mt-1">
+    <div style="padding:0.5rem 0 0.25rem;text-align:center">
       <button class="btn btn-primary" onclick="switchStep('cover')" id="next-to-cover">Continue → Cover Page</button>
     </div>
   </div>
@@ -599,7 +783,7 @@ label .hint{font-weight:400;font-size:0.78rem;color:var(--text-muted)}
         <input type="checkbox" id="include-toc" checked> Include Table of Contents page
       </label>
     </div>
-    <div class="text-center mt-1 flex flex-wrap" style="justify-content:center;gap:0.75rem">
+    <div style="padding:0.5rem 0 0.25rem;display:flex;justify-content:center;gap:0.75rem">
       <button class="btn btn-secondary" onclick="switchStep('select')">← Back</button>
       <button class="btn btn-primary" onclick="switchStep('style')">Continue → Styling</button>
     </div>
@@ -631,11 +815,14 @@ label .hint{font-weight:400;font-size:0.78rem;color:var(--text-muted)}
         <div class="form-group">
           <label>Font</label>
           <select class="select-input" id="font-mode">
-            <option value="sans">Sans-serif — Inter</option>
-            <option value="serif">Serif — Source Serif 4</option>
-            <option value="elegant">Elegant — DM Serif Display</option>
-            <option value="mono">Monospace — JetBrains Mono</option>
-            <option value="system">System UI</option>
+            <option value="sans">Inter — Clean Sans-serif</option>
+            <option value="outfit">Outfit — Modern Geometric</option>
+            <option value="playfair">Playfair Display — Elegant Serif</option>
+            <option value="serif">Georgia — Classic Serif</option>
+            <option value="mono">JetBrains Mono — Technical</option>
+            <option value="system">System Default</option>
+            <option value="dm-serif">DM Serif Display — Editorial</option>
+            <option value="source-serif">Source Serif 4 — Academic</option>
           </select>
         </div>
         <div class="form-group">
@@ -676,7 +863,7 @@ label .hint{font-weight:400;font-size:0.78rem;color:var(--text-muted)}
         </div>
       </div>
     </div>
-    <div class="text-center mt-1 flex flex-wrap" style="justify-content:center;gap:0.75rem">
+    <div style="padding:0.5rem 0 0.25rem;display:flex;justify-content:center;gap:0.75rem">
       <button class="btn btn-secondary" onclick="switchStep('cover')">← Back</button>
       <button class="btn btn-primary" onclick="switchStep('export')">Continue → Export</button>
     </div>
@@ -687,20 +874,38 @@ label .hint{font-weight:400;font-size:0.78rem;color:var(--text-muted)}
     <div class="summary-strip" id="export-summary">
       <span class="summary-stat">📄 <strong id="export-count">0</strong> quizzes</span>
       <span class="summary-stat">❓ <strong id="export-questions">0</strong> questions</span>
-      <span class="summary-stat">📐 <strong id="export-style">Standard</strong></span>
-      <span class="summary-stat">📄 <strong id="export-pagesize">A4</strong></span>
+      <span class="summary-stat">🎨 <strong id="export-style">Standard</strong></span>
+      <span class="summary-stat">📐 <strong id="export-pagesize">A4</strong></span>
     </div>
     <div class="card">
       <h3>📄 Generate &amp; Export</h3>
-      <div style="display:flex;flex-direction:column;gap:0.75rem">
-        <button class="btn btn-primary" style="width:100%;justify-content:center;padding:0.75rem" onclick="generatePreview()" id="preview-btn">👁️ Generate Preview</button>
-        <div id="generate-status" class="status-msg"></div>
-        <button class="btn btn-success" style="width:100%;justify-content:center;flex-direction:column;padding:0.85rem 1rem;line-height:1.35;font-size:1rem" onclick="nativePrintPdf()" id="print-btn" disabled>
-          🖨️ Open PDF / Print
-          <span style="font-size:0.78rem;font-weight:400;opacity:0.85;margin-top:0.25rem">Opens print dialog — vector text, fully copyable &amp; searchable</span>
+      <div style="display:flex;flex-direction:column;gap:1rem">
+
+        <!-- Primary: generate -->
+        <button class="btn btn-primary" style="width:100%;justify-content:center;padding:0.85rem 1.25rem;font-size:1rem;border-radius:10px" onclick="generatePreview()" id="preview-btn">
+          <span style="font-size:1.25rem">👁️</span> Generate Preview
         </button>
-        <div style="padding:0.55rem 0.75rem;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:0.8rem;color:var(--text-muted)">
-          💡 A clean print window opens with your PDF content. Select <strong>Save as PDF</strong> as the destination in the print dialog to save the file. Text will be fully copyable and searchable.
+
+        <div id="generate-status" class="status-msg"></div>
+        <div class="progress-bar" id="progress-bar-wrap" style="display:none">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+
+        <!-- Export action -->
+        <div style="display:grid;grid-template-columns:1fr;gap:0.6rem" id="export-actions">
+          <button class="btn btn-success" style="width:100%;justify-content:center;flex-direction:column;padding:1rem 1.25rem;line-height:1.4;font-size:1rem;border-radius:10px;gap:0.2rem" onclick="nativePrintPdf()" id="print-btn" disabled>
+            <span style="display:flex;align-items:center;gap:0.5rem;font-size:1rem">🖨️ Open PDF / Print</span>
+            <span style="font-size:0.77rem;font-weight:400;opacity:0.8">Native vector PDF · fully copyable &amp; searchable text</span>
+          </button>
+        </div>
+
+        <!-- Tips box -->
+        <div style="padding:0.75rem 1rem;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);font-size:0.82rem;color:var(--text-muted);display:flex;gap:0.75rem;align-items:flex-start">
+          <span style="font-size:1.2rem;flex-shrink:0;margin-top:-1px">💡</span>
+          <div>
+            <strong style="color:var(--text);display:block;margin-bottom:0.25rem">How to save as PDF</strong>
+            A clean print window opens with your full document. In the print dialog, set the <strong>Destination</strong> to <em>Save as PDF</em>. The PDF will contain real, selectable text — not a screenshot.
+          </div>
         </div>
       </div>
     </div>
@@ -719,6 +924,7 @@ label .hint{font-weight:400;font-size:0.78rem;color:var(--text-muted)}
 // ═══════════════════════════════════════════════════════════════════════════════
 const state = {
   selectedQuizzes: [],     // { path, meta: { title, description, uid, question_count, icon, questions } }
+  openFolders: new Set(),
   allFiles: [],            // raw file list from project
   cover: {
     title: 'Quiz Compilation',
@@ -837,10 +1043,8 @@ function parseContent(content) {
     return null;
   };
   let isWritten = false, isBank = false;
-  // Try quiz format
   let config = extract('/* [QUIZ_CONFIG_START] */', '/* [QUIZ_CONFIG_END] */', /(?:const|let|var)\s+QUIZ_CONFIG\s*=\s*([\s\S]*?);?(?:\n|\r|$)/);
   let questions = extract('/* [QUESTIONS_START] */', '/* [QUESTIONS_END] */', /(?:const|let|var)\s+QUESTIONS\s*=\s*([\s\S]*?);?(?:\n|\r|$)/);
-  // Try bank format
   if (!config || !questions) {
     config = extract('/* [BANK_CONFIG_START] */', '/* [BANK_CONFIG_END] */', /(?:const|let|var)\s+BANK_CONFIG\s*=\s*([\s\S]*?);?(?:\n|\r|$)/);
     questions = extract('/* [QUESTION_BANK_START] */', '/* [QUESTION_BANK_END] */', /(?:const|let|var)\s+QUESTION_BANK\s*=\s*([\s\S]*?);?(?:\n|\r|$)/);
@@ -857,29 +1061,105 @@ function parseContent(content) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// FILE LIST RENDERING
+// FILE LIST RENDERING (TREE-BASED)
 // ═══════════════════════════════════════════════════════════════════════════════
+function getFilteredFiles() {
+  const q = (document.getElementById('file-search').value || '').toLowerCase();
+  if (!q) return state.allFiles;
+  return state.allFiles.filter(f =>
+    (f.title || '').toLowerCase().includes(q) ||
+    (f.path || '').toLowerCase().includes(q) ||
+    (f.name || '').toLowerCase().includes(q)
+  );
+}
+
+function buildTreeFromFiles(files) {
+  const root = {};
+  for (const file of files) {
+    const parts = file.path.split('/');
+    let cursor = root;
+    let running = '';
+    for (let i = 0; i < parts.length - 1; i += 1) {
+      const part = parts[i];
+      running = running ? `${running}/${part}` : part;
+      if (!cursor[part]) {
+        cursor[part] = { kind: 'folder', path: running, children: {} };
+      }
+      cursor = cursor[part].children;
+    }
+    cursor[parts[parts.length - 1]] = { kind: 'file', record: file };
+  }
+  return root;
+}
+
+function sortTreeEntries(entries) {
+  return Object.entries(entries).sort((a, b) => {
+    const aFolder = a[1].kind === 'folder';
+    const bFolder = b[1].kind === 'folder';
+    if (aFolder !== bFolder) return aFolder ? -1 : 1;
+    return a[0].localeCompare(b[0]);
+  });
+}
+
+function toggleFolder(path) {
+  const wasOpen = state.openFolders.has(path);
+  if (wasOpen) {
+    state.openFolders.delete(path);
+  } else {
+    state.openFolders.add(path);
+  }
+  renderFileList();
+}
+
+function renderTreeLevel(node, q) {
+  const selectedPaths = new Set(state.selectedQuizzes.map(s => s.path));
+  const items = sortTreeEntries(node).map(([name, item]) => {
+    if (item.kind === 'folder') {
+      const open = q ? true : state.openFolders.has(item.path);
+      const childrenHtml = open ? renderTreeLevel(item.children, q) : '';
+      const hasChildren = Object.keys(item.children).length > 0;
+      if (!hasChildren) return '';
+      return `
+        <li>
+          <div class="tree-row folder-row" onclick="toggleFolder('${item.path.replace(/'/g, "\\'")}')">
+            <button class="tree-chevron ${open ? 'open' : ''}" onclick="event.stopPropagation();toggleFolder('${item.path.replace(/'/g, "\\'")}')">▶</button>
+            <span class="tree-icon">${open ? '📂' : '📁'}</span>
+            <span class="tree-name">${esc(name)}</span>
+            <span class="tree-type-dot type-folder"></span>
+          </div>
+          ${open ? `<ul class="file-tree">${childrenHtml}</ul>` : ''}
+        </li>
+      `;
+    }
+    const file = item.record;
+    const sel = selectedPaths.has(file.path) ? 'selected' : '';
+    const icon = file.icon || (file.type === 'bank' ? '🗃️' : file.type === 'written' ? '✍️' : file.type === 'flashcard' ? '🃏' : '📝');
+    const qc = file.question_count || '?';
+    return `
+      <li>
+        <div class="tree-row ${sel}" onclick="toggleFileSelect('${file.path.replace(/'/g, "\\'")}')">
+          <input type="checkbox" ${sel ? 'checked' : ''} onclick="event.stopPropagation();toggleFileSelect('${file.path.replace(/'/g, "\\'")}')" style="accent-color:var(--accent);cursor:pointer;width:14px;height:14px;">
+          <span class="tree-icon" style="margin-left:2px">${icon}</span>
+          <span class="tree-name">${esc(file.title || file.name)}</span>
+          <span class="tree-type-dot type-${file.type}"></span>
+          <span style="font-size:0.75rem;color:var(--text-muted);margin-left:0.5rem;white-space:nowrap;">${qc} Q</span>
+        </div>
+      </li>
+    `;
+  });
+  return `<ul class="file-tree">${items.join('')}</ul>`;
+}
+
 function renderFileList() {
   const container = document.getElementById('file-list');
   const q = (document.getElementById('file-search').value || '').toLowerCase();
-  const filtered = state.allFiles.filter(f => (f.title || f.path).toLowerCase().includes(q));
+  const filtered = getFilteredFiles();
   if (filtered.length === 0) {
     container.innerHTML = '<div style="padding:1.5rem;text-align:center;color:var(--text-muted);font-size:0.85rem">No quiz files found.</div>';
     return;
   }
-  const selectedPaths = new Set(state.selectedQuizzes.map(s => s.path));
-  container.innerHTML = filtered.map(f => {
-    const sel = selectedPaths.has(f.path) ? 'selected' : '';
-    const icon = f.icon || (f.type === 'bank' ? '🗃️' : f.type === 'written' ? '✍️' : f.type === 'flashcard' ? '🃏' : '📝');
-    const qc = f.question_count || '?';
-    return `<div class="file-item ${sel}" onclick="toggleFileSelect('${f.path.replace(/'/g, "\\'")}')">
-      <input type="checkbox" ${sel ? 'checked' : ''} onchange="toggleFileSelect('${f.path.replace(/'/g, "\\'")}')">
-      <span class="file-icon">${icon}</span>
-      <span class="truncate" style="flex:1;font-weight:600">${esc(f.title || f.path)}</span>
-      <span class="file-path">${esc(f.path)}</span>
-      <span class="file-count">${qc} Q</span>
-    </div>`;
-  }).join('');
+  const tree = buildTreeFromFiles(filtered);
+  container.innerHTML = renderTreeLevel(tree, q);
 }
 
 function toggleFileSelect(path) {
@@ -1063,6 +1343,33 @@ function updateExportSummary() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // PREVIEW GENERATION
 // ═══════════════════════════════════════════════════════════════════════════════
+function updateDynamicPrintStyle() {
+  let styleEl = document.getElementById('dynamic-print-style');
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'dynamic-print-style';
+    document.head.appendChild(styleEl);
+  }
+  const size = state.style.pageSize === 'letter' ? 'letter' : 'A4';
+  const orientation = state.style.orientation === 'landscape' ? 'landscape' : 'portrait';
+  styleEl.textContent = `
+    @media print {
+      @page {
+        size: ${size} ${orientation};
+        margin: 1.5cm 1.8cm;
+      }
+    }
+    @page cover-page {
+      margin: 0;
+      @bottom-center { content: none; }
+    }
+    @page toc-page {
+      margin: 2cm 1.8cm;
+      @bottom-center { content: counter(pg, upper-roman); font: 8pt 'Outfit','Inter',sans-serif; color: #888; font-weight: 500; }
+    }
+  `;
+}
+
 async function generatePreview() {
   // Gather cover settings
   state.cover.title = document.getElementById('cover-title').value || 'Quiz Compilation';
@@ -1113,18 +1420,23 @@ async function generatePreview() {
   if (state.style.mode === 'detailed') cls.push('detailed-layout');
   cls.forEach(c => area.classList.add(c));
 
+  // Inject print styles matching user size/orientation selection
+  updateDynamicPrintStyle();
+
   // Font class
   const page = document.getElementById('pdf-content');
   page.className = 'pdf-page';
   if (state.style.font === 'serif') page.classList.add('font-serif');
-  else if (state.style.font === 'elegant') page.classList.add('font-elegant');
+  else if (state.style.font === 'outfit') page.classList.add('font-outfit');
+  else if (state.style.font === 'playfair') page.classList.add('font-playfair');
   else if (state.style.font === 'mono') page.classList.add('font-mono');
   else if (state.style.font === 'system') page.classList.add('font-system');
-  else page.classList.add('font-sans');
+  else if (state.style.font === 'dm-serif') page.classList.add('font-dm-serif');
+  else if (state.style.font === 'source-serif') page.classList.add('font-source-serif');
 
   state.previewGenerated = true;
-  document.getElementById('download-btn').disabled = false;
-  document.getElementById('print-btn').disabled = false;
+  const printBtn = document.getElementById('print-btn');
+  if (printBtn) printBtn.disabled = false;
 
   status.className = 'status-msg success';
   const totalQ = state.allQuestionsLoad.reduce((s, f) => s + (f.questions ? f.questions.length : 0), 0);
@@ -1159,23 +1471,26 @@ function buildPdfContent() {
     const questions = quizData.questions || [];
     const config = quizData.config || {};
 
-    // Chapter header
+    // Chapter header (styled like the print header)
     if (state.allQuestionsLoad.length > 1) {
       parts.push(`
-        <div class="chapter-page">
-          <div class="chapter-number">Chapter ${ci + 1}</div>
-          <div class="chapter-title">${esc(config.title || quizData.meta.title || 'Untitled')}</div>
-          ${config.description ? `<div class="chapter-desc">${esc(config.description)}</div>` : ''}
-          ${config.icon ? `<div style="font-size:2rem;margin-top:0.5rem">${config.icon}</div>` : ''}
-          <div class="chapter-divider"></div>
+        <div class="chapter-page" id="chapter-${ci + 1}">
+          <div class="chapter-inner">
+            <div class="chapter-number">Chapter ${ci + 1}</div>
+            <div class="chapter-title">${esc(config.title || quizData.meta.title || 'Untitled')}</div>
+            ${config.description ? `<div class="chapter-desc">${esc(config.description)}</div>` : ''}
+            ${config.icon ? `<div style="font-size:1.6rem;margin-top:0.2rem;opacity:0.7">${config.icon}</div>` : ''}
+          </div>
         </div>
       `);
     } else {
       parts.push(`
-        <div class="quiz-header">
-          ${config.icon ? `<div style="font-size:2.5rem;margin-bottom:0.3rem">${config.icon}</div>` : ''}
-          <h1>${esc(config.title || quizData.meta.title || 'Untitled')}</h1>
-          ${config.description ? `<p>${esc(config.description)}</p>` : ''}
+        <div class="quiz-header" id="chapter-1">
+          <div class="quiz-inner">
+            ${config.icon ? `<div style="font-size:1.6rem;margin-bottom:0.2rem;opacity:0.7">${config.icon}</div>` : ''}
+            <h1>${esc(config.title || quizData.meta.title || 'Untitled')}</h1>
+            ${config.description ? `<p>${esc(config.description)}</p>` : ''}
+          </div>
         </div>
       `);
     }
@@ -1287,41 +1602,108 @@ function renderCoverPage() {
               <stop offset="0%" stop-color="rgba(240,165,0,0.06)"/>
               <stop offset="100%" stop-color="rgba(240,165,0,0.01)"/>
             </linearGradient>
+            <!-- Reusable symbols -->
+            <g id="bacteria-cocci">
+              <circle cx="0" cy="0" r="4" fill="none" stroke="rgba(240,165,0,0.4)" stroke-width="1.2"/>
+              <circle cx="7" cy="3" r="3.5" fill="none" stroke="rgba(240,165,0,0.3)" stroke-width="1"/>
+              <circle cx="-6" cy="5" r="3" fill="none" stroke="rgba(240,165,0,0.25)" stroke-width="0.8"/>
+              <circle cx="4" cy="-5" r="2.5" fill="none" stroke="rgba(240,165,0,0.2)" stroke-width="0.8"/>
+            </g>
+            <g id="bacteria-bacillus">
+              <ellipse cx="0" cy="0" rx="7" ry="3" fill="none" stroke="rgba(88,166,255,0.35)" stroke-width="1"/>
+              <ellipse cx="10" cy="2" rx="5" ry="2.5" fill="none" stroke="rgba(88,166,255,0.25)" stroke-width="0.8"/>
+              <ellipse cx="-8" cy="-1" rx="4" ry="2" fill="none" stroke="rgba(88,166,255,0.2)" stroke-width="0.8"/>
+            </g>
+            <g id="heart">
+              <path d="M0 0 C0 -8,6 -12,10 -8 C14 -12,20 -8,20 0 C20 6,10 14,10 14 C10 14,0 6,0 0Z" fill="none" stroke="rgba(240,165,0,0.35)" stroke-width="1"/>
+            </g>
+            <g id="lung">
+              <path d="M0 0 C-5 -2,-10 2,-12 8 C-14 16,-10 24,-4 26 C2 28,6 22,8 18 M0 0 C5 -2,10 2,12 8 C14 16,10 24,4 26 C-2 28,-6 22,-8 18" fill="none" stroke="rgba(240,165,0,0.3)" stroke-width="1"/>
+              <path d="M0 -4 L0 0" stroke="rgba(240,165,0,0.25)" stroke-width="0.8"/>
+            </g>
+            <g id="med-cross">
+              <path d="M-6 -6 L-6 -14 L6 -14 L6 -6 L14 -6 L14 6 L6 6 L6 14 L-6 14 L-6 6 L-14 6 L-14 -6 Z" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.2"/>
+            </g>
           </defs>
-          <g opacity="0.08" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.5">
-            <path d="M120 80 L120 130 L70 130 L70 150 L120 150 L120 200 L140 200 L140 150 L190 150 L190 130 L140 130 L140 80 Z" transform="scale(0.8)"/>
-            <path d="M650 400 L650 440 L610 440 L610 460 L650 460 L650 500 L670 500 L670 460 L710 460 L710 440 L670 440 L670 400 Z" transform="scale(0.6)"/>
-            <path d="M700 80 L700 120 L660 120 L660 140 L700 140 L700 180 L720 180 L720 140 L760 140 L760 120 L720 120 L720 80 Z" transform="scale(0.5)"/>
+          <!-- Bacteria — cocci clusters -->
+          <g opacity="0.08">
+            <use href="#bacteria-cocci" x="80" y="90" transform="scale(1.5)"/>
+            <use href="#bacteria-cocci" x="650" y="80" transform="scale(1.2)"/>
+            <use href="#bacteria-cocci" x="350" y="520" transform="scale(1.8)"/>
+            <use href="#bacteria-cocci" x="720" y="500" transform="scale(1.0)"/>
+            <use href="#bacteria-cocci" x="40" y="480" transform="scale(0.9)"/>
           </g>
-          <g opacity="0.06" stroke="rgba(255,255,255,0.4)" stroke-width="1.2" fill="none">
-            <path d="M400 50 C420 100,380 150,400 200 C420 250,380 300,400 350 C420 400,380 450,400 500 C420 550,380 580,400 600" stroke-dasharray="4 4"/>
-            <path d="M400 50 C380 100,420 150,400 200 C380 250,420 300,400 350 C380 400,420 450,400 500 C380 550,420 580,400 600" stroke-dasharray="4 4" transform="translate(20,0)"/>
+          <!-- Bacteria — bacillus rods -->
+          <g opacity="0.06">
+            <use href="#bacteria-bacillus" x="250" y="80" transform="scale(1.3)"/>
+            <use href="#bacteria-bacillus" x="680" y="250" transform="scale(1.1)"/>
+            <use href="#bacteria-bacillus" x="100" y="350" transform="scale(1.4)"/>
+            <use href="#bacteria-bacillus" x="450" y="550" transform="scale(1.2)"/>
           </g>
+          <!-- Anatomical hearts -->
+          <g opacity="0.07">
+            <use href="#heart" x="180" y="180" transform="scale(1.6)"/>
+            <use href="#heart" x="600" y="180" transform="scale(1.0)"/>
+            <use href="#heart" x="50" y="250" transform="scale(0.8)"/>
+            <use href="#heart" x="300" y="60" transform="scale(0.7)"/>
+          </g>
+          <!-- Lungs -->
+          <g opacity="0.05">
+            <use href="#lung" x="550" y="430" transform="scale(1.4)"/>
+            <use href="#lung" x="150" y="450" transform="scale(1.0)"/>
+            <use href="#lung" x="700" y="120" transform="scale(0.8)"/>
+          </g>
+          <!-- Medical crosses -->
+          <g opacity="0.06">
+            <use href="#med-cross" x="450" y="120" transform="scale(1.2)"/>
+            <use href="#med-cross" x="120" y="550" transform="scale(0.9)"/>
+            <use href="#med-cross" x="680" y="350" transform="scale(1.1)"/>
+            <use href="#med-cross" x="320" y="250" transform="scale(0.7)"/>
+          </g>
+          <!-- Stethoscope abstract -->
           <g opacity="0.04" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" fill="none">
             <path d="M600 550 C620 520,620 480,600 450 C580 420,560 400,560 370 C560 340,580 320,600 320 C620 320,640 340,640 370"/>
             <circle cx="640" cy="370" r="15"/>
             <path d="M600 550 L600 580 L640 580"/>
           </g>
-          <g opacity="0.05" stroke="rgba(240,165,0,0.5)" stroke-width="1.5" fill="none">
-            <path d="M50 350 L140 350 L160 300 L190 420 L220 280 L250 400 L280 330 L300 350 L350 350"/>
+          <!-- DNA helices -->
+          <g opacity="0.05" stroke="rgba(240,165,0,0.3)" stroke-width="1" fill="none">
+            <path d="M750 100 C760 120,740 140,750 160 C760 180,740 200,750 220" stroke-dasharray="3 3"/>
+            <path d="M750 100 C740 120,760 140,750 160 C740 180,760 200,750 220" stroke-dasharray="3 3"/>
+          </g>
+          <!-- Pulse / heartbeat lines -->
+          <g opacity="0.06" stroke="rgba(240,165,0,0.6)" stroke-width="1.5" fill="none">
+            <path d="M30 370 L100 370 L120 330 L150 430 L180 300 L210 410 L240 350 L260 370 L310 370"/>
+          </g>
+          <g opacity="0.04" stroke="rgba(240,165,0,0.4)" stroke-width="1" fill="none">
+            <path d="M450 560 L500 560 L515 530 L535 580 L555 510 L575 570 L595 540 L610 560 L640 560"/>
           </g>
         </svg>
       </div>
-      <svg class="cover-svg-corner tl" width="100" height="100" viewBox="0 0 100 100">
-        <path d="M0 0 L100 0 L100 4 L4 4 L4 100 L0 100 Z" fill="rgba(240,165,0,0.12)"/>
-        <path d="M10 10 L90 10 L90 14 L14 14 L14 90 L10 90 Z" fill="rgba(240,165,0,0.06)"/>
+      <!-- Corner decorations -->
+      <svg class="cover-svg-corner tl" width="110" height="110" viewBox="0 0 110 110">
+        <path d="M0 0 L110 0 L110 5 L5 5 L5 110 L0 110 Z" fill="rgba(240,165,0,0.15)"/>
+        <path d="M12 12 L98 12 L98 17 L17 17 L17 98 L12 98 Z" fill="rgba(240,165,0,0.08)"/>
+        <path d="M22 22 L40 22" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
+        <path d="M22 22 L22 40" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
       </svg>
-      <svg class="cover-svg-corner tr" width="100" height="100" viewBox="0 0 100 100">
-        <path d="M0 0 L100 0 L100 100 L96 100 L96 4 L0 4 Z" fill="rgba(240,165,0,0.12)"/>
-        <path d="M10 10 L90 10 L90 90 L86 90 L86 14 L10 14 Z" fill="rgba(240,165,0,0.06)"/>
+      <svg class="cover-svg-corner tr" width="110" height="110" viewBox="0 0 110 110">
+        <path d="M0 0 L110 0 L110 110 L105 110 L105 5 L0 5 Z" fill="rgba(240,165,0,0.15)"/>
+        <path d="M12 12 L98 12 L98 98 L93 98 L93 17 L12 17 Z" fill="rgba(240,165,0,0.08)"/>
+        <path d="M88 22 L98 22" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
+        <path d="M98 22 L98 40" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
       </svg>
-      <svg class="cover-svg-corner bl" width="100" height="100" viewBox="0 0 100 100">
-        <path d="M0 0 L0 100 L100 100 L100 96 L4 96 L4 0 Z" fill="rgba(240,165,0,0.12)"/>
-        <path d="M10 10 L10 90 L90 90 L90 86 L14 86 L14 10 Z" fill="rgba(240,165,0,0.06)"/>
+      <svg class="cover-svg-corner bl" width="110" height="110" viewBox="0 0 110 110">
+        <path d="M0 0 L0 110 L110 110 L110 105 L5 105 L5 0 Z" fill="rgba(240,165,0,0.15)"/>
+        <path d="M12 12 L12 98 L98 98 L98 93 L17 93 L17 12 Z" fill="rgba(240,165,0,0.08)"/>
+        <path d="M22 88 L22 98" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
+        <path d="M22 88 L40 88" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
       </svg>
-      <svg class="cover-svg-corner br" width="100" height="100" viewBox="0 0 100 100">
-        <path d="M100 0 L100 100 L0 100 L0 96 L96 96 L96 0 Z" fill="rgba(240,165,0,0.12)"/>
-        <path d="M90 10 L90 90 L10 90 L10 86 L86 86 L86 10 Z" fill="rgba(240,165,0,0.06)"/>
+      <svg class="cover-svg-corner br" width="110" height="110" viewBox="0 0 110 110">
+        <path d="M110 0 L110 110 L0 110 L0 105 L105 105 L105 0 Z" fill="rgba(240,165,0,0.15)"/>
+        <path d="M98 12 L98 98 L12 98 L12 93 L93 93 L93 12 Z" fill="rgba(240,165,0,0.08)"/>
+        <path d="M98 88 L98 98" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
+        <path d="M78 98 L98 98" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
       </svg>
       <div class="cover-accent-bar-bottom"></div>
       <div class="cover-frame">
@@ -1336,7 +1718,7 @@ function renderCoverPage() {
           ${state.cover.author ? `<span>✍️ ${esc(state.cover.author)}</span>` : ''}
           ${state.cover.date ? `<span>📅 ${esc(state.cover.date)}</span>` : ''}
           <span>📄 ${state.allQuestionsLoad.length} quiz${state.allQuestionsLoad.length !== 1 ? 'zes' : ''}</span>
-          <span>❓ ${totalQ} questions</span>
+          <span>❓ ${totalQ} question${totalQ !== 1 ? 's' : ''}</span>
         </div>
       </div>
     </div>
@@ -1350,11 +1732,23 @@ function renderToc() {
   let html = '<div class="toc-page"><h2>📑 Table of Contents</h2>';
   state.allQuestionsLoad.forEach((qd, i) => {
     const title = (qd.config && qd.config.title) || (qd.meta && qd.meta.title) || 'Chapter ' + (i + 1);
+    const icon = (qd.config && qd.config.icon) || (qd.meta && qd.meta.icon) || '';
     const qc = (qd.questions && qd.questions.length) || 0;
-    html += `<div class="toc-item"><span class="toc-num">${i + 1}</span><span class="toc-title">${esc(title)}</span><span class="toc-pages">${qc} Q</span></div>`;
+    html += `<a class="toc-item" href="#chapter-${i + 1}">` +
+      `<span class="toc-num">${i + 1}</span>` +
+      `<span class="toc-title">${icon ? icon + ' ' : ''}${esc(title)}</span>` +
+      `<span class="toc-leader"></span>` +
+      `<span class="toc-pages">${qc} Q</span>` +
+      `</a>`;
   });
   html += '</div>';
   return html;
+}
+
+function showGenerateStatus(msg, type) {
+  const el = document.getElementById('generate-status');
+  el.innerHTML = msg;
+  el.className = 'status-msg ' + type;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1376,8 +1770,10 @@ function openPrintWindow() {
   const styleNodes = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
     .map(n => n.outerHTML).join('\n');
 
-  // Body content: only the print-area inner HTML
+  // Body content: only the print-area
   const contentHtml = document.getElementById('print-area').innerHTML;
+  const headerHtml = '<div class="print-header"><span class="ph-title">' + esc(state.cover.title) + '</span><div class="ph-accent"></div></div>';
+  const footerHtml = '<div class="print-footer"><span class="pf-left">' + esc(state.cover.title) + '</span><span class="pf-right"></span><div class="pf-accent"></div></div>';
 
   // Detect classes applied to print-area (layout + style classes)
   const areaClasses = document.getElementById('print-area').className || '';
@@ -1393,7 +1789,9 @@ function openPrintWindow() {
 ${styleNodes}
 <style>
   @page { size: ${size} ${orientation}; margin: 1.5cm 1.8cm; }
-  @page:first { margin: 0; }
+  @page cover-page { margin: 0; @bottom-center { content: none; } }
+  @page toc-page { margin: 2cm 1.8cm; @bottom-center { content: counter(pg, upper-roman); font: 8pt 'Outfit','Inter',sans-serif; color: #888; font-weight: 500; } }
+  @page { @bottom-center { content: counter(pg); font: 8pt 'Outfit','Inter',sans-serif; color: rgba(255,255,255,0.6); font-weight: 500; } }
   html, body {
     background: white !important;
     color: black !important;
@@ -1401,11 +1799,12 @@ ${styleNodes}
     font-size: 11pt;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    counter-reset: pg 0;
   }
   #print-area { display: block !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; border-radius: 0; background: white; }
-  #print-area .pdf-page { padding: 0; max-width: none; }
-  .cover-page { min-height: 100vh !important; padding: 0 !important; page-break-after: always; }
-  .cover-frame { padding: 3cm 2cm !important; width: 85% !important; max-width: 560px !important; height: auto !important; display: flex !important; flex-direction: column !important; align-items: center !important; }
+  #print-area .pdf-page { padding: 1.3cm 1.8cm 1.1cm; max-width: none; }
+  .cover-page { min-height: 100vh !important; padding: 0 !important; page-break-after: always; position: relative; z-index: 10; background: linear-gradient(135deg,#0a1628,#0f2027,#162d3a,#0d1b2a) !important; }
+  .cover-frame { border: none !important; padding: 3cm 2cm !important; width: 85% !important; max-width: 560px !important; height: auto !important; display: flex !important; flex-direction: column !important; align-items: center !important; box-sizing: border-box; }
   .cover-accent-bar { height: 5px !important; display: block !important; }
   .cover-accent-bar-bottom { height: 3px !important; display: block !important; }
   .cover-svg-bg, .cover-svg-corner { display: block !important; }
@@ -1413,8 +1812,11 @@ ${styleNodes}
   .cover-page .cover-subtitle { font-size: 1rem !important; color: rgba(255,255,255,0.7) !important; }
   .cover-page .cover-description { color: rgba(255,255,255,0.6) !important; }
   .cover-page .cover-meta { color: rgba(255,255,255,0.5) !important; border-top-color: rgba(255,255,255,0.1) !important; }
-  .toc-page { page-break-after: always; }
+  .toc-page { page-break-after: always; page: toc-page; }
+  .cover-page { page: cover-page; }
   .chapter-page { page-break-before: always; page-break-after: avoid; }
+  .chapter-page, .quiz-header, .end-book-answers, .end-chapter-answers { counter-reset: pg 0; }
+  .page-num { display: none; }
   .quiz-header { page-break-after: avoid; }
   .question-item { page-break-inside: avoid; orphans: 3; widows: 3; }
   .answer-key { page-break-inside: avoid; }
@@ -1427,16 +1829,26 @@ ${styleNodes}
   .textbook-layout .end-book-answers { column-span: all; }
   .textbook-layout .question-item { break-inside: avoid; }
   .styled-output .question-item { box-shadow: none !important; break-inside: avoid; border: 1px solid #e0e0e0; }
-  .end-chapter-answers, .end-book-answers { page-break-before: always; }
+  .end-chapter-answers, .end-book-answers { page-break-before: always; counter-reset: pg 0; }
   .written-item .written-answer-space { min-height: 4cm; }
   a { text-decoration: none; color: inherit; }
   .no-print { display: none !important; }
+  .print-header,.print-footer{display:flex;position:fixed;left:0;right:0;z-index:5;font-family:'Outfit','Inter',sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .print-header{top:0;height:1.1cm;align-items:center;padding:0 1.8cm;background:linear-gradient(135deg,#0a1628,#162d3a);border-bottom:2px solid rgba(240,165,0,0.5)}
+  .print-header .ph-title{font-size:8pt;font-weight:500;color:rgba(255,255,255,0.7);letter-spacing:0.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .print-header .ph-accent{position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--accent),rgba(240,165,0,0.3),transparent)}
+  .print-footer{bottom:0;height:0.9cm;align-items:center;padding:0 1.8cm;background:linear-gradient(135deg,#0a1628,#162d3a);border-top:2px solid rgba(240,165,0,0.5)}
+  .print-footer .pf-left{font-size:7.5pt;color:rgba(255,255,255,0.5);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .print-footer .pf-right{font-size:8pt;color:rgba(255,255,255,0.6);font-weight:500}
+  .print-footer .pf-accent{position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(240,165,0,0.3),#f0a500)}
 </style>
 </head>
 <body>
+${headerHtml}
 <div id="print-area" class="${areaClasses}">
   <div class="${pageClasses}" id="pdf-content">${contentHtml}</div>
 </div>
+${footerHtml}
 <script>
   window.addEventListener('load', function() {
     setTimeout(function() { window.print(); }, 300);
@@ -1455,8 +1867,34 @@ ${styleNodes}
   win.document.close();
 }
 
+function ensurePrintHeaderFooter() {
+  let hdr = document.querySelector('.print-header');
+  if (!hdr) {
+    hdr = document.createElement('div');
+    hdr.className = 'print-header';
+    hdr.innerHTML = '<span class="ph-title">' + esc(state.cover.title) + '</span><div class="ph-accent"></div>';
+    document.body.appendChild(hdr);
+  } else {
+    hdr.querySelector('.ph-title').textContent = state.cover.title;
+  }
+  let ftr = document.querySelector('.print-footer');
+  if (!ftr) {
+    ftr = document.createElement('div');
+    ftr.className = 'print-footer';
+    ftr.innerHTML = '<span class="pf-left">' + esc(state.cover.title) + '</span><span class="pf-right"></span><div class="pf-accent"></div>';
+    document.body.appendChild(ftr);
+  } else {
+    ftr.querySelector('.pf-left').textContent = state.cover.title;
+  }
+}
+
 function nativePrintPdf() {
-  openPrintWindow();
+  if (!state.previewGenerated) {
+    showGenerateStatus('Generate the preview first.', 'error');
+    return;
+  }
+  ensurePrintHeaderFooter();
+  window.print();
 }
 
 async function downloadPdf() {

@@ -365,15 +365,19 @@ a.toc-item:hover .toc-title {
 .toc-item .toc-leader{flex:1;margin:0 0.5rem;border-bottom:1px dotted #ccc;height:1px;align-self:flex-end;margin-bottom:5px}
 
 /* Quiz header / chapter header */
-.chapter-page{page-break-before:always;padding:1cm 0 0.5cm;margin-bottom:1.5rem}
-.chapter-page .chapter-number{font-size:0.85rem;color:#999;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.25rem}
-.chapter-page .chapter-title{font-family:'Playfair Display',serif;font-size:2rem;font-weight:700;margin-bottom:0.5rem}
-.chapter-page .chapter-desc{color:#666;font-size:1rem}
-.chapter-divider{height:2px;background:linear-gradient(90deg,#000,#0000);margin:0.75rem 0 1.5rem;width:60%}
+.chapter-page{page-break-before:always;margin-bottom:1.5rem;background:linear-gradient(135deg,#0a1628,#162d3a);color:#fff;border-radius:0;position:relative;overflow:hidden;padding:0}
+.chapter-page::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--accent),rgba(240,165,0,0.3),transparent)}
+.chapter-page .chapter-inner{padding:1.4rem 1.8rem 1.2rem;position:relative;z-index:1}
+.chapter-page .chapter-number{font-size:0.72rem;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:0.2rem;font-weight:500}
+.chapter-page .chapter-title{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:#fff;margin-bottom:0.15rem}
+.chapter-page .chapter-desc{color:rgba(255,255,255,0.55);font-size:0.88rem}
+.chapter-divider{display:none}
 
-.quiz-header{text-align:center;border-bottom:2px solid #000;margin-bottom:1.5rem;padding-bottom:0.75rem}
-.quiz-header h1{font-family:'Playfair Display',serif;font-size:2rem;margin-bottom:0.3rem}
-.quiz-header p{font-size:1rem;color:#555}
+.quiz-header{margin-bottom:1.5rem;background:linear-gradient(135deg,#0a1628,#162d3a);color:#fff;position:relative;overflow:hidden;padding:0;text-align:center;padding:0}
+.quiz-header::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--accent),rgba(240,165,0,0.3),transparent)}
+.quiz-header .quiz-inner{padding:1.4rem 1.8rem 1.2rem;position:relative;z-index:1}
+.quiz-header h1{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:#fff;margin-bottom:0.15rem}
+.quiz-header p{color:rgba(255,255,255,0.55);font-size:0.88rem}
 
 /* Questions */
 .question-item{margin-bottom:1.5rem;page-break-inside:avoid}
@@ -460,9 +464,34 @@ a.toc-item:hover .toc-title {
 .answer-entry .a-answer{font-weight:600}
 .answer-entry .a-explain{color:#666;font-size:0.85rem}
 
+@page {
+  margin: 1.5cm 1.8cm;
+  @bottom-center {
+    content: counter(pg);
+    font-family: 'Outfit','Inter',sans-serif;
+    font-size: 8pt;
+    color: rgba(255,255,255,0.6);
+    font-weight: 500;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+@page cover-page {
+  margin: 0;
+  @bottom-center { content: none; }
+}
+@page toc-page {
+  margin: 2cm 1.8cm;
+  @bottom-center {
+    content: counter(pg, upper-roman);
+    font-family: 'Outfit','Inter',sans-serif;
+    font-size: 8pt;
+    color: #888;
+    font-weight: 500;
+  }
+}
+
 @media print{
-  @page{margin:1.5cm 1.8cm}
-  @page:first{margin:0}
   .no-print{display:none!important}
   html,body{
     background:white!important;
@@ -475,8 +504,8 @@ a.toc-item:hover .toc-title {
   }
   .container{max-width:none;margin:0;padding:0}
   #print-area{display:block!important;box-shadow:none!important;padding:0!important;margin:0!important;border-radius:0;background:white}
-  #print-area .pdf-page{padding:0;max-width:none}
-  .cover-page{min-height:100vh!important;padding:0!important;page-break-after:always;box-sizing:border-box;display:flex!important}
+  #print-area .pdf-page{padding:1.3cm 1.8cm 1.1cm;max-width:none}
+  .cover-page{min-height:100vh!important;padding:0!important;page-break-after:always;position:relative;z-index:10;background:linear-gradient(135deg,#0a1628,#0f2027,#162d3a,#0d1b2a)!important}
   .cover-frame{border:none!important;padding:3cm 2cm!important;width:85%!important;max-width:560px!important;height:auto!important;display:flex!important;flex-direction:column!important;align-items:center!important;box-sizing:border-box}
   .cover-accent-bar{height:5px!important;display:block!important}
   .cover-accent-bar-bottom{height:3px!important;display:block!important}
@@ -485,9 +514,9 @@ a.toc-item:hover .toc-title {
   .cover-page .cover-subtitle{font-size:1rem!important;color:rgba(255,255,255,0.7)!important}
   .cover-page .cover-description{color:rgba(255,255,255,0.6)!important}
   .cover-page .cover-meta{color:rgba(255,255,255,0.5)!important;border-top-color:rgba(255,255,255,0.1)!important}
-  .toc-page{page-break-after:always}
-  .chapter-page{page-break-before:always;page-break-after:avoid}
-  .quiz-header{page-break-after:avoid}
+  .toc-page{page-break-after:always;padding:1.5cm 1.5cm!important}
+  .chapter-page{page-break-before:always;page-break-after:avoid;margin:-0.2cm -1.8cm 1.5rem;border-radius:0}
+  .quiz-header{page-break-after:avoid;margin:-0.2cm -1.8cm 1.5rem;border-radius:0;text-align:center}
   .question-item{page-break-inside:avoid;orphans:3;widows:3}
   .answer-key{page-break-inside:avoid}
   .textbook-layout{column-count:2;column-gap:1.8rem;column-rule:1px solid #ddd}
@@ -499,9 +528,53 @@ a.toc-item:hover .toc-title {
   .textbook-layout .end-book-answers{column-span:all}
   .textbook-layout .question-item{break-inside:avoid}
   .styled-output .question-item{box-shadow:none!important;break-inside:avoid;border:1px solid #e0e0e0}
-  .end-chapter-answers,.end-book-answers{page-break-before:always}
+  .end-chapter-answers,.end-book-answers{page-break-before:always;counter-reset:pg 0}
   .written-item .written-answer-space{min-height:4cm}
   a{text-decoration:none;color:inherit}
+  .cover-page{page:cover-page}
+  .toc-page{page:toc-page}
+  body{counter-reset:pg 0}
+  .page-num{display:none}
+  .chapter-page,.quiz-header,.end-book-answers,.end-chapter-answers{counter-reset:pg 0}
+}
+
+/* ── Print Header & Footer (position: fixed — repeats on every page) ── */
+.print-header,.print-footer{display:none}
+@media print{
+  .print-header,.print-footer{
+    display:flex;position:fixed;left:0;right:0;z-index:5;
+    font-family:'Outfit','Inter',sans-serif;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  .print-header{
+    top:0;height:1.1cm;align-items:center;padding:0 1.8cm;
+    background:linear-gradient(135deg,#0a1628,#162d3a);
+    border-bottom:2px solid rgba(240,165,0,0.5);
+  }
+  .print-header .ph-title{
+    font-size:8pt;font-weight:500;color:rgba(255,255,255,0.7);
+    letter-spacing:0.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .print-header .ph-accent{
+    position:absolute;bottom:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,var(--accent),rgba(240,165,0,0.3),transparent);
+  }
+  .print-footer{
+    bottom:0;height:0.9cm;align-items:center;padding:0 1.8cm;
+    background:linear-gradient(135deg,#0a1628,#162d3a);
+    border-top:2px solid rgba(240,165,0,0.5);
+  }
+  .print-footer .pf-left{
+    font-size:7.5pt;color:rgba(255,255,255,0.5);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .print-footer .pf-right{
+    font-size:8pt;color:rgba(255,255,255,0.6);font-weight:500;
+  }
+  .print-footer .pf-right .page-num{font-weight:700;color:var(--accent)}
+  .print-footer .pf-accent{
+    position:absolute;top:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(240,165,0,0.3),var(--accent));
+  }
 }
 
 /* Responsive */
@@ -1390,23 +1463,26 @@ function buildPdfContent() {
     const questions = quizData.questions || [];
     const config = quizData.config || {};
 
-    // Chapter header
+    // Chapter header (styled like the print header)
     if (state.allQuestionsLoad.length > 1) {
       parts.push(`
         <div class="chapter-page" id="chapter-${ci + 1}">
-          <div class="chapter-number">Chapter ${ci + 1}</div>
-          <div class="chapter-title">${esc(config.title || quizData.meta.title || 'Untitled')}</div>
-          ${config.description ? `<div class="chapter-desc">${esc(config.description)}</div>` : ''}
-          ${config.icon ? `<div style="font-size:2rem;margin-top:0.5rem">${config.icon}</div>` : ''}
-          <div class="chapter-divider"></div>
+          <div class="chapter-inner">
+            <div class="chapter-number">Chapter ${ci + 1}</div>
+            <div class="chapter-title">${esc(config.title || quizData.meta.title || 'Untitled')}</div>
+            ${config.description ? `<div class="chapter-desc">${esc(config.description)}</div>` : ''}
+            ${config.icon ? `<div style="font-size:1.6rem;margin-top:0.2rem;opacity:0.7">${config.icon}</div>` : ''}
+          </div>
         </div>
       `);
     } else {
       parts.push(`
         <div class="quiz-header" id="chapter-1">
-          ${config.icon ? `<div style="font-size:2.5rem;margin-bottom:0.3rem">${config.icon}</div>` : ''}
-          <h1>${esc(config.title || quizData.meta.title || 'Untitled')}</h1>
-          ${config.description ? `<p>${esc(config.description)}</p>` : ''}
+          <div class="quiz-inner">
+            ${config.icon ? `<div style="font-size:1.6rem;margin-bottom:0.2rem;opacity:0.7">${config.icon}</div>` : ''}
+            <h1>${esc(config.title || quizData.meta.title || 'Untitled')}</h1>
+            ${config.description ? `<p>${esc(config.description)}</p>` : ''}
+          </div>
         </div>
       `);
     }
@@ -1518,17 +1594,63 @@ function renderCoverPage() {
               <stop offset="0%" stop-color="rgba(240,165,0,0.06)"/>
               <stop offset="100%" stop-color="rgba(240,165,0,0.01)"/>
             </linearGradient>
+            <!-- Reusable symbols -->
+            <g id="bacteria-cocci">
+              <circle cx="0" cy="0" r="4" fill="none" stroke="rgba(240,165,0,0.4)" stroke-width="1.2"/>
+              <circle cx="7" cy="3" r="3.5" fill="none" stroke="rgba(240,165,0,0.3)" stroke-width="1"/>
+              <circle cx="-6" cy="5" r="3" fill="none" stroke="rgba(240,165,0,0.25)" stroke-width="0.8"/>
+              <circle cx="4" cy="-5" r="2.5" fill="none" stroke="rgba(240,165,0,0.2)" stroke-width="0.8"/>
+            </g>
+            <g id="bacteria-bacillus">
+              <ellipse cx="0" cy="0" rx="7" ry="3" fill="none" stroke="rgba(88,166,255,0.35)" stroke-width="1"/>
+              <ellipse cx="10" cy="2" rx="5" ry="2.5" fill="none" stroke="rgba(88,166,255,0.25)" stroke-width="0.8"/>
+              <ellipse cx="-8" cy="-1" rx="4" ry="2" fill="none" stroke="rgba(88,166,255,0.2)" stroke-width="0.8"/>
+            </g>
+            <g id="heart">
+              <path d="M0 0 C0 -8,6 -12,10 -8 C14 -12,20 -8,20 0 C20 6,10 14,10 14 C10 14,0 6,0 0Z" fill="none" stroke="rgba(240,165,0,0.35)" stroke-width="1"/>
+            </g>
+            <g id="lung">
+              <path d="M0 0 C-5 -2,-10 2,-12 8 C-14 16,-10 24,-4 26 C2 28,6 22,8 18 M0 0 C5 -2,10 2,12 8 C14 16,10 24,4 26 C-2 28,-6 22,-8 18" fill="none" stroke="rgba(240,165,0,0.3)" stroke-width="1"/>
+              <path d="M0 -4 L0 0" stroke="rgba(240,165,0,0.25)" stroke-width="0.8"/>
+            </g>
+            <g id="med-cross">
+              <path d="M-6 -6 L-6 -14 L6 -14 L6 -6 L14 -6 L14 6 L6 6 L6 14 L-6 14 L-6 6 L-14 6 L-14 -6 Z" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.2"/>
+            </g>
           </defs>
-          <!-- Medical cross symbols -->
-          <g opacity="0.08" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.5">
-            <path d="M120 80 L120 130 L70 130 L70 150 L120 150 L120 200 L140 200 L140 150 L190 150 L190 130 L140 130 L140 80 Z" transform="scale(0.8)"/>
-            <path d="M650 400 L650 440 L610 440 L610 460 L650 460 L650 500 L670 500 L670 460 L710 460 L710 440 L670 440 L670 400 Z" transform="scale(0.6)"/>
-            <path d="M700 80 L700 120 L660 120 L660 140 L700 140 L700 180 L720 180 L720 140 L760 140 L760 120 L720 120 L720 80 Z" transform="scale(0.5)"/>
+          <!-- Bacteria — cocci clusters -->
+          <g opacity="0.08">
+            <use href="#bacteria-cocci" x="80" y="90" transform="scale(1.5)"/>
+            <use href="#bacteria-cocci" x="650" y="80" transform="scale(1.2)"/>
+            <use href="#bacteria-cocci" x="350" y="520" transform="scale(1.8)"/>
+            <use href="#bacteria-cocci" x="720" y="500" transform="scale(1.0)"/>
+            <use href="#bacteria-cocci" x="40" y="480" transform="scale(0.9)"/>
           </g>
-          <!-- Caduceus / DNA helix abstract -->
-          <g opacity="0.06" stroke="rgba(255,255,255,0.4)" stroke-width="1.2" fill="none">
-            <path d="M400 50 C420 100,380 150,400 200 C420 250,380 300,400 350 C420 400,380 450,400 500 C420 550,380 580,400 600" stroke-dasharray="4 4"/>
-            <path d="M400 50 C380 100,420 150,400 200 C380 250,420 300,400 350 C380 400,420 450,400 500 C380 550,420 580,400 600" stroke-dasharray="4 4" transform="translate(20,0)"/>
+          <!-- Bacteria — bacillus rods -->
+          <g opacity="0.06">
+            <use href="#bacteria-bacillus" x="250" y="80" transform="scale(1.3)"/>
+            <use href="#bacteria-bacillus" x="680" y="250" transform="scale(1.1)"/>
+            <use href="#bacteria-bacillus" x="100" y="350" transform="scale(1.4)"/>
+            <use href="#bacteria-bacillus" x="450" y="550" transform="scale(1.2)"/>
+          </g>
+          <!-- Anatomical hearts -->
+          <g opacity="0.07">
+            <use href="#heart" x="180" y="180" transform="scale(1.6)"/>
+            <use href="#heart" x="600" y="180" transform="scale(1.0)"/>
+            <use href="#heart" x="50" y="250" transform="scale(0.8)"/>
+            <use href="#heart" x="300" y="60" transform="scale(0.7)"/>
+          </g>
+          <!-- Lungs -->
+          <g opacity="0.05">
+            <use href="#lung" x="550" y="430" transform="scale(1.4)"/>
+            <use href="#lung" x="150" y="450" transform="scale(1.0)"/>
+            <use href="#lung" x="700" y="120" transform="scale(0.8)"/>
+          </g>
+          <!-- Medical crosses -->
+          <g opacity="0.06">
+            <use href="#med-cross" x="450" y="120" transform="scale(1.2)"/>
+            <use href="#med-cross" x="120" y="550" transform="scale(0.9)"/>
+            <use href="#med-cross" x="680" y="350" transform="scale(1.1)"/>
+            <use href="#med-cross" x="320" y="250" transform="scale(0.7)"/>
           </g>
           <!-- Stethoscope abstract -->
           <g opacity="0.04" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" fill="none">
@@ -1536,28 +1658,44 @@ function renderCoverPage() {
             <circle cx="640" cy="370" r="15"/>
             <path d="M600 550 L600 580 L640 580"/>
           </g>
-          <!-- Pulse / heartbeat line -->
-          <g opacity="0.05" stroke="rgba(240,165,0,0.5)" stroke-width="1.5" fill="none">
-            <path d="M50 350 L140 350 L160 300 L190 420 L220 280 L250 400 L280 330 L300 350 L350 350"/>
+          <!-- DNA helices -->
+          <g opacity="0.05" stroke="rgba(240,165,0,0.3)" stroke-width="1" fill="none">
+            <path d="M750 100 C760 120,740 140,750 160 C760 180,740 200,750 220" stroke-dasharray="3 3"/>
+            <path d="M750 100 C740 120,760 140,750 160 C740 180,760 200,750 220" stroke-dasharray="3 3"/>
+          </g>
+          <!-- Pulse / heartbeat lines -->
+          <g opacity="0.06" stroke="rgba(240,165,0,0.6)" stroke-width="1.5" fill="none">
+            <path d="M30 370 L100 370 L120 330 L150 430 L180 300 L210 410 L240 350 L260 370 L310 370"/>
+          </g>
+          <g opacity="0.04" stroke="rgba(240,165,0,0.4)" stroke-width="1" fill="none">
+            <path d="M450 560 L500 560 L515 530 L535 580 L555 510 L575 570 L595 540 L610 560 L640 560"/>
           </g>
         </svg>
       </div>
       <!-- Corner decorations -->
-      <svg class="cover-svg-corner tl" width="100" height="100" viewBox="0 0 100 100">
-        <path d="M0 0 L100 0 L100 4 L4 4 L4 100 L0 100 Z" fill="rgba(240,165,0,0.12)"/>
-        <path d="M10 10 L90 10 L90 14 L14 14 L14 90 L10 90 Z" fill="rgba(240,165,0,0.06)"/>
+      <svg class="cover-svg-corner tl" width="110" height="110" viewBox="0 0 110 110">
+        <path d="M0 0 L110 0 L110 5 L5 5 L5 110 L0 110 Z" fill="rgba(240,165,0,0.15)"/>
+        <path d="M12 12 L98 12 L98 17 L17 17 L17 98 L12 98 Z" fill="rgba(240,165,0,0.08)"/>
+        <path d="M22 22 L40 22" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
+        <path d="M22 22 L22 40" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
       </svg>
-      <svg class="cover-svg-corner tr" width="100" height="100" viewBox="0 0 100 100">
-        <path d="M0 0 L100 0 L100 100 L96 100 L96 4 L0 4 Z" fill="rgba(240,165,0,0.12)"/>
-        <path d="M10 10 L90 10 L90 90 L86 90 L86 14 L10 14 Z" fill="rgba(240,165,0,0.06)"/>
+      <svg class="cover-svg-corner tr" width="110" height="110" viewBox="0 0 110 110">
+        <path d="M0 0 L110 0 L110 110 L105 110 L105 5 L0 5 Z" fill="rgba(240,165,0,0.15)"/>
+        <path d="M12 12 L98 12 L98 98 L93 98 L93 17 L12 17 Z" fill="rgba(240,165,0,0.08)"/>
+        <path d="M88 22 L98 22" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
+        <path d="M98 22 L98 40" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
       </svg>
-      <svg class="cover-svg-corner bl" width="100" height="100" viewBox="0 0 100 100">
-        <path d="M0 0 L0 100 L100 100 L100 96 L4 96 L4 0 Z" fill="rgba(240,165,0,0.12)"/>
-        <path d="M10 10 L10 90 L90 90 L90 86 L14 86 L14 10 Z" fill="rgba(240,165,0,0.06)"/>
+      <svg class="cover-svg-corner bl" width="110" height="110" viewBox="0 0 110 110">
+        <path d="M0 0 L0 110 L110 110 L110 105 L5 105 L5 0 Z" fill="rgba(240,165,0,0.15)"/>
+        <path d="M12 12 L12 98 L98 98 L98 93 L17 93 L17 12 Z" fill="rgba(240,165,0,0.08)"/>
+        <path d="M22 88 L22 98" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
+        <path d="M22 88 L40 88" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
       </svg>
-      <svg class="cover-svg-corner br" width="100" height="100" viewBox="0 0 100 100">
-        <path d="M100 0 L100 100 L0 100 L0 96 L96 96 L96 0 Z" fill="rgba(240,165,0,0.12)"/>
-        <path d="M90 10 L90 90 L10 90 L10 86 L86 86 L86 10 Z" fill="rgba(240,165,0,0.06)"/>
+      <svg class="cover-svg-corner br" width="110" height="110" viewBox="0 0 110 110">
+        <path d="M110 0 L110 110 L0 110 L0 105 L105 105 L105 0 Z" fill="rgba(240,165,0,0.15)"/>
+        <path d="M98 12 L98 98 L12 98 L12 93 L93 93 L93 12 Z" fill="rgba(240,165,0,0.08)"/>
+        <path d="M98 88 L98 98" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
+        <path d="M78 98 L98 98" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
       </svg>
       <div class="cover-accent-bar-bottom"></div>
       <div class="cover-frame">
@@ -1626,6 +1764,8 @@ function openPrintWindow() {
 
   // Body content: only the print-area
   const contentHtml = document.getElementById('print-area').innerHTML;
+  const headerHtml = '<div class="print-header"><span class="ph-title">' + esc(state.cover.title) + '</span><div class="ph-accent"></div></div>';
+  const footerHtml = '<div class="print-footer"><span class="pf-left">' + esc(state.cover.title) + '</span><span class="pf-right"></span><div class="pf-accent"></div></div>';
 
   // Detect classes applied to print-area (layout + style classes)
   const areaClasses = document.getElementById('print-area').className || '';
@@ -1641,7 +1781,9 @@ function openPrintWindow() {
 ${styleNodes}
 <style>
   @page { size: ${size} ${orientation}; margin: 1.5cm 1.8cm; }
-  @page:first { margin: 0; }
+  @page cover-page { margin: 0; @bottom-center { content: none; } }
+  @page toc-page { margin: 2cm 1.8cm; @bottom-center { content: counter(pg, upper-roman); font: 8pt 'Outfit','Inter',sans-serif; color: #888; font-weight: 500; } }
+  @page { @bottom-center { content: counter(pg); font: 8pt 'Outfit','Inter',sans-serif; color: rgba(255,255,255,0.6); font-weight: 500; } }
   html, body {
     background: white !important;
     color: black !important;
@@ -1649,10 +1791,11 @@ ${styleNodes}
     font-size: 11pt;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    counter-reset: pg 0;
   }
   #print-area { display: block !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; border-radius: 0; background: white; }
-  #print-area .pdf-page { padding: 0; max-width: none; }
-  .cover-page { min-height: 100vh !important; padding: 0 !important; page-break-after: always; box-sizing: border-box; display: flex !important; }
+  #print-area .pdf-page { padding: 1.3cm 1.8cm 1.1cm; max-width: none; }
+  .cover-page { min-height: 100vh !important; padding: 0 !important; page-break-after: always; position: relative; z-index: 10; background: linear-gradient(135deg,#0a1628,#0f2027,#162d3a,#0d1b2a) !important; }
   .cover-frame { border: none !important; padding: 3cm 2cm !important; width: 85% !important; max-width: 560px !important; height: auto !important; display: flex !important; flex-direction: column !important; align-items: center !important; box-sizing: border-box; }
   .cover-accent-bar { height: 5px !important; display: block !important; }
   .cover-accent-bar-bottom { height: 3px !important; display: block !important; }
@@ -1661,8 +1804,11 @@ ${styleNodes}
   .cover-page .cover-subtitle { font-size: 1rem !important; color: rgba(255,255,255,0.7) !important; }
   .cover-page .cover-description { color: rgba(255,255,255,0.6) !important; }
   .cover-page .cover-meta { color: rgba(255,255,255,0.5) !important; border-top-color: rgba(255,255,255,0.1) !important; }
-  .toc-page { page-break-after: always; }
+  .toc-page { page-break-after: always; page: toc-page; }
+  .cover-page { page: cover-page; }
   .chapter-page { page-break-before: always; page-break-after: avoid; }
+  .chapter-page, .quiz-header, .end-book-answers, .end-chapter-answers { counter-reset: pg 0; }
+  .page-num { display: none; }
   .quiz-header { page-break-after: avoid; }
   .question-item { page-break-inside: avoid; orphans: 3; widows: 3; }
   .answer-key { page-break-inside: avoid; }
@@ -1675,16 +1821,26 @@ ${styleNodes}
   .textbook-layout .end-book-answers { column-span: all; }
   .textbook-layout .question-item { break-inside: avoid; }
   .styled-output .question-item { box-shadow: none !important; break-inside: avoid; border: 1px solid #e0e0e0; }
-  .end-chapter-answers, .end-book-answers { page-break-before: always; }
+  .end-chapter-answers, .end-book-answers { page-break-before: always; counter-reset: pg 0; }
   .written-item .written-answer-space { min-height: 4cm; }
   a { text-decoration: none; color: inherit; }
   .no-print { display: none !important; }
+  .print-header,.print-footer{display:flex;position:fixed;left:0;right:0;z-index:5;font-family:'Outfit','Inter',sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .print-header{top:0;height:1.1cm;align-items:center;padding:0 1.8cm;background:linear-gradient(135deg,#0a1628,#162d3a);border-bottom:2px solid rgba(240,165,0,0.5)}
+  .print-header .ph-title{font-size:8pt;font-weight:500;color:rgba(255,255,255,0.7);letter-spacing:0.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .print-header .ph-accent{position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--accent),rgba(240,165,0,0.3),transparent)}
+  .print-footer{bottom:0;height:0.9cm;align-items:center;padding:0 1.8cm;background:linear-gradient(135deg,#0a1628,#162d3a);border-top:2px solid rgba(240,165,0,0.5)}
+  .print-footer .pf-left{font-size:7.5pt;color:rgba(255,255,255,0.5);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .print-footer .pf-right{font-size:8pt;color:rgba(255,255,255,0.6);font-weight:500}
+  .print-footer .pf-accent{position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(240,165,0,0.3),#f0a500)}
 </style>
 </head>
 <body>
+${headerHtml}
 <div id="print-area" class="${areaClasses}">
   <div class="${pageClasses}" id="pdf-content">${contentHtml}</div>
 </div>
+${footerHtml}
 <script>
   window.addEventListener('load', function() {
     setTimeout(function() { window.print(); }, 300);
@@ -1703,8 +1859,34 @@ ${styleNodes}
   win.document.close();
 }
 
+function ensurePrintHeaderFooter() {
+  let hdr = document.querySelector('.print-header');
+  if (!hdr) {
+    hdr = document.createElement('div');
+    hdr.className = 'print-header';
+    hdr.innerHTML = '<span class="ph-title">' + esc(state.cover.title) + '</span><div class="ph-accent"></div>';
+    document.body.appendChild(hdr);
+  } else {
+    hdr.querySelector('.ph-title').textContent = state.cover.title;
+  }
+  let ftr = document.querySelector('.print-footer');
+  if (!ftr) {
+    ftr = document.createElement('div');
+    ftr.className = 'print-footer';
+    ftr.innerHTML = '<span class="pf-left">' + esc(state.cover.title) + '</span><span class="pf-right"></span><div class="pf-accent"></div>';
+    document.body.appendChild(ftr);
+  } else {
+    ftr.querySelector('.pf-left').textContent = state.cover.title;
+  }
+}
+
 function nativePrintPdf() {
-  openPrintWindow();
+  if (!state.previewGenerated) {
+    showGenerateStatus('Generate the preview first.', 'error');
+    return;
+  }
+  ensurePrintHeaderFooter();
+  window.print();
 }
 
 async function downloadPdf() {
