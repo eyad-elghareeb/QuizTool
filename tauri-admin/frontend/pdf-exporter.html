@@ -32,9 +32,7 @@ body{
   line-height:1.6;min-height:100vh;display:flex;flex-direction:column;
   transition:background var(--transition),color var(--transition);
 }
-.no-print{display:block}
 
-/* Topbar */
 .topbar{
   display:flex;align-items:center;padding:0.75rem 1.5rem;
   background:var(--surface);border-bottom:1px solid var(--border);
@@ -51,25 +49,17 @@ body{
 .icon-btn:hover{color:var(--text);border-color:var(--accent)}
 .icon-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
 
-/* Layout */
 .container{max-width:960px;margin:0 auto;padding:1.25rem 1.25rem 2rem;flex:1;width:100%}
-.no-print .styled-tabs{margin-top:0.25rem}
 .two-col{display:grid;grid-template-columns:1fr 340px;gap:1.25rem;align-items:start}
-.two-col-rev{grid-template-columns:340px 1fr}
-@media(max-width:900px){.two-col,.two-col-rev{grid-template-columns:1fr}}
+@media(max-width:900px){.two-col{grid-template-columns:1fr}}
 
-/* Cards */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.25rem;box-shadow:var(--shadow)}
 .card h3{font-size:0.95rem;font-weight:700;margin-bottom:0.85rem;display:flex;align-items:center;gap:0.5rem;letter-spacing:0.01em;color:var(--text)}
 .card h3 .badge{font-size:0.7rem;background:var(--accent-dim);color:var(--accent);padding:0.15rem 0.5rem;border-radius:999px;font-weight:600}
 
-/* Sections */
 .section{display:none}
 .section.active{display:block}
-.section-header{display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;padding-bottom:0.75rem;border-bottom:1px solid var(--border)}
-.section-header h2{font-size:1.2rem;font-weight:700;font-family:'Playfair Display',serif;flex:1}
 
-/* Buttons */
 .btn{
   padding:0.6rem 1.25rem;border-radius:var(--radius);font-weight:600;font-size:0.9rem;
   transition:all var(--transition);cursor:pointer;border:1px solid transparent;
@@ -82,37 +72,27 @@ body{
 .btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
 .btn-success{background:var(--success);color:#fff;border-color:var(--success)}
 .btn-success:hover{opacity:0.9}
-.btn-danger{color:var(--wrong);border-color:var(--border)}
-.btn-danger:hover{background:rgba(218,54,51,0.12);border-color:var(--wrong)}
 .btn-sm{padding:0.35rem 0.75rem;font-size:0.82rem}
-.btn-xs{padding:0.2rem 0.5rem;font-size:0.75rem}
 
-/* Inputs */
 .text-input,.select-input{
   width:100%;padding:0.55rem 0.75rem;border-radius:var(--radius-sm);
   border:1px solid var(--border);background:var(--surface2);color:var(--text);
   outline:none;transition:border-color var(--transition);font-family:'Outfit',sans-serif;font-size:0.9rem;
 }
 .text-input:focus,.select-input:focus{border-color:var(--accent)}
-.text-input-sm{padding:0.35rem 0.55rem;font-size:0.85rem}
 select.select-input{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 0.75rem center;background-size:1em;padding-right:2.2rem;cursor:pointer}
 label{font-weight:600;font-size:0.85rem;display:flex;flex-direction:column;gap:0.3rem}
 label .hint{font-weight:400;font-size:0.78rem;color:var(--text-muted)}
 
-/* Grid layouts */
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem}
-.form-grid-3{grid-template-columns:1fr 1fr 1fr}
-@media(max-width:640px){.form-grid,.form-grid-3{grid-template-columns:1fr}}
+@media(max-width:640px){.form-grid{grid-template-columns:1fr}}
 .form-group{display:flex;flex-direction:column;gap:0.3rem}
 .form-group.full{grid-column:1/-1}
 .form-row{display:flex;flex-wrap:wrap;gap:0.6rem;align-items:center}
 
-/* Toggle / Checkbox */
 .toggle-wrap{display:flex;align-items:center;gap:0.5rem;cursor:pointer;user-select:none;flex-direction:row}
 .toggle-wrap input[type="checkbox"]{width:17px;height:17px;accent-color:var(--accent);cursor:pointer}
-.toggle-group{display:flex;flex-wrap:wrap;gap:0.5rem;padding:0.6rem 0.75rem;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border2)}
 
-/* File selector */
 .file-selector{min-height:200px;max-height:420px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface3);font-size:0.82rem}
 .file-item{
   display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.65rem;
@@ -121,43 +101,9 @@ label .hint{font-weight:400;font-size:0.78rem;color:var(--text-muted)}
 }
 .file-item:hover{background:var(--surface2)}
 .file-item.selected{background:var(--accent-dim);color:var(--accent)}
-.file-item input[type="checkbox"]{accent-color:var(--accent);cursor:pointer}
 .file-icon{font-size:1rem;width:22px;text-align:center;flex-shrink:0}
-.file-path{color:var(--text-muted);font-size:0.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
-.file-count{color:var(--text-dim);font-size:0.75rem;white-space:nowrap}
+.file-path{color:var(--text-dim);font-size:0.72rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
 
-/* Selected quizzes list (reorderable) */
-.selected-list{display:flex;flex-direction:column;gap:0.35rem;max-height:300px;overflow-y:auto}
-.selected-item{
-  display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.65rem;
-  background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);
-  cursor:grab;font-size:0.88rem;transition:border-color var(--transition);
-}
-.selected-item:hover{border-color:var(--accent)}
-.selected-item .drag-handle{color:var(--text-dim);cursor:grab;font-size:0.85rem}
-.selected-item .item-title{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.selected-item .item-qcount{color:var(--text-dim);font-size:0.78rem;white-space:nowrap}
-.selected-item .remove-btn{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:1rem;padding:0.2rem;transition:color var(--transition)}
-.selected-item .remove-btn:hover{color:var(--wrong)}
-.selected-empty{text-align:center;padding:2rem;color:var(--text-muted);font-size:0.9rem;border:1px dashed var(--border);border-radius:var(--radius-sm)}
-
-/* Status */
-.status-msg{text-align:center;margin-top:0.75rem;padding:0.6rem;border-radius:var(--radius-sm);font-weight:500;font-size:0.88rem;display:none}
-.status-msg.info{display:block;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent)}
-.status-msg.success{display:block;background:rgba(46,160,67,0.1);color:var(--success);border:1px solid var(--success)}
-.status-msg.error{display:block;background:rgba(218,54,51,0.1);color:var(--wrong);border:1px solid var(--wrong)}
-.status-msg.loading{display:flex;align-items:center;justify-content:center;gap:0.5rem;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent)}
-
-/* Summary strip */
-.summary-strip{
-  display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;
-  padding:0.65rem 1rem;background:var(--surface2);border:1px solid var(--border);
-  border-radius:var(--radius-sm);margin-bottom:1rem;font-size:0.85rem;
-}
-.summary-stat{display:flex;align-items:center;gap:0.3rem}
-.summary-stat strong{color:var(--accent)}
-
-/* Tabs */
 .styled-tabs{display:flex;gap:0;background:var(--surface2);border-radius:var(--radius);padding:4px;margin-bottom:1.25rem;border:1px solid var(--border);box-shadow:inset 0 1px 3px rgba(0,0,0,0.15)}
 .styled-tab{flex:1;padding:0.6rem 0.85rem;border:none;background:transparent;color:var(--text-muted);
   font-family:'Outfit',sans-serif;font-weight:600;font-size:0.8rem;border-radius:7px;
@@ -166,514 +112,84 @@ label .hint{font-weight:400;font-size:0.78rem;color:var(--text-muted)}
 .styled-tab:hover{color:var(--text);background:rgba(255,255,255,0.04)}
 .styled-tab.active{background:var(--accent);color:#000;box-shadow:0 2px 10px var(--accent-glow),0 1px 3px rgba(0,0,0,0.2);font-weight:700}
 
-/* Progress bar */
+.status-msg{text-align:center;margin-top:0.75rem;padding:0.6rem;border-radius:var(--radius-sm);font-weight:500;font-size:0.88rem;display:none}
+.status-msg.info{display:block;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent)}
+.status-msg.success{display:block;background:rgba(46,160,67,0.1);color:var(--success);border:1px solid var(--success)}
+.status-msg.error{display:block;background:rgba(218,54,51,0.1);color:var(--wrong);border:1px solid var(--wrong)}
+.status-msg.loading{display:flex;align-items:center;justify-content:center;gap:0.5rem;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent)}
+
+.summary-strip{
+  display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;
+  padding:0.65rem 1rem;background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--radius-sm);margin-bottom:1rem;font-size:0.85rem;
+}
+.summary-stat{display:flex;align-items:center;gap:0.3rem}
+.summary-stat strong{color:var(--accent)}
+
 .progress-bar{height:4px;background:var(--border2);border-radius:4px;overflow:hidden;margin:1rem 0}
 .progress-fill{height:100%;background:var(--accent);border-radius:4px;transition:width 0.3s ease;width:0%}
 
-/* Spinner */
 @keyframes spin{to{transform:rotate(360deg)}}
 .spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--accent-dim);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle}
 
-/* ─────────── PREVIEW / PRINT STYLES ─────────── */
-#print-area{background:white;color:black;padding:0;border-radius:8px;box-shadow:var(--shadow);display:none;margin-top:1.5rem;margin-bottom:2rem}
-#print-area .pdf-page{max-width:210mm;margin:0 auto;padding:2.5cm 2cm;font-family:'Inter',sans-serif;line-height:1.7}
-#print-area .pdf-page.font-outfit{font-family:'Outfit',sans-serif}
-#print-area .pdf-page.font-playfair{font-family:'Playfair Display','Georgia',serif}
-#print-area .pdf-page.font-serif{font-family:'Georgia','Times New Roman',serif}
-#print-area .pdf-page.font-mono{font-family:'JetBrains Mono','Consolas',monospace;font-size:0.9rem}
-#print-area .pdf-page.font-system{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
-#print-area .pdf-page.font-dm-serif{font-family:'DM Serif Display','Georgia',serif}
-#print-area .pdf-page.font-source-serif{font-family:'Source Serif 4','Georgia',serif}
+.selected-list{display:flex;flex-direction:column;gap:0.35rem;max-height:300px;overflow-y:auto}
+.selected-item{
+  display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.65rem;
+  background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);
+  cursor:grab;font-size:0.88rem;transition:border-color var(--transition);
+}
+.selected-item:hover{border-color:var(--accent)}
+.selected-item .item-title{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.selected-item .item-qcount{color:var(--text-dim);font-size:0.78rem;white-space:nowrap}
+.selected-item .remove-btn{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:1rem;padding:0.2rem;transition:color var(--transition)}
+.selected-item .remove-btn:hover{color:var(--wrong)}
+.selected-empty{text-align:center;padding:2rem;color:var(--text-muted);font-size:0.9rem;border:1px dashed var(--border);border-radius:var(--radius-sm)}
 
-/* ── Premium Medical Cover Page ── */
-.cover-page {
-  text-align: center;
-  padding: 0;
-  position: relative;
-  min-height: 297mm;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  page-break-after: always;
-  box-sizing: border-box;
-  background: linear-gradient(135deg, #0a1628 0%, #0f2027 30%, #162d3a 60%, #0d1b2a 100%);
-  color: #fff;
-  overflow: hidden;
-  font-family: 'Outfit', 'Inter', sans-serif;
-}
-.cover-page::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse at 20% 80%, rgba(240,165,0,0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 20%, rgba(88,166,255,0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 50%, rgba(46,160,67,0.04) 0%, transparent 60%);
-  pointer-events: none;
-}
-/* Grid pattern overlay */
-.cover-page::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
-  background-size: 40px 40px;
-  pointer-events: none;
-}
-.cover-svg-bg {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.12;
-  overflow: hidden;
-}
-.cover-svg-bg svg {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-}
-.cover-svg-corner {
-  position: absolute;
-  pointer-events: none;
-}
-.cover-svg-corner.tl { top: 0; left: 0; }
-.cover-svg-corner.tr { top: 0; right: 0; transform: scaleX(-1); }
-.cover-svg-corner.bl { bottom: 0; left: 0; transform: scaleY(-1); }
-.cover-svg-corner.br { bottom: 0; right: 0; transform: scale(-1,-1); }
-.cover-accent-bar {
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 5px;
-  background: linear-gradient(90deg, var(--accent), #f0a50088, transparent 80%);
-  z-index: 2;
-}
-.cover-accent-bar-bottom {
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, transparent 20%, #f0a50088, var(--accent));
-  z-index: 2;
-}
-.cover-frame {
-  position: relative;
-  z-index: 1;
-  width: 85%;
-  max-width: 560px;
-  padding: 3.5cm 2cm;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-}
-.cover-icon-wrap {
-  width: 90px;
-  height: 90px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, rgba(240,165,0,0.2), rgba(240,165,0,0.08));
-  border: 2px solid rgba(240,165,0,0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 0.5rem;
-  position: relative;
-}
-.cover-icon-wrap svg {
-  width: 48px;
-  height: 48px;
-}
-.cover-icon-wrap .cover-emoji {
-  font-size: 2.4rem;
-  line-height: 1;
-}
-.cover-page .cover-title {
-  font-family: 'DM Serif Display', 'Playfair Display', Georgia, serif;
-  font-size: 3.2rem;
-  font-weight: 400;
-  line-height: 1.12;
-  color: #fff;
-  letter-spacing: -0.02em;
-  margin: 0.25rem 0;
-  text-shadow: 0 2px 20px rgba(0,0,0,0.3);
-}
-.cover-page .cover-subtitle {
-  font-family: 'Outfit', 'Inter', sans-serif;
-  font-size: 1.1rem;
-  color: rgba(255,255,255,0.7);
-  font-weight: 400;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  margin: 0.25rem 0;
-}
-.cover-page .cover-divider {
-  width: 70px;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  margin: 0.5rem auto;
-  border-radius: 1px;
-}
-.cover-page .cover-description {
-  max-width: 480px;
-  margin: 0.5rem auto;
-  color: rgba(255,255,255,0.6);
-  font-size: 0.95rem;
-  line-height: 1.7;
-  font-family: 'Outfit', 'Inter', sans-serif;
-  font-weight: 300;
-}
-.cover-page .cover-meta {
-  color: rgba(255,255,255,0.5);
-  font-size: 0.82rem;
-  margin-top: 1rem;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 1.25rem;
-  border-top: 1px solid rgba(255,255,255,0.1);
-  padding-top: 1rem;
-  width: 100%;
-}
-.cover-page .cover-meta span {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-weight: 300;
-}
-.cover-deco-top{display:none}
-.cover-deco-bottom{display:none}
+.file-tree, .file-tree ul{list-style:none;margin:0;padding:0}
+.file-tree ul{margin-left:0.55rem;padding-left:0.5rem;border-left:1px solid var(--border)}
+.tree-row{width:100%;display:flex;align-items:center;gap:0.35rem;padding:0.2rem 0.4rem;border-radius:5px;cursor:pointer;transition:background var(--transition),color var(--transition);min-height:28px}
+.tree-row:hover{background:var(--surface2)}
+.tree-row.selected{background:var(--accent-dim);color:var(--accent)}
+.tree-chevron{background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:0.65rem;flex:none;transition:transform 0.15s ease;border-radius:3px}
+.tree-chevron:hover{background:var(--surface3)}
+.tree-chevron.open{transform:rotate(90deg)}
+.tree-icon{width:18px;text-align:center;flex:none;font-size:0.85rem}
+.tree-name{font-size:0.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+.tree-path{font-size:0.72rem;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tree-type-dot{width:8px;height:8px;border-radius:50%;flex:none;display:inline-block}
+.tree-type-dot.type-quiz{background:var(--accent)}
+.tree-type-dot.type-bank{background:var(--purple)}
+.tree-type-dot.type-flashcard{background:var(--success)}
+.tree-type-dot.type-written{background:#d946ef}
+.tree-type-dot.type-folder{background:var(--text-muted);opacity:0.5}
+.folder-select-area{flex:1;display:flex;align-items:center;gap:0.35rem;cursor:pointer;min-width:0;padding:0.1rem 0;border-radius:4px;transition:background var(--transition)}
+.folder-select-area:hover{background:rgba(240,165,0,0.08)}
+.tree-row.folder-sel-all{background:var(--accent-dim)}
+.tree-row.folder-sel-all>.folder-select-area>.tree-name{color:var(--accent)}
+.tree-row.folder-sel-partial>.folder-select-area>.tree-name{color:var(--accent)}
 
-a.toc-item {
-  color: inherit;
-  text-decoration: none;
-}
-a.toc-item:hover .toc-title {
-  color: var(--accent);
-  text-decoration: underline;
-}
+.flex{display:flex;align-items:center;gap:0.5rem}
+.flex-wrap{flex-wrap:wrap}
+.gap-sm{gap:0.35rem}
+.mt-1{margin-top:0.75rem}
+.mb-1{margin-bottom:0.75rem}
+.text-muted{color:var(--text-muted)}
+.text-center{text-align:center}
+.w-full{width:100%}
+.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-/* Table of contents */
-.toc-page{page-break-after:always;padding:2cm 2cm}
-.toc-page h2{font-family:'Playfair Display',serif;font-size:1.8rem;margin-bottom:1.5rem;border-bottom:2px solid #000;padding-bottom:0.5rem}
-.toc-item{display:flex;align-items:center;padding:0.6rem 0.4rem;border-bottom:1px dotted #ddd;font-size:0.95rem;text-decoration:none;color:inherit;transition:background 0.15s ease;border-radius:4px}
-.toc-item:hover{background:#f5f5f5}
-.toc-item .toc-num{font-weight:800;min-width:2.5rem;color:#8B6914;font-variant-numeric:tabular-nums}
-.toc-item .toc-title{flex:1;font-weight:500}
-.toc-item .toc-pages{color:#888;font-size:0.85rem;min-width:4rem;text-align:right;font-variant-numeric:tabular-nums}
-.toc-item .toc-leader{flex:1;margin:0 0.5rem;border-bottom:1px dotted #ccc;height:1px;align-self:flex-end;margin-bottom:5px}
-
-/* Quiz header / chapter header */
-.chapter-page{page-break-before:always;margin-bottom:1.5rem;background:linear-gradient(135deg,#0a1628,#162d3a);color:#fff;border-radius:0;position:relative;overflow:hidden;padding:0}
-.chapter-page::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--accent),rgba(240,165,0,0.3),transparent)}
-.chapter-page .chapter-inner{padding:1.4rem 1.8rem 1.2rem;position:relative;z-index:1}
-.chapter-page .chapter-number{font-size:0.72rem;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:0.2rem;font-weight:500}
-.chapter-page .chapter-title{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:#fff;margin-bottom:0.15rem}
-.chapter-page .chapter-desc{color:rgba(255,255,255,0.55);font-size:0.88rem}
-.chapter-divider{display:none}
-
-.quiz-header{margin-bottom:1.5rem;background:linear-gradient(135deg,#0a1628,#162d3a);color:#fff;position:relative;overflow:hidden;padding:0;text-align:center;padding:0}
-.quiz-header::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--accent),rgba(240,165,0,0.3),transparent)}
-.quiz-header .quiz-inner{padding:1.4rem 1.8rem 1.2rem;position:relative;z-index:1}
-.quiz-header h1{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:#fff;margin-bottom:0.15rem}
-.quiz-header p{color:rgba(255,255,255,0.55);font-size:0.88rem}
-
-/* Questions */
-.question-item{margin-bottom:1.5rem;page-break-inside:avoid}
-.question-text{font-size:1rem;font-weight:600;margin-bottom:0.6rem;line-height:1.6}
-.question-number{color:var(--accent);font-weight:700;margin-right:0.25rem}
-.options-list{list-style:none;margin-left:0.5rem}
-.option-item{display:flex;gap:0.65rem;margin-bottom:0.3rem;padding:0 0.5rem}
-.option-letter{font-weight:700;min-width:1.5rem;color:#333}
-.option-text{flex:1}
-.answer-key{margin-top:0.5rem;padding:0.6rem 0.75rem;background:#f5f5f5;border-left:3px solid #000;font-size:0.88rem;border-radius:0 6px 6px 0}
-.answer-key.hidden{display:none}
-.answer-key strong{color:#166534}
-.answer-key .expl{color:#555;margin-top:0.3rem;font-size:0.85rem}
-
-/* 2-Column Textbook Layout */
-.textbook-layout{column-count:2;column-gap:2.5rem;column-rule:1px solid #ddd}
-.textbook-layout .cover-page,
-.textbook-layout .toc-page,
-.textbook-layout .quiz-header,
-.textbook-layout .chapter-page,
-.textbook-layout .end-chapter-answers,
-.textbook-layout .end-book-answers{column-span:all}
-.textbook-layout .question-item{break-inside:avoid;margin-bottom:1.25rem}
-.textbook-layout .question-text{font-size:0.92rem}
-.textbook-layout .option-item{font-size:0.88rem}
-.textbook-layout .answer-key{font-size:0.82rem;padding:0.4rem 0.6rem}
-.textbook-layout .cover-frame{height:auto!important}
-
-/* Styled output */
-.styled-output .quiz-header{background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff;border-radius:14px;padding:2rem 1.5rem;border:none}
-.styled-output .quiz-header h1{color:#fff;font-size:2.2rem}
-.styled-output .quiz-header p{color:rgba(255,255,255,0.75)}
-.styled-output .question-item{background:#fff;border:1.5px solid #e8e8e8;border-radius:12px;padding:1.1rem 1.25rem;box-shadow:0 2px 8px rgba(0,0,0,0.05)}
-.styled-output .q-badge{display:inline-block;background:var(--accent);color:#000;font-size:0.68rem;font-weight:700;padding:0.18rem 0.55rem;border-radius:5px;margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:0.04em}
-.styled-output .question-text{font-size:0.98rem}
-.styled-output .option-item{border:1.5px solid #eee;background:#fafafa;border-radius:8px;padding:0.55rem 0.75rem;margin-bottom:0.35rem}
-.styled-output .option-letter{width:24px;height:24px;border-radius:6px;background:#f0f0f0;border:1.5px solid #d0d0d0;display:flex;align-items:center;justify-content:center;font-size:0.7rem;flex-shrink:0}
-.styled-output .answer-key{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-left:4px solid #22c55e;border-radius:0 8px 8px 0}
-.styled-output .answer-key strong{color:#16a34a;text-transform:uppercase;font-size:0.8rem;letter-spacing:0.04em;display:block;margin-bottom:0.2rem}
-.styled-output .chapter-number{color:rgba(255,255,255,0.6)}
-.styled-output.chapter-page .chapter-title{font-size:2.2rem}
-
-/* MCQ Notes */
-.mcq-notes-layout .question-item{margin-bottom:0.6rem;break-inside:avoid}
-.mcq-notes-layout .question-text{font-size:0.88rem;margin-bottom:0.2rem;font-weight:600}
-.mcq-notes-layout .compact-answer{font-size:0.88rem;color:#16a34a;font-weight:500;margin-left:1.2rem}
-.mcq-notes-layout .quiz-header{margin-bottom:1rem}
-.mcq-notes-layout.textbook-layout{column-count:2;column-gap:2rem}
-.mcq-notes-layout.styled-output .question-item{padding:0.45rem 0.65rem;border-radius:6px;background:#fafafa;border:1px solid #eee}
-.mcq-notes-layout.styled-output .compact-answer{background:rgba(22,163,74,0.08);padding:0.1rem 0.4rem;border-radius:3px;display:inline-block}
-
-/* Compact */
-.compact-layout .question-item{margin-bottom:0.8rem}
-.compact-layout .question-text{font-size:0.9rem;margin-bottom:0.3rem}
-.compact-layout .option-item{padding:0.15rem 0.3rem;margin-bottom:0.1rem;font-size:0.85rem}
-.compact-layout .answer-key{padding:0.3rem 0.5rem;font-size:0.8rem}
-
-/* Written content styles */
-.written-item .written-answer-space{
-  min-height:3.5cm;margin:0.75rem 0 0.5rem 1.5rem;
-  border-bottom:1px solid #ccc;background:repeating-linear-gradient(transparent,transparent 1.8em,#e0e0e0 1.8em,#e0e0e0 1.85em);
-  page-break-inside:avoid;
-}
-.written-item .answer-key{margin-left:1.5rem}
-.written-layout .written-answer-space{min-height:2.5cm}
-.written-layout.styled-output .written-answer-space{background:repeating-linear-gradient(transparent,transparent 1.8em,#f0f0f0 1.8em,#f0f0f0 1.85em)}
-.written-layout .question-item{page-break-inside:avoid;margin-bottom:2rem}
-.written-layout .question-text{font-weight:600;margin-bottom:0.3rem}
-
-/* Detailed */
-.detailed-layout .question-item{margin-bottom:2rem}
-.detailed-layout .question-text{font-size:1.1rem;font-weight:700}
-.detailed-layout .option-item{padding:0.5rem 0.75rem;background:#fafafa;border:1px solid #eee;border-radius:6px;margin-bottom:0.35rem}
-.detailed-layout .answer-key{padding:0.75rem 1rem;background:#f8f8f8;border-left:4px solid var(--accent)}
-
-/* Page numbers */
-.page-number-footer{text-align:center;font-size:0.75rem;color:#999;margin-top:1.5rem;padding-top:0.75rem;border-top:1px solid #eee}
-
-/* Answer key sections */
-.end-chapter-answers,.end-book-answers{page-break-before:always;padding:1.5rem 0}
-.end-chapter-answers h3,.end-book-answers h3{font-family:'Playfair Display',serif;font-size:1.5rem;margin-bottom:1rem;border-bottom:1px solid #ccc;padding-bottom:0.5rem}
-.answer-entry{display:flex;gap:0.75rem;padding:0.3rem 0;font-size:0.9rem;border-bottom:1px dotted #eee}
-.answer-entry .a-num{font-weight:700;min-width:2.5rem;color:var(--accent)}
-.answer-entry .a-answer{font-weight:600}
-.answer-entry .a-explain{color:#666;font-size:0.85rem}
-
-@page {
-  margin: 2cm 1.8cm;
-  @top-center {
-    content: "";
-    font-family: 'Outfit','Inter',sans-serif;
-    font-size: 8pt;
-    font-weight: 500;
-    color: #c27803;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-  @bottom-center {
-    content: counter(page);
-    font-family: 'Outfit','Inter',sans-serif;
-    font-size: 8pt;
-    color: #999;
-    font-weight: 500;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-}
-@page cover-page {
-  margin: 0;
-  @top-center { content: none; }
-  @bottom-center { content: none; }
-}
-@page toc-page {
-  margin: 2cm 1.8cm;
-  @top-center {
-    content: "";
-    font-family: 'Outfit','Inter',sans-serif;
-    font-size: 8pt;
-    font-weight: 500;
-    color: #c27803;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-  @bottom-center {
-    content: counter(page, upper-roman);
-    font-family: 'Outfit','Inter',sans-serif;
-    font-size: 8pt;
-    color: #888;
-    font-weight: 500;
-  }
-}
-
-@media print{
-  .no-print{display:none!important}
-  html,body{
-    background:white!important;
-    color:black!important;
-    margin:0;
-    padding:0;
-    font-size:11pt;
-    -webkit-print-color-adjust:exact!important;
-    print-color-adjust:exact!important;
-  }
-  .container{max-width:none;margin:0;padding:0}
-  #print-area{display:block!important;box-shadow:none!important;padding:0!important;margin:0!important;border-radius:0;background:white}
-  #print-area .pdf-page{padding:1.3cm 1.8cm 1.1cm;max-width:none}
-  .cover-page{min-height:0!important;padding:0!important;page-break-after:always;position:relative;z-index:10;background:linear-gradient(135deg,#0a1628,#0f2027,#162d3a,#0d1b2a)!important;height:100%!important;display:flex!important;flex-direction:column!important;justify-content:center!important}
-  .cover-frame{border:none!important;padding:3cm 2cm!important;width:85%!important;max-width:560px!important;height:auto!important;display:flex!important;flex-direction:column!important;align-items:center!important;box-sizing:border-box}
-  .cover-accent-bar{height:5px!important;display:block!important}
-  .cover-accent-bar-bottom{height:3px!important;display:block!important}
-  .cover-svg-bg,.cover-svg-corner{display:block!important}
-  .cover-page .cover-title{font-size:2.8rem!important;color:#fff!important}
-  .cover-page .cover-subtitle{font-size:1rem!important;color:rgba(255,255,255,0.7)!important}
-  .cover-page .cover-description{color:rgba(255,255,255,0.6)!important}
-  .cover-page .cover-meta{color:rgba(255,255,255,0.5)!important;border-top-color:rgba(255,255,255,0.1)!important}
-  .toc-page{page-break-after:always;padding:1.5cm 1.5cm!important}
-  .chapter-page{page-break-before:always;page-break-after:avoid;margin:-0.2cm -1.8cm 1.5rem;border-radius:0}
-  .quiz-header{page-break-after:avoid;margin:-0.2cm -1.8cm 1.5rem;border-radius:0;text-align:center}
-  .question-item{page-break-inside:avoid;orphans:3;widows:3}
-  .answer-key{page-break-inside:avoid}
-  .textbook-layout{column-count:2;column-gap:1.8rem;column-rule:1px solid #ddd}
-  .textbook-layout .cover-page,
-  .textbook-layout .toc-page,
-  .textbook-layout .quiz-header,
-  .textbook-layout .chapter-page,
-  .textbook-layout .end-chapter-answers,
-  .textbook-layout .end-book-answers{column-span:all}
-  .textbook-layout .question-item{break-inside:avoid}
-  .styled-output .question-item{box-shadow:none!important;break-inside:avoid;border:1px solid #e0e0e0}
-  .end-chapter-answers,.end-book-answers{page-break-before:always}
-  .written-item .written-answer-space{min-height:4cm}
-  a{text-decoration:none;color:inherit}
-  .cover-page{page:cover-page}
-  .toc-page{page:toc-page}
-  .page-num{display:none}
-}
-
-/* Print header/footer use @page margin-boxes — no fixed-position elements */
-
-/* Responsive */
 @media(max-width:640px){
   .topbar{padding:0.5rem 0.75rem}
   .container{padding:0 0.75rem}
   .card{padding:0.85rem}
   .form-grid{grid-template-columns:1fr}
 }
-
-/* Misc */
-.flex{display:flex;align-items:center;gap:0.5rem}
-.flex-wrap{flex-wrap:wrap}
-.gap-sm{gap:0.35rem}
-.gap-md{gap:0.75rem}
-.mt-1{margin-top:0.75rem}
-.mb-1{margin-bottom:0.75rem}
-.text-muted{color:var(--text-muted)}
-.text-center{text-align:center}
-.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.w-full{width:100%}
-
-/* Tree styling inside file-selector */
-.file-tree, .file-tree ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.file-tree ul {
-  margin-left: 0.55rem;
-  padding-left: 0.5rem;
-  border-left: 1px solid var(--border);
-}
-.tree-row {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.2rem 0.4rem;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background var(--transition), color var(--transition);
-  min-height: 28px;
-}
-.tree-row:hover {
-  background: var(--surface2);
-}
-.tree-row.selected {
-  background: var(--accent-dim);
-  color: var(--accent);
-}
-.tree-chevron {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 0;
-  width: 16px;
-  height: 16px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.65rem;
-  flex: none;
-  transition: transform 0.15s ease;
-  border-radius: 3px;
-}
-.tree-chevron:hover {
-  background: var(--surface3);
-}
-.tree-chevron.open {
-  transform: rotate(90deg);
-}
-.tree-icon {
-  width: 18px;
-  text-align: center;
-  flex: none;
-  font-size: 0.85rem;
-}
-.tree-name {
-  font-size: 0.82rem;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-  flex: 1;
-}
-.tree-path {
-  font-size: 0.72rem;
-  color: var(--text-dim);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.tree-type-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex: none;
-  display: inline-block;
-}
-.tree-type-dot.type-quiz { background: var(--accent); }
-.tree-type-dot.type-bank { background: var(--purple); }
-.tree-type-dot.type-index { background: var(--blue); }
-.tree-type-dot.type-flashcard { background: var(--success); }
-.tree-type-dot.type-written { background: #d946ef; }
-.tree-type-dot.type-folder { background: var(--text-muted); opacity: 0.5; }
-.folder-select-area{flex:1;display:flex;align-items:center;gap:0.35rem;cursor:pointer;min-width:0;padding:0.1rem 0;border-radius:4px;transition:background var(--transition)}
-.folder-select-area:hover{background:rgba(240,165,0,0.08)}
-.tree-row.folder-sel-all{background:var(--accent-dim)}
-.tree-row.folder-sel-all>.folder-select-area>.tree-name{color:var(--accent)}
-.tree-row.folder-sel-partial>.folder-select-area>.tree-name{color:var(--accent)}
 </style>
 </head>
 <body>
-<div class="topbar no-print">
+<div class="topbar">
   <div style="display:flex;align-items:center;gap:0.75rem;flex:1;min-width:0">
-    <div style="width:34px;height:34px;border-radius:8px;background:var(--accent);color:#17120a;display:grid;place-items:center;font-weight:800;font-size:0.9rem;flex-shrink:0">📄</div>
+    <div style="width:34px;height:34px;border-radius:8px;background:var(--accent);color:#17120a;display:grid;place-items:center;font-weight:800;font-size:0.9rem;flex-shrink:0">PDF</div>
     <div class="topbar-title">PDF Exporter</div>
   </div>
   <div style="display:flex;gap:0.45rem;align-items:center">
@@ -682,36 +198,35 @@ a.toc-item:hover .toc-title {
   </div>
 </div>
 
-<div class="container no-print">
-  <!-- Step tabs -->
+<div class="container">
   <div class="styled-tabs" id="main-tabs">
-    <button class="styled-tab active" data-step="select" onclick="switchStep('select')">📂 Select Quizzes</button>
-    <button class="styled-tab" data-step="cover" onclick="switchStep('cover')">📖 Cover Page</button>
-    <button class="styled-tab" data-step="style" onclick="switchStep('style')">🎨 Styling</button>
-    <button class="styled-tab" data-step="export" onclick="switchStep('export')">📄 Export</button>
+    <button class="styled-tab active" data-step="select" onclick="switchStep('select')"> Select Quizzes</button>
+    <button class="styled-tab" data-step="cover" onclick="switchStep('cover')"> Cover Page</button>
+    <button class="styled-tab" data-step="style" onclick="switchStep('style')"> Styling</button>
+    <button class="styled-tab" data-step="export" onclick="switchStep('export')"> Export</button>
   </div>
 
-  <!-- STEP 1: Select Quizzes -->
+  <!-- STEP 1 -->
   <div class="section active" id="step-select">
     <div class="two-col">
       <div class="card">
-        <h3>📁 Project Quizzes <span class="badge" id="total-files-badge">0 available</span></h3>
+        <h3> Project Quizzes <span class="badge" id="total-files-badge">0 available</span></h3>
         <div class="search-wrap" style="position:relative;margin-bottom:0.5rem">
           <input type="text" class="text-input" id="file-search" placeholder="Filter quizzes..." oninput="filterFileList()" style="padding-left:2rem">
-          <span style="position:absolute;left:0.65rem;top:50%;transform:translateY(-50%);color:var(--text-dim);font-size:0.85rem">🔍</span>
+          <span style="position:absolute;left:0.65rem;top:50%;transform:translateY(-50%);color:var(--text-dim);font-size:0.85rem"></span>
         </div>
         <div class="file-selector" id="file-list"></div>
         <div class="status-msg" id="file-status"></div>
       </div>
       <div>
         <div class="card">
-          <h3>📋 Selected Quizzes <span class="badge" id="selected-count-badge">0</span></h3>
+          <h3> Selected Quizzes <span class="badge" id="selected-count-badge">0</span></h3>
           <div class="selected-list" id="selected-list">
-            <div class="selected-empty">Select quizzes from the list to add them here. Drag to reorder.</div>
+            <div class="selected-empty">Select quizzes from the list to add them here.</div>
           </div>
         </div>
         <div class="card" style="margin-top:0.75rem">
-          <h3>🔗 Or Load from URL</h3>
+          <h3> Or Load from URL</h3>
           <div class="form-row">
             <input type="text" class="text-input" id="url-input" placeholder="https://example.com/quiz.html" style="flex:1">
             <button class="btn btn-secondary btn-sm" onclick="loadFromUrl()">Load</button>
@@ -721,17 +236,17 @@ a.toc-item:hover .toc-title {
       </div>
     </div>
     <div style="padding:0.5rem 0 0.25rem;text-align:center">
-      <button class="btn btn-primary" onclick="switchStep('cover')" id="next-to-cover">Continue → Cover Page</button>
+      <button class="btn btn-primary" onclick="switchStep('cover')" id="next-to-cover">Continue  Cover Page</button>
     </div>
   </div>
 
-  <!-- STEP 2: Cover Page -->
+  <!-- STEP 2 -->
   <div class="section" id="step-cover">
     <div class="card">
-      <h3>📖 Cover Page Settings</h3>
+      <h3> Cover Page Settings</h3>
       <div class="form-grid">
         <div class="form-group full">
-          <label>Document Title <span class="hint">Appears on cover &amp; PDF metadata</span></label>
+          <label>Document Title <span class="hint">Appears on cover &amp; page headers</span></label>
           <input type="text" class="text-input" id="cover-title" placeholder="e.g. Surgery MCQ Compendium" value="Quiz Compilation">
         </div>
         <div class="form-group">
@@ -747,13 +262,9 @@ a.toc-item:hover .toc-title {
           <input type="text" class="text-input" id="cover-date">
         </div>
         <div class="form-group">
-          <label>Icon / Emoji</label>
-          <input type="text" class="text-input" id="cover-icon" placeholder="📚" value="📚" style="text-align:center;font-size:1.5rem">
-        </div>
-        <div class="form-group">
           <label>Include Cover Page</label>
           <label class="toggle-wrap" style="flex-direction:row;font-weight:400;padding-top:0.3rem">
-            <input type="checkbox" id="include-cover" checked onchange="toggleCoverField()"> Show cover page in PDF
+            <input type="checkbox" id="include-cover" checked> Show cover page in PDF
           </label>
         </div>
         <div class="form-group full">
@@ -763,58 +274,45 @@ a.toc-item:hover .toc-title {
       </div>
     </div>
     <div class="card">
-      <h3>📑 Table of Contents</h3>
+      <h3> Table of Contents</h3>
       <label class="toggle-wrap" style="flex-direction:row;font-weight:400">
         <input type="checkbox" id="include-toc" checked> Include Table of Contents page
       </label>
     </div>
     <div style="padding:0.5rem 0 0.25rem;display:flex;justify-content:center;gap:0.75rem">
-      <button class="btn btn-secondary" onclick="switchStep('select')">← Back</button>
-      <button class="btn btn-primary" onclick="switchStep('style')">Continue → Styling</button>
+      <button class="btn btn-secondary" onclick="switchStep('select')"> Back</button>
+      <button class="btn btn-primary" onclick="switchStep('style')">Continue  Styling</button>
     </div>
   </div>
 
-  <!-- STEP 3: Styling -->
+  <!-- STEP 3 -->
   <div class="section" id="step-style">
     <div class="card">
-      <h3>🎨 Layout &amp; Style</h3>
+      <h3> Layout &amp; Style</h3>
       <div class="form-grid">
         <div class="form-group">
           <label>Style</label>
-          <select class="select-input" id="style-mode" onchange="updateStyleDepends()">
+          <select class="select-input" id="style-mode">
             <option value="standard">Standard</option>
-            <option value="styled">✨ Styled</option>
-            <option value="written">✍️ Written / Essay</option>
-            <option value="mcqnotes">📝 MCQ Notes</option>
             <option value="compact">Compact</option>
-            <option value="detailed">Detailed</option>
           </select>
         </div>
         <div class="form-group">
           <label>Layout</label>
           <select class="select-input" id="layout-mode">
             <option value="single">Single Column</option>
-            <option value="twocol">Two Column</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Font</label>
-          <select class="select-input" id="font-mode">
-            <option value="sans">Inter — Clean Sans-serif</option>
-            <option value="outfit">Outfit — Modern Geometric</option>
-            <option value="playfair">Playfair Display — Elegant Serif</option>
-            <option value="serif">Georgia — Classic Serif</option>
-            <option value="mono">JetBrains Mono — Technical</option>
-            <option value="system">System Default</option>
-            <option value="dm-serif">DM Serif Display — Editorial</option>
-            <option value="source-serif">Source Serif 4 — Academic</option>
+            <option value="twocol">Two-Column Textbook</option>
           </select>
         </div>
         <div class="form-group">
           <label>Page Size</label>
           <select class="select-input" id="page-size">
-            <option value="a4">A4</option>
+            <option value="a3">A3</option>
+            <option value="a4" selected>A4</option>
+            <option value="a5">A5</option>
             <option value="letter">Letter</option>
+            <option value="legal">Legal</option>
+            <option value="tabloid">Tabloid</option>
           </select>
         </div>
         <div class="form-group">
@@ -827,7 +325,7 @@ a.toc-item:hover .toc-title {
         <div class="form-group">
           <label>Question Numbering</label>
           <select class="select-input" id="numbering-mode">
-            <option value="global">Global (1–N)</option>
+            <option value="global">Global (1N)</option>
             <option value="perchapter">Per Chapter</option>
           </select>
         </div>
@@ -836,7 +334,6 @@ a.toc-item:hover .toc-title {
           <select class="select-input" id="answers-mode">
             <option value="inline">Inline (after each question)</option>
             <option value="endchapter">End of Each Chapter</option>
-            <option value="endbook">End of Book</option>
             <option value="none">Hidden</option>
           </select>
         </div>
@@ -849,26 +346,25 @@ a.toc-item:hover .toc-title {
       </div>
     </div>
     <div style="padding:0.5rem 0 0.25rem;display:flex;justify-content:center;gap:0.75rem">
-      <button class="btn btn-secondary" onclick="switchStep('cover')">← Back</button>
-      <button class="btn btn-primary" onclick="switchStep('export')">Continue → Export</button>
+      <button class="btn btn-secondary" onclick="switchStep('cover')"> Back</button>
+      <button class="btn btn-primary" onclick="switchStep('export')">Continue  Export</button>
     </div>
   </div>
 
   <!-- STEP 4: Export -->
   <div class="section" id="step-export">
     <div class="summary-strip" id="export-summary">
-      <span class="summary-stat">📄 <strong id="export-count">0</strong> quizzes</span>
-      <span class="summary-stat">❓ <strong id="export-questions">0</strong> questions</span>
-      <span class="summary-stat">🎨 <strong id="export-style">Standard</strong></span>
-      <span class="summary-stat">📐 <strong id="export-pagesize">A4</strong></span>
+      <span class="summary-stat"> <strong id="export-count">0</strong> quizzes</span>
+      <span class="summary-stat"> <strong id="export-questions">0</strong> questions</span>
+      <span class="summary-stat"> <strong id="export-style">Standard</strong></span>
+      <span class="summary-stat"> <strong id="export-pagesize">A4</strong></span>
     </div>
     <div class="card">
-      <h3>📄 Generate &amp; Export</h3>
+      <h3> Generate Native PDF</h3>
       <div style="display:flex;flex-direction:column;gap:1rem">
-
-        <!-- Primary: generate -->
-        <button class="btn btn-primary" style="width:100%;justify-content:center;padding:0.85rem 1.25rem;font-size:1rem;border-radius:10px" onclick="generatePreview()" id="preview-btn">
-          <span style="font-size:1.25rem">👁️</span> Generate Preview
+        <button class="btn btn-success" style="width:100%;justify-content:center;padding:0.85rem 1.25rem;font-size:1rem;border-radius:10px" onclick="generatePdf()" id="generate-btn">
+          <span style="display:flex;align-items:center;gap:0.5rem;font-size:1rem"> Generate PDF</span>
+          <span style="font-size:0.77rem;font-weight:400;opacity:0.8">Native vector PDF  selectable text  page headers &amp; footers</span>
         </button>
 
         <div id="generate-status" class="status-msg"></div>
@@ -876,20 +372,18 @@ a.toc-item:hover .toc-title {
           <div class="progress-fill" id="progress-fill"></div>
         </div>
 
-        <!-- Export action -->
-        <div style="display:grid;grid-template-columns:1fr;gap:0.6rem" id="export-actions">
-          <button class="btn btn-success" style="width:100%;justify-content:center;flex-direction:column;padding:1rem 1.25rem;line-height:1.4;font-size:1rem;border-radius:10px;gap:0.2rem" onclick="nativePrintPdf()" id="print-btn" disabled>
-            <span style="display:flex;align-items:center;gap:0.5rem;font-size:1rem">🖨️ Open PDF / Print</span>
-            <span style="font-size:0.77rem;font-weight:400;opacity:0.8">Native vector PDF · fully copyable &amp; searchable text</span>
+        <div style="display:none;gap:0.6rem;flex-direction:column" id="download-area">
+          <button class="btn btn-primary" style="width:100%;justify-content:center;padding:0.75rem;font-size:1rem;border-radius:10px" onclick="downloadPdf()" id="download-btn">
+             Download PDF
           </button>
+          <div style="font-size:0.82rem;text-align:center;color:var(--text-muted)" id="download-info"></div>
         </div>
 
-        <!-- Tips box -->
         <div style="padding:0.75rem 1rem;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);font-size:0.82rem;color:var(--text-muted);display:flex;gap:0.75rem;align-items:flex-start">
-          <span style="font-size:1.2rem;flex-shrink:0;margin-top:-1px">💡</span>
+          <span style="font-size:1.2rem;flex-shrink:0;margin-top:-1px">i</span>
           <div>
-            <strong style="color:var(--text);display:block;margin-bottom:0.25rem">How to save as PDF</strong>
-            A clean print window opens with your full document. In the print dialog, set the <strong>Destination</strong> to <em>Save as PDF</em>. The PDF will contain real, selectable text — not a screenshot.
+            <strong style="color:var(--text);display:block;margin-bottom:0.25rem">Rust-powered PDF generation</strong>
+            The PDF is generated natively by the Rust backend using the <strong>genpdf</strong> engine. Three layout modes: Standard, Compact, and Two-Column Textbook. All text is vector-based and fully selectable.
           </div>
         </div>
       </div>
@@ -897,52 +391,29 @@ a.toc-item:hover .toc-title {
   </div>
 </div>
 
-<div class="container" id="preview-container">
-  <div id="print-area">
-    <div class="pdf-page" id="pdf-content"></div>
-  </div>
-</div>
-
 <script>
-// ═══════════════════════════════════════════════════════════════════════════════
 // STATE
-// ═══════════════════════════════════════════════════════════════════════════════
 const state = {
-  selectedQuizzes: [],     // { path, meta: { title, description, uid, question_count, icon, questions } }
+  selectedQuizzes: [],
   openFolders: new Set(),
-  allFiles: [],            // raw file list from project
+  allFiles: [],
+  allQuestionsLoad: [],
   cover: {
-    title: 'Quiz Compilation',
-    subtitle: '',
-    author: '',
+    title: 'Quiz Compilation', subtitle: '', author: '',
     date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-    icon: '📚',
-    description: '',
-    include: true,
+    description: '', include: true,
   },
   toc: { include: true },
   style: {
-    mode: 'standard',      // standard | styled | mcqnotes | compact | detailed
-    layout: 'single',      // single | twocol
-    font: 'sans',          // sans | serif | mono | system
-    pageSize: 'a4',        // a4 | letter
-    orientation: 'portrait',
-    numbering: 'global',   // global | perchapter
-    answers: 'inline',     // inline | endchapter | endbook | none
-    showExplanations: true,
+    mode: 'standard', layout: 'single', pageSize: 'a4',
+    orientation: 'portrait', numbering: 'global',
+    answers: 'inline', showExplanations: true,
   },
-  previewGenerated: false,
   isTauri: false,
-  isGenerating: false,
-  allQuestionsLoad: [],    // cached loaded question data
-  questionGlobalOffset: 0,
+  pdfData: null,
+  pdfFilename: 'export.pdf',
 };
 
-const letters = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P'];
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TAURI DETECTION & IPC
-// ═══════════════════════════════════════════════════════════════════════════════
 function detectTauri() {
   return typeof window.__TAURI__ !== 'undefined' && window.__TAURI__ !== null;
 }
@@ -958,62 +429,235 @@ async function tauriInvoke(cmd, args = {}) {
   }
 }
 
+function esc(str) {
+  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  localStorage.setItem('quiz-theme', html.getAttribute('data-theme'));
+  document.getElementById('theme-toggle').textContent = isDark ? '\u263E' : '\u2600';
+}
+
+function switchStep(step) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('step-' + step).classList.add('active');
+  document.querySelectorAll('.styled-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.step === step);
+  });
+}
+
+// FILE LIST RENDERING
 async function loadProjectFiles() {
   if (!state.isTauri) return;
   try {
     const result = await tauriInvoke('list_files');
-    const files = (result.files || []).filter(f => f.type === 'quiz' || f.type === 'bank' || f.type === 'flashcard' || f.type === 'written');
+    const files = (result.files || []).filter(f =>
+      f.type === 'quiz' || f.type === 'bank' || f.type === 'flashcard' || f.type === 'written'
+    );
     state.allFiles = files;
     renderFileList();
-    document.getElementById('total-files-badge').textContent = `${files.length} available`;
+    document.getElementById('total-files-badge').textContent = files.length + ' available';
   } catch (err) {
     showFileStatus(err.message, 'error');
   }
 }
 
-async function loadSelectedQuizzes() {
-  if (state.selectedQuizzes.length === 0) return;
-  const paths = state.selectedQuizzes.map(q => q.path);
-  try {
-    if (state.isTauri) {
-      const result = await tauriInvoke('load_exports_batch', { paths });
-      const loaded = result.files || [];
-      state.allQuestionsLoad = loaded.map(f => {
-        const cfg = f.meta.config ? (typeof f.meta.config === 'string' ? JSON.parse(f.meta.config) : f.meta.config) : {};
-        const qs = f.meta.questions ? (typeof f.meta.questions === 'string' ? JSON.parse(f.meta.questions) : f.meta.questions) : [];
-        return {
-          path: f.path,
-          meta: f.meta,
-          config: cfg,
-          questions: qs,
-          isWritten: f.meta.type === 'written' || !!cfg.WRITTEN_CONFIG,
-        };
-      });
-    } else {
-      // Fallback: fetch each URL
-      state.allQuestionsLoad = [];
-      for (const q of state.selectedQuizzes) {
-        try {
-          const resp = await fetch(q.path);
-          if (!resp.ok) continue;
-          const content = await resp.text();
-          const parsed = parseContent(content);
-          if (parsed) {
-            state.allQuestionsLoad.push({ path: q.path, ...parsed });
-          }
-        } catch(e) { console.warn('Failed to load', q.path, e); }
-      }
+function getFilteredFiles() {
+  const q = (document.getElementById('file-search').value || '').toLowerCase();
+  if (!q) return state.allFiles;
+  return state.allFiles.filter(f =>
+    (f.title || '').toLowerCase().includes(q) ||
+    (f.path || '').toLowerCase().includes(q)
+  );
+}
+
+function buildTreeFromFiles(files) {
+  const root = {};
+  for (const file of files) {
+    const parts = file.path.split('/');
+    let cursor = root;
+    let running = '';
+    for (let i = 0; i < parts.length - 1; i++) {
+      running = running ? running + '/' + parts[i] : parts[i];
+      if (!cursor[parts[i]]) cursor[parts[i]] = { kind: 'folder', path: running, children: {} };
+      cursor = cursor[parts[i]].children;
     }
+    cursor[parts[parts.length - 1]] = { kind: 'file', record: file };
+  }
+  return root;
+}
+
+function sortTreeEntries(entries) {
+  return Object.entries(entries).sort((a, b) => {
+    const aF = a[1].kind === 'folder';
+    const bF = b[1].kind === 'folder';
+    if (aF !== bF) return aF ? -1 : 1;
+    return a[0].localeCompare(b[0]);
+  });
+}
+
+function toggleFolder(path) {
+  if (state.openFolders.has(path)) state.openFolders.delete(path);
+  else state.openFolders.add(path);
+  renderFileList();
+}
+
+function getFilesInFolder(folderPath) {
+  const prefix = folderPath + '/';
+  return state.allFiles.filter(f => f.path === folderPath || f.path.startsWith(prefix));
+}
+
+function toggleFolderSelect(folderPath) {
+  const files = getFilesInFolder(folderPath);
+  if (files.length === 0) return;
+  const selPaths = new Set(state.selectedQuizzes.map(s => s.path));
+  const allSelected = files.every(f => selPaths.has(f.path));
+  if (allSelected) {
+    const fps = new Set(files.map(f => f.path));
+    state.selectedQuizzes = state.selectedQuizzes.filter(s => !fps.has(s.path));
+  } else {
+    files.forEach(f => {
+      if (!selPaths.has(f.path)) state.selectedQuizzes.push({ path: f.path, meta: f });
+    });
+  }
+  renderFileList();
+  renderSelectedList();
+}
+
+function renderTreeLevel(node, q) {
+  const selPaths = new Set(state.selectedQuizzes.map(s => s.path));
+  const items = sortTreeEntries(node).map(([name, item]) => {
+    if (item.kind === 'folder') {
+      const open = q ? true : state.openFolders.has(item.path);
+      const childrenHtml = open ? renderTreeLevel(item.children, q) : '';
+      const hasChildren = Object.keys(item.children).length > 0;
+      if (!hasChildren) return '';
+      const selState = (() => {
+        const files = getFilesInFolder(item.path);
+        if (files.length === 0) return 'none';
+        const selCount = files.filter(f => selPaths.has(f.path)).length;
+        if (selCount === files.length) return 'all';
+        if (selCount > 0) return 'partial';
+        return 'none';
+      })();
+      const selClass = selState === 'all' ? 'folder-sel-all' : selState === 'partial' ? 'folder-sel-partial' : '';
+      const pathEsc = item.path.replace(/'/g, "\\'");
+      return '<li><div class="tree-row folder-row ' + selClass + '">' +
+        '<button class="tree-chevron ' + (open ? 'open' : '') + '" onclick="event.stopPropagation();toggleFolder(\'' + pathEsc + '\')">\u25B6</button>' +
+        '<span class="folder-select-area" onclick="event.stopPropagation();toggleFolderSelect(\'' + pathEsc + '\')">' +
+        '<span class="tree-icon">' + (open ? '\uD83D\uDCC2' : '\uD83D\uDCC1') + '</span>' +
+        '<span class="tree-name">' + esc(name) + '</span></span>' +
+        '<span class="tree-type-dot type-folder"></span></div>' +
+        (open ? '<ul class="file-tree">' + childrenHtml + '</ul>' : '') + '</li>';
+    }
+    const file = item.record;
+    const sel = selPaths.has(file.path) ? 'selected' : '';
+    const icon = file.icon || (file.type === 'bank' ? '\uD83D\uDDC3\uFE0F' : file.type === 'written' ? '\u270D\uFE0F' : file.type === 'flashcard' ? '\uD83C\uDCCF' : '\uD83D\uDCDD');
+    const qc = file.question_count || '?';
+    const pathEsc = file.path.replace(/'/g, "\\'");
+    return '<li><div class="tree-row ' + sel + '" onclick="toggleFileSelect(\'' + pathEsc + '\')">' +
+      '<input type="checkbox" ' + (sel ? 'checked' : '') + ' onclick="event.stopPropagation();toggleFileSelect(\'' + pathEsc + '\')" style="accent-color:var(--accent);cursor:pointer;width:14px;height:14px;">' +
+      '<span class="tree-icon" style="margin-left:2px">' + icon + '</span>' +
+      '<span class="tree-name">' + esc(file.title || file.name) + '</span>' +
+      '<span class="tree-type-dot type-' + file.type + '"></span>' +
+      '<span style="font-size:0.75rem;color:var(--text-muted);margin-left:0.5rem;white-space:nowrap;">' + qc + ' Q</span></div></li>';
+  });
+  return '<ul class="file-tree">' + items.join('') + '</ul>';
+}
+
+function renderFileList() {
+  const container = document.getElementById('file-list');
+  const q = (document.getElementById('file-search').value || '').toLowerCase();
+  const filtered = getFilteredFiles();
+  if (filtered.length === 0) {
+    container.innerHTML = '<div style="padding:1.5rem;text-align:center;color:var(--text-muted);font-size:0.85rem">No quiz files found.</div>';
+    return;
+  }
+  container.innerHTML = renderTreeLevel(buildTreeFromFiles(filtered), q);
+}
+
+function toggleFileSelect(path) {
+  const idx = state.selectedQuizzes.findIndex(s => s.path === path);
+  const file = state.allFiles.find(f => f.path === path);
+  if (!file) return;
+  if (idx === -1) state.selectedQuizzes.push({ path: file.path, meta: file });
+  else state.selectedQuizzes.splice(idx, 1);
+  renderFileList();
+  renderSelectedList();
+}
+
+function filterFileList() { renderFileList(); }
+
+function showFileStatus(msg, type) {
+  const el = document.getElementById('file-status');
+  el.textContent = msg;
+  el.className = 'status-msg ' + type;
+}
+
+function renderSelectedList() {
+  const container = document.getElementById('selected-list');
+  const badge = document.getElementById('selected-count-badge');
+  badge.textContent = state.selectedQuizzes.length;
+  if (state.selectedQuizzes.length === 0) {
+    container.innerHTML = '<div class="selected-empty">Select quizzes from the list to add them here.</div>';
+    return;
+  }
+  container.innerHTML = state.selectedQuizzes.map((q, i) =>
+    '<div class="selected-item" data-index="' + i + '">' +
+    '<span class="item-title">' + esc(q.meta.title || q.path) + '</span>' +
+    '<span class="item-qcount">' + (q.meta.question_count || '?') + ' Q</span>' +
+    '<button class="remove-btn" onclick="removeSelected(' + i + ')" title="Remove">\u2715</button></div>'
+  ).join('');
+}
+
+function removeSelected(idx) {
+  state.selectedQuizzes.splice(idx, 1);
+  renderSelectedList();
+  renderFileList();
+}
+
+// URL LOADING
+async function loadFromUrl() {
+  const input = document.getElementById('url-input');
+  const status = document.getElementById('url-status');
+  let url = input.value.trim();
+  if (!url) { showUrlStatus('Enter a URL.', 'error'); return; }
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  showUrlStatus('<span class="spinner"></span> Fetching...', 'loading');
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const content = await resp.text();
+    const parsed = parseContent(content);
+    if (!parsed) throw new Error('No quiz data found in page');
+    const title = parsed.config.title || 'Quiz from URL';
+    const qc = parsed.questions ? parsed.questions.length : 0;
+    const pseudo = {
+      path: url,
+      meta: { title, question_count: qc, type: parsed.isWritten ? 'written' : (parsed.isBank ? 'bank' : 'quiz') },
+      config: parsed.config,
+      questions: parsed.questions,
+      isWritten: parsed.isWritten,
+    };
+    state.allQuestionsLoad.push(pseudo);
+    state.selectedQuizzes.push({ path: url, meta: pseudo.meta });
+    showUrlStatus('Loaded "' + title + '" (' + qc + ' questions)', 'success');
+    renderSelectedList();
     updateExportSummary();
   } catch (err) {
-    console.error('Failed to load quiz data:', err);
-    showGenerateStatus('Failed to load quiz data: ' + err.message, 'error');
+    showUrlStatus('Error: ' + err.message, 'error');
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// CONTENT PARSING (standalone fallback)
-// ═══════════════════════════════════════════════════════════════════════════════
+function showUrlStatus(msg, type) {
+  const el = document.getElementById('url-status');
+  el.innerHTML = msg;
+  el.className = 'status-msg ' + type;
+}
+
 function parseContent(content) {
   const extract = (start, end, fallback) => {
     const si = content.indexOf(start);
@@ -1035,7 +679,6 @@ function parseContent(content) {
     questions = extract('/* [QUESTION_BANK_START] */', '/* [QUESTION_BANK_END] */', /(?:const|let|var)\s+QUESTION_BANK\s*=\s*([\s\S]*?);?(?:\n|\r|$)/);
     if (config && questions) isBank = true;
   }
-  // Try written content format
   if (!config || !questions) {
     config = extract('/* [WRITTEN_CONFIG_START] */', '/* [WRITTEN_CONFIG_END] */', /(?:const|let|var)\s+WRITTEN_CONFIG\s*=\s*([\s\S]*?);?(?:\n|\r|$)/);
     questions = extract('/* [WRITTEN_QUESTIONS_START] */', '/* [WRITTEN_QUESTIONS_END] */', /(?:const|let|var)\s+WRITTEN_QUESTIONS\s*=\s*([\s\S]*?);?(?:\n|\r|$)/);
@@ -1045,753 +688,190 @@ function parseContent(content) {
   return { config, questions, isWritten, isBank };
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// FILE LIST RENDERING (TREE-BASED)
-// ═══════════════════════════════════════════════════════════════════════════════
-function getFilteredFiles() {
-  const q = (document.getElementById('file-search').value || '').toLowerCase();
-  if (!q) return state.allFiles;
-  return state.allFiles.filter(f =>
-    (f.title || '').toLowerCase().includes(q) ||
-    (f.path || '').toLowerCase().includes(q) ||
-    (f.name || '').toLowerCase().includes(q)
-  );
-}
-
-function buildTreeFromFiles(files) {
-  const root = {};
-  for (const file of files) {
-    const parts = file.path.split('/');
-    let cursor = root;
-    let running = '';
-    for (let i = 0; i < parts.length - 1; i += 1) {
-      const part = parts[i];
-      running = running ? `${running}/${part}` : part;
-      if (!cursor[part]) {
-        cursor[part] = { kind: 'folder', path: running, children: {} };
-      }
-      cursor = cursor[part].children;
-    }
-    cursor[parts[parts.length - 1]] = { kind: 'file', record: file };
-  }
-  return root;
-}
-
-function sortTreeEntries(entries) {
-  return Object.entries(entries).sort((a, b) => {
-    const aFolder = a[1].kind === 'folder';
-    const bFolder = b[1].kind === 'folder';
-    if (aFolder !== bFolder) return aFolder ? -1 : 1;
-    return a[0].localeCompare(b[0]);
-  });
-}
-
-function toggleFolder(path) {
-  const wasOpen = state.openFolders.has(path);
-  if (wasOpen) {
-    state.openFolders.delete(path);
-  } else {
-    state.openFolders.add(path);
-  }
-  renderFileList();
-}
-
-function getFilesInFolder(folderPath) {
-  const prefix = folderPath + '/';
-  return state.allFiles.filter(f => f.path === folderPath || f.path.startsWith(prefix));
-}
-
-function getFolderSelState(folderPath) {
-  const files = getFilesInFolder(folderPath);
-  if (files.length === 0) return 'none';
-  const selCount = files.filter(f => state.selectedQuizzes.some(s => s.path === f.path)).length;
-  if (selCount === files.length) return 'all';
-  if (selCount > 0) return 'partial';
-  return 'none';
-}
-
-function toggleFolderSelect(folderPath) {
-  const files = getFilesInFolder(folderPath);
-  if (files.length === 0) return;
-  const selPaths = new Set(state.selectedQuizzes.map(s => s.path));
-  const allSelected = files.every(f => selPaths.has(f.path));
-  if (allSelected) {
-    const folderPaths = new Set(files.map(f => f.path));
-    state.selectedQuizzes = state.selectedQuizzes.filter(s => !folderPaths.has(s.path));
-  } else {
-    files.forEach(f => {
-      if (!selPaths.has(f.path)) {
-        state.selectedQuizzes.push({ path: f.path, meta: f });
-      }
-    });
-  }
-  renderFileList();
-  renderSelectedList();
-}
-
-function renderTreeLevel(node, q) {
-  const selectedPaths = new Set(state.selectedQuizzes.map(s => s.path));
-  const items = sortTreeEntries(node).map(([name, item]) => {
-    if (item.kind === 'folder') {
-      const open = q ? true : state.openFolders.has(item.path);
-      const childrenHtml = open ? renderTreeLevel(item.children, q) : '';
-      const hasChildren = Object.keys(item.children).length > 0;
-      if (!hasChildren) return '';
-      const selState = getFolderSelState(item.path);
-      const selClass = selState === 'all' ? 'folder-sel-all' : selState === 'partial' ? 'folder-sel-partial' : '';
-      const pathEsc = item.path.replace(/'/g, "\\'");
-      return `
-        <li>
-          <div class="tree-row folder-row ${selClass}">
-            <button class="tree-chevron ${open ? 'open' : ''}" onclick="event.stopPropagation();toggleFolder('${pathEsc}')">▶</button>
-            <span class="folder-select-area" onclick="event.stopPropagation();toggleFolderSelect('${pathEsc}')">
-              <span class="tree-icon">${open ? '📂' : '📁'}</span>
-              <span class="tree-name">${esc(name)}</span>
-            </span>
-            <span class="tree-type-dot type-folder"></span>
-          </div>
-          ${open ? `<ul class="file-tree">${childrenHtml}</ul>` : ''}
-        </li>
-      `;
-    }
-    const file = item.record;
-    const sel = selectedPaths.has(file.path) ? 'selected' : '';
-    const icon = file.icon || (file.type === 'bank' ? '🗃️' : file.type === 'written' ? '✍️' : file.type === 'flashcard' ? '🃏' : '📝');
-    const qc = file.question_count || '?';
-    return `
-      <li>
-        <div class="tree-row ${sel}" onclick="toggleFileSelect('${file.path.replace(/'/g, "\\'")}')">
-          <input type="checkbox" ${sel ? 'checked' : ''} onclick="event.stopPropagation();toggleFileSelect('${file.path.replace(/'/g, "\\'")}')" style="accent-color:var(--accent);cursor:pointer;width:14px;height:14px;">
-          <span class="tree-icon" style="margin-left:2px">${icon}</span>
-          <span class="tree-name">${esc(file.title || file.name)}</span>
-          <span class="tree-type-dot type-${file.type}"></span>
-          <span style="font-size:0.75rem;color:var(--text-muted);margin-left:0.5rem;white-space:nowrap;">${qc} Q</span>
-        </div>
-      </li>
-    `;
-  });
-  return `<ul class="file-tree">${items.join('')}</ul>`;
-}
-
-function renderFileList() {
-  const container = document.getElementById('file-list');
-  const q = (document.getElementById('file-search').value || '').toLowerCase();
-  const filtered = getFilteredFiles();
-  if (filtered.length === 0) {
-    container.innerHTML = '<div style="padding:1.5rem;text-align:center;color:var(--text-muted);font-size:0.85rem">No quiz files found.</div>';
-    return;
-  }
-  const tree = buildTreeFromFiles(filtered);
-  container.innerHTML = renderTreeLevel(tree, q);
-}
-
-function toggleFileSelect(path) {
-  const idx = state.selectedQuizzes.findIndex(s => s.path === path);
-  const file = state.allFiles.find(f => f.path === path);
-  if (!file) return;
-  if (idx === -1) {
-    state.selectedQuizzes.push({ path: file.path, meta: file });
-  } else {
-    state.selectedQuizzes.splice(idx, 1);
-  }
-  renderFileList();
-  renderSelectedList();
-}
-
-function filterFileList() { renderFileList(); }
-
-function showFileStatus(msg, type) {
-  const el = document.getElementById('file-status');
-  el.textContent = msg;
-  el.className = 'status-msg ' + type;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// SELECTED LIST (reorderable)
-// ═══════════════════════════════════════════════════════════════════════════════
-function renderSelectedList() {
-  const container = document.getElementById('selected-list');
-  const badge = document.getElementById('selected-count-badge');
-  badge.textContent = state.selectedQuizzes.length;
-  if (state.selectedQuizzes.length === 0) {
-    container.innerHTML = '<div class="selected-empty">Select quizzes from the list to add them here. Drag to reorder.</div>';
-    return;
-  }
-  container.innerHTML = state.selectedQuizzes.map((q, i) => `
-    <div class="selected-item" draggable="true" data-index="${i}">
-      <span class="drag-handle">⠿</span>
-      <span class="file-icon">${q.meta.icon || (q.meta.type === 'bank' ? '🗃️' : q.meta.type === 'written' ? '✍️' : q.meta.type === 'flashcard' ? '🃏' : '📝')}</span>
-      <span class="item-title">${esc(q.meta.title || q.path)}</span>
-      <span class="item-qcount">${q.meta.question_count || '?'} Q</span>
-      <button class="remove-btn" onclick="removeSelected(${i})" title="Remove">✕</button>
-    </div>
-  `).join('');
-  // Drag events
-  container.querySelectorAll('.selected-item').forEach(el => {
-    el.addEventListener('dragstart', handleDragStart);
-    el.addEventListener('dragover', handleDragOver);
-    el.addEventListener('drop', handleDrop);
-    el.addEventListener('dragend', handleDragEnd);
-  });
-}
-
-let dragIndex = null;
-function handleDragStart(e) {
-  dragIndex = parseInt(e.target.closest('.selected-item').dataset.index);
-  e.dataTransfer.effectAllowed = 'move';
-  e.target.style.opacity = '0.5';
-}
-function handleDragOver(e) {
-  e.preventDefault();
-  const target = e.target.closest('.selected-item');
-  if (!target) return;
-  const idx = parseInt(target.dataset.index);
-  if (idx === dragIndex) return;
-  const rect = target.getBoundingClientRect();
-  const mid = rect.top + rect.height / 2;
-  if (e.clientY < mid) {
-    target.parentNode.insertBefore(target.parentNode.children[dragIndex], target);
-  } else {
-    target.parentNode.insertBefore(target.parentNode.children[dragIndex], target.nextSibling);
-  }
-}
-function handleDrop(e) {
-  e.preventDefault();
-  const items = state.selectedQuizzes;
-  const targetEl = e.target.closest('.selected-item');
-  if (!targetEl) return;
-  const targetIdx = parseInt(targetEl.dataset.index);
-  if (dragIndex !== null && dragIndex !== targetIdx) {
-    const [moved] = items.splice(dragIndex, 1);
-    items.splice(targetIdx, 0, moved);
-    state.selectedQuizzes = items;
-    renderSelectedList();
-  }
-  dragIndex = null;
-}
-function handleDragEnd(e) {
-  e.target.style.opacity = '1';
-  dragIndex = null;
-}
-
-function removeSelected(idx) {
-  state.selectedQuizzes.splice(idx, 1);
-  renderSelectedList();
-  renderFileList();
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// URL LOADING (standalone)
-// ═══════════════════════════════════════════════════════════════════════════════
-async function loadFromUrl() {
-  const input = document.getElementById('url-input');
-  const status = document.getElementById('url-status');
-  let url = input.value.trim();
-  if (!url) { showUrlStatus('Enter a URL.', 'error'); return; }
-  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
-  showUrlStatus('<span class="spinner"></span> Fetching...', 'loading');
+// LOAD QUIZ DATA
+async function loadSelectedQuizzes() {
+  if (state.selectedQuizzes.length === 0) return;
+  const paths = state.selectedQuizzes.map(q => q.path);
   try {
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const content = await resp.text();
-    const parsed = parseContent(content);
-    if (!parsed) throw new Error('No quiz data found in page');
-    const title = parsed.config.title || 'Quiz from URL';
-    const qc = parsed.questions ? parsed.questions.length : 0;
-    // Add as a pseudo-file
-    const pseudo = {
-      path: url,
-      meta: { title, question_count: qc, type: parsed.isWritten ? 'written' : (parsed.isBank ? 'bank' : 'quiz'), icon: parsed.config.icon || null },
-      config: parsed.config,
-      questions: parsed.questions,
-      isWritten: parsed.isWritten,
-    };
-    state.allQuestionsLoad.push(pseudo);
-    state.selectedQuizzes.push({ path: url, meta: pseudo.meta });
-    showUrlStatus(`Loaded "${title}" (${qc} questions)`, 'success');
-    renderSelectedList();
+    if (state.isTauri) {
+      const result = await tauriInvoke('load_exports_batch', { paths });
+      const loaded = result.files || [];
+      state.allQuestionsLoad = loaded.map(f => {
+        const cfg = f.meta.config ? (typeof f.meta.config === 'string' ? JSON.parse(f.meta.config) : f.meta.config) : {};
+        const qs = f.meta.questions ? (typeof f.meta.questions === 'string' ? JSON.parse(f.meta.questions) : f.meta.questions) : [];
+        return { path: f.path, meta: f.meta, config: cfg, questions: qs, isWritten: f.meta.type === 'written' || !!cfg.WRITTEN_CONFIG };
+      });
+    } else {
+      state.allQuestionsLoad = [];
+      for (const q of state.selectedQuizzes) {
+        try {
+          const resp = await fetch(q.path);
+          if (!resp.ok) continue;
+          const content = await resp.text();
+          const parsed = parseContent(content);
+          if (parsed) state.allQuestionsLoad.push({ path: q.path, ...parsed });
+        } catch(e) { console.warn('Failed to load', q.path, e); }
+      }
+    }
     updateExportSummary();
   } catch (err) {
-    showUrlStatus('Error: ' + err.message, 'error');
+    console.error('Failed to load quiz data:', err);
+    showGenerateStatus('Failed to load quiz data: ' + err.message, 'error');
   }
 }
 
-function showUrlStatus(msg, type) {
-  const el = document.getElementById('url-status');
-  el.innerHTML = msg;
-  el.className = 'status-msg ' + type;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// STEP NAVIGATION
-// ═══════════════════════════════════════════════════════════════════════════════
-function switchStep(step) {
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.getElementById('step-' + step).classList.add('active');
-  document.querySelectorAll('.styled-tab').forEach(t => {
-    t.classList.toggle('active', t.dataset.step === step);
-  });
-}
-
-function toggleCoverField() {
-  const checked = document.getElementById('include-cover').checked;
-  state.cover.include = checked;
-}
-
-function updateStyleDepends() {
-  const mode = document.getElementById('style-mode').value;
-  const isMcq = mode === 'mcqnotes';
-  const isWritten = mode === 'written';
-  document.getElementById('answers-mode').value = isMcq || isWritten ? 'none' : 'inline';
-  document.getElementById('show-explanations').disabled = isMcq || isWritten;
-  if (isMcq || isWritten) document.getElementById('show-explanations').checked = true;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// EXPORT SUMMARY
-// ═══════════════════════════════════════════════════════════════════════════════
 function updateExportSummary() {
   const totalQ = state.allQuestionsLoad.reduce((sum, f) => sum + (f.questions ? f.questions.length : 0), 0);
   document.getElementById('export-count').textContent = state.allQuestionsLoad.length;
   document.getElementById('export-questions').textContent = totalQ;
-  document.getElementById('export-style').textContent = state.style.mode.charAt(0).toUpperCase() + state.style.mode.slice(1);
+  const styleLabel = state.style.mode === 'compact' ? 'Compact' : 'Standard';
+  document.getElementById('export-style').textContent = styleLabel;
   document.getElementById('export-pagesize').textContent = (state.style.pageSize || 'a4').toUpperCase();
   document.getElementById('export-mode-badge').style.display = state.allQuestionsLoad.length > 1 ? 'inline' : 'none';
   const btn = document.getElementById('next-to-cover');
   if (btn) btn.textContent = state.selectedQuizzes.length > 0
-    ? `Continue → Cover Page (${state.selectedQuizzes.length} selected)`
-    : 'Continue → Cover Page';
+    ? 'Continue \u2192 Cover Page (' + state.selectedQuizzes.length + ' selected)'
+    : 'Continue \u2192 Cover Page';
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PREVIEW GENERATION
-// ═══════════════════════════════════════════════════════════════════════════════
-function updateDynamicPrintStyle() {
-  let styleEl = document.getElementById('dynamic-print-style');
-  if (!styleEl) {
-    styleEl = document.createElement('style');
-    styleEl.id = 'dynamic-print-style';
-    document.head.appendChild(styleEl);
-  }
-  const size = state.style.pageSize === 'letter' ? 'letter' : 'A4';
-  const orientation = state.style.orientation === 'landscape' ? 'landscape' : 'portrait';
-  const title = state.cover.title || 'Quiz Compilation';
-  // Escape for CSS string content
-  const cssTitle = title.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-  styleEl.textContent = `
-    @media print {
-      @page {
-        size: ${size} ${orientation};
-        margin: 2cm 1.8cm;
-        @top-center {
-          content: "${cssTitle}";
-          font: 8pt 'Outfit','Inter',sans-serif;
-          font-weight: 500;
-          color: #c27803;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-        }
-        @bottom-center {
-          content: counter(page);
-          font: 8pt 'Outfit','Inter',sans-serif;
-          color: #999;
-          font-weight: 500;
-        }
-      }
-    }
-    @page cover-page {
-      margin: 0;
-      @top-center { content: none; }
-      @bottom-center { content: none; }
-    }
-    @page toc-page {
-      margin: 2cm 1.8cm;
-      @top-center {
-        content: "${cssTitle}";
-        font: 8pt 'Outfit','Inter',sans-serif;
-        font-weight: 500;
-        color: #c27803;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-      }
-      @bottom-center { content: counter(page, upper-roman); font: 8pt 'Outfit','Inter',sans-serif; color: #888; font-weight: 500; }
-    }
-  `;
+// EXPORT SUMMARY
+function updateExportSummary() {
+  const totalQ = state.allQuestionsLoad.reduce((sum, f) => sum + (f.questions ? f.questions.length : 0), 0);
+  document.getElementById('export-count').textContent = state.allQuestionsLoad.length;
+  document.getElementById('export-questions').textContent = totalQ;
+  const styleLabel = state.style.mode === 'compact' ? 'Compact' : (state.style.layout === 'twocol' ? 'Two-Column' : 'Standard');
+  document.getElementById('export-style').textContent = styleLabel;
+  document.getElementById('export-pagesize').textContent = (state.style.pageSize || 'a4').toUpperCase();
+  document.getElementById('export-mode-badge').style.display = state.allQuestionsLoad.length > 1 ? 'inline' : 'none';
 }
 
-async function generatePreview() {
-  // Gather cover settings
+// GATHER CONFIG
+function gatherConfig() {
   state.cover.title = document.getElementById('cover-title').value || 'Quiz Compilation';
   state.cover.subtitle = document.getElementById('cover-subtitle').value || '';
   state.cover.author = document.getElementById('cover-author').value || '';
-  state.cover.date = document.getElementById('cover-date').value || new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-  state.cover.icon = document.getElementById('cover-icon').value || '📚';
+  state.cover.date = document.getElementById('cover-date').value || state.cover.date;
   state.cover.description = document.getElementById('cover-description').value || '';
   state.cover.include = document.getElementById('include-cover').checked;
   state.toc.include = document.getElementById('include-toc').checked;
   state.style.mode = document.getElementById('style-mode').value;
   state.style.layout = document.getElementById('layout-mode').value;
-  state.style.font = document.getElementById('font-mode').value;
   state.style.pageSize = document.getElementById('page-size').value;
   state.style.orientation = document.getElementById('page-orientation').value;
   state.style.numbering = document.getElementById('numbering-mode').value;
   state.style.answers = document.getElementById('answers-mode').value;
   state.style.showExplanations = document.getElementById('show-explanations').checked;
+}
 
+// BUILD PAYLOAD
+function buildPayload() {
+  const quizzes = state.allQuestionsLoad.map(f => ({
+    title: (f.config && f.config.title) || (f.meta && f.meta.title) || 'Untitled',
+    description: (f.config && f.config.description) || (f.meta && f.meta.description) || '',
+    icon: (f.config && f.config.icon) || (f.meta && f.meta.icon) || '',
+    questions: (f.questions || []).map(q => ({
+      question: q.question || '',
+      options: q.options || [],
+      correct: typeof q.correct === 'number' ? q.correct : 0,
+      explanation: q.explanation || '',
+    })),
+  }));
+  return {
+    quizzes,
+    cover: state.cover,
+    toc: state.toc,
+    style: state.style,
+  };
+}
+
+// GENERATE PDF
+async function generatePdf() {
+  gatherConfig();
   const status = document.getElementById('generate-status');
+  const progressWrap = document.getElementById('progress-bar-wrap');
+  const progressFill = document.getElementById('progress-fill');
+  const downloadArea = document.getElementById('download-area');
+  const btn = document.getElementById('generate-btn');
+
+  downloadArea.style.display = 'none';
+  btn.disabled = true;
+  progressWrap.style.display = 'block';
+  progressFill.style.width = '15%';
   status.className = 'status-msg loading';
   status.innerHTML = '<span class="spinner"></span> Loading quiz data...';
 
-  // Load data
   await loadSelectedQuizzes();
+
   if (state.allQuestionsLoad.length === 0) {
     status.className = 'status-msg error';
     status.textContent = 'No quiz data loaded. Select quizzes first.';
+    btn.disabled = false;
+    progressWrap.style.display = 'none';
     return;
   }
 
-  status.innerHTML = '<span class="spinner"></span> Building preview...';
+  progressFill.style.width = '40%';
+  status.innerHTML = '<span class="spinner"></span> Sending to PDF engine...';
 
-  // Build PDF content
-  const content = buildPdfContent();
-  document.getElementById('pdf-content').innerHTML = content;
-  const area = document.getElementById('print-area');
-  area.style.display = 'block';
+  const payload = buildPayload();
 
-  // Apply layout classes
-  area.className = '';
-  const cls = [];
-  if (state.style.layout === 'twocol') cls.push('textbook-layout');
-  if (state.style.mode === 'styled') cls.push('styled-output');
-  if (state.style.mode === 'written') cls.push('written-layout');
-  if (state.style.mode === 'mcqnotes') cls.push('mcq-notes-layout');
-  if (state.style.mode === 'compact') cls.push('compact-layout');
-  if (state.style.mode === 'detailed') cls.push('detailed-layout');
-  cls.forEach(c => area.classList.add(c));
+  try {
+    progressFill.style.width = '60%';
+    status.innerHTML = '<span class="spinner"></span> Generating PDF with Rust backend...';
 
-  // Inject print styles matching user size/orientation selection
-  updateDynamicPrintStyle();
+    const result = await tauriInvoke('export_pdf', { config: payload });
 
-  // Font class
-  const page = document.getElementById('pdf-content');
-  page.className = 'pdf-page';
-  if (state.style.font === 'serif') page.classList.add('font-serif');
-  else if (state.style.font === 'outfit') page.classList.add('font-outfit');
-  else if (state.style.font === 'playfair') page.classList.add('font-playfair');
-  else if (state.style.font === 'mono') page.classList.add('font-mono');
-  else if (state.style.font === 'system') page.classList.add('font-system');
-  else if (state.style.font === 'dm-serif') page.classList.add('font-dm-serif');
-  else if (state.style.font === 'source-serif') page.classList.add('font-source-serif');
+    progressFill.style.width = '100%';
 
-  state.previewGenerated = true;
-  const printBtn = document.getElementById('print-btn');
-  if (printBtn) printBtn.disabled = false;
+    state.pdfData = result.pdf_base64;
+    state.pdfFilename = result.filename || 'export.pdf';
+    const sizeKB = Math.round((result.size || 0) / 1024);
 
-  status.className = 'status-msg success';
-  const totalQ = state.allQuestionsLoad.reduce((s, f) => s + (f.questions ? f.questions.length : 0), 0);
-  status.innerHTML = `✅ Preview ready — ${state.allQuestionsLoad.length} quizzes, ${totalQ} questions`;
+    btn.disabled = false;
+    status.className = 'status-msg success';
+    status.innerHTML = ' PDF generated successfully! (' + sizeKB + ' KB)';
+    document.getElementById('download-info').textContent =
+      result.quiz_count + ' quiz(zes), ' + result.question_count + ' questions  ' + sizeKB + ' KB';
 
-  // Scroll to preview
-  document.getElementById('preview-container').scrollIntoView({ behavior: 'smooth' });
+    // Auto-download
+    downloadPdf();
+
+    setTimeout(() => { progressWrap.style.display = 'none'; }, 800);
+  } catch (err) {
+    btn.disabled = false;
+    progressWrap.style.display = 'none';
+    status.className = 'status-msg error';
+    status.textContent = 'PDF generation failed: ' + err.message;
+  }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PDF CONTENT BUILDER
-// ═══════════════════════════════════════════════════════════════════════════════
-function buildPdfContent() {
-  const parts = [];
-
-  // ── Cover Page ──
-  if (state.cover.include) {
-    parts.push(renderCoverPage());
+function downloadPdf() {
+  if (!state.pdfData) {
+    showGenerateStatus('No PDF data available. Generate the PDF first.', 'error');
+    return;
   }
-
-  // ── Table of Contents ──
-  if (state.toc.include && state.allQuestionsLoad.length > 1) {
-    parts.push(renderToc());
-  }
-
-  // ── Quiz Chapters ──
-  let globalIdx = 0;
-  const allAnswers = []; // for end-of-book
-
-  state.allQuestionsLoad.forEach((quizData, ci) => {
-    const chapterStartIdx = globalIdx;
-    const questions = quizData.questions || [];
-    const config = quizData.config || {};
-
-    // Chapter header (styled like the print header)
-    if (state.allQuestionsLoad.length > 1) {
-      parts.push(`
-        <div class="chapter-page" id="chapter-${ci + 1}">
-          <div class="chapter-inner">
-            <div class="chapter-number">Chapter ${ci + 1}</div>
-            <div class="chapter-title">${esc(config.title || quizData.meta.title || 'Untitled')}</div>
-            ${config.description ? `<div class="chapter-desc">${esc(config.description)}</div>` : ''}
-            ${config.icon ? `<div style="font-size:1.6rem;margin-top:0.2rem;opacity:0.7">${config.icon}</div>` : ''}
-          </div>
-        </div>
-      `);
-    } else {
-      parts.push(`
-        <div class="quiz-header" id="chapter-1">
-          <div class="quiz-inner">
-            ${config.icon ? `<div style="font-size:1.6rem;margin-bottom:0.2rem;opacity:0.7">${config.icon}</div>` : ''}
-            <h1>${esc(config.title || quizData.meta.title || 'Untitled')}</h1>
-            ${config.description ? `<p>${esc(config.description)}</p>` : ''}
-          </div>
-        </div>
-      `);
+  try {
+    const dataUri = 'data:application/pdf;base64,' + state.pdfData;
+    const a = document.createElement('a');
+    a.href = dataUri;
+    a.download = state.pdfFilename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } catch (err) {
+    // Fallback: try Tauri save dialog
+    try {
+      const byteChars = atob(state.pdfData);
+      const bytes = new Uint8Array(byteChars.length);
+      for (let i = 0; i < byteChars.length; i++) bytes[i] = byteChars.charCodeAt(i);
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    } catch (fallbackErr) {
+      showGenerateStatus('Download failed: ' + err.message + ' | Fallback: ' + fallbackErr.message, 'error');
     }
-
-    // Questions
-    const chapterAnswers = [];
-    questions.forEach((q, qi) => {
-      const num = state.style.numbering === 'global' ? globalIdx + 1 : qi + 1;
-      const isWrittenMode = quizData.isWritten || state.style.mode === 'written';
-      const answerLetter = !isWrittenMode ? (letters[q.correct] || '?') : '';
-      const answerText = !isWrittenMode && q.options && q.options[q.correct] ? q.options[q.correct] : q.explanation || '';
-      chapterAnswers.push({ num: state.style.numbering === 'global' ? globalIdx + 1 : qi + 1, letter: answerLetter, text: answerText, explanation: q.explanation || '' });
-
-      if (state.style.mode === 'mcqnotes') {
-        parts.push(`
-          <div class="question-item">
-            <div class="question-text"><span class="question-number">${num}.</span> ${esc(q.question)}</div>
-            <div class="compact-answer">${answerLetter}. ${esc(answerText)}</div>
-          </div>
-        `);
-      } else if (quizData.isWritten || state.style.mode === 'written') {
-        const modelAns = q.modelAnswer || q.explanation || '';
-        parts.push('<div class="question-item written-item">');
-        parts.push(`<div class="question-text"><span class="question-number">${num}.</span> ${esc(q.question)}</div>`);
-        if (state.style.answers === 'inline') {
-          if (modelAns) {
-            parts.push(`<div class="answer-key"><strong>✍️ Model Answer</strong><div class="expl">${esc(modelAns)}</div></div>`);
-          }
-        } else {
-          parts.push(`<div class="written-answer-space" data-q="${num}"></div>`);
-          if (modelAns) {
-            parts.push(`<div class="answer-key" style="margin-top:0.5rem"><strong>✍️ Model Answer</strong><div class="expl">${esc(modelAns)}</div></div>`);
-          }
-        }
-        parts.push('</div>');
-      } else {
-        parts.push('<div class="question-item">');
-        parts.push(`<div class="question-text"><span class="question-number">${num}.</span> ${esc(q.question)}</div>`);
-
-        if (q.options && q.options.length > 0) {
-          parts.push('<div class="options-list">');
-          q.options.forEach((opt, oi) => {
-            parts.push(`<div class="option-item"><span class="option-letter">${letters[oi] || oi}.</span><span class="option-text">${esc(opt)}</span></div>`);
-          });
-          parts.push('</div>');
-        }
-
-        // Inline answers
-        if (state.style.answers === 'inline') {
-          const showAns = true;
-          parts.push(`<div class="answer-key">
-            <strong>✓ ${answerLetter}. ${esc(answerText)}</strong>
-            ${q.explanation && state.style.showExplanations ? `<div class="expl">${esc(q.explanation)}</div>` : ''}
-          </div>`);
-        }
-
-        parts.push('</div>');
-      }
-
-      globalIdx++;
-    });
-
-    // End-of-chapter answers
-    if (state.style.answers === 'endchapter' && chapterAnswers.length > 0) {
-      parts.push('<div class="end-chapter-answers">');
-      parts.push(`<h3>📝 Answer Key — Chapter ${ci + 1}</h3>`);
-      chapterAnswers.forEach(a => {
-        const prefix = a.letter ? `${a.letter}. ` : '';
-        parts.push(`<div class="answer-entry"><span class="a-num">${a.num}.</span><span class="a-answer">${prefix}${esc(a.text)}</span>${a.explanation && state.style.showExplanations ? `<span class="a-explain">— ${esc(a.explanation)}</span>` : ''}</div>`);
-      });
-      parts.push('</div>');
-    }
-
-    allAnswers.push({ chapter: ci + 1, title: config.title || quizData.meta.title || 'Chapter ' + (ci + 1), answers: chapterAnswers });
-  });
-
-  // End-of-book answers
-  if (state.style.answers === 'endbook' && allAnswers.length > 0) {
-    parts.push('<div class="end-book-answers">');
-    parts.push('<h3>📝 Complete Answer Key</h3>');
-    allAnswers.forEach(ch => {
-      parts.push(`<h4 style="margin-top:1rem;margin-bottom:0.5rem;font-size:1.1rem">${esc(ch.title)}</h4>`);
-      ch.answers.forEach(a => {
-        const prefix = a.letter ? `${a.letter}. ` : '';
-        parts.push(`<div class="answer-entry"><span class="a-num">${a.num}.</span><span class="a-answer">${prefix}${esc(a.text)}</span>${a.explanation && state.style.showExplanations ? `<span class="a-explain">${esc(a.explanation)}</span>` : ''}</div>`);
-      });
-    });
-    parts.push('</div>');
   }
-
-  return parts.join('\n');
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// COVER PAGE RENDERER
-// ═══════════════════════════════════════════════════════════════════════════════
-function renderCoverPage() {
-  const totalQ = state.allQuestionsLoad.reduce((s, f) => s + (f.questions ? f.questions.length : 0), 0);
-  const iconHtml = state.cover.icon && !state.cover.icon.startsWith('<')
-    ? `<span class="cover-emoji">${state.cover.icon}</span>`
-    : state.cover.icon || '';
-  return `
-    <div class="cover-page">
-      <div class="cover-accent-bar"></div>
-      <div class="cover-svg-bg">
-        <svg viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice">
-          <defs>
-            <linearGradient id="svg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="rgba(240,165,0,0.06)"/>
-              <stop offset="100%" stop-color="rgba(240,165,0,0.01)"/>
-            </linearGradient>
-            <!-- Reusable symbols -->
-            <g id="bacteria-cocci">
-              <circle cx="0" cy="0" r="4" fill="none" stroke="rgba(240,165,0,0.4)" stroke-width="1.2"/>
-              <circle cx="7" cy="3" r="3.5" fill="none" stroke="rgba(240,165,0,0.3)" stroke-width="1"/>
-              <circle cx="-6" cy="5" r="3" fill="none" stroke="rgba(240,165,0,0.25)" stroke-width="0.8"/>
-              <circle cx="4" cy="-5" r="2.5" fill="none" stroke="rgba(240,165,0,0.2)" stroke-width="0.8"/>
-            </g>
-            <g id="bacteria-bacillus">
-              <ellipse cx="0" cy="0" rx="7" ry="3" fill="none" stroke="rgba(88,166,255,0.35)" stroke-width="1"/>
-              <ellipse cx="10" cy="2" rx="5" ry="2.5" fill="none" stroke="rgba(88,166,255,0.25)" stroke-width="0.8"/>
-              <ellipse cx="-8" cy="-1" rx="4" ry="2" fill="none" stroke="rgba(88,166,255,0.2)" stroke-width="0.8"/>
-            </g>
-            <g id="heart">
-              <path d="M0 0 C0 -8,6 -12,10 -8 C14 -12,20 -8,20 0 C20 6,10 14,10 14 C10 14,0 6,0 0Z" fill="none" stroke="rgba(240,165,0,0.35)" stroke-width="1"/>
-            </g>
-            <g id="lung">
-              <path d="M0 0 C-5 -2,-10 2,-12 8 C-14 16,-10 24,-4 26 C2 28,6 22,8 18 M0 0 C5 -2,10 2,12 8 C14 16,10 24,4 26 C-2 28,-6 22,-8 18" fill="none" stroke="rgba(240,165,0,0.3)" stroke-width="1"/>
-              <path d="M0 -4 L0 0" stroke="rgba(240,165,0,0.25)" stroke-width="0.8"/>
-            </g>
-            <g id="med-cross">
-              <path d="M-6 -6 L-6 -14 L6 -14 L6 -6 L14 -6 L14 6 L6 6 L6 14 L-6 14 L-6 6 L-14 6 L-14 -6 Z" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.2"/>
-            </g>
-          </defs>
-          <!-- Bacteria — cocci clusters -->
-          <g opacity="0.08">
-            <use href="#bacteria-cocci" x="80" y="90" transform="scale(1.5)"/>
-            <use href="#bacteria-cocci" x="650" y="80" transform="scale(1.2)"/>
-            <use href="#bacteria-cocci" x="350" y="520" transform="scale(1.8)"/>
-            <use href="#bacteria-cocci" x="720" y="500" transform="scale(1.0)"/>
-            <use href="#bacteria-cocci" x="40" y="480" transform="scale(0.9)"/>
-          </g>
-          <!-- Bacteria — bacillus rods -->
-          <g opacity="0.06">
-            <use href="#bacteria-bacillus" x="250" y="80" transform="scale(1.3)"/>
-            <use href="#bacteria-bacillus" x="680" y="250" transform="scale(1.1)"/>
-            <use href="#bacteria-bacillus" x="100" y="350" transform="scale(1.4)"/>
-            <use href="#bacteria-bacillus" x="450" y="550" transform="scale(1.2)"/>
-          </g>
-          <!-- Anatomical hearts -->
-          <g opacity="0.07">
-            <use href="#heart" x="180" y="180" transform="scale(1.6)"/>
-            <use href="#heart" x="600" y="180" transform="scale(1.0)"/>
-            <use href="#heart" x="50" y="250" transform="scale(0.8)"/>
-            <use href="#heart" x="300" y="60" transform="scale(0.7)"/>
-          </g>
-          <!-- Lungs -->
-          <g opacity="0.05">
-            <use href="#lung" x="550" y="430" transform="scale(1.4)"/>
-            <use href="#lung" x="150" y="450" transform="scale(1.0)"/>
-            <use href="#lung" x="700" y="120" transform="scale(0.8)"/>
-          </g>
-          <!-- Medical crosses -->
-          <g opacity="0.06">
-            <use href="#med-cross" x="450" y="120" transform="scale(1.2)"/>
-            <use href="#med-cross" x="120" y="550" transform="scale(0.9)"/>
-            <use href="#med-cross" x="680" y="350" transform="scale(1.1)"/>
-            <use href="#med-cross" x="320" y="250" transform="scale(0.7)"/>
-          </g>
-          <!-- Stethoscope abstract -->
-          <g opacity="0.04" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" fill="none">
-            <path d="M600 550 C620 520,620 480,600 450 C580 420,560 400,560 370 C560 340,580 320,600 320 C620 320,640 340,640 370"/>
-            <circle cx="640" cy="370" r="15"/>
-            <path d="M600 550 L600 580 L640 580"/>
-          </g>
-          <!-- DNA helices -->
-          <g opacity="0.05" stroke="rgba(240,165,0,0.3)" stroke-width="1" fill="none">
-            <path d="M750 100 C760 120,740 140,750 160 C760 180,740 200,750 220" stroke-dasharray="3 3"/>
-            <path d="M750 100 C740 120,760 140,750 160 C740 180,760 200,750 220" stroke-dasharray="3 3"/>
-          </g>
-          <!-- Pulse / heartbeat lines -->
-          <g opacity="0.06" stroke="rgba(240,165,0,0.6)" stroke-width="1.5" fill="none">
-            <path d="M30 370 L100 370 L120 330 L150 430 L180 300 L210 410 L240 350 L260 370 L310 370"/>
-          </g>
-          <g opacity="0.04" stroke="rgba(240,165,0,0.4)" stroke-width="1" fill="none">
-            <path d="M450 560 L500 560 L515 530 L535 580 L555 510 L575 570 L595 540 L610 560 L640 560"/>
-          </g>
-        </svg>
-      </div>
-      <!-- Corner decorations -->
-      <svg class="cover-svg-corner tl" width="110" height="110" viewBox="0 0 110 110">
-        <path d="M0 0 L110 0 L110 5 L5 5 L5 110 L0 110 Z" fill="rgba(240,165,0,0.15)"/>
-        <path d="M12 12 L98 12 L98 17 L17 17 L17 98 L12 98 Z" fill="rgba(240,165,0,0.08)"/>
-        <path d="M22 22 L40 22" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
-        <path d="M22 22 L22 40" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
-      </svg>
-      <svg class="cover-svg-corner tr" width="110" height="110" viewBox="0 0 110 110">
-        <path d="M0 0 L110 0 L110 110 L105 110 L105 5 L0 5 Z" fill="rgba(240,165,0,0.15)"/>
-        <path d="M12 12 L98 12 L98 98 L93 98 L93 17 L12 17 Z" fill="rgba(240,165,0,0.08)"/>
-        <path d="M88 22 L98 22" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
-        <path d="M98 22 L98 40" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
-      </svg>
-      <svg class="cover-svg-corner bl" width="110" height="110" viewBox="0 0 110 110">
-        <path d="M0 0 L0 110 L110 110 L110 105 L5 105 L5 0 Z" fill="rgba(240,165,0,0.15)"/>
-        <path d="M12 12 L12 98 L98 98 L98 93 L17 93 L17 12 Z" fill="rgba(240,165,0,0.08)"/>
-        <path d="M22 88 L22 98" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
-        <path d="M22 88 L40 88" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
-      </svg>
-      <svg class="cover-svg-corner br" width="110" height="110" viewBox="0 0 110 110">
-        <path d="M110 0 L110 110 L0 110 L0 105 L105 105 L105 0 Z" fill="rgba(240,165,0,0.15)"/>
-        <path d="M98 12 L98 98 L12 98 L12 93 L93 93 L93 12 Z" fill="rgba(240,165,0,0.08)"/>
-        <path d="M98 88 L98 98" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
-        <path d="M78 98 L98 98" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
-      </svg>
-      <div class="cover-accent-bar-bottom"></div>
-      <div class="cover-frame">
-        <div class="cover-icon-wrap">
-          ${iconHtml ? iconHtml : '<svg viewBox="0 0 48 48" fill="none" stroke="rgba(240,165,0,0.8)" stroke-width="1.5"><path d="M24 4 C24 4,20 14,12 18 C4 22,4 32,12 36 C20 40,24 44,24 44 C24 44,28 40,36 36 C44 32,44 22,36 18 C28 14,24 4,24 4Z"/><path d="M24 14 L24 34 M14 24 L34 24" stroke="rgba(255,255,255,0.9)" stroke-width="2"/></svg>'}
-        </div>
-        <div class="cover-divider"></div>
-        <h1 class="cover-title">${esc(state.cover.title)}</h1>
-        ${state.cover.subtitle ? `<p class="cover-subtitle">${esc(state.cover.subtitle)}</p>` : ''}
-        ${state.cover.description ? `<p class="cover-description">${esc(state.cover.description)}</p>` : ''}
-        <div class="cover-meta">
-          ${state.cover.author ? `<span>✍️ ${esc(state.cover.author)}</span>` : ''}
-          ${state.cover.date ? `<span>📅 ${esc(state.cover.date)}</span>` : ''}
-          <span>📄 ${state.allQuestionsLoad.length} quiz${state.allQuestionsLoad.length !== 1 ? 'zes' : ''}</span>
-          <span>❓ ${totalQ} question${totalQ !== 1 ? 's' : ''}</span>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TABLE OF CONTENTS RENDERER
-// ═══════════════════════════════════════════════════════════════════════════════
-function renderToc() {
-  let html = '<div class="toc-page"><h2>📑 Table of Contents</h2>';
-  state.allQuestionsLoad.forEach((qd, i) => {
-    const title = (qd.config && qd.config.title) || (qd.meta && qd.meta.title) || 'Chapter ' + (i + 1);
-    const icon = (qd.config && qd.config.icon) || (qd.meta && qd.meta.icon) || '';
-    const qc = (qd.questions && qd.questions.length) || 0;
-    html += `<a class="toc-item" href="#chapter-${i + 1}">` +
-      `<span class="toc-num">${i + 1}</span>` +
-      `<span class="toc-title">${icon ? icon + ' ' : ''}${esc(title)}</span>` +
-      `<span class="toc-leader"></span>` +
-      `<span class="toc-pages">${qc} Q</span>` +
-      `</a>`;
-  });
-  html += '</div>';
-  return html;
 }
 
 function showGenerateStatus(msg, type) {
@@ -1800,162 +880,17 @@ function showGenerateStatus(msg, type) {
   el.className = 'status-msg ' + type;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PRINT WINDOW — shared by both export buttons
-// Opens a dedicated popup with all styles + content and auto-triggers print.
-// The browser's native PDF engine renders real vector text (fully copyable).
-// ═══════════════════════════════════════════════════════════════════════════════
-function openPrintWindow() {
-  if (!state.previewGenerated) {
-    showGenerateStatus('Generate the preview first.', 'error');
-    return;
-  }
-
-  const s = state.style;
-  const size = s.pageSize === 'letter' ? 'letter' : 'A4';
-  const orientation = s.orientation === 'landscape' ? 'landscape' : 'portrait';
-
-  // Collect all <style> and <link rel="stylesheet"> from current document
-  const styleNodes = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
-    .map(n => n.outerHTML).join('\n');
-
-  // Body content: only the print-area
-  const contentHtml = document.getElementById('print-area').innerHTML;
-
-  // Detect classes applied to print-area (layout + style classes)
-  const areaClasses = document.getElementById('print-area').className || '';
-  // Detect class on pdf-content (font class)
-  const pageClasses = document.getElementById('pdf-content').className || '';
-
-  const cssTitle = (state.cover.title || 'PDF Export').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-  const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${esc(state.cover.title || 'PDF Export')}</title>
-${styleNodes}
-<style>
-  @page { size: ${size} ${orientation}; margin: 2cm 1.8cm; @top-center { content: "${cssTitle}"; font: 8pt 'Outfit','Inter',sans-serif; font-weight:500; color:#c27803; letter-spacing:0.08em; text-transform:uppercase; } @bottom-center { content: counter(page); font: 8pt 'Outfit','Inter',sans-serif; color: #999; font-weight: 500; } }
-  @page cover-page { margin: 0; @top-center { content: none; } @bottom-center { content: none; } }
-  @page toc-page { margin: 2cm 1.8cm; @top-center { content: "${cssTitle}"; font: 8pt 'Outfit','Inter',sans-serif; font-weight:500; color:#c27803; letter-spacing:0.08em; text-transform:uppercase; } @bottom-center { content: counter(page, upper-roman); font: 8pt 'Outfit','Inter',sans-serif; color: #888; font-weight: 500; } }
-  html, body {
-    background: white !important;
-    color: black !important;
-    margin: 0; padding: 0;
-    font-size: 11pt;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-  #print-area { display: block !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; border-radius: 0; background: white; }
-  #print-area .pdf-page { padding: 1.3cm 1.8cm 1.1cm; max-width: none; }
-  .cover-page { min-height: 0 !important; padding: 0 !important; page-break-after: always; position: relative; z-index: 10; background: linear-gradient(135deg,#0a1628,#0f2027,#162d3a,#0d1b2a) !important; height: 100% !important; display: flex !important; flex-direction: column !important; justify-content: center !important; }
-  .cover-frame { border: none !important; padding: 3cm 2cm !important; width: 85% !important; max-width: 560px !important; height: auto !important; display: flex !important; flex-direction: column !important; align-items: center !important; box-sizing: border-box; }
-  .cover-accent-bar { height: 5px !important; display: block !important; }
-  .cover-accent-bar-bottom { height: 3px !important; display: block !important; }
-  .cover-svg-bg, .cover-svg-corner { display: block !important; }
-  .cover-page .cover-title { font-size: 2.8rem !important; color: #fff !important; }
-  .cover-page .cover-subtitle { font-size: 1rem !important; color: rgba(255,255,255,0.7) !important; }
-  .cover-page .cover-description { color: rgba(255,255,255,0.6) !important; }
-  .cover-page .cover-meta { color: rgba(255,255,255,0.5) !important; border-top-color: rgba(255,255,255,0.1) !important; }
-  .toc-page { page-break-after: always; page: toc-page; }
-  .cover-page { page: cover-page; }
-  .chapter-page { page-break-before: always; page-break-after: avoid; }
-  .page-num { display: none; }
-  .quiz-header { page-break-after: avoid; }
-  .question-item { page-break-inside: avoid; orphans: 3; widows: 3; }
-  .answer-key { page-break-inside: avoid; }
-  .textbook-layout { column-count: 2; column-gap: 1.8rem; column-rule: 1px solid #ddd; }
-  .textbook-layout .cover-page,
-  .textbook-layout .toc-page,
-  .textbook-layout .quiz-header,
-  .textbook-layout .chapter-page,
-  .textbook-layout .end-chapter-answers,
-  .textbook-layout .end-book-answers { column-span: all; }
-  .textbook-layout .question-item { break-inside: avoid; }
-  .styled-output .question-item { box-shadow: none !important; break-inside: avoid; border: 1px solid #e0e0e0; }
-  .end-chapter-answers, .end-book-answers { page-break-before: always; }
-  .written-item .written-answer-space { min-height: 4cm; }
-  a { text-decoration: none; color: inherit; }
-  .no-print { display: none !important; }
-</style>
-</head>
-<body>
-<div id="print-area" class="${areaClasses}">
-  <div class="${pageClasses}" id="pdf-content">${contentHtml}</div>
-</div>
-<script>
-  window.addEventListener('load', function() {
-    setTimeout(function() { window.print(); }, 300);
-  });
-<\/script>
-</body>
-</html>`;
-
-  const win = window.open('', '_blank', `width=900,height=700,toolbar=0,menubar=0,location=0`);
-  if (!win) {
-    showGenerateStatus('Pop-up blocked! Please allow pop-ups for this site to use the PDF export.', 'error');
-    return;
-  }
-  win.document.open();
-  win.document.write(html);
-  win.document.close();
-}
-
-function nativePrintPdf() {
-  if (!state.previewGenerated) {
-    showGenerateStatus('Generate the preview first.', 'error');
-    return;
-  }
-  // Set the document title into @page @top-center via dynamic style
-  updateDynamicPrintStyle();
-  window.print();
-}
-
-async function downloadPdf() {
-  openPrintWindow();
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// THEME
-// ═══════════════════════════════════════════════════════════════════════════════
-function toggleTheme() {
-  const html = document.documentElement;
-  const isDark = html.getAttribute('data-theme') === 'dark';
-  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
-  localStorage.setItem('quiz-theme', html.getAttribute('data-theme'));
-  document.getElementById('theme-toggle').textContent = isDark ? '☾' : '☀';
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// ESCAPE HTML
-// ═══════════════════════════════════════════════════════════════════════════════
-function esc(str) {
-  return String(str || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
 // INIT
-// ═══════════════════════════════════════════════════════════════════════════════
 (async function init() {
-  // Theme
   const savedTheme = localStorage.getItem('quiz-theme') || 'dark';
   document.documentElement.setAttribute('data-theme', savedTheme);
-  document.getElementById('theme-toggle').textContent = savedTheme === 'dark' ? '☀' : '☾';
+  document.getElementById('theme-toggle').textContent = savedTheme === 'dark' ? '\u2600' : '\u263E';
 
-  // Date
   const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   document.getElementById('cover-date').value = today;
 
-  // Detect Tauri
   state.isTauri = detectTauri();
 
-  // Check for URL query param (backward compat)
   const params = new URLSearchParams(window.location.search);
   const quizUrl = params.get('url') || params.get('quiz');
   if (quizUrl) {
@@ -1964,15 +899,14 @@ function esc(str) {
     switchStep('style');
   }
 
-  // Load project files (Tauri mode)
   if (state.isTauri) {
     await loadProjectFiles();
   } else {
-    document.getElementById('file-list').innerHTML = '<div style="padding:1.5rem;text-align:center;color:var(--text-muted);font-size:0.85rem">📂 For project file browsing, open this tool from the Admin Dashboard.</div>';
+    document.getElementById('file-list').innerHTML =
+      '<div style="padding:1.5rem;text-align:center;color:var(--text-muted);font-size:0.85rem">Open this tool from the Admin Dashboard to browse project files.</div>';
   }
 
   updateExportSummary();
-  updateStyleDepends();
 })();
 </script>
 </body>

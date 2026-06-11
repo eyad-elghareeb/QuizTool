@@ -20,6 +20,7 @@ portpicker = "0.1.1"
 open = { version = "5.3.5", features = ["shellexecute-on-windows"] }
 tiny_http = "0.12"
 notify = { version = "7", features = [] }
+genpdf = "0.2"
 
 [profile.release]
 strip = true

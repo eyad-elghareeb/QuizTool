@@ -7,8 +7,9 @@ mod commands;
 mod deploy;
 mod git;
 mod parser;
-mod templates;
+mod pdf;
 mod server;
+mod templates;
 
 use commands::ProjectRoot;
 use notify::{EventKind, RecursiveMode, Watcher};
@@ -212,6 +213,7 @@ fn main() {
             commands::read_external_file,
             commands::parse_json_questions,
             commands::load_exports_batch,
+            commands::export_pdf,
         ])
         .run(tauri::generate_context!())
         .expect("error while running QuizTool Admin");

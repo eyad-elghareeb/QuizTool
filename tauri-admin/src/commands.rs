@@ -1,6 +1,7 @@
 // commands.rs — All 19+ Tauri IPC commands (1:1 with Flask routes)
-use crate::{deploy, git, parser, templates};
+use crate::{deploy, git, parser, pdf, templates};
 use crate::server::QuizServer;
+use base64::Engine;
 use regex::Regex;
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
@@ -701,6 +702,22 @@ pub fn load_exports_batch(paths: Vec<String>, state: State<ProjectRoot>) -> Resu
         "total_requested": paths.len(),
         "total_loaded": results.len(),
         "skipped": skipped,
+    }))
+}
+
+#[tauri::command]
+pub fn export_pdf(config: Value) -> Result<Value, String> {
+    let cfg = pdf::ExportConfig::from_json(&config)?;
+    let pdf_bytes = pdf::generate_pdf(&cfg)?;
+    let b64 = base64::engine::general_purpose::STANDARD.encode(&pdf_bytes);
+    let filename = format!("{}.pdf", cfg.title.replace(|c: char| !c.is_alphanumeric() && c != ' ' && c != '-' && c != '_', "").trim());
+    let filename = if filename.trim().is_empty() { "export.pdf".into() } else { filename };
+    Ok(json!({
+        "pdf_base64": b64,
+        "filename": filename,
+        "size": pdf_bytes.len(),
+        "quiz_count": cfg.quizzes.len(),
+        "question_count": cfg.quizzes.iter().map(|q| q.questions.len()).sum::<usize>(),
     }))
 }
 

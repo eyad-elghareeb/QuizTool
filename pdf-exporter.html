@@ -176,7 +176,7 @@ label .hint{font-weight:400;font-size:0.78rem;color:var(--text-muted)}
 
 /* ─────────── PREVIEW / PRINT STYLES ─────────── */
 #print-area{background:white;color:black;padding:0;border-radius:8px;box-shadow:var(--shadow);display:none;margin-top:1.5rem;margin-bottom:2rem}
-#print-area .pdf-page{max-width:210mm;margin:0 auto;padding:2.5cm 2cm;font-family:'Inter',sans-serif;line-height:1.7}
+#print-area .pdf-page{max-width:210mm;margin:0 auto;padding:2cm 1.8cm;font-family:'Inter',sans-serif;line-height:1.6}
 #print-area .pdf-page.font-outfit{font-family:'Outfit',sans-serif}
 #print-area .pdf-page.font-playfair{font-family:'Playfair Display','Georgia',serif}
 #print-area .pdf-page.font-serif{font-family:'Georgia','Times New Roman',serif}
@@ -185,165 +185,173 @@ label .hint{font-weight:400;font-size:0.78rem;color:var(--text-muted)}
 #print-area .pdf-page.font-dm-serif{font-family:'DM Serif Display','Georgia',serif}
 #print-area .pdf-page.font-source-serif{font-family:'Source Serif 4','Georgia',serif}
 
-/* ── Premium Medical Cover Page ── */
+/* ── Premium Medical Cover Page — always exactly 1 full page ── */
 .cover-page {
   text-align: center;
   padding: 0;
   position: relative;
   min-height: 297mm;
+  height: 100vh;
+  max-height: 100vh;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  page-break-after: always;
+  page-break-before: avoid;
   box-sizing: border-box;
-  background: linear-gradient(135deg, #0a1628 0%, #0f2027 30%, #162d3a 60%, #0d1b2a 100%);
+  background: linear-gradient(165deg, #030712 0%, #0a1628 20%, #112240 45%, #0d2137 70%, #061018 100%);
   color: #fff;
   overflow: hidden;
   font-family: 'Outfit', 'Inter', sans-serif;
+  margin: 0;
+  width: 100%;
 }
-.cover-page::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse at 20% 80%, rgba(240,165,0,0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 20%, rgba(88,166,255,0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 50%, rgba(46,160,67,0.04) 0%, transparent 60%);
-  pointer-events: none;
-}
-/* Grid pattern overlay */
+/* Subtle dot grid overlay */
 .cover-page::after {
   content: '';
   position: absolute;
   inset: 0;
-  background-image:
-    linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
-  background-size: 40px 40px;
+  background-image: radial-gradient(rgba(255,255,255,0.035) 1px, transparent 1px);
+  background-size: 28px 28px;
   pointer-events: none;
 }
-.cover-svg-bg {
+/* Full-page medical icons SVG layer */
+.cover-bg-svg {
   position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.12;
-  overflow: hidden;
-}
-.cover-svg-bg svg {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-}
-.cover-svg-corner {
-  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
   pointer-events: none;
 }
-.cover-svg-corner.tl { top: 0; left: 0; }
-.cover-svg-corner.tr { top: 0; right: 0; transform: scaleX(-1); }
-.cover-svg-corner.bl { bottom: 0; left: 0; transform: scaleY(-1); }
-.cover-svg-corner.br { bottom: 0; right: 0; transform: scale(-1,-1); }
+/* Top gold accent bar */
 .cover-accent-bar {
   position: absolute;
   top: 0; left: 0; right: 0;
-  height: 5px;
-  background: linear-gradient(90deg, var(--accent), #f0a50088, transparent 80%);
-  z-index: 2;
+  height: 6px;
+  background: linear-gradient(90deg, #f0a500, #ffc94d 45%, rgba(240,165,0,0.3) 80%, transparent);
+  z-index: 3;
 }
+/* Bottom accent bar */
 .cover-accent-bar-bottom {
   position: absolute;
   bottom: 0; left: 0; right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, transparent 20%, #f0a50088, var(--accent));
-  z-index: 2;
+  height: 4px;
+  background: linear-gradient(90deg, transparent 20%, rgba(240,165,0,0.4), #f0a500 75%, #ffc94d);
+  z-index: 3;
 }
+/* Left side accent line */
+.cover-side-bar {
+  position: absolute;
+  top: 6px; left: 0; bottom: 4px;
+  width: 3px;
+  background: linear-gradient(180deg, rgba(240,165,0,0.7) 0%, rgba(240,165,0,0.1) 30%, rgba(240,165,0,0.1) 70%, rgba(240,165,0,0.7));
+  z-index: 3;
+}
+/* Corner bracket decorations */
+.cover-corner { position: absolute; pointer-events: none; z-index: 3; }
+.cover-corner.tl { top: 14px; left: 12px; }
+.cover-corner.tr { top: 14px; right: 12px; transform: scaleX(-1); }
+.cover-corner.bl { bottom: 12px; left: 12px; transform: scaleY(-1); }
+.cover-corner.br { bottom: 12px; right: 12px; transform: scale(-1,-1); }
+/* Center content frame */
 .cover-frame {
   position: relative;
-  z-index: 1;
-  width: 85%;
-  max-width: 560px;
-  padding: 3.5cm 2cm;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
+  gap: 0.55rem;
+  padding: 0 2.5cm;
+  max-width: 560px;
+  width: 100%;
+}
+/* Kicker badge */
+.cover-kicker {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #f0a500;
+  border: 1px solid rgba(240,165,0,0.4);
+  padding: 0.22rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(240,165,0,0.08);
+  margin-bottom: 0.2rem;
 }
 .cover-icon-wrap {
-  width: 90px;
-  height: 90px;
+  width: 82px; height: 82px;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(240,165,0,0.2), rgba(240,165,0,0.08));
-  border: 2px solid rgba(240,165,0,0.35);
+  background: radial-gradient(circle at 35% 35%, rgba(240,165,0,0.22), rgba(240,165,0,0.05));
+  border: 1.5px solid rgba(240,165,0,0.45);
+  box-shadow: 0 0 32px rgba(240,165,0,0.18), inset 0 1px 0 rgba(255,255,255,0.08);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 0.5rem;
-  position: relative;
+  margin-bottom: 0.15rem;
 }
-.cover-icon-wrap svg {
-  width: 48px;
-  height: 48px;
-}
-.cover-icon-wrap .cover-emoji {
-  font-size: 2.4rem;
-  line-height: 1;
-}
+.cover-icon-wrap .cover-emoji { font-size: 2.2rem; line-height: 1; }
+.cover-icon-wrap svg { width: 44px; height: 44px; }
 .cover-page .cover-title {
   font-family: 'DM Serif Display', 'Playfair Display', Georgia, serif;
-  font-size: 3.2rem;
+  font-size: 3rem;
   font-weight: 400;
-  line-height: 1.12;
+  line-height: 1.1;
   color: #fff;
   letter-spacing: -0.02em;
-  margin: 0.25rem 0;
-  text-shadow: 0 2px 20px rgba(0,0,0,0.3);
+  margin: 0.1rem 0;
+  text-shadow: 0 2px 30px rgba(0,0,0,0.5), 0 0 60px rgba(240,165,0,0.08);
 }
 .cover-page .cover-subtitle {
-  font-family: 'Outfit', 'Inter', sans-serif;
-  font-size: 1.1rem;
-  color: rgba(255,255,255,0.7);
+  font-size: 0.88rem;
+  color: rgba(255,255,255,0.62);
   font-weight: 400;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  margin: 0.25rem 0;
+  margin: 0.05rem 0;
 }
 .cover-page .cover-divider {
-  width: 70px;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  margin: 0.5rem auto;
+  width: 60px; height: 2px;
+  background: linear-gradient(90deg, transparent, #f0a500, transparent);
+  margin: 0.25rem auto;
   border-radius: 1px;
 }
 .cover-page .cover-description {
-  max-width: 480px;
-  margin: 0.5rem auto;
-  color: rgba(255,255,255,0.6);
-  font-size: 0.95rem;
-  line-height: 1.7;
-  font-family: 'Outfit', 'Inter', sans-serif;
+  max-width: 420px;
+  color: rgba(255,255,255,0.52);
+  font-size: 0.85rem;
+  line-height: 1.65;
   font-weight: 300;
 }
-.cover-page .cover-meta {
-  color: rgba(255,255,255,0.5);
-  font-size: 0.82rem;
-  margin-top: 1rem;
+.cover-stats {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 1.25rem;
+  gap: 0 1.4rem;
+  margin-top: 0.6rem;
+  padding-top: 0.7rem;
   border-top: 1px solid rgba(255,255,255,0.1);
-  padding-top: 1rem;
+  width: 100%;
+  color: rgba(255,255,255,0.48);
+  font-size: 0.76rem;
+}
+.cover-stat { display: inline-flex; align-items: center; gap: 0.28rem; font-weight: 300; }
+.cover-page .cover-meta {
+  color: rgba(255,255,255,0.48);
+  font-size: 0.76rem;
+  margin-top: 0.7rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  padding-top: 0.7rem;
   width: 100%;
 }
-.cover-page .cover-meta span {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-weight: 300;
-}
+.cover-page .cover-meta span { display: inline-flex; align-items: center; gap: 0.28rem; font-weight: 300; }
 .cover-deco-top{display:none}
 .cover-deco-bottom{display:none}
+/* Legacy SVG classes — hidden, replaced by cover-bg-svg */
+.cover-svg-corner { display: none !important; }
+.cover-svg-bg { display: none !important; }
 
 a.toc-item {
   color: inherit;
@@ -355,42 +363,41 @@ a.toc-item:hover .toc-title {
 }
 
 /* Table of contents */
-.toc-page{page-break-after:always;padding:2cm 2cm}
-.toc-page h2{font-family:'Playfair Display',serif;font-size:1.8rem;margin-bottom:1.5rem;border-bottom:2px solid #000;padding-bottom:0.5rem}
-.toc-item{display:flex;align-items:center;padding:0.6rem 0.4rem;border-bottom:1px dotted #ddd;font-size:0.95rem;text-decoration:none;color:inherit;transition:background 0.15s ease;border-radius:4px}
-.toc-item:hover{background:#f5f5f5}
-.toc-item .toc-num{font-weight:800;min-width:2.5rem;color:#8B6914;font-variant-numeric:tabular-nums}
+.toc-page{page-break-after:always;padding:1.5cm 1.5cm}
+.toc-page h2{font-family:'Playfair Display',serif;font-size:1.4rem;margin-bottom:1rem;border-bottom:1.5px solid #000;padding-bottom:0.3rem}
+.toc-item{display:flex;align-items:center;padding:0.3rem 0.3rem;border-bottom:1px dotted #ddd;font-size:0.82rem;text-decoration:none;color:inherit;border-radius:3px}
+.toc-item .toc-num{font-weight:700;min-width:2rem;color:#8B6914;font-variant-numeric:tabular-nums;font-size:0.8rem}
 .toc-item .toc-title{flex:1;font-weight:500}
-.toc-item .toc-pages{color:#888;font-size:0.85rem;min-width:4rem;text-align:right;font-variant-numeric:tabular-nums}
-.toc-item .toc-leader{flex:1;margin:0 0.5rem;border-bottom:1px dotted #ccc;height:1px;align-self:flex-end;margin-bottom:5px}
+.toc-item .toc-pages{color:#888;font-size:0.75rem;min-width:3rem;text-align:right;font-variant-numeric:tabular-nums}
+.toc-item .toc-leader{flex:1;margin:0 0.4rem;border-bottom:1px dotted #ccc;height:1px;align-self:flex-end;margin-bottom:4px}
 
 /* Quiz header / chapter header */
-.chapter-page{page-break-before:always;margin-bottom:1.5rem;background:linear-gradient(135deg,#0a1628,#162d3a);color:#fff;border-radius:0;position:relative;overflow:hidden;padding:0}
-.chapter-page::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--accent),rgba(240,165,0,0.3),transparent)}
-.chapter-page .chapter-inner{padding:1.4rem 1.8rem 1.2rem;position:relative;z-index:1}
-.chapter-page .chapter-number{font-size:0.72rem;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:0.2rem;font-weight:500}
-.chapter-page .chapter-title{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:#fff;margin-bottom:0.15rem}
-.chapter-page .chapter-desc{color:rgba(255,255,255,0.55);font-size:0.88rem}
+.chapter-page{page-break-before:always;margin-bottom:1rem;background:linear-gradient(135deg,#0a1628,#162d3a);color:#fff;border-radius:0;position:relative;overflow:hidden;padding:0}
+.chapter-page::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),rgba(240,165,0,0.3),transparent)}
+.chapter-page .chapter-inner{padding:1rem 1.5rem 0.9rem;position:relative;z-index:1}
+.chapter-page .chapter-number{font-size:0.65rem;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.15rem;font-weight:500}
+.chapter-page .chapter-title{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:#fff;margin-bottom:0.1rem}
+.chapter-page .chapter-desc{color:rgba(255,255,255,0.55);font-size:0.8rem}
 .chapter-divider{display:none}
 
-.quiz-header{margin-bottom:1.5rem;background:linear-gradient(135deg,#0a1628,#162d3a);color:#fff;position:relative;overflow:hidden;padding:0;text-align:center;padding:0}
-.quiz-header::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--accent),rgba(240,165,0,0.3),transparent)}
-.quiz-header .quiz-inner{padding:1.4rem 1.8rem 1.2rem;position:relative;z-index:1}
-.quiz-header h1{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:#fff;margin-bottom:0.15rem}
-.quiz-header p{color:rgba(255,255,255,0.55);font-size:0.88rem}
+.quiz-header{margin-bottom:1rem;background:linear-gradient(135deg,#0a1628,#162d3a);color:#fff;position:relative;overflow:hidden;padding:0;text-align:center}
+.quiz-header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),rgba(240,165,0,0.3),transparent)}
+.quiz-header .quiz-inner{padding:1rem 1.5rem 0.9rem;position:relative;z-index:1}
+.quiz-header h1{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:#fff;margin-bottom:0.1rem}
+.quiz-header p{color:rgba(255,255,255,0.55);font-size:0.8rem}
 
 /* Questions */
-.question-item{margin-bottom:1.5rem;page-break-inside:avoid}
-.question-text{font-size:1rem;font-weight:600;margin-bottom:0.6rem;line-height:1.6}
-.question-number{color:var(--accent);font-weight:700;margin-right:0.25rem}
-.options-list{list-style:none;margin-left:0.5rem}
-.option-item{display:flex;gap:0.65rem;margin-bottom:0.3rem;padding:0 0.5rem}
-.option-letter{font-weight:700;min-width:1.5rem;color:#333}
-.option-text{flex:1}
-.answer-key{margin-top:0.5rem;padding:0.6rem 0.75rem;background:#f5f5f5;border-left:3px solid #000;font-size:0.88rem;border-radius:0 6px 6px 0}
+.question-item{margin-bottom:0.8rem;page-break-inside:avoid}
+.question-text{font-size:0.92rem;font-weight:600;margin-bottom:0.35rem;line-height:1.5}
+.question-number{color:var(--accent);font-weight:700;margin-right:0.2rem}
+.options-list{list-style:none;margin-left:0.4rem}
+.option-item{display:flex;gap:0.45rem;margin-bottom:0.16rem;padding:0 0.25rem}
+.option-letter{font-weight:700;min-width:1.2rem;color:#333;font-size:0.88rem}
+.option-text{flex:1;font-size:0.88rem}
+.answer-key{margin-top:0.3rem;padding:0.3rem 0.55rem;background:#f5f5f5;border-left:3px solid #000;font-size:0.82rem;border-radius:0 5px 5px 0}
 .answer-key.hidden{display:none}
 .answer-key strong{color:#166534}
-.answer-key .expl{color:#555;margin-top:0.3rem;font-size:0.85rem}
+.answer-key .expl{color:#555;margin-top:0.15rem;font-size:0.78rem}
 
 /* 2-Column Textbook Layout */
 .textbook-layout{column-count:2;column-gap:2.5rem;column-rule:1px solid #ddd}
@@ -429,11 +436,16 @@ a.toc-item:hover .toc-title {
 .mcq-notes-layout.styled-output .question-item{padding:0.45rem 0.65rem;border-radius:6px;background:#fafafa;border:1px solid #eee}
 .mcq-notes-layout.styled-output .compact-answer{background:rgba(22,163,74,0.08);padding:0.1rem 0.4rem;border-radius:3px;display:inline-block}
 
-/* Compact */
-.compact-layout .question-item{margin-bottom:0.8rem}
-.compact-layout .question-text{font-size:0.9rem;margin-bottom:0.3rem}
-.compact-layout .option-item{padding:0.15rem 0.3rem;margin-bottom:0.1rem;font-size:0.85rem}
-.compact-layout .answer-key{padding:0.3rem 0.5rem;font-size:0.8rem}
+/* Compact — tighter fit for high-density content */
+.compact-layout .question-item{margin-bottom:0.35rem}
+.compact-layout .question-text{font-size:0.75rem;margin-bottom:0.15rem;line-height:1.35}
+.compact-layout .option-item{padding:0.05rem 0.15rem;margin-bottom:0.04rem;font-size:0.72rem;gap:0.3rem}
+.compact-layout .option-letter{font-size:0.72rem;min-width:1rem}
+.compact-layout .option-text{font-size:0.72rem}
+.compact-layout .answer-key{padding:0.15rem 0.35rem;font-size:0.68rem;margin-top:0.15rem}
+.compact-layout .answer-key strong{font-size:0.68rem}
+.compact-layout .answer-key .expl{font-size:0.65rem}
+.compact-layout .options-list{margin-left:0.25rem}
 
 /* Written content styles */
 .written-item .written-answer-space{
@@ -457,58 +469,14 @@ a.toc-item:hover .toc-title {
 .page-number-footer{text-align:center;font-size:0.75rem;color:#999;margin-top:1.5rem;padding-top:0.75rem;border-top:1px solid #eee}
 
 /* Answer key sections */
-.end-chapter-answers,.end-book-answers{page-break-before:always;padding:1.5rem 0}
-.end-chapter-answers h3,.end-book-answers h3{font-family:'Playfair Display',serif;font-size:1.5rem;margin-bottom:1rem;border-bottom:1px solid #ccc;padding-bottom:0.5rem}
-.answer-entry{display:flex;gap:0.75rem;padding:0.3rem 0;font-size:0.9rem;border-bottom:1px dotted #eee}
-.answer-entry .a-num{font-weight:700;min-width:2.5rem;color:var(--accent)}
-.answer-entry .a-answer{font-weight:600}
-.answer-entry .a-explain{color:#666;font-size:0.85rem}
+.end-chapter-answers,.end-book-answers{page-break-before:always;padding:1rem 0}
+.end-chapter-answers h3,.end-book-answers h3{font-family:'Playfair Display',serif;font-size:1.3rem;margin-bottom:0.8rem;border-bottom:1px solid #ccc;padding-bottom:0.35rem}
+.answer-entry{display:flex;gap:0.5rem;padding:0.2rem 0;font-size:0.82rem;border-bottom:1px dotted #eee}
+.answer-entry .a-num{font-weight:700;min-width:2rem;color:var(--accent);font-size:0.82rem}
+.answer-entry .a-answer{font-weight:600;font-size:0.82rem}
+.answer-entry .a-explain{color:#666;font-size:0.78rem}
 
-@page {
-  margin: 2cm 1.8cm;
-  @top-center {
-    content: "";
-    font-family: 'Outfit','Inter',sans-serif;
-    font-size: 8pt;
-    font-weight: 500;
-    color: #c27803;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-  @bottom-center {
-    content: counter(page);
-    font-family: 'Outfit','Inter',sans-serif;
-    font-size: 8pt;
-    color: #999;
-    font-weight: 500;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-}
-@page cover-page {
-  margin: 0;
-  @top-center { content: none; }
-  @bottom-center { content: none; }
-}
-@page toc-page {
-  margin: 2cm 1.8cm;
-  @top-center {
-    content: "";
-    font-family: 'Outfit','Inter',sans-serif;
-    font-size: 8pt;
-    font-weight: 500;
-    color: #c27803;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-  @bottom-center {
-    content: counter(page, upper-roman);
-    font-family: 'Outfit','Inter',sans-serif;
-    font-size: 8pt;
-    color: #888;
-    font-weight: 500;
-  }
-}
+
 
 @media print{
   .no-print{display:none!important}
@@ -517,28 +485,48 @@ a.toc-item:hover .toc-title {
     color:black!important;
     margin:0;
     padding:0;
-    font-size:11pt;
+    font-size:10.5pt;
     -webkit-print-color-adjust:exact!important;
     print-color-adjust:exact!important;
   }
   .container{max-width:none;margin:0;padding:0}
   #print-area{display:block!important;box-shadow:none!important;padding:0!important;margin:0!important;border-radius:0;background:white}
-  #print-area .pdf-page{padding:1.3cm 1.8cm 1.1cm;max-width:none}
-  .cover-page{min-height:0!important;padding:0!important;page-break-after:always;position:relative;z-index:10;background:linear-gradient(135deg,#0a1628,#0f2027,#162d3a,#0d1b2a)!important;height:100%!important;display:flex!important;flex-direction:column!important;justify-content:center!important}
-  .cover-frame{border:none!important;padding:3cm 2cm!important;width:85%!important;max-width:560px!important;height:auto!important;display:flex!important;flex-direction:column!important;align-items:center!important;box-sizing:border-box}
-  .cover-accent-bar{height:5px!important;display:block!important}
-  .cover-accent-bar-bottom{height:3px!important;display:block!important}
-  .cover-svg-bg,.cover-svg-corner{display:block!important}
-  .cover-page .cover-title{font-size:2.8rem!important;color:#fff!important}
-  .cover-page .cover-subtitle{font-size:1rem!important;color:rgba(255,255,255,0.7)!important}
-  .cover-page .cover-description{color:rgba(255,255,255,0.6)!important}
-  .cover-page .cover-meta{color:rgba(255,255,255,0.5)!important;border-top-color:rgba(255,255,255,0.1)!important}
-  .toc-page{page-break-after:always;padding:1.5cm 1.5cm!important}
-  .chapter-page{page-break-before:always;page-break-after:avoid;margin:-0.2cm -1.8cm 1.5rem;border-radius:0}
-  .quiz-header{page-break-after:avoid;margin:-0.2cm -1.8cm 1.5rem;border-radius:0;text-align:center}
-  .question-item{page-break-inside:avoid;orphans:3;widows:3}
+  #print-area .pdf-page{padding:0.8cm 1.4cm 0.6cm;max-width:none}
+  /* Cover: always exactly 1 full page, edge-to-edge */
+  .cover-page{
+    margin:0!important;
+    width:100%!important;
+    min-height:100vh!important;
+    height:100vh!important;
+    max-height:100vh!important;
+    padding:0!important;
+    page-break-before:avoid;
+    position:relative;
+    z-index:10;
+    background:linear-gradient(165deg,#030712,#0a1628 20%,#112240 45%,#0d2137 70%,#061018)!important;
+    display:flex!important;
+    flex-direction:column!important;
+    justify-content:center!important;
+    align-items:center!important;
+    -webkit-print-color-adjust:exact!important;
+    print-color-adjust:exact!important;
+    overflow:hidden!important;
+  }
+  .cover-accent-bar{display:block!important;height:5px!important}
+  .cover-accent-bar-bottom{display:block!important;height:3px!important}
+  .cover-side-bar{display:block!important}
+  .cover-bg-svg{display:block!important;position:absolute!important;top:0!important;left:0!important;width:100%!important;height:100%!important}
+  .cover-corner{display:block!important}
+  .cover-page .cover-title{font-size:2.5rem!important;color:#fff!important}
+  .cover-page .cover-subtitle{font-size:0.8rem!important;color:rgba(255,255,255,0.62)!important}
+  .cover-page .cover-description{color:rgba(255,255,255,0.52)!important}
+  .cover-stats,.cover-page .cover-meta{color:rgba(255,255,255,0.48)!important;border-top-color:rgba(255,255,255,0.1)!important}
+  .toc-page{page-break-after:always;padding:1.2cm 1.4cm!important}
+  .chapter-page{page-break-before:always;page-break-after:avoid;margin:-0.1cm -1.3rem 0.8rem;border-radius:0}
+  .quiz-header{page-break-after:avoid;margin:-0.1cm -1.3rem 0.8rem;border-radius:0;text-align:center;padding:0!important}
+  .question-item{page-break-inside:avoid;orphans:2;widows:2}
   .answer-key{page-break-inside:avoid}
-  .textbook-layout{column-count:2;column-gap:1.8rem;column-rule:1px solid #ddd}
+  .textbook-layout{column-count:2;column-gap:1.2rem;column-rule:0.5pt solid #ddd}
   .textbook-layout .cover-page,
   .textbook-layout .toc-page,
   .textbook-layout .quiz-header,
@@ -548,11 +536,76 @@ a.toc-item:hover .toc-title {
   .textbook-layout .question-item{break-inside:avoid}
   .styled-output .question-item{box-shadow:none!important;break-inside:avoid;border:1px solid #e0e0e0}
   .end-chapter-answers,.end-book-answers{page-break-before:always}
-  .written-item .written-answer-space{min-height:4cm}
+  .written-item .written-answer-space{min-height:3.5cm}
   a{text-decoration:none;color:inherit}
   .cover-page{page:cover-page}
   .toc-page{page:toc-page}
+  .first-chapter{counter-reset:page 1}
   .page-num{display:none}
+}
+
+@page {
+  margin: 1.3cm 1.4cm 1.4cm;
+  @top-left {
+    content: "";
+    font-family: 'Outfit','Inter',sans-serif;
+    font-size: 7pt;
+    font-weight: 600;
+    color: #b8860b;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    vertical-align: bottom;
+    padding-bottom: 4pt;
+    border-bottom: 0.5pt solid rgba(184,134,11,0.25);
+  }
+  @top-right {
+    content: "✦";
+    font-size: 7pt;
+    color: rgba(184,134,11,0.3);
+    vertical-align: bottom;
+    padding-bottom: 4pt;
+    border-bottom: 0.5pt solid rgba(184,134,11,0.25);
+  }
+  @bottom-center {
+    content: "— " counter(page) " —";
+    font-family: 'Outfit','Inter',sans-serif;
+    font-size: 7pt;
+    color: #888;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+@page cover-page {
+  margin: 0;
+  @top-left { content: none; border: none; }
+  @top-right { content: none; border: none; }
+  @bottom-center { content: none; }
+}
+@page toc-page {
+  margin: 1.3cm 1.4cm 1.4cm;
+  @top-left {
+    content: "";
+    font-family: 'Outfit','Inter',sans-serif;
+    font-size: 7pt;
+    font-weight: 600;
+    color: #b8860b;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    vertical-align: bottom;
+    padding-bottom: 4pt;
+    border-bottom: 0.5pt solid rgba(184,134,11,0.25);
+  }
+  @top-right {
+    content: "✦";
+    font-size: 7pt;
+    color: rgba(184,134,11,0.3);
+    vertical-align: bottom;
+    padding-bottom: 4pt;
+    border-bottom: 0.5pt solid rgba(184,134,11,0.25);
+  }
+  @bottom-center { content: none; }
 }
 
 /* Print header/footer use @page margin-boxes — no fixed-position elements */
@@ -1376,45 +1429,63 @@ function updateDynamicPrintStyle() {
   const size = state.style.pageSize === 'letter' ? 'letter' : 'A4';
   const orientation = state.style.orientation === 'landscape' ? 'landscape' : 'portrait';
   const title = state.cover.title || 'Quiz Compilation';
-  // Escape for CSS string content
   const cssTitle = title.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   styleEl.textContent = `
-    @media print {
-      @page {
-        size: ${size} ${orientation};
-        margin: 2cm 1.8cm;
-        @top-center {
-          content: "${cssTitle}";
-          font: 8pt 'Outfit','Inter',sans-serif;
-          font-weight: 500;
-          color: #c27803;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-        }
-        @bottom-center {
-          content: counter(page);
-          font: 8pt 'Outfit','Inter',sans-serif;
-          color: #999;
-          font-weight: 500;
-        }
+    @page {
+      size: ${size} ${orientation};
+      margin: 1.3cm 1.4cm 1.4cm;
+      @top-left {
+        content: "${cssTitle}";
+        font: 600 7pt 'Outfit','Inter',sans-serif;
+        color: #b8860b;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        vertical-align: bottom;
+        padding-bottom: 4pt;
+        border-bottom: 0.5pt solid rgba(184,134,11,0.25);
+      }
+      @top-right {
+        content: "✦";
+        font-size: 7pt;
+        color: rgba(184,134,11,0.3);
+        vertical-align: bottom;
+        padding-bottom: 4pt;
+        border-bottom: 0.5pt solid rgba(184,134,11,0.25);
+      }
+      @bottom-center {
+        content: "— " counter(page) " —";
+        font: 500 7pt 'Outfit','Inter',sans-serif;
+        color: #888;
+        letter-spacing: 0.05em;
       }
     }
     @page cover-page {
       margin: 0;
-      @top-center { content: none; }
+      @top-left { content: none; border: none; }
+      @top-right { content: none; border: none; }
       @bottom-center { content: none; }
     }
     @page toc-page {
-      margin: 2cm 1.8cm;
-      @top-center {
+      margin: 1.3cm 1.4cm 1.4cm;
+      @top-left {
         content: "${cssTitle}";
-        font: 8pt 'Outfit','Inter',sans-serif;
-        font-weight: 500;
-        color: #c27803;
+        font: 600 7pt 'Outfit','Inter',sans-serif;
+        color: #b8860b;
         letter-spacing: 0.08em;
         text-transform: uppercase;
+        vertical-align: bottom;
+        padding-bottom: 4pt;
+        border-bottom: 0.5pt solid rgba(184,134,11,0.25);
       }
-      @bottom-center { content: counter(page, upper-roman); font: 8pt 'Outfit','Inter',sans-serif; color: #888; font-weight: 500; }
+      @top-right {
+        content: "✦";
+        font-size: 7pt;
+        color: rgba(184,134,11,0.3);
+        vertical-align: bottom;
+        padding-bottom: 4pt;
+        border-bottom: 0.5pt solid rgba(184,134,11,0.25);
+      }
+      @bottom-center { content: none; }
     }
   `;
 }
@@ -1452,10 +1523,20 @@ async function generatePreview() {
 
   status.innerHTML = '<span class="spinner"></span> Building preview...';
 
-  // Build PDF content
-  const content = buildPdfContent();
-  document.getElementById('pdf-content').innerHTML = content;
+  // Build PDF content (cover separate, rest in pdf-page)
+  const { coverHtml, bodyHtml } = buildPdfContent();
   const area = document.getElementById('print-area');
+  area.innerHTML = '';
+  if (coverHtml) {
+    const coverWrap = document.createElement('div');
+    coverWrap.innerHTML = coverHtml;
+    area.appendChild(coverWrap.firstElementChild);
+  }
+  const pageDiv = document.createElement('div');
+  pageDiv.className = 'pdf-page';
+  pageDiv.id = 'pdf-content';
+  pageDiv.innerHTML = bodyHtml;
+  area.appendChild(pageDiv);
   area.style.display = 'block';
 
   // Apply layout classes
@@ -1500,10 +1581,11 @@ async function generatePreview() {
 // ═══════════════════════════════════════════════════════════════════════════════
 function buildPdfContent() {
   const parts = [];
+  let coverHtml = '';
 
-  // ── Cover Page ──
+  // ── Cover Page (returned separately, NOT inside pdf-page) ──
   if (state.cover.include) {
-    parts.push(renderCoverPage());
+    coverHtml = renderCoverPage();
   }
 
   // ── Table of Contents ──
@@ -1523,7 +1605,7 @@ function buildPdfContent() {
     // Chapter header (styled like the print header)
     if (state.allQuestionsLoad.length > 1) {
       parts.push(`
-        <div class="chapter-page" id="chapter-${ci + 1}">
+        <div class="chapter-page${ci === 0 ? ' first-chapter' : ''}" id="chapter-${ci + 1}">
           <div class="chapter-inner">
             <div class="chapter-number">Chapter ${ci + 1}</div>
             <div class="chapter-title">${esc(config.title || quizData.meta.title || 'Untitled')}</div>
@@ -1534,9 +1616,9 @@ function buildPdfContent() {
       `);
     } else {
       parts.push(`
-        <div class="quiz-header" id="chapter-1">
+        <div class="quiz-header first-chapter" id="chapter-1">
           <div class="quiz-inner">
-            ${config.icon ? `<div style="font-size:1.6rem;margin-bottom:0.2rem;opacity:0.7">${config.icon}</div>` : ''}
+            ${config.icon ? `<div style="font-size:1.4rem;margin-bottom:0.15rem;opacity:0.7">${config.icon}</div>` : ''}
             <h1>${esc(config.title || quizData.meta.title || 'Untitled')}</h1>
             ${config.description ? `<p>${esc(config.description)}</p>` : ''}
           </div>
@@ -1630,149 +1712,284 @@ function buildPdfContent() {
     parts.push('</div>');
   }
 
-  return parts.join('\n');
+  return { coverHtml, bodyHtml: parts.join('\n') };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// COVER PAGE RENDERER
+// COVER PAGE RENDERER — Edge-to-Edge with Scattered Medical Icons
 // ═══════════════════════════════════════════════════════════════════════════════
 function renderCoverPage() {
   const totalQ = state.allQuestionsLoad.reduce((s, f) => s + (f.questions ? f.questions.length : 0), 0);
   const iconHtml = state.cover.icon && !state.cover.icon.startsWith('<')
     ? `<span class="cover-emoji">${state.cover.icon}</span>`
     : state.cover.icon || '';
+
   return `
     <div class="cover-page">
+      <!-- ── Full-page medical icons SVG background ── -->
+      <svg class="cover-bg-svg" viewBox="0 0 595 842" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <radialGradient id="cg1" cx="15%" cy="70%" r="50%">
+            <stop offset="0%" stop-color="rgba(240,165,0,0.12)"/>
+            <stop offset="60%" stop-color="transparent"/>
+          </radialGradient>
+          <radialGradient id="cg2" cx="85%" cy="25%" r="45%">
+            <stop offset="0%" stop-color="rgba(88,166,255,0.08)"/>
+            <stop offset="100%" stop-color="transparent"/>
+          </radialGradient>
+          <radialGradient id="cg3" cx="50%" cy="50%" r="55%">
+            <stop offset="0%" stop-color="rgba(46,160,67,0.05)"/>
+            <stop offset="100%" stop-color="transparent"/>
+          </radialGradient>
+          <radialGradient id="cg4" cx="50%" cy="90%" r="35%">
+            <stop offset="0%" stop-color="rgba(200,150,255,0.06)"/>
+            <stop offset="100%" stop-color="transparent"/>
+          </radialGradient>
+        </defs>
+        <!-- Ambient glows -->
+        <rect x="0" y="0" width="595" height="842" fill="url(#cg1)"/>
+        <rect x="0" y="0" width="595" height="842" fill="url(#cg2)"/>
+        <rect x="0" y="0" width="595" height="842" fill="url(#cg3)"/>
+        <rect x="0" y="0" width="595" height="842" fill="url(#cg4)"/>
+
+        <!-- STETHOSCOPE — top right, larger -->
+        <g transform="translate(470,50) rotate(-10) scale(1.05)" fill="none" stroke="rgba(240,190,55,1)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.17">
+          <circle cx="18" cy="72" r="18"/>
+          <ellipse cx="18" cy="72" rx="11" ry="11" stroke-opacity="0.5"/>
+          <circle cx="18" cy="72" r="22" stroke-width="0.8" stroke-dasharray="3 3" stroke-opacity="0.35"/>
+          <path d="M18 50 L18 18 Q18 -6, 0 -8 Q-20 -10, -20 10 L-20 28"/>
+          <path d="M18 50 L18 18 Q18 -6, 36 -8 Q56 -10, 56 10 L56 28"/>
+          <line x1="-20" y1="28" x2="-32" y2="14"/>
+          <line x1="56" y1="28" x2="68" y2="14"/>
+          <circle cx="-32" cy="14" r="5" fill="rgba(240,190,55,0.25)" stroke-width="1.2"/>
+          <circle cx="68" cy="14" r="5" fill="rgba(240,190,55,0.25)" stroke-width="1.2"/>
+        </g>
+
+        <!-- DNA DOUBLE HELIX — top left -->
+        <g transform="translate(42,28)" fill="none" stroke-linecap="round" opacity="0.15">
+          <path d="M8 0 C22 18, -4 36, 8 54 C22 72, -4 90, 8 108 C22 126, -4 144, 8 162 C22 180, -4 198, 8 216" stroke="rgba(88,166,255,1)" stroke-width="2"/>
+          <path d="M32 0 C18 18, 44 36, 32 54 C18 72, 44 90, 32 108 C18 126, 44 144, 32 162 C18 180, 44 198, 32 216" stroke="rgba(88,166,255,1)" stroke-width="2"/>
+          <line x1="9" y1="27" x2="31" y2="27" stroke="rgba(150,200,255,0.7)" stroke-width="1.2"/>
+          <line x1="8" y1="54" x2="32" y2="54" stroke="rgba(150,200,255,0.7)" stroke-width="1.2"/>
+          <line x1="9" y1="81" x2="31" y2="81" stroke="rgba(150,200,255,0.7)" stroke-width="1.2"/>
+          <line x1="8" y1="108" x2="32" y2="108" stroke="rgba(150,200,255,0.7)" stroke-width="1.2"/>
+          <line x1="9" y1="135" x2="31" y2="135" stroke="rgba(150,200,255,0.7)" stroke-width="1.2"/>
+          <line x1="8" y1="162" x2="32" y2="162" stroke="rgba(150,200,255,0.7)" stroke-width="1.2"/>
+          <circle cx="9" cy="27" r="2" fill="rgba(88,166,255,0.4)"/>
+          <circle cx="31" cy="27" r="2" fill="rgba(88,166,255,0.4)"/>
+          <circle cx="8" cy="81" r="2" fill="rgba(88,166,255,0.4)"/>
+          <circle cx="32" cy="81" r="2" fill="rgba(88,166,255,0.4)"/>
+        </g>
+
+        <!-- ECG / HEARTBEAT LINE — right side -->
+        <g transform="translate(455,305)" fill="none" stroke="rgba(240,80,80,1)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.18">
+          <polyline points="-10,20 10,20 18,-2 26,44 36,-8 46,46 56,20 70,20 85,20"/>
+        </g>
+        <!-- Smaller ECG bottom -->
+        <g transform="translate(105,745)" fill="none" stroke="rgba(240,80,80,1)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity="0.13">
+          <polyline points="0,15 18,15 25,-2 33,30 41,-5 49,32 57,15 72,15 88,15"/>
+        </g>
+
+        <!-- SYRINGE — bottom left -->
+        <g transform="translate(38,615) rotate(-32)" fill="none" stroke="rgba(240,190,55,1)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity="0.15">
+          <rect x="-6" y="-52" width="22" height="7" rx="2"/>
+          <line x1="5" y1="-45" x2="5" y2="-52"/>
+          <rect x="-6" y="-45" width="22" height="65" rx="4"/>
+          <line x1="-6" y1="-20" x2="-12" y2="-20"/>
+          <line x1="-6" y1="0" x2="-12" y2="0"/>
+          <line x1="-6" y1="12" x2="-12" y2="12"/>
+          <rect x="-4" y="-39" width="18" height="6" rx="2" fill="rgba(240,190,55,0.18)"/>
+          <path d="M-6 26 L-4 34 L14 34 L16 26"/>
+          <line x1="5" y1="34" x2="5" y2="56" stroke-width="1.2"/>
+        </g>
+
+        <!-- MICROSCOPE — bottom right -->
+        <g transform="translate(500,695) scale(0.85)" fill="none" stroke="rgba(240,190,55,1)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity="0.15">
+          <rect x="-8" y="-82" width="16" height="12" rx="4"/>
+          <line x1="0" y1="-82" x2="0" y2="-75"/>
+          <line x1="0" y1="-70" x2="0" y2="-30"/>
+          <path d="M0 -30 L20 -2"/>
+          <rect x="15" y="-5" width="10" height="22" rx="4" fill="rgba(240,190,55,0.1)"/>
+          <ellipse cx="-12" cy="-42" rx="6" ry="10" fill="rgba(240,190,55,0.12)" stroke-width="1.2"/>
+          <rect x="-28" y="22" width="60" height="8" rx="3"/>
+          <line x1="-12" y1="22" x2="-12" y2="17"/>
+          <line x1="12" y1="22" x2="12" y2="17"/>
+          <path d="M-28 30 L-34 52 L34 52 L28 30"/>
+          <line x1="20" y1="22" x2="20" y2="14"/>
+          <circle cx="20" cy="10" r="3.5" fill="rgba(240,190,55,0.18)"/>
+        </g>
+
+        <!-- Large medical cross — top center right -->
+        <g transform="translate(345,88) scale(1.15)" fill="none" stroke="rgba(240,190,55,1)" stroke-width="2" opacity="0.14">
+          <path d="M-9 -22 L9 -22 L9 -9 L22 -9 L22 9 L9 9 L9 22 L-9 22 L-9 9 L-22 9 L-22 -9 L-9 -9 Z"/>
+        </g>
+        <!-- Medium cross — lower left -->
+        <g transform="translate(72,695) scale(0.7)" fill="none" stroke="rgba(240,190,55,1)" stroke-width="1.8" opacity="0.12">
+          <path d="M-9 -22 L9 -22 L9 -9 L22 -9 L22 9 L9 9 L9 22 L-9 22 L-9 9 L-22 9 L-22 -9 L-9 -9 Z"/>
+        </g>
+        <!-- Small cross — top left -->
+        <g transform="translate(150,65) scale(0.5)" fill="none" stroke="rgba(255,255,255,1)" stroke-width="2" opacity="0.09">
+          <path d="M-9 -22 L9 -22 L9 -9 L22 -9 L22 9 L9 9 L9 22 L-9 22 L-9 9 L-22 9 L-22 -9 L-9 -9 Z"/>
+        </g>
+        <!-- Extra cross — right margin middle -->
+        <g transform="translate(548,260) scale(0.45)" fill="none" stroke="rgba(240,190,55,1)" stroke-width="1.5" opacity="0.1">
+          <path d="M-9 -22 L9 -22 L9 -9 L22 -9 L22 9 L9 9 L9 22 L-9 22 L-9 9 L-22 9 L-22 -9 L-9 -9 Z"/>
+        </g>
+
+        <!-- PILL CAPSULE 1 -->
+        <g transform="translate(485,475) rotate(28)" fill="none" stroke="rgba(80,200,140,1)" stroke-width="1.8" stroke-linecap="round" opacity="0.14">
+          <path d="M-20 -7 Q-28 -7, -28 0 Q-28 7, -20 7 L20 7 Q28 7, 28 0 Q28 -7, 20 -7 Z"/>
+          <line x1="0" y1="-7" x2="0" y2="7" stroke="rgba(80,200,140,0.5)"/>
+          <path d="M-20 -7 Q-28 -7, -28 0 Q-28 7, -20 7 L0 7 L0 -7 Z" fill="rgba(80,200,140,0.1)"/>
+        </g>
+        <!-- PILL CAPSULE 2 — top -->
+        <g transform="translate(210,92) rotate(-22)" fill="none" stroke="rgba(80,200,140,1)" stroke-width="1.5" stroke-linecap="round" opacity="0.11">
+          <path d="M-14 -5 Q-20 -5, -20 0 Q-20 5, -14 5 L14 5 Q20 5, 20 0 Q20 -5, 14 -5 Z"/>
+          <line x1="0" y1="-5" x2="0" y2="5"/>
+        </g>
+        <!-- PILL CAPSULE 3 — lower right -->
+        <g transform="translate(390,785) rotate(45)" fill="none" stroke="rgba(80,200,140,1)" stroke-width="1.5" stroke-linecap="round" opacity="0.1">
+          <path d="M-12 -4 Q-16 -4, -16 0 Q-16 4, -12 4 L12 4 Q16 4, 16 0 Q16 -4, 12 -4 Z"/>
+          <line x1="0" y1="-4" x2="0" y2="4"/>
+        </g>
+
+        <!-- CADUCEUS STAFF — right middle -->
+        <g transform="translate(540,365)" fill="none" stroke="rgba(240,190,55,1)" stroke-width="1.5" stroke-linecap="round" opacity="0.13">
+          <line x1="0" y1="-50" x2="0" y2="50"/>
+          <path d="M0 -38 Q-16 -52, -20 -44 Q-12 -32, 0 -38"/>
+          <path d="M0 -38 Q16 -52, 20 -44 Q12 -32, 0 -38"/>
+          <circle cx="0" cy="-52" r="4.5" fill="rgba(240,190,55,0.2)"/>
+          <path d="M-10 -24 C-22 -12, -22 4, 0 10 C22 16, 22 32, 0 48" stroke="rgba(240,190,55,0.75)"/>
+          <path d="M10 -24 C22 -12, 22 4, 0 10 C-22 16, -22 32, 0 48" stroke="rgba(240,190,55,0.75)"/>
+          <circle cx="-10" cy="-24" r="3" fill="rgba(240,190,55,0.25)"/>
+          <circle cx="10" cy="-24" r="3" fill="rgba(240,190,55,0.25)"/>
+        </g>
+
+        <!-- THERMOMETER — upper right -->
+        <g transform="translate(415,68) rotate(18)" fill="none" stroke="rgba(240,190,55,1)" stroke-width="1.5" stroke-linecap="round" opacity="0.13">
+          <rect x="-4" y="-42" width="8" height="52" rx="4"/>
+          <rect x="-2" y="-5" width="4" height="18" rx="2" fill="rgba(240,80,80,0.45)"/>
+          <circle cx="0" cy="18" r="8" fill="rgba(240,80,80,0.3)" stroke="rgba(240,80,80,0.7)"/>
+          <line x1="4" y1="-28" x2="9" y2="-28"/>
+          <line x1="4" y1="-16" x2="9" y2="-16"/>
+          <line x1="4" y1="-4" x2="9" y2="-4"/>
+        </g>
+
+        <!-- ATOM — middle left -->
+        <g transform="translate(55,415)" fill="none" stroke="rgba(88,166,255,1)" stroke-width="1.4" opacity="0.12">
+          <circle cx="0" cy="0" r="6" fill="rgba(88,166,255,0.18)"/>
+          <ellipse cx="0" cy="0" rx="30" ry="12"/>
+          <ellipse cx="0" cy="0" rx="30" ry="12" transform="rotate(60)"/>
+          <ellipse cx="0" cy="0" rx="30" ry="12" transform="rotate(120)"/>
+          <circle cx="30" cy="0" r="2.5" fill="rgba(88,166,255,0.45)"/>
+          <circle cx="-30" cy="0" r="2.5" fill="rgba(88,166,255,0.45)"/>
+        </g>
+
+        <!-- BRAIN outline — center left -->
+        <g transform="translate(58,555) scale(0.85)" fill="none" stroke="rgba(200,150,255,1)" stroke-width="1.5" stroke-linecap="round" opacity="0.11">
+          <path d="M20 -10 C35 -25, 55 -20, 55 -5 C65 -8, 72 2, 68 12 C74 16, 74 28, 65 30 C65 42, 55 48, 44 44 C38 50, 24 50, 18 44 C10 50, -2 46, -5 36 C-14 34, -16 22, -10 16 C-14 6, -8 -4, 0 -2 C2 -16, 12 -20, 20 -10 Z"/>
+          <path d="M20 -8 C18 2, 22 10, 18 20" stroke-opacity="0.5"/>
+          <path d="M35 -18 C32 -8, 38 0, 34 12" stroke-opacity="0.5"/>
+        </g>
+
+        <!-- RX SYMBOL — top area -->
+        <g transform="translate(295,62)" fill="none" stroke="rgba(255,255,255,1)" stroke-width="1.8" stroke-linecap="round" opacity="0.09">
+          <path d="M-16 12 L-16 -12 L-7 -12 Q0 -12, 0 -5 Q0 2, -7 2 L-16 2"/>
+          <line x1="-7" y1="2" x2="0" y2="12"/>
+          <line x1="7" y1="-12" x2="20" y2="12"/>
+          <line x1="7" y1="12" x2="20" y2="-12"/>
+        </g>
+
+        <!-- Molecular chain — lower middle -->
+        <g transform="translate(245,765)" fill="none" stroke="rgba(88,166,255,1)" stroke-width="1.2" opacity="0.1" stroke-linecap="round">
+          <circle cx="0" cy="0" r="5" fill="rgba(88,166,255,0.12)"/>
+          <line x1="5" y1="0" x2="18" y2="0"/>
+          <circle cx="23" cy="0" r="5" fill="rgba(88,166,255,0.12)"/>
+          <line x1="28" y1="0" x2="41" y2="0"/>
+          <circle cx="46" cy="0" r="5" fill="rgba(88,166,255,0.12)"/>
+          <line x1="51" y1="0" x2="64" y2="0"/>
+          <circle cx="69" cy="0" r="5" fill="rgba(88,166,255,0.12)"/>
+        </g>
+
+        <!-- Spine / vertebrae column — left edge middle -->
+        <g transform="translate(18,290)" fill="none" stroke="rgba(240,190,55,1)" stroke-width="1.2" opacity="0.08">
+          <rect x="0" y="0" width="8" height="6" rx="2"/>
+          <line x1="4" y1="6" x2="4" y2="10"/>
+          <rect x="0" y="10" width="8" height="6" rx="2"/>
+          <line x1="4" y1="16" x2="4" y2="20"/>
+          <rect x="0" y="20" width="8" height="6" rx="2"/>
+          <line x1="4" y1="26" x2="4" y2="30"/>
+          <rect x="0" y="30" width="8" height="6" rx="2"/>
+          <line x1="4" y1="36" x2="4" y2="40"/>
+          <rect x="0" y="40" width="8" height="6" rx="2"/>
+        </g>
+
+        <!-- Scattered sparkle dots -->
+        <circle cx="148" cy="188" r="2.5" fill="rgba(240,190,55,0.16)"/>
+        <circle cx="448" cy="218" r="2" fill="rgba(240,190,55,0.13)"/>
+        <circle cx="92" cy="302" r="2.5" fill="rgba(88,166,255,0.12)"/>
+        <circle cx="545" cy="580" r="2.5" fill="rgba(240,190,55,0.16)"/>
+        <circle cx="178" cy="670" r="2" fill="rgba(80,200,140,0.13)"/>
+        <circle cx="380" cy="740" r="2.5" fill="rgba(88,166,255,0.1)"/>
+        <circle cx="480" cy="160" r="2" fill="rgba(80,200,140,0.11)"/>
+        <circle cx="38" cy="200" r="2" fill="rgba(240,190,55,0.1)"/>
+        <circle cx="555" cy="128" r="2" fill="rgba(88,166,255,0.1)"/>
+        <circle cx="250" cy="715" r="2" fill="rgba(240,190,55,0.08)"/>
+        <circle cx="100" cy="500" r="2.5" fill="rgba(80,200,140,0.09)"/>
+        <circle cx="425" cy="620" r="1.8" fill="rgba(88,166,255,0.09)"/>
+
+        <!-- Thin diagonal accent lines -->
+        <line x1="0" y1="220" x2="60" y2="160" stroke="rgba(240,165,0,0.05)" stroke-width="0.8"/>
+        <line x1="520" y1="842" x2="595" y2="777" stroke="rgba(240,165,0,0.05)" stroke-width="0.8"/>
+        <line x1="0" y1="780" x2="50" y2="730" stroke="rgba(240,165,0,0.04)" stroke-width="0.8"/>
+      </svg>
+
+      <!-- Accent bars -->
       <div class="cover-accent-bar"></div>
-      <div class="cover-svg-bg">
-        <svg viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice">
-          <defs>
-            <linearGradient id="svg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="rgba(240,165,0,0.06)"/>
-              <stop offset="100%" stop-color="rgba(240,165,0,0.01)"/>
-            </linearGradient>
-            <!-- Reusable symbols -->
-            <g id="bacteria-cocci">
-              <circle cx="0" cy="0" r="4" fill="none" stroke="rgba(240,165,0,0.4)" stroke-width="1.2"/>
-              <circle cx="7" cy="3" r="3.5" fill="none" stroke="rgba(240,165,0,0.3)" stroke-width="1"/>
-              <circle cx="-6" cy="5" r="3" fill="none" stroke="rgba(240,165,0,0.25)" stroke-width="0.8"/>
-              <circle cx="4" cy="-5" r="2.5" fill="none" stroke="rgba(240,165,0,0.2)" stroke-width="0.8"/>
-            </g>
-            <g id="bacteria-bacillus">
-              <ellipse cx="0" cy="0" rx="7" ry="3" fill="none" stroke="rgba(88,166,255,0.35)" stroke-width="1"/>
-              <ellipse cx="10" cy="2" rx="5" ry="2.5" fill="none" stroke="rgba(88,166,255,0.25)" stroke-width="0.8"/>
-              <ellipse cx="-8" cy="-1" rx="4" ry="2" fill="none" stroke="rgba(88,166,255,0.2)" stroke-width="0.8"/>
-            </g>
-            <g id="heart">
-              <path d="M0 0 C0 -8,6 -12,10 -8 C14 -12,20 -8,20 0 C20 6,10 14,10 14 C10 14,0 6,0 0Z" fill="none" stroke="rgba(240,165,0,0.35)" stroke-width="1"/>
-            </g>
-            <g id="lung">
-              <path d="M0 0 C-5 -2,-10 2,-12 8 C-14 16,-10 24,-4 26 C2 28,6 22,8 18 M0 0 C5 -2,10 2,12 8 C14 16,10 24,4 26 C-2 28,-6 22,-8 18" fill="none" stroke="rgba(240,165,0,0.3)" stroke-width="1"/>
-              <path d="M0 -4 L0 0" stroke="rgba(240,165,0,0.25)" stroke-width="0.8"/>
-            </g>
-            <g id="med-cross">
-              <path d="M-6 -6 L-6 -14 L6 -14 L6 -6 L14 -6 L14 6 L6 6 L6 14 L-6 14 L-6 6 L-14 6 L-14 -6 Z" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.2"/>
-            </g>
-          </defs>
-          <!-- Bacteria — cocci clusters -->
-          <g opacity="0.08">
-            <use href="#bacteria-cocci" x="80" y="90" transform="scale(1.5)"/>
-            <use href="#bacteria-cocci" x="650" y="80" transform="scale(1.2)"/>
-            <use href="#bacteria-cocci" x="350" y="520" transform="scale(1.8)"/>
-            <use href="#bacteria-cocci" x="720" y="500" transform="scale(1.0)"/>
-            <use href="#bacteria-cocci" x="40" y="480" transform="scale(0.9)"/>
-          </g>
-          <!-- Bacteria — bacillus rods -->
-          <g opacity="0.06">
-            <use href="#bacteria-bacillus" x="250" y="80" transform="scale(1.3)"/>
-            <use href="#bacteria-bacillus" x="680" y="250" transform="scale(1.1)"/>
-            <use href="#bacteria-bacillus" x="100" y="350" transform="scale(1.4)"/>
-            <use href="#bacteria-bacillus" x="450" y="550" transform="scale(1.2)"/>
-          </g>
-          <!-- Anatomical hearts -->
-          <g opacity="0.07">
-            <use href="#heart" x="180" y="180" transform="scale(1.6)"/>
-            <use href="#heart" x="600" y="180" transform="scale(1.0)"/>
-            <use href="#heart" x="50" y="250" transform="scale(0.8)"/>
-            <use href="#heart" x="300" y="60" transform="scale(0.7)"/>
-          </g>
-          <!-- Lungs -->
-          <g opacity="0.05">
-            <use href="#lung" x="550" y="430" transform="scale(1.4)"/>
-            <use href="#lung" x="150" y="450" transform="scale(1.0)"/>
-            <use href="#lung" x="700" y="120" transform="scale(0.8)"/>
-          </g>
-          <!-- Medical crosses -->
-          <g opacity="0.06">
-            <use href="#med-cross" x="450" y="120" transform="scale(1.2)"/>
-            <use href="#med-cross" x="120" y="550" transform="scale(0.9)"/>
-            <use href="#med-cross" x="680" y="350" transform="scale(1.1)"/>
-            <use href="#med-cross" x="320" y="250" transform="scale(0.7)"/>
-          </g>
-          <!-- Stethoscope abstract -->
-          <g opacity="0.04" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" fill="none">
-            <path d="M600 550 C620 520,620 480,600 450 C580 420,560 400,560 370 C560 340,580 320,600 320 C620 320,640 340,640 370"/>
-            <circle cx="640" cy="370" r="15"/>
-            <path d="M600 550 L600 580 L640 580"/>
-          </g>
-          <!-- DNA helices -->
-          <g opacity="0.05" stroke="rgba(240,165,0,0.3)" stroke-width="1" fill="none">
-            <path d="M750 100 C760 120,740 140,750 160 C760 180,740 200,750 220" stroke-dasharray="3 3"/>
-            <path d="M750 100 C740 120,760 140,750 160 C740 180,760 200,750 220" stroke-dasharray="3 3"/>
-          </g>
-          <!-- Pulse / heartbeat lines -->
-          <g opacity="0.06" stroke="rgba(240,165,0,0.6)" stroke-width="1.5" fill="none">
-            <path d="M30 370 L100 370 L120 330 L150 430 L180 300 L210 410 L240 350 L260 370 L310 370"/>
-          </g>
-          <g opacity="0.04" stroke="rgba(240,165,0,0.4)" stroke-width="1" fill="none">
-            <path d="M450 560 L500 560 L515 530 L535 580 L555 510 L575 570 L595 540 L610 560 L640 560"/>
-          </g>
-        </svg>
-      </div>
-      <!-- Corner decorations -->
-      <svg class="cover-svg-corner tl" width="110" height="110" viewBox="0 0 110 110">
-        <path d="M0 0 L110 0 L110 5 L5 5 L5 110 L0 110 Z" fill="rgba(240,165,0,0.15)"/>
-        <path d="M12 12 L98 12 L98 17 L17 17 L17 98 L12 98 Z" fill="rgba(240,165,0,0.08)"/>
-        <path d="M22 22 L40 22" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
-        <path d="M22 22 L22 40" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
-      </svg>
-      <svg class="cover-svg-corner tr" width="110" height="110" viewBox="0 0 110 110">
-        <path d="M0 0 L110 0 L110 110 L105 110 L105 5 L0 5 Z" fill="rgba(240,165,0,0.15)"/>
-        <path d="M12 12 L98 12 L98 98 L93 98 L93 17 L12 17 Z" fill="rgba(240,165,0,0.08)"/>
-        <path d="M88 22 L98 22" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
-        <path d="M98 22 L98 40" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
-      </svg>
-      <svg class="cover-svg-corner bl" width="110" height="110" viewBox="0 0 110 110">
-        <path d="M0 0 L0 110 L110 110 L110 105 L5 105 L5 0 Z" fill="rgba(240,165,0,0.15)"/>
-        <path d="M12 12 L12 98 L98 98 L98 93 L17 93 L17 12 Z" fill="rgba(240,165,0,0.08)"/>
-        <path d="M22 88 L22 98" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
-        <path d="M22 88 L40 88" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
-      </svg>
-      <svg class="cover-svg-corner br" width="110" height="110" viewBox="0 0 110 110">
-        <path d="M110 0 L110 110 L0 110 L0 105 L105 105 L105 0 Z" fill="rgba(240,165,0,0.15)"/>
-        <path d="M98 12 L98 98 L12 98 L12 93 L93 93 L93 12 Z" fill="rgba(240,165,0,0.08)"/>
-        <path d="M98 88 L98 98" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
-        <path d="M78 98 L98 98" stroke="rgba(240,165,0,0.2)" stroke-width="1.5"/>
-      </svg>
+      <div class="cover-side-bar"></div>
       <div class="cover-accent-bar-bottom"></div>
+
+      <!-- Corner bracket decorations -->
+      <svg class="cover-corner tl" width="48" height="48" viewBox="0 0 48 48" fill="none">
+        <path d="M0 0 L48 0 L48 3 L3 3 L3 48 L0 48 Z" fill="rgba(240,165,0,0.22)"/>
+        <path d="M8 8 L28 8" stroke="rgba(240,165,0,0.28)" stroke-width="1.1"/>
+        <path d="M8 8 L8 28" stroke="rgba(240,165,0,0.28)" stroke-width="1.1"/>
+      </svg>
+      <svg class="cover-corner tr" width="48" height="48" viewBox="0 0 48 48" fill="none">
+        <path d="M0 0 L48 0 L48 48 L45 48 L45 3 L0 3 Z" fill="rgba(240,165,0,0.22)"/>
+        <path d="M20 8 L40 8" stroke="rgba(240,165,0,0.28)" stroke-width="1.1"/>
+        <path d="M40 8 L40 28" stroke="rgba(240,165,0,0.28)" stroke-width="1.1"/>
+      </svg>
+      <svg class="cover-corner bl" width="48" height="48" viewBox="0 0 48 48" fill="none">
+        <path d="M0 0 L0 48 L48 48 L48 45 L3 45 L3 0 Z" fill="rgba(240,165,0,0.22)"/>
+        <path d="M8 20 L8 40" stroke="rgba(240,165,0,0.28)" stroke-width="1.1"/>
+        <path d="M8 40 L28 40" stroke="rgba(240,165,0,0.28)" stroke-width="1.1"/>
+      </svg>
+      <svg class="cover-corner br" width="48" height="48" viewBox="0 0 48 48" fill="none">
+        <path d="M48 0 L48 48 L0 48 L0 45 L45 45 L45 0 Z" fill="rgba(240,165,0,0.22)"/>
+        <path d="M40 20 L40 40" stroke="rgba(240,165,0,0.28)" stroke-width="1.1"/>
+        <path d="M20 40 L40 40" stroke="rgba(240,165,0,0.28)" stroke-width="1.1"/>
+      </svg>
+
+      <!-- Center content -->
       <div class="cover-frame">
-        <div class="cover-icon-wrap">
-          ${iconHtml ? iconHtml : '<svg viewBox="0 0 48 48" fill="none" stroke="rgba(240,165,0,0.8)" stroke-width="1.5"><path d="M24 4 C24 4,20 14,12 18 C4 22,4 32,12 36 C20 40,24 44,24 44 C24 44,28 40,36 36 C44 32,44 22,36 18 C28 14,24 4,24 4Z"/><path d="M24 14 L24 34 M14 24 L34 24" stroke="rgba(255,255,255,0.9)" stroke-width="2"/></svg>'}
-        </div>
-        <div class="cover-divider"></div>
+        <div class="cover-kicker">Medical Education</div>
+        <div class="cover-icon-wrap">${iconHtml ? iconHtml : '<svg viewBox="0 0 48 48" fill="none" stroke="rgba(240,165,0,0.85)" stroke-width="1.8" stroke-linecap="round"><path d="M24 6C24 6,20 14,12 18C4 22,4 32,12 36C20 40,24 44,24 44C24 44,28 40,36 36C44 32,44 22,36 18C28 14,24 6,24 6Z"/><line x1="24" y1="15" x2="24" y2="33"/><line x1="15" y1="24" x2="33" y2="24"/></svg>'}</div>
         <h1 class="cover-title">${esc(state.cover.title)}</h1>
         ${state.cover.subtitle ? `<p class="cover-subtitle">${esc(state.cover.subtitle)}</p>` : ''}
+        <div class="cover-divider"></div>
         ${state.cover.description ? `<p class="cover-description">${esc(state.cover.description)}</p>` : ''}
         <div class="cover-meta">
           ${state.cover.author ? `<span>✍️ ${esc(state.cover.author)}</span>` : ''}
           ${state.cover.date ? `<span>📅 ${esc(state.cover.date)}</span>` : ''}
-          <span>📄 ${state.allQuestionsLoad.length} quiz${state.allQuestionsLoad.length !== 1 ? 'zes' : ''}</span>
+          <span>📚 ${state.allQuestionsLoad.length} quiz${state.allQuestionsLoad.length !== 1 ? 'zes' : ''}</span>
           <span>❓ ${totalQ} question${totalQ !== 1 ? 's' : ''}</span>
         </div>
       </div>
     </div>
   `;
 }
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TABLE OF CONTENTS RENDERER
@@ -1836,36 +2053,37 @@ function openPrintWindow() {
 <title>${esc(state.cover.title || 'PDF Export')}</title>
 ${styleNodes}
 <style>
-  @page { size: ${size} ${orientation}; margin: 2cm 1.8cm; @top-center { content: "${cssTitle}"; font: 8pt 'Outfit','Inter',sans-serif; font-weight:500; color:#c27803; letter-spacing:0.08em; text-transform:uppercase; } @bottom-center { content: counter(page); font: 8pt 'Outfit','Inter',sans-serif; color: #999; font-weight: 500; } }
-  @page cover-page { margin: 0; @top-center { content: none; } @bottom-center { content: none; } }
-  @page toc-page { margin: 2cm 1.8cm; @top-center { content: "${cssTitle}"; font: 8pt 'Outfit','Inter',sans-serif; font-weight:500; color:#c27803; letter-spacing:0.08em; text-transform:uppercase; } @bottom-center { content: counter(page, upper-roman); font: 8pt 'Outfit','Inter',sans-serif; color: #888; font-weight: 500; } }
+  @page { size: ${size} ${orientation}; margin: 1.3cm 1.4cm 1.4cm; @top-left { content: "${cssTitle}"; font: 600 7pt 'Outfit','Inter',sans-serif; color: #b8860b; letter-spacing:0.08em; text-transform:uppercase; vertical-align:bottom; padding-bottom:4pt; border-bottom:0.5pt solid rgba(184,134,11,0.25); } @top-right { content: "✦"; font-size:7pt; color:rgba(184,134,11,0.3); vertical-align:bottom; padding-bottom:4pt; border-bottom:0.5pt solid rgba(184,134,11,0.25); } @bottom-center { content: "— " counter(page) " —"; font: 500 7pt 'Outfit','Inter',sans-serif; color:#888; letter-spacing:0.05em; } }
+  @page cover-page { margin: 0; @top-left { content: none; } @top-right { content: none; } @bottom-center { content: none; } }
+  @page toc-page { margin: 1.3cm 1.4cm 1.4cm; @top-left { content: "${cssTitle}"; font: 600 7pt 'Outfit','Inter',sans-serif; color:#b8860b; letter-spacing:0.08em; text-transform:uppercase; vertical-align:bottom; padding-bottom:4pt; border-bottom:0.5pt solid rgba(184,134,11,0.25); } @top-right { content: "✦"; font-size:7pt; color:rgba(184,134,11,0.3); vertical-align:bottom; padding-bottom:4pt; border-bottom:0.5pt solid rgba(184,134,11,0.25); } @bottom-center { content: none; } }
   html, body {
     background: white !important;
     color: black !important;
     margin: 0; padding: 0;
-    font-size: 11pt;
+    font-size: 10.5pt;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
   #print-area { display: block !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; border-radius: 0; background: white; }
-  #print-area .pdf-page { padding: 1.3cm 1.8cm 1.1cm; max-width: none; }
-  .cover-page { min-height: 0 !important; padding: 0 !important; page-break-after: always; position: relative; z-index: 10; background: linear-gradient(135deg,#0a1628,#0f2027,#162d3a,#0d1b2a) !important; height: 100% !important; display: flex !important; flex-direction: column !important; justify-content: center !important; }
-  .cover-frame { border: none !important; padding: 3cm 2cm !important; width: 85% !important; max-width: 560px !important; height: auto !important; display: flex !important; flex-direction: column !important; align-items: center !important; box-sizing: border-box; }
+  #print-area .pdf-page { padding: 0.8cm 1.4cm 0.6cm; max-width: none; }
+  .cover-page { margin: 0 !important; width: 100% !important; min-height: 100vh !important; height: 100vh !important; max-height: 100vh !important; padding: 0 !important; page-break-after: always; page-break-before: avoid; position: relative; z-index: 10; background: linear-gradient(165deg,#030712,#0a1628 20%,#112240 45%,#0d2137 70%,#061018) !important; display: flex !important; flex-direction: column !important; justify-content: center !important; align-items: center !important; overflow: hidden !important; }
+  .cover-frame { border: none !important; padding: 2.5cm 2cm !important; width: 85% !important; max-width: 520px !important; height: auto !important; display: flex !important; flex-direction: column !important; align-items: center !important; box-sizing: border-box; }
   .cover-accent-bar { height: 5px !important; display: block !important; }
   .cover-accent-bar-bottom { height: 3px !important; display: block !important; }
   .cover-svg-bg, .cover-svg-corner { display: block !important; }
-  .cover-page .cover-title { font-size: 2.8rem !important; color: #fff !important; }
-  .cover-page .cover-subtitle { font-size: 1rem !important; color: rgba(255,255,255,0.7) !important; }
+  .cover-page .cover-title { font-size: 2.5rem !important; color: #fff !important; }
+  .cover-page .cover-subtitle { font-size: 0.8rem !important; color: rgba(255,255,255,0.7) !important; }
   .cover-page .cover-description { color: rgba(255,255,255,0.6) !important; }
   .cover-page .cover-meta { color: rgba(255,255,255,0.5) !important; border-top-color: rgba(255,255,255,0.1) !important; }
   .toc-page { page-break-after: always; page: toc-page; }
   .cover-page { page: cover-page; }
+  .first-chapter { counter-reset: page 1; }
   .chapter-page { page-break-before: always; page-break-after: avoid; }
   .page-num { display: none; }
   .quiz-header { page-break-after: avoid; }
-  .question-item { page-break-inside: avoid; orphans: 3; widows: 3; }
+  .question-item { page-break-inside: avoid; orphans: 2; widows: 2; }
   .answer-key { page-break-inside: avoid; }
-  .textbook-layout { column-count: 2; column-gap: 1.8rem; column-rule: 1px solid #ddd; }
+  .textbook-layout { column-count: 2; column-gap: 1.2rem; column-rule: 0.5pt solid #ddd; }
   .textbook-layout .cover-page,
   .textbook-layout .toc-page,
   .textbook-layout .quiz-header,
@@ -1875,14 +2093,14 @@ ${styleNodes}
   .textbook-layout .question-item { break-inside: avoid; }
   .styled-output .question-item { box-shadow: none !important; break-inside: avoid; border: 1px solid #e0e0e0; }
   .end-chapter-answers, .end-book-answers { page-break-before: always; }
-  .written-item .written-answer-space { min-height: 4cm; }
+  .written-item .written-answer-space { min-height: 3.5cm; }
   a { text-decoration: none; color: inherit; }
   .no-print { display: none !important; }
 </style>
 </head>
 <body>
 <div id="print-area" class="${areaClasses}">
-  <div class="${pageClasses}" id="pdf-content">${contentHtml}</div>
+  ${contentHtml}
 </div>
 <script>
   window.addEventListener('load', function() {
@@ -1907,8 +2125,8 @@ function nativePrintPdf() {
     showGenerateStatus('Generate the preview first.', 'error');
     return;
   }
-  // Set the document title into @page @top-center via dynamic style
   updateDynamicPrintStyle();
+  void document.getElementById('print-area').offsetHeight;
   window.print();
 }
 
