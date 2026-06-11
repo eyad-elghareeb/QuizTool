@@ -1064,6 +1064,14 @@
       width: min(1600px, 98%);
       max-height: min(96vh, 1200px);
       height: 95vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-card.modal-card-xl #modal-body {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
     }
 
     .modal-header {
@@ -3885,7 +3893,7 @@
         subtitle: 'Combine multiple quizzes into a single PDF with cover page and chapters.',
         size: 'xl',
         body: `
-          <div style="display:flex; flex-direction:column; height:90vh;">
+          <div style="display:flex; flex-direction:column; flex:1; min-height:0;">
             <div style="flex-shrink:0; display:flex; gap:0.5rem; align-items:center; padding-bottom:0.75rem; border-bottom:1px solid var(--border); margin-bottom:0.75rem;">
               <button class="btn btn-primary" onclick="window.openPdfExporterStandalone()">Open Full PDF Exporter</button>
               <span class="muted" style="font-size:0.85rem;">Opens the enhanced PDF exporter with multi-quiz support, cover page, chapters, and styling options.</span>
@@ -3894,6 +3902,7 @@
           </div>
         `
       });
+      document.querySelector('.modal-card').style.overflow = 'hidden';
     }
     window.openPdfExporterModal = openPdfExporterModal;
 
@@ -3927,6 +3936,7 @@
       const card = document.querySelector('.modal-card');
       if (card) {
         card.classList.remove('modal-card-lg', 'modal-card-xl', 'modal-card-full');
+        card.style.overflow = '';
       }
     }
 

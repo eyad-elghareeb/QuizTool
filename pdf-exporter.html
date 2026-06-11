@@ -470,11 +470,13 @@ a.toc-item:hover .toc-title {
     content: "";
     font-family: 'Outfit','Inter',sans-serif;
     font-size: 8pt;
-    color: #666;
-    letter-spacing: 0.04em;
+    font-weight: 500;
+    color: #c27803;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
   @bottom-center {
-    content: counter(pg);
+    content: counter(page);
     font-family: 'Outfit','Inter',sans-serif;
     font-size: 8pt;
     color: #999;
@@ -494,11 +496,13 @@ a.toc-item:hover .toc-title {
     content: "";
     font-family: 'Outfit','Inter',sans-serif;
     font-size: 8pt;
-    color: #666;
-    letter-spacing: 0.04em;
+    font-weight: 500;
+    color: #c27803;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
   @bottom-center {
-    content: counter(pg, upper-roman);
+    content: counter(page, upper-roman);
     font-family: 'Outfit','Inter',sans-serif;
     font-size: 8pt;
     color: #888;
@@ -520,7 +524,7 @@ a.toc-item:hover .toc-title {
   .container{max-width:none;margin:0;padding:0}
   #print-area{display:block!important;box-shadow:none!important;padding:0!important;margin:0!important;border-radius:0;background:white}
   #print-area .pdf-page{padding:1.3cm 1.8cm 1.1cm;max-width:none}
-  .cover-page{min-height:100vh!important;padding:0!important;page-break-after:always;position:relative;z-index:10;background:linear-gradient(135deg,#0a1628,#0f2027,#162d3a,#0d1b2a)!important}
+  .cover-page{min-height:0!important;padding:0!important;page-break-after:always;position:relative;z-index:10;background:linear-gradient(135deg,#0a1628,#0f2027,#162d3a,#0d1b2a)!important;height:100%!important;display:flex!important;flex-direction:column!important;justify-content:center!important}
   .cover-frame{border:none!important;padding:3cm 2cm!important;width:85%!important;max-width:560px!important;height:auto!important;display:flex!important;flex-direction:column!important;align-items:center!important;box-sizing:border-box}
   .cover-accent-bar{height:5px!important;display:block!important}
   .cover-accent-bar-bottom{height:3px!important;display:block!important}
@@ -548,7 +552,6 @@ a.toc-item:hover .toc-title {
   a{text-decoration:none;color:inherit}
   .cover-page{page:cover-page}
   .toc-page{page:toc-page}
-  body{counter-reset:pg 0}
   .page-num{display:none}
 }
 
@@ -660,6 +663,11 @@ a.toc-item:hover .toc-title {
 .tree-type-dot.type-flashcard { background: var(--success); }
 .tree-type-dot.type-written { background: #d946ef; }
 .tree-type-dot.type-folder { background: var(--text-muted); opacity: 0.5; }
+.folder-select-area{flex:1;display:flex;align-items:center;gap:0.35rem;cursor:pointer;min-width:0;padding:0.1rem 0;border-radius:4px;transition:background var(--transition)}
+.folder-select-area:hover{background:rgba(240,165,0,0.08)}
+.tree-row.folder-sel-all{background:var(--accent-dim)}
+.tree-row.folder-sel-all>.folder-select-area>.tree-name{color:var(--accent)}
+.tree-row.folder-sel-partial>.folder-select-area>.tree-name{color:var(--accent)}
 </style>
 </head>
 <body>
@@ -1088,6 +1096,39 @@ function toggleFolder(path) {
   renderFileList();
 }
 
+function getFilesInFolder(folderPath) {
+  const prefix = folderPath + '/';
+  return state.allFiles.filter(f => f.path === folderPath || f.path.startsWith(prefix));
+}
+
+function getFolderSelState(folderPath) {
+  const files = getFilesInFolder(folderPath);
+  if (files.length === 0) return 'none';
+  const selCount = files.filter(f => state.selectedQuizzes.some(s => s.path === f.path)).length;
+  if (selCount === files.length) return 'all';
+  if (selCount > 0) return 'partial';
+  return 'none';
+}
+
+function toggleFolderSelect(folderPath) {
+  const files = getFilesInFolder(folderPath);
+  if (files.length === 0) return;
+  const selPaths = new Set(state.selectedQuizzes.map(s => s.path));
+  const allSelected = files.every(f => selPaths.has(f.path));
+  if (allSelected) {
+    const folderPaths = new Set(files.map(f => f.path));
+    state.selectedQuizzes = state.selectedQuizzes.filter(s => !folderPaths.has(s.path));
+  } else {
+    files.forEach(f => {
+      if (!selPaths.has(f.path)) {
+        state.selectedQuizzes.push({ path: f.path, meta: f });
+      }
+    });
+  }
+  renderFileList();
+  renderSelectedList();
+}
+
 function renderTreeLevel(node, q) {
   const selectedPaths = new Set(state.selectedQuizzes.map(s => s.path));
   const items = sortTreeEntries(node).map(([name, item]) => {
@@ -1096,12 +1137,17 @@ function renderTreeLevel(node, q) {
       const childrenHtml = open ? renderTreeLevel(item.children, q) : '';
       const hasChildren = Object.keys(item.children).length > 0;
       if (!hasChildren) return '';
+      const selState = getFolderSelState(item.path);
+      const selClass = selState === 'all' ? 'folder-sel-all' : selState === 'partial' ? 'folder-sel-partial' : '';
+      const pathEsc = item.path.replace(/'/g, "\\'");
       return `
         <li>
-          <div class="tree-row folder-row" onclick="toggleFolder('${item.path.replace(/'/g, "\\'")}')">
-            <button class="tree-chevron ${open ? 'open' : ''}" onclick="event.stopPropagation();toggleFolder('${item.path.replace(/'/g, "\\'")}')">▶</button>
-            <span class="tree-icon">${open ? '📂' : '📁'}</span>
-            <span class="tree-name">${esc(name)}</span>
+          <div class="tree-row folder-row ${selClass}">
+            <button class="tree-chevron ${open ? 'open' : ''}" onclick="event.stopPropagation();toggleFolder('${pathEsc}')">▶</button>
+            <span class="folder-select-area" onclick="event.stopPropagation();toggleFolderSelect('${pathEsc}')">
+              <span class="tree-icon">${open ? '📂' : '📁'}</span>
+              <span class="tree-name">${esc(name)}</span>
+            </span>
             <span class="tree-type-dot type-folder"></span>
           </div>
           ${open ? `<ul class="file-tree">${childrenHtml}</ul>` : ''}
@@ -1340,11 +1386,13 @@ function updateDynamicPrintStyle() {
         @top-center {
           content: "${cssTitle}";
           font: 8pt 'Outfit','Inter',sans-serif;
-          color: #666;
-          letter-spacing: 0.04em;
+          font-weight: 500;
+          color: #c27803;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
         }
         @bottom-center {
-          content: counter(pg);
+          content: counter(page);
           font: 8pt 'Outfit','Inter',sans-serif;
           color: #999;
           font-weight: 500;
@@ -1361,10 +1409,12 @@ function updateDynamicPrintStyle() {
       @top-center {
         content: "${cssTitle}";
         font: 8pt 'Outfit','Inter',sans-serif;
-        color: #666;
-        letter-spacing: 0.04em;
+        font-weight: 500;
+        color: #c27803;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
       }
-      @bottom-center { content: counter(pg, upper-roman); font: 8pt 'Outfit','Inter',sans-serif; color: #888; font-weight: 500; }
+      @bottom-center { content: counter(page, upper-roman); font: 8pt 'Outfit','Inter',sans-serif; color: #888; font-weight: 500; }
     }
   `;
 }
@@ -1786,9 +1836,9 @@ function openPrintWindow() {
 <title>${esc(state.cover.title || 'PDF Export')}</title>
 ${styleNodes}
 <style>
-  @page { size: ${size} ${orientation}; margin: 2cm 1.8cm; @top-center { content: "${cssTitle}"; font: 8pt 'Outfit','Inter',sans-serif; color: #666; letter-spacing: 0.04em; } @bottom-center { content: counter(pg); font: 8pt 'Outfit','Inter',sans-serif; color: #999; font-weight: 500; } }
+  @page { size: ${size} ${orientation}; margin: 2cm 1.8cm; @top-center { content: "${cssTitle}"; font: 8pt 'Outfit','Inter',sans-serif; font-weight:500; color:#c27803; letter-spacing:0.08em; text-transform:uppercase; } @bottom-center { content: counter(page); font: 8pt 'Outfit','Inter',sans-serif; color: #999; font-weight: 500; } }
   @page cover-page { margin: 0; @top-center { content: none; } @bottom-center { content: none; } }
-  @page toc-page { margin: 2cm 1.8cm; @top-center { content: "${cssTitle}"; font: 8pt 'Outfit','Inter',sans-serif; color: #666; letter-spacing: 0.04em; } @bottom-center { content: counter(pg, upper-roman); font: 8pt 'Outfit','Inter',sans-serif; color: #888; font-weight: 500; } }
+  @page toc-page { margin: 2cm 1.8cm; @top-center { content: "${cssTitle}"; font: 8pt 'Outfit','Inter',sans-serif; font-weight:500; color:#c27803; letter-spacing:0.08em; text-transform:uppercase; } @bottom-center { content: counter(page, upper-roman); font: 8pt 'Outfit','Inter',sans-serif; color: #888; font-weight: 500; } }
   html, body {
     background: white !important;
     color: black !important;
@@ -1796,11 +1846,10 @@ ${styleNodes}
     font-size: 11pt;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
-    counter-reset: pg 0;
   }
   #print-area { display: block !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; border-radius: 0; background: white; }
   #print-area .pdf-page { padding: 1.3cm 1.8cm 1.1cm; max-width: none; }
-  .cover-page { min-height: 100vh !important; padding: 0 !important; page-break-after: always; position: relative; z-index: 10; background: linear-gradient(135deg,#0a1628,#0f2027,#162d3a,#0d1b2a) !important; }
+  .cover-page { min-height: 0 !important; padding: 0 !important; page-break-after: always; position: relative; z-index: 10; background: linear-gradient(135deg,#0a1628,#0f2027,#162d3a,#0d1b2a) !important; height: 100% !important; display: flex !important; flex-direction: column !important; justify-content: center !important; }
   .cover-frame { border: none !important; padding: 3cm 2cm !important; width: 85% !important; max-width: 560px !important; height: auto !important; display: flex !important; flex-direction: column !important; align-items: center !important; box-sizing: border-box; }
   .cover-accent-bar { height: 5px !important; display: block !important; }
   .cover-accent-bar-bottom { height: 3px !important; display: block !important; }
