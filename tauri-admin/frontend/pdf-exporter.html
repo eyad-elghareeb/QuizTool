@@ -465,12 +465,19 @@ a.toc-item:hover .toc-title {
 .answer-entry .a-explain{color:#666;font-size:0.85rem}
 
 @page {
-  margin: 1.5cm 1.8cm;
+  margin: 2cm 1.8cm;
+  @top-center {
+    content: "";
+    font-family: 'Outfit','Inter',sans-serif;
+    font-size: 8pt;
+    color: #666;
+    letter-spacing: 0.04em;
+  }
   @bottom-center {
     content: counter(pg);
     font-family: 'Outfit','Inter',sans-serif;
     font-size: 8pt;
-    color: rgba(255,255,255,0.6);
+    color: #999;
     font-weight: 500;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
@@ -478,10 +485,18 @@ a.toc-item:hover .toc-title {
 }
 @page cover-page {
   margin: 0;
+  @top-center { content: none; }
   @bottom-center { content: none; }
 }
 @page toc-page {
   margin: 2cm 1.8cm;
+  @top-center {
+    content: "";
+    font-family: 'Outfit','Inter',sans-serif;
+    font-size: 8pt;
+    color: #666;
+    letter-spacing: 0.04em;
+  }
   @bottom-center {
     content: counter(pg, upper-roman);
     font-family: 'Outfit','Inter',sans-serif;
@@ -528,54 +543,16 @@ a.toc-item:hover .toc-title {
   .textbook-layout .end-book-answers{column-span:all}
   .textbook-layout .question-item{break-inside:avoid}
   .styled-output .question-item{box-shadow:none!important;break-inside:avoid;border:1px solid #e0e0e0}
-  .end-chapter-answers,.end-book-answers{page-break-before:always;counter-reset:pg 0}
+  .end-chapter-answers,.end-book-answers{page-break-before:always}
   .written-item .written-answer-space{min-height:4cm}
   a{text-decoration:none;color:inherit}
   .cover-page{page:cover-page}
   .toc-page{page:toc-page}
   body{counter-reset:pg 0}
   .page-num{display:none}
-  .chapter-page,.quiz-header,.end-book-answers,.end-chapter-answers{counter-reset:pg 0}
 }
 
-/* ── Print Header & Footer (position: fixed — repeats on every page) ── */
-.print-header,.print-footer{display:none}
-@media print{
-  .print-header,.print-footer{
-    display:flex;position:fixed;left:0;right:0;z-index:5;
-    font-family:'Outfit','Inter',sans-serif;
-    -webkit-print-color-adjust:exact;print-color-adjust:exact;
-  }
-  .print-header{
-    top:0;height:1.1cm;align-items:center;padding:0 1.8cm;
-    background:linear-gradient(135deg,#0a1628,#162d3a);
-    border-bottom:2px solid rgba(240,165,0,0.5);
-  }
-  .print-header .ph-title{
-    font-size:8pt;font-weight:500;color:rgba(255,255,255,0.7);
-    letter-spacing:0.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  }
-  .print-header .ph-accent{
-    position:absolute;bottom:0;left:0;right:0;height:1px;
-    background:linear-gradient(90deg,var(--accent),rgba(240,165,0,0.3),transparent);
-  }
-  .print-footer{
-    bottom:0;height:0.9cm;align-items:center;padding:0 1.8cm;
-    background:linear-gradient(135deg,#0a1628,#162d3a);
-    border-top:2px solid rgba(240,165,0,0.5);
-  }
-  .print-footer .pf-left{
-    font-size:7.5pt;color:rgba(255,255,255,0.5);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  }
-  .print-footer .pf-right{
-    font-size:8pt;color:rgba(255,255,255,0.6);font-weight:500;
-  }
-  .print-footer .pf-right .page-num{font-weight:700;color:var(--accent)}
-  .print-footer .pf-accent{
-    position:absolute;top:0;left:0;right:0;height:1px;
-    background:linear-gradient(90deg,transparent,rgba(240,165,0,0.3),var(--accent));
-  }
-}
+/* Print header/footer use @page margin-boxes — no fixed-position elements */
 
 /* Responsive */
 @media(max-width:640px){
@@ -1352,12 +1329,42 @@ function updateDynamicPrintStyle() {
   }
   const size = state.style.pageSize === 'letter' ? 'letter' : 'A4';
   const orientation = state.style.orientation === 'landscape' ? 'landscape' : 'portrait';
+  const title = state.cover.title || 'Quiz Compilation';
+  // Escape for CSS string content
+  const cssTitle = title.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   styleEl.textContent = `
     @media print {
       @page {
         size: ${size} ${orientation};
-        margin: 1.5cm 1.8cm;
+        margin: 2cm 1.8cm;
+        @top-center {
+          content: "${cssTitle}";
+          font: 8pt 'Outfit','Inter',sans-serif;
+          color: #666;
+          letter-spacing: 0.04em;
+        }
+        @bottom-center {
+          content: counter(pg);
+          font: 8pt 'Outfit','Inter',sans-serif;
+          color: #999;
+          font-weight: 500;
+        }
       }
+    }
+    @page cover-page {
+      margin: 0;
+      @top-center { content: none; }
+      @bottom-center { content: none; }
+    }
+    @page toc-page {
+      margin: 2cm 1.8cm;
+      @top-center {
+        content: "${cssTitle}";
+        font: 8pt 'Outfit','Inter',sans-serif;
+        color: #666;
+        letter-spacing: 0.04em;
+      }
+      @bottom-center { content: counter(pg, upper-roman); font: 8pt 'Outfit','Inter',sans-serif; color: #888; font-weight: 500; }
     }
   `;
 }
@@ -1764,14 +1771,13 @@ function openPrintWindow() {
 
   // Body content: only the print-area
   const contentHtml = document.getElementById('print-area').innerHTML;
-  const headerHtml = '<div class="print-header"><span class="ph-title">' + esc(state.cover.title) + '</span><div class="ph-accent"></div></div>';
-  const footerHtml = '<div class="print-footer"><span class="pf-left">' + esc(state.cover.title) + '</span><span class="pf-right"></span><div class="pf-accent"></div></div>';
 
   // Detect classes applied to print-area (layout + style classes)
   const areaClasses = document.getElementById('print-area').className || '';
   // Detect class on pdf-content (font class)
   const pageClasses = document.getElementById('pdf-content').className || '';
 
+  const cssTitle = (state.cover.title || 'PDF Export').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1780,10 +1786,9 @@ function openPrintWindow() {
 <title>${esc(state.cover.title || 'PDF Export')}</title>
 ${styleNodes}
 <style>
-  @page { size: ${size} ${orientation}; margin: 1.5cm 1.8cm; }
-  @page cover-page { margin: 0; @bottom-center { content: none; } }
-  @page toc-page { margin: 2cm 1.8cm; @bottom-center { content: counter(pg, upper-roman); font: 8pt 'Outfit','Inter',sans-serif; color: #888; font-weight: 500; } }
-  @page { @bottom-center { content: counter(pg); font: 8pt 'Outfit','Inter',sans-serif; color: rgba(255,255,255,0.6); font-weight: 500; } }
+  @page { size: ${size} ${orientation}; margin: 2cm 1.8cm; @top-center { content: "${cssTitle}"; font: 8pt 'Outfit','Inter',sans-serif; color: #666; letter-spacing: 0.04em; } @bottom-center { content: counter(pg); font: 8pt 'Outfit','Inter',sans-serif; color: #999; font-weight: 500; } }
+  @page cover-page { margin: 0; @top-center { content: none; } @bottom-center { content: none; } }
+  @page toc-page { margin: 2cm 1.8cm; @top-center { content: "${cssTitle}"; font: 8pt 'Outfit','Inter',sans-serif; color: #666; letter-spacing: 0.04em; } @bottom-center { content: counter(pg, upper-roman); font: 8pt 'Outfit','Inter',sans-serif; color: #888; font-weight: 500; } }
   html, body {
     background: white !important;
     color: black !important;
@@ -1807,7 +1812,6 @@ ${styleNodes}
   .toc-page { page-break-after: always; page: toc-page; }
   .cover-page { page: cover-page; }
   .chapter-page { page-break-before: always; page-break-after: avoid; }
-  .chapter-page, .quiz-header, .end-book-answers, .end-chapter-answers { counter-reset: pg 0; }
   .page-num { display: none; }
   .quiz-header { page-break-after: avoid; }
   .question-item { page-break-inside: avoid; orphans: 3; widows: 3; }
@@ -1821,26 +1825,16 @@ ${styleNodes}
   .textbook-layout .end-book-answers { column-span: all; }
   .textbook-layout .question-item { break-inside: avoid; }
   .styled-output .question-item { box-shadow: none !important; break-inside: avoid; border: 1px solid #e0e0e0; }
-  .end-chapter-answers, .end-book-answers { page-break-before: always; counter-reset: pg 0; }
+  .end-chapter-answers, .end-book-answers { page-break-before: always; }
   .written-item .written-answer-space { min-height: 4cm; }
   a { text-decoration: none; color: inherit; }
   .no-print { display: none !important; }
-  .print-header,.print-footer{display:flex;position:fixed;left:0;right:0;z-index:5;font-family:'Outfit','Inter',sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .print-header{top:0;height:1.1cm;align-items:center;padding:0 1.8cm;background:linear-gradient(135deg,#0a1628,#162d3a);border-bottom:2px solid rgba(240,165,0,0.5)}
-  .print-header .ph-title{font-size:8pt;font-weight:500;color:rgba(255,255,255,0.7);letter-spacing:0.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .print-header .ph-accent{position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--accent),rgba(240,165,0,0.3),transparent)}
-  .print-footer{bottom:0;height:0.9cm;align-items:center;padding:0 1.8cm;background:linear-gradient(135deg,#0a1628,#162d3a);border-top:2px solid rgba(240,165,0,0.5)}
-  .print-footer .pf-left{font-size:7.5pt;color:rgba(255,255,255,0.5);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .print-footer .pf-right{font-size:8pt;color:rgba(255,255,255,0.6);font-weight:500}
-  .print-footer .pf-accent{position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(240,165,0,0.3),#f0a500)}
 </style>
 </head>
 <body>
-${headerHtml}
 <div id="print-area" class="${areaClasses}">
   <div class="${pageClasses}" id="pdf-content">${contentHtml}</div>
 </div>
-${footerHtml}
 <script>
   window.addEventListener('load', function() {
     setTimeout(function() { window.print(); }, 300);
@@ -1859,33 +1853,13 @@ ${footerHtml}
   win.document.close();
 }
 
-function ensurePrintHeaderFooter() {
-  let hdr = document.querySelector('.print-header');
-  if (!hdr) {
-    hdr = document.createElement('div');
-    hdr.className = 'print-header';
-    hdr.innerHTML = '<span class="ph-title">' + esc(state.cover.title) + '</span><div class="ph-accent"></div>';
-    document.body.appendChild(hdr);
-  } else {
-    hdr.querySelector('.ph-title').textContent = state.cover.title;
-  }
-  let ftr = document.querySelector('.print-footer');
-  if (!ftr) {
-    ftr = document.createElement('div');
-    ftr.className = 'print-footer';
-    ftr.innerHTML = '<span class="pf-left">' + esc(state.cover.title) + '</span><span class="pf-right"></span><div class="pf-accent"></div>';
-    document.body.appendChild(ftr);
-  } else {
-    ftr.querySelector('.pf-left').textContent = state.cover.title;
-  }
-}
-
 function nativePrintPdf() {
   if (!state.previewGenerated) {
     showGenerateStatus('Generate the preview first.', 'error');
     return;
   }
-  ensurePrintHeaderFooter();
+  // Set the document title into @page @top-center via dynamic style
+  updateDynamicPrintStyle();
   window.print();
 }
 
