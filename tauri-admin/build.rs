@@ -30,7 +30,11 @@ fn main() {
     ];
 
     for file in &files_to_copy {
-        let src = quiztool_root.join(file);
+        let src = if *file == "pdf-exporter.html" {
+            project_dir.join("frontend/pdf-exporter.html")
+        } else {
+            quiztool_root.join(file)
+        };
         let dest = dest_dir.join(file);
         if src.exists() {
             fs::copy(&src, &dest).unwrap_or_else(|_| panic!("Failed to copy {}", file));

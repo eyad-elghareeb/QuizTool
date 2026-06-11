@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PDF Exporter - QuizTool</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;700;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;700;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
 <style>
 :root {
   --bg: #0d1117; --surface: #161b22; --surface2: #1c2330; --surface3: #11161d;
@@ -175,22 +174,175 @@ label .hint{font-weight:400;font-size:0.78rem;color:var(--text-muted)}
 
 /* ─────────── PREVIEW / PRINT STYLES ─────────── */
 #print-area{background:white;color:black;padding:0;border-radius:8px;box-shadow:var(--shadow);display:none;margin-top:1.5rem}
-#print-area .pdf-page{max-width:210mm;margin:0 auto;padding:2.5cm 2cm;font-family:'Inter',sans-serif;line-height:1.7}
-#print-area .pdf-page.font-serif{font-family:'Georgia','Times New Roman',serif}
+#print-area .pdf-page{max-width:210mm;margin:0 auto;padding:2.5cm 2cm;font-family:'Inter',sans-serif;line-height:1.7;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
+#print-area .pdf-page.font-sans{font-family:'Inter','Outfit',sans-serif}
+#print-area .pdf-page.font-serif{font-family:'Source Serif 4','Georgia','Times New Roman',serif}
+#print-area .pdf-page.font-elegant{font-family:'DM Serif Display','Playfair Display',serif}
 #print-area .pdf-page.font-mono{font-family:'JetBrains Mono','Consolas',monospace;font-size:0.9rem}
 #print-area .pdf-page.font-system{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
 
-/* Cover page */
-.cover-page{text-align:center;padding:4cm 2cm 3cm;position:relative;min-height:80vh;display:flex;flex-direction:column;justify-content:center;page-break-after:always}
-.cover-page .cover-icon{font-size:4rem;margin-bottom:1.5rem;display:block}
-.cover-page .cover-title{font-family:'Playfair Display',serif;font-size:2.8rem;font-weight:900;margin-bottom:0.75rem;line-height:1.2;color:#1a1a1a}
-.cover-page .cover-subtitle{font-size:1.2rem;color:#555;margin-bottom:2rem;font-weight:400}
-.cover-page .cover-meta{color:#888;font-size:0.9rem;margin-top:2rem}
-.cover-page .cover-meta span{display:inline-block;margin:0 0.75rem}
-.cover-page .cover-divider{width:80px;height:3px;background:var(--accent);margin:1.5rem auto;border-radius:3px}
-.cover-page .cover-description{max-width:500px;margin:0 auto;color:#666;font-size:0.95rem;line-height:1.7}
-.cover-deco-top{position:absolute;top:0;left:0;right:0;height:6px;background:linear-gradient(90deg,var(--accent),#f0a50055,transparent)}
-.cover-deco-bottom{position:absolute;bottom:0;left:0;right:0;height:4px;background:linear-gradient(90deg,transparent,#f0a50055,var(--accent))}
+/* ── Premium Medical Cover Page ── */
+.cover-page {
+  text-align: center;
+  padding: 0;
+  position: relative;
+  min-height: 297mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  page-break-after: always;
+  box-sizing: border-box;
+  background: linear-gradient(135deg, #0a1628 0%, #0f2027 30%, #162d3a 60%, #0d1b2a 100%);
+  color: #fff;
+  overflow: hidden;
+  font-family: 'Outfit', 'Inter', sans-serif;
+}
+.cover-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 80%, rgba(240,165,0,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(88,166,255,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(46,160,67,0.04) 0%, transparent 60%);
+  pointer-events: none;
+}
+.cover-page::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+.cover-svg-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.12;
+  overflow: hidden;
+}
+.cover-svg-bg svg {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+.cover-svg-corner {
+  position: absolute;
+  pointer-events: none;
+}
+.cover-svg-corner.tl { top: 0; left: 0; }
+.cover-svg-corner.tr { top: 0; right: 0; transform: scaleX(-1); }
+.cover-svg-corner.bl { bottom: 0; left: 0; transform: scaleY(-1); }
+.cover-svg-corner.br { bottom: 0; right: 0; transform: scale(-1,-1); }
+.cover-accent-bar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 5px;
+  background: linear-gradient(90deg, var(--accent), #f0a50088, transparent 80%);
+  z-index: 2;
+}
+.cover-accent-bar-bottom {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent 20%, #f0a50088, var(--accent));
+  z-index: 2;
+}
+.cover-frame {
+  position: relative;
+  z-index: 1;
+  width: 85%;
+  max-width: 560px;
+  padding: 3.5cm 2cm;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+.cover-icon-wrap {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(240,165,0,0.2), rgba(240,165,0,0.08));
+  border: 2px solid rgba(240,165,0,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+  position: relative;
+}
+.cover-icon-wrap svg {
+  width: 48px;
+  height: 48px;
+}
+.cover-icon-wrap .cover-emoji {
+  font-size: 2.4rem;
+  line-height: 1;
+}
+.cover-page .cover-title {
+  font-family: 'DM Serif Display', 'Playfair Display', Georgia, serif;
+  font-size: 3.2rem;
+  font-weight: 400;
+  line-height: 1.12;
+  color: #fff;
+  letter-spacing: -0.02em;
+  margin: 0.25rem 0;
+  text-shadow: 0 2px 20px rgba(0,0,0,0.3);
+}
+.cover-page .cover-subtitle {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: 1.1rem;
+  color: rgba(255,255,255,0.7);
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 0.25rem 0;
+}
+.cover-page .cover-divider {
+  width: 70px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  margin: 0.5rem auto;
+  border-radius: 1px;
+}
+.cover-page .cover-description {
+  max-width: 480px;
+  margin: 0.5rem auto;
+  color: rgba(255,255,255,0.6);
+  font-size: 0.95rem;
+  line-height: 1.7;
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-weight: 300;
+}
+.cover-page .cover-meta {
+  color: rgba(255,255,255,0.5);
+  font-size: 0.82rem;
+  margin-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.25rem;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  padding-top: 1rem;
+  width: 100%;
+}
+.cover-page .cover-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 300;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+.cover-page .cover-meta span:first-child{border:none}
+.cover-deco-top{display:none}
+.cover-deco-bottom{display:none}
 
 /* Table of contents */
 .toc-page{page-break-after:always;padding:2cm 2cm}
@@ -226,7 +378,12 @@ label .hint{font-weight:400;font-size:0.78rem;color:var(--text-muted)}
 
 /* 2-Column Textbook Layout */
 .textbook-layout{column-count:2;column-gap:2.5rem;column-rule:1px solid #ddd}
-.textbook-layout .quiz-header,.textbook-layout .chapter-page{column-span:all}
+.textbook-layout .cover-page,
+.textbook-layout .toc-page,
+.textbook-layout .quiz-header,
+.textbook-layout .chapter-page,
+.textbook-layout .end-chapter-answers,
+.textbook-layout .end-book-answers{column-span:all}
 .textbook-layout .question-item{break-inside:avoid;margin-bottom:1.25rem}
 .textbook-layout .question-text{font-size:0.92rem}
 .textbook-layout .option-item{font-size:0.88rem}
@@ -292,25 +449,37 @@ label .hint{font-weight:400;font-size:0.78rem;color:var(--text-muted)}
 
 @media print{
   @page{margin:1.5cm 1.8cm;size:auto}
-  @page:first{margin-top:0}
+  @page:first{margin:0}
   .no-print{display:none!important}
   html,body{background:white!important;color:black!important;margin:0;padding:0;font-size:11pt}
   .container{max-width:none;margin:0;padding:0}
   #print-area{display:block!important;box-shadow:none!important;padding:0!important;margin:0!important;border-radius:0;background:white}
   #print-area .pdf-page{padding:0;max-width:none}
-  .cover-page{min-height:100vh;padding:4cm 2cm;page-break-after:always}
+  .cover-page{min-height:100vh!important;padding:0!important;page-break-after:always}
+  .cover-frame{padding:3cm 2cm!important;width:85%!important;max-width:560px!important;height:auto!important;display:flex!important;flex-direction:column!important;align-items:center!important}
+  .cover-accent-bar{height:5px!important;display:block!important}
+  .cover-accent-bar-bottom{height:3px!important;display:block!important}
+  .cover-svg-bg,.cover-svg-corner{display:block!important}
+  .cover-page .cover-title{font-size:2.8rem!important;color:#fff!important}
+  .cover-page .cover-subtitle{font-size:1rem!important;color:rgba(255,255,255,0.7)!important}
+  .cover-page .cover-description{color:rgba(255,255,255,0.6)!important}
+  .cover-page .cover-meta{color:rgba(255,255,255,0.5)!important;border-top-color:rgba(255,255,255,0.1)!important}
   .toc-page{page-break-after:always}
   .chapter-page{page-break-before:always;page-break-after:avoid}
   .quiz-header{page-break-after:avoid}
   .question-item{page-break-inside:avoid;orphans:3;widows:3}
   .answer-key{page-break-inside:avoid}
   .textbook-layout{column-count:2;column-gap:1.8rem;column-rule:1px solid #ddd}
-  .textbook-layout .quiz-header,.textbook-layout .chapter-page{column-span:all}
+  .textbook-layout .cover-page,
+  .textbook-layout .toc-page,
+  .textbook-layout .quiz-header,
+  .textbook-layout .chapter-page,
+  .textbook-layout .end-chapter-answers,
+  .textbook-layout .end-book-answers{column-span:all}
   .textbook-layout .question-item{break-inside:avoid}
   .styled-output .question-item{box-shadow:none!important;break-inside:avoid;border:1px solid #e0e0e0}
   .end-chapter-answers,.end-book-answers{page-break-before:always}
   .written-item .written-answer-space{min-height:4cm}
-  .cover-deco-top,.cover-deco-bottom{display:none}
   a{text-decoration:none;color:inherit}
 }
 
@@ -462,10 +631,11 @@ label .hint{font-weight:400;font-size:0.78rem;color:var(--text-muted)}
         <div class="form-group">
           <label>Font</label>
           <select class="select-input" id="font-mode">
-            <option value="sans">Sans-serif (Inter)</option>
-            <option value="serif">Serif (Georgia)</option>
-            <option value="mono">Monospace</option>
-            <option value="system">System</option>
+            <option value="sans">Sans-serif — Inter</option>
+            <option value="serif">Serif — Source Serif 4</option>
+            <option value="elegant">Elegant — DM Serif Display</option>
+            <option value="mono">Monospace — JetBrains Mono</option>
+            <option value="system">System UI</option>
           </select>
         </div>
         <div class="form-group">
@@ -520,21 +690,19 @@ label .hint{font-weight:400;font-size:0.78rem;color:var(--text-muted)}
       <span class="summary-stat">📐 <strong id="export-style">Standard</strong></span>
       <span class="summary-stat">📄 <strong id="export-pagesize">A4</strong></span>
     </div>
-    <div class="two-col">
-      <div>
-        <button class="btn btn-primary w-full" onclick="generatePreview()" id="preview-btn">👁️ Generate Preview</button>
+    <div class="card">
+      <h3>📄 Generate &amp; Export</h3>
+      <div style="display:flex;flex-direction:column;gap:0.75rem">
+        <button class="btn btn-primary" style="width:100%;justify-content:center;padding:0.75rem" onclick="generatePreview()" id="preview-btn">👁️ Generate Preview</button>
         <div id="generate-status" class="status-msg"></div>
-        <div class="progress-bar" id="progress-bar-wrap" style="display:none">
-          <div class="progress-fill" id="progress-fill"></div>
+        <button class="btn btn-success" style="width:100%;justify-content:center;flex-direction:column;padding:0.85rem 1rem;line-height:1.35;font-size:1rem" onclick="nativePrintPdf()" id="print-btn" disabled>
+          🖨️ Open PDF / Print
+          <span style="font-size:0.78rem;font-weight:400;opacity:0.85;margin-top:0.25rem">Opens print dialog — vector text, fully copyable &amp; searchable</span>
+        </button>
+        <div style="padding:0.55rem 0.75rem;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:0.8rem;color:var(--text-muted)">
+          💡 A clean print window opens with your PDF content. Select <strong>Save as PDF</strong> as the destination in the print dialog to save the file. Text will be fully copyable and searchable.
         </div>
       </div>
-      <div class="flex flex-wrap gap-sm" style="flex-direction:column">
-        <button class="btn btn-success w-full" onclick="nativePrintPdf()" id="print-btn" disabled style="font-size:1rem;padding:0.8rem">🖨️ Native Browser Print <span style="font-size:0.75rem;font-weight:400;display:block;opacity:0.8">Best quality — uses your browser's PDF engine</span></button>
-        <button class="btn btn-secondary w-full" onclick="downloadPdf()" id="download-btn" disabled>💾 Download PDF (html2pdf)</button>
-      </div>
-    </div>
-    <div style="margin-top:0.75rem;padding:0.6rem 0.85rem;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:0.82rem;color:var(--text-muted)">
-      💡 <strong>Native Browser Print</strong> produces vector-quality PDFs with proper fonts, handles large documents, and lets you choose orientation/save location. <strong>Download PDF</strong> uses html2pdf (raster-based) — better for quick single-quiz exports.
     </div>
   </div>
 </div>
@@ -937,7 +1105,7 @@ async function generatePreview() {
   // Apply layout classes
   area.className = '';
   const cls = [];
-  if (state.style.layout === 'twocol' && state.style.mode !== 'mcqnotes') cls.push('textbook-layout');
+  if (state.style.layout === 'twocol') cls.push('textbook-layout');
   if (state.style.mode === 'styled') cls.push('styled-output');
   if (state.style.mode === 'written') cls.push('written-layout');
   if (state.style.mode === 'mcqnotes') cls.push('mcq-notes-layout');
@@ -945,16 +1113,14 @@ async function generatePreview() {
   if (state.style.mode === 'detailed') cls.push('detailed-layout');
   cls.forEach(c => area.classList.add(c));
 
-  if (state.style.layout === 'twocol' && state.style.mode === 'mcqnotes') {
-    area.classList.add('textbook-layout');
-  }
-
   // Font class
   const page = document.getElementById('pdf-content');
   page.className = 'pdf-page';
   if (state.style.font === 'serif') page.classList.add('font-serif');
+  else if (state.style.font === 'elegant') page.classList.add('font-elegant');
   else if (state.style.font === 'mono') page.classList.add('font-mono');
   else if (state.style.font === 'system') page.classList.add('font-system');
+  else page.classList.add('font-sans');
 
   state.previewGenerated = true;
   document.getElementById('download-btn').disabled = false;
@@ -1031,17 +1197,17 @@ function buildPdfContent() {
           </div>
         `);
       } else if (quizData.isWritten || state.style.mode === 'written') {
-        const hasAnswerLines = !q.explanation || state.style.answers !== 'inline';
+        const modelAns = q.modelAnswer || q.explanation || '';
         parts.push('<div class="question-item written-item">');
         parts.push(`<div class="question-text"><span class="question-number">${num}.</span> ${esc(q.question)}</div>`);
         if (state.style.answers === 'inline') {
-          if (q.explanation) {
-            parts.push(`<div class="answer-key"><strong>✍️ Model Answer</strong><div class="expl">${esc(q.explanation)}</div></div>`);
+          if (modelAns) {
+            parts.push(`<div class="answer-key"><strong>✍️ Model Answer</strong><div class="expl">${esc(modelAns)}</div></div>`);
           }
         } else {
           parts.push(`<div class="written-answer-space" data-q="${num}"></div>`);
-          if (q.explanation) {
-            parts.push(`<div class="answer-key" style="margin-top:0.5rem"><strong>✍️ Model Answer</strong><div class="expl">${esc(q.explanation)}</div></div>`);
+          if (modelAns) {
+            parts.push(`<div class="answer-key" style="margin-top:0.5rem"><strong>✍️ Model Answer</strong><div class="expl">${esc(modelAns)}</div></div>`);
           }
         }
         parts.push('</div>');
@@ -1107,21 +1273,72 @@ function buildPdfContent() {
 // COVER PAGE RENDERER
 // ═══════════════════════════════════════════════════════════════════════════════
 function renderCoverPage() {
+  const totalQ = state.allQuestionsLoad.reduce((s, f) => s + (f.questions ? f.questions.length : 0), 0);
+  const iconHtml = state.cover.icon && !state.cover.icon.startsWith('<')
+    ? `<span class="cover-emoji">${state.cover.icon}</span>`
+    : state.cover.icon || '';
   return `
     <div class="cover-page">
-      <div class="cover-deco-top"></div>
-      ${state.cover.icon ? `<span class="cover-icon">${state.cover.icon}</span>` : ''}
-      <div class="cover-divider"></div>
-      <h1 class="cover-title">${esc(state.cover.title)}</h1>
-      ${state.cover.subtitle ? `<p class="cover-subtitle">${esc(state.cover.subtitle)}</p>` : ''}
-      ${state.cover.description ? `<p class="cover-description">${esc(state.cover.description)}</p>` : ''}
-      <div class="cover-meta">
-        ${state.cover.author ? `<span>✍️ ${esc(state.cover.author)}</span>` : ''}
-        ${state.cover.date ? `<span>📅 ${esc(state.cover.date)}</span>` : ''}
-        <span>📄 ${state.allQuestionsLoad.length} quiz${state.allQuestionsLoad.length !== 1 ? 'zes' : ''}</span>
-        <span>❓ ${state.allQuestionsLoad.reduce((s, f) => s + (f.questions ? f.questions.length : 0), 0)} questions</span>
+      <div class="cover-accent-bar"></div>
+      <div class="cover-svg-bg">
+        <svg viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice">
+          <defs>
+            <linearGradient id="svg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="rgba(240,165,0,0.06)"/>
+              <stop offset="100%" stop-color="rgba(240,165,0,0.01)"/>
+            </linearGradient>
+          </defs>
+          <g opacity="0.08" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.5">
+            <path d="M120 80 L120 130 L70 130 L70 150 L120 150 L120 200 L140 200 L140 150 L190 150 L190 130 L140 130 L140 80 Z" transform="scale(0.8)"/>
+            <path d="M650 400 L650 440 L610 440 L610 460 L650 460 L650 500 L670 500 L670 460 L710 460 L710 440 L670 440 L670 400 Z" transform="scale(0.6)"/>
+            <path d="M700 80 L700 120 L660 120 L660 140 L700 140 L700 180 L720 180 L720 140 L760 140 L760 120 L720 120 L720 80 Z" transform="scale(0.5)"/>
+          </g>
+          <g opacity="0.06" stroke="rgba(255,255,255,0.4)" stroke-width="1.2" fill="none">
+            <path d="M400 50 C420 100,380 150,400 200 C420 250,380 300,400 350 C420 400,380 450,400 500 C420 550,380 580,400 600" stroke-dasharray="4 4"/>
+            <path d="M400 50 C380 100,420 150,400 200 C380 250,420 300,400 350 C380 400,420 450,400 500 C380 550,420 580,400 600" stroke-dasharray="4 4" transform="translate(20,0)"/>
+          </g>
+          <g opacity="0.04" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" fill="none">
+            <path d="M600 550 C620 520,620 480,600 450 C580 420,560 400,560 370 C560 340,580 320,600 320 C620 320,640 340,640 370"/>
+            <circle cx="640" cy="370" r="15"/>
+            <path d="M600 550 L600 580 L640 580"/>
+          </g>
+          <g opacity="0.05" stroke="rgba(240,165,0,0.5)" stroke-width="1.5" fill="none">
+            <path d="M50 350 L140 350 L160 300 L190 420 L220 280 L250 400 L280 330 L300 350 L350 350"/>
+          </g>
+        </svg>
       </div>
-      <div class="cover-deco-bottom"></div>
+      <svg class="cover-svg-corner tl" width="100" height="100" viewBox="0 0 100 100">
+        <path d="M0 0 L100 0 L100 4 L4 4 L4 100 L0 100 Z" fill="rgba(240,165,0,0.12)"/>
+        <path d="M10 10 L90 10 L90 14 L14 14 L14 90 L10 90 Z" fill="rgba(240,165,0,0.06)"/>
+      </svg>
+      <svg class="cover-svg-corner tr" width="100" height="100" viewBox="0 0 100 100">
+        <path d="M0 0 L100 0 L100 100 L96 100 L96 4 L0 4 Z" fill="rgba(240,165,0,0.12)"/>
+        <path d="M10 10 L90 10 L90 90 L86 90 L86 14 L10 14 Z" fill="rgba(240,165,0,0.06)"/>
+      </svg>
+      <svg class="cover-svg-corner bl" width="100" height="100" viewBox="0 0 100 100">
+        <path d="M0 0 L0 100 L100 100 L100 96 L4 96 L4 0 Z" fill="rgba(240,165,0,0.12)"/>
+        <path d="M10 10 L10 90 L90 90 L90 86 L14 86 L14 10 Z" fill="rgba(240,165,0,0.06)"/>
+      </svg>
+      <svg class="cover-svg-corner br" width="100" height="100" viewBox="0 0 100 100">
+        <path d="M100 0 L100 100 L0 100 L0 96 L96 96 L96 0 Z" fill="rgba(240,165,0,0.12)"/>
+        <path d="M90 10 L90 90 L10 90 L10 86 L86 86 L86 10 Z" fill="rgba(240,165,0,0.06)"/>
+      </svg>
+      <div class="cover-accent-bar-bottom"></div>
+      <div class="cover-frame">
+        <div class="cover-icon-wrap">
+          ${iconHtml ? iconHtml : '<svg viewBox="0 0 48 48" fill="none" stroke="rgba(240,165,0,0.8)" stroke-width="1.5"><path d="M24 4 C24 4,20 14,12 18 C4 22,4 32,12 36 C20 40,24 44,24 44 C24 44,28 40,36 36 C44 32,44 22,36 18 C28 14,24 4,24 4Z"/><path d="M24 14 L24 34 M14 24 L34 24" stroke="rgba(255,255,255,0.9)" stroke-width="2"/></svg>'}
+        </div>
+        <div class="cover-divider"></div>
+        <h1 class="cover-title">${esc(state.cover.title)}</h1>
+        ${state.cover.subtitle ? `<p class="cover-subtitle">${esc(state.cover.subtitle)}</p>` : ''}
+        ${state.cover.description ? `<p class="cover-description">${esc(state.cover.description)}</p>` : ''}
+        <div class="cover-meta">
+          ${state.cover.author ? `<span>✍️ ${esc(state.cover.author)}</span>` : ''}
+          ${state.cover.date ? `<span>📅 ${esc(state.cover.date)}</span>` : ''}
+          <span>📄 ${state.allQuestionsLoad.length} quiz${state.allQuestionsLoad.length !== 1 ? 'zes' : ''}</span>
+          <span>❓ ${totalQ} questions</span>
+        </div>
+      </div>
     </div>
   `;
 }
@@ -1141,97 +1358,109 @@ function renderToc() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// PDF DOWNLOAD
+// PRINT WINDOW — shared by both export buttons
+// Opens a dedicated popup with all styles + content and auto-triggers print.
+// The browser's native PDF engine renders real vector text (fully copyable).
 // ═══════════════════════════════════════════════════════════════════════════════
-async function downloadPdf() {
+function openPrintWindow() {
   if (!state.previewGenerated) {
     showGenerateStatus('Generate the preview first.', 'error');
     return;
   }
-  if (state.isGenerating) return;
 
-  state.isGenerating = true;
-  const btn = document.getElementById('download-btn');
-  btn.disabled = true;
-  btn.textContent = '⏳ Generating PDF...';
+  const s = state.style;
+  const size = s.pageSize === 'letter' ? 'letter' : 'A4';
+  const orientation = s.orientation === 'landscape' ? 'landscape' : 'portrait';
 
-  const progressBar = document.getElementById('progress-bar-wrap');
-  const progressFill = document.getElementById('progress-fill');
-  progressBar.style.display = 'block';
-  progressFill.style.width = '0%';
+  // Collect all <style> and <link rel="stylesheet"> from current document
+  const styleNodes = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+    .map(n => n.outerHTML).join('\n');
 
-  showGenerateStatus('<span class="spinner"></span> Generating PDF, please wait...', 'loading');
+  // Body content: only the print-area inner HTML
+  const contentHtml = document.getElementById('print-area').innerHTML;
 
-  try {
-    const element = document.getElementById('print-area');
-    const s = state.style;
-    const w = s.pageSize === 'letter' ? 215.9 : 210; // mm
-    const h = s.pageSize === 'letter' ? 279.4 : 297;
-    const dim = s.orientation === 'landscape' ? { w: h, h: w } : { w, h };
+  // Detect classes applied to print-area (layout + style classes)
+  const areaClasses = document.getElementById('print-area').className || '';
+  // Detect class on pdf-content (font class)
+  const pageClasses = document.getElementById('pdf-content').className || '';
 
-    const filename = (state.cover.title || 'quiz-compilation')
-      .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-{2,}/g, '-').replace(/^-|-$/g, '') + '.pdf';
-
-    const opt = {
-      margin: [0.4, 0.5, 0.4, 0.5],
-      filename,
-      image: { type: 'jpeg', quality: 0.95 },
-      html2canvas: {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        width: dim.w * 3.78, // mm to px at 96dpi
-      },
-      jsPDF: {
-        unit: 'mm',
-        format: [dim.w, dim.h],
-        orientation: s.orientation === 'landscape' ? 'landscape' : 'portrait',
-      },
-      pagebreak: {
-        mode: ['avoid-all', 'css', 'legacy'],
-      },
-    };
-
-    // Simulate progress
-    let progress = 0;
-    const progInterval = setInterval(() => {
-      progress = Math.min(progress + 8, 85);
-      progressFill.style.width = progress + '%';
-    }, 400);
-
-    await html2pdf().set(opt).from(element).save();
-
-    clearInterval(progInterval);
-    progressFill.style.width = '100%';
-    setTimeout(() => { progressBar.style.display = 'none'; }, 800);
-
-    showGenerateStatus(`✅ PDF saved as "${filename}"`, 'success');
-  } catch (err) {
-    console.error(err);
-    showGenerateStatus('Error: ' + err.message + '<br><small>Try using the Print Dialog instead for large documents.</small>', 'error');
-  } finally {
-    state.isGenerating = false;
-    btn.disabled = false;
-    btn.textContent = '💾 Download PDF';
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${esc(state.cover.title || 'PDF Export')}</title>
+${styleNodes}
+<style>
+  @page { size: ${size} ${orientation}; margin: 1.5cm 1.8cm; }
+  @page:first { margin: 0; }
+  html, body {
+    background: white !important;
+    color: black !important;
+    margin: 0; padding: 0;
+    font-size: 11pt;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
-}
+  #print-area { display: block !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; border-radius: 0; background: white; }
+  #print-area .pdf-page { padding: 0; max-width: none; }
+  .cover-page { min-height: 100vh !important; padding: 0 !important; page-break-after: always; }
+  .cover-frame { padding: 3cm 2cm !important; width: 85% !important; max-width: 560px !important; height: auto !important; display: flex !important; flex-direction: column !important; align-items: center !important; }
+  .cover-accent-bar { height: 5px !important; display: block !important; }
+  .cover-accent-bar-bottom { height: 3px !important; display: block !important; }
+  .cover-svg-bg, .cover-svg-corner { display: block !important; }
+  .cover-page .cover-title { font-size: 2.8rem !important; color: #fff !important; }
+  .cover-page .cover-subtitle { font-size: 1rem !important; color: rgba(255,255,255,0.7) !important; }
+  .cover-page .cover-description { color: rgba(255,255,255,0.6) !important; }
+  .cover-page .cover-meta { color: rgba(255,255,255,0.5) !important; border-top-color: rgba(255,255,255,0.1) !important; }
+  .toc-page { page-break-after: always; }
+  .chapter-page { page-break-before: always; page-break-after: avoid; }
+  .quiz-header { page-break-after: avoid; }
+  .question-item { page-break-inside: avoid; orphans: 3; widows: 3; }
+  .answer-key { page-break-inside: avoid; }
+  .textbook-layout { column-count: 2; column-gap: 1.8rem; column-rule: 1px solid #ddd; }
+  .textbook-layout .cover-page,
+  .textbook-layout .toc-page,
+  .textbook-layout .quiz-header,
+  .textbook-layout .chapter-page,
+  .textbook-layout .end-chapter-answers,
+  .textbook-layout .end-book-answers { column-span: all; }
+  .textbook-layout .question-item { break-inside: avoid; }
+  .styled-output .question-item { box-shadow: none !important; break-inside: avoid; border: 1px solid #e0e0e0; }
+  .end-chapter-answers, .end-book-answers { page-break-before: always; }
+  .written-item .written-answer-space { min-height: 4cm; }
+  a { text-decoration: none; color: inherit; }
+  .no-print { display: none !important; }
+</style>
+</head>
+<body>
+<div id="print-area" class="${areaClasses}">
+  <div class="${pageClasses}" id="pdf-content">${contentHtml}</div>
+</div>
+<script>
+  window.addEventListener('load', function() {
+    setTimeout(function() { window.print(); }, 300);
+  });
+<\/script>
+</body>
+</html>`;
 
-function showGenerateStatus(msg, type) {
-  const el = document.getElementById('generate-status');
-  el.innerHTML = msg;
-  el.className = 'status-msg ' + type;
+  const win = window.open('', '_blank', `width=900,height=700,toolbar=0,menubar=0,location=0`);
+  if (!win) {
+    showGenerateStatus('Pop-up blocked! Please allow pop-ups for this site to use the PDF export.', 'error');
+    return;
+  }
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
 }
 
 function nativePrintPdf() {
-  if (!state.previewGenerated) {
-    showGenerateStatus('Generate the preview first.', 'error');
-    return;
-  }
-  // Ensure print-area is visible for print media queries
-  const area = document.getElementById('print-area');
-  area.style.display = 'block';
-  // Dispatch print with a small delay to ensure CSS transitions settle
-  setTimeout(() => window.print(), 150);
+  openPrintWindow();
+}
+
+async function downloadPdf() {
+  openPrintWindow();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
