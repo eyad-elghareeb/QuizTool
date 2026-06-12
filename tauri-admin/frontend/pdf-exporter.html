@@ -1068,7 +1068,7 @@ function gatherConfig() {
 }
 
 function buildPayload() {
-  return {
+  const payload = {
     quizzes: state.allQuestionsLoad.map(f=>({
       title:       (f.config?.title)       || (f.meta?.title)       || 'Untitled',
       description: (f.config?.description) || (f.meta?.description) || '',

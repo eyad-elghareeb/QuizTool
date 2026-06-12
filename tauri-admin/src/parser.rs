@@ -69,21 +69,180 @@ pub fn extract_assigned_literal(content: &str, const_name: &str, open_char: char
 }
 
 pub fn sanitize_jsonish(block: &str) -> String {
-    // Remove BOM first (common in Windows-saved JSON files)
-    let s = block.strip_prefix('\u{FEFF}').unwrap_or(block);
-    // Strip single-line comments, avoiding protocol slashes like http://
-    let re_lc = Regex::new(r"(?m)(^|[^:])//.*$").unwrap();
-    let s = re_lc.replace_all(s, "$1");
-    let re_bc = Regex::new(r"(?s)/\*.*?\*/").unwrap();
-    let s = re_bc.replace_all(&s, "");
-    let re_keys = Regex::new(r#"([{,]\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:"#).unwrap();
-    let s = re_keys.replace_all(&s, r#"$1"$2":"#);
-    let re_sq = Regex::new(r#"'([^'\\]*(?:\\.[^'\\]*)*)'"#).unwrap();
-    let s = re_sq.replace_all(&s, |caps: &regex::Captures| {
-        format!("\"{}\"", caps[1].replace('"', "\\\""))
-    });
-    let re_trail = Regex::new(r",\s*([\]}])").unwrap();
-    re_trail.replace_all(&s, "$1").to_string()
+    let bytes = block.as_bytes();
+    let mut out = Vec::with_capacity(block.len() + 32);
+    let mut i = 0;
+
+    // State machine for parsing JS-like content into valid JSON.
+    // States:
+    //   0 = outside string
+    //   1 = inside "..." string
+    //   2 = inside '...' string  (will be converted to "...")
+    //   3 = inside /* ... */ comment
+    //   4 = inside // ... comment
+    let mut state = 0u8;
+    let mut last_non_ws: u8 = 0; // last non-whitespace emitted char; 0 = start of input
+
+    macro_rules! emit_byte {
+        ($b:expr) => {{
+            let b = $b;
+            out.push(b);
+            if !(b == b' ' || b == b'\t' || b == b'\n' || b == b'\r') {
+                last_non_ws = b;
+            }
+        }};
+    }
+
+    while i < bytes.len() {
+        let b = bytes[i];
+
+        // ── Inside block comment ───────────────────────────────
+        if state == 3 {
+            if b == b'*' && i + 1 < bytes.len() && bytes[i + 1] == b'/' {
+                state = 0;
+                i += 2;
+            } else {
+                i += 1;
+            }
+            continue;
+        }
+
+        // ── Inside line comment ────────────────────────────────
+        if state == 4 {
+            if b == b'\n' {
+                state = 0;
+                emit_byte!(b'\n');
+            }
+            i += 1;
+            continue;
+        }
+
+        // ── Inside strings ─────────────────────────────────────
+        if state == 1 || state == 2 {
+            // Track escape sequences
+            if b == b'\\' && i + 1 < bytes.len() {
+                let next = bytes[i + 1];
+                // Inside single-quoted strings, \' stays as \'
+                // Inside double-quoted strings, \" stays as \"
+                out.push(b'\\');
+                out.push(next);
+                i += 2;
+                continue;
+            }
+            if state == 1 && b == b'"' {
+                state = 0;  // close double string
+                emit_byte!(b'"');
+                i += 1;
+                continue;
+            }
+            if state == 2 && b == b'\'' {
+                state = 0;  // close single string → converted to double
+                emit_byte!(b'"');
+                i += 1;
+                continue;
+            }
+            out.push(b);
+            i += 1;
+            continue;
+        }
+
+        // ── Outside any string / comment ───────────────────────
+
+        // Skip BOM
+        if b == 0xEF && i + 2 < bytes.len() && bytes[i+1] == 0xBB && bytes[i+2] == 0xBF {
+            i += 3;
+            continue;
+        }
+
+        // Block comment start
+        if b == b'/' && i + 1 < bytes.len() && bytes[i + 1] == b'*' {
+            state = 3;
+            i += 2;
+            continue;
+        }
+
+        // Line comment start — skip if preceded by : (avoids http:// etc.)
+        if b == b'/' && i + 1 < bytes.len() && bytes[i + 1] == b'/' {
+            let is_protocol = i > 0 && bytes[i - 1] == b':';
+            if !is_protocol {
+                state = 4;
+                i += 2;
+                continue;
+            }
+        }
+
+        // Double-quoted string
+        if b == b'"' {
+            state = 1;
+            emit_byte!(b'"');
+            i += 1;
+            continue;
+        }
+
+        // Single-quoted string → convert to double-quoted
+        if b == b'\'' {
+            state = 2;
+            emit_byte!(b'"');
+            i += 1;
+            continue;
+        }
+
+        // Unquoted key: `identifier:` → `"identifier":`
+        // Must be preceded by `{` `,` or start of input
+        if b.is_ascii_alphabetic() || b == b'_' {
+            // Check if preceded by { , or start (after skipping whitespace)
+            let is_key_start = last_non_ws == 0
+                || last_non_ws == b'{'
+                || last_non_ws == b',';
+            if is_key_start {
+                // Collect identifier and peek for `:`
+                let mut j = i;
+                while j < bytes.len() && (bytes[j].is_ascii_alphanumeric() || bytes[j] == b'_') {
+                    j += 1;
+                }
+                // Skip whitespace before `:`
+                let mut k = j;
+                while k < bytes.len() && bytes[k] == b' ' {
+                    k += 1;
+                }
+                if k < bytes.len() && bytes[k] == b':' {
+                    // Emit quoted key
+                    out.push(b'"');
+                    out.extend_from_slice(&bytes[i..j]);
+                    out.push(b'"');
+                    out.push(b':');
+                    last_non_ws = b':';
+                    i = k + 1;
+                    continue;
+                }
+            }
+            // Not a key — emit as-is
+            emit_byte!(b);
+            i += 1;
+            continue;
+        }
+
+        // Trailing comma before `]` or `}` → remove
+        if b == b',' {
+            let mut j = i + 1;
+            while j < bytes.len() && bytes[j] == b' ' {
+                j += 1;
+            }
+            if j < bytes.len() && (bytes[j] == b']' || bytes[j] == b'}') {
+                // skip the comma
+                i += 1;
+                continue;
+            }
+            emit_byte!(b',');
+            i += 1;
+            continue;
+        }
+
+        emit_byte!(b);
+        i += 1;
+    }
+
+    String::from_utf8(out).unwrap_or_else(|_| block.to_string())
 }
 
 pub fn parse_literal(content: &str, const_name: &str, open_char: char, close_char: char) -> Option<Value> {
