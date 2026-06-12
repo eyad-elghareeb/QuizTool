@@ -1041,14 +1041,15 @@ def build_question(q_data, q_num, styles, layout, answers_mode,
             )
             elems.append(Paragraph(opt_html, styles["q_option"]))
 
-    # Inline answer + explanation
+    # Inline answer — badge only when explanation is also shown
+    # (otherwise the green coloring on the correct option is sufficient)
     if answers_mode == "inline":
-        if 0 <= correct < len(opts):
+        expl = q_data.get("explanation", "")
+        if show_expl and 0 <= correct < len(opts):
             elems.append(Spacer(1, sp(2, fs)))
             elems.append(_correct_badge(
                 LETTERS[correct], opts[correct], content_w, fs
             ))
-        expl = q_data.get("explanation", "")
         if expl and show_expl:
             elems.append(Spacer(1, sp(1, fs)))
             elems.append(_callout_box(
