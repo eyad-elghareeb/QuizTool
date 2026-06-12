@@ -903,7 +903,7 @@ def build_toc(cfg, styles, layout):
 # § 11  CHAPTER HEADER  —  with PDF anchor bookmark
 # ═══════════════════════════════════════════════════════════════
 
-def build_chapter_header(quiz, styles, layout, ch_num, is_single=False):
+def build_chapter_header(quiz, styles, layout, ch_num, is_single=False, content_w=400):
     """Build chapter-opening section header with anchor bookmark."""
     fs     = layout["fs"]
     story  = []
@@ -954,7 +954,7 @@ def build_chapter_header(quiz, styles, layout, ch_num, is_single=False):
         if sub:
             story.append(Paragraph(xesc(sub), styles["ch_desc"]))
 
-        story.append(HRule(400, thickness=1.5, color=GOLD,
+        story.append(HRule(content_w, thickness=1.5, color=GOLD,
                            before=sp(1, fs), after=sp(3, fs)))
 
     return story
@@ -966,18 +966,21 @@ def build_chapter_header(quiz, styles, layout, ch_num, is_single=False):
 
 def build_question(q_data, q_num, styles, layout, answers_mode,
                    show_expl, content_w, style_mode="standard",
-                   endbook_anchor=True):
+                   endbook_anchor=True, anchor_id=None):
     """
     Render a single question with options.
     answers_mode: 'inline' | 'endchapter' | 'endbook' | 'none'
     style_mode: 'standard' | 'styled' | 'detailed' | 'compact'
     endbook_anchor: if True, emit an anchor so the answer section can link back.
+    anchor_id: globally unique ID for anchor bookmarks (prevents per-chapter collisions).
+               Falls back to q_num if None.
     """
     fs    = layout["fs"]
     elems = []
 
-    q_anchor   = f"q{q_num}"
-    ans_anchor = f"a{q_num}"
+    aid        = anchor_id if anchor_id is not None else q_num
+    q_anchor   = f"q{aid}"
+    ans_anchor = f"a{aid}"
 
     # Bookmark anchor (target for "Back to Question N" links)
     elems.append(Anchor(q_anchor))
@@ -1105,17 +1108,19 @@ def build_mcqnotes_question(q_data, q_num, styles, layout, show_expl, content_w)
 # § 13  ANSWER KEY FLOWABLES
 # ═══════════════════════════════════════════════════════════════
 
-def build_answer_block(q_data, q_num, styles, layout, content_w, show_expl=True):
+def build_answer_block(q_data, q_num, styles, layout, content_w, show_expl=True, anchor_id=None):
     """
     Render a single answer explanation block for the answer key section.
     Mirrors medmcq answer section: preview → correct badge → explanation → back link.
     show_expl: if False, explanation text is omitted.
+    anchor_id: globally unique ID for anchor bookmarks.
     """
     fs    = layout["fs"]
     elems = []
 
-    ans_anchor = f"a{q_num}"
-    q_anchor   = f"q{q_num}"
+    aid        = anchor_id if anchor_id is not None else q_num
+    ans_anchor = f"a{aid}"
+    q_anchor   = f"q{aid}"
 
     elems.append(Anchor(ans_anchor))
 
@@ -1166,7 +1171,7 @@ def build_answer_key_section(answers_data, styles, layout, content_w,
                               section_title="ANSWER KEY", show_expl=True):
     """
     Build a complete answer key section (for endchapter or endbook).
-    answers_data: list of (q_num, q_data) tuples.
+    answers_data: list of (q_num, q_data, anchor_id) tuples.
     show_expl: if False, explanations are omitted from each answer block.
     """
     fs    = layout["fs"]
@@ -1181,12 +1186,15 @@ def build_answer_key_section(answers_data, styles, layout, content_w,
     # Quick-reference strip
     story.append(Paragraph("Quick Reference", styles["a_qref_title"]))
     parts = []
-    for q_num, q_data in answers_data:
+    for entry in answers_data:
+        q_num = entry[0]
+        q_data = entry[1]
+        anchor_id = entry[2] if len(entry) > 2 else q_num
         correct = q_data.get("correct", -1)
         if 0 <= correct < len(LETTERS):
             ltr = LETTERS[correct]
             parts.append(
-                f'<a href="#a{q_num}" color="#{_hx(LINK)}">Q{q_num}={ltr}</a>'
+                f'<a href="#a{anchor_id}" color="#{_hx(LINK)}">Q{q_num}={ltr}</a>'
             )
     story.append(Paragraph(
         "\u2002\u00b7\u2002".join(parts), styles["a_qref"]
@@ -1195,9 +1203,13 @@ def build_answer_key_section(answers_data, styles, layout, content_w,
                        before=sp(1, fs), after=sp(2, fs)))
 
     # Per-question answer blocks
-    for q_num, q_data in answers_data:
+    for entry in answers_data:
+        q_num = entry[0]
+        q_data = entry[1]
+        anchor_id = entry[2] if len(entry) > 2 else q_num
         for elem in build_answer_block(q_data, q_num, styles, layout,
-                                        content_w, show_expl=show_expl):
+                                        content_w, show_expl=show_expl,
+                                        anchor_id=anchor_id):
             story.append(elem)
 
     return story
@@ -1348,7 +1360,8 @@ def generate_pdf(config_path, output_path):
         story.extend(
             build_chapter_header(
                 quiz, styles, layout, ch_num,
-                is_single=(not multi_chapter)
+                is_single=(not multi_chapter),
+                content_w=content_w,
             )
         )
 
@@ -1359,6 +1372,7 @@ def generate_pdf(config_path, output_path):
             global_qnum[0] += 1
             ch_qnum += 1
             qnum = ch_qnum if numbering == "perchapter" else global_qnum[0]
+            anchor_id = global_qnum[0]  # always globally unique for PDF bookmarks
 
             if is_mcqnotes:
                 elems = build_mcqnotes_question(
@@ -1369,12 +1383,13 @@ def generate_pdf(config_path, output_path):
                     q_data, qnum, styles, layout,
                     answers_mode, show_expl, content_w,
                     style_mode=style_mode,
+                    anchor_id=anchor_id,
                 )
-            story.extend(elems)
+            story.append(KeepTogether(elems))
 
             if answers_mode in ("endchapter", "endbook"):
-                chapter_ans.append((qnum, q_data))
-                all_answers.append((qnum, q_data))
+                chapter_ans.append((qnum, q_data, anchor_id))
+                all_answers.append((qnum, q_data, anchor_id))
 
         # End-of-chapter answer key
         if answers_mode == "endchapter" and chapter_ans:
