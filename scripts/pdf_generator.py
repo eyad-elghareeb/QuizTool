@@ -1201,6 +1201,45 @@ def build_question(q_data, q_num, styles, layout, answers_mode,
     return elems
 
 
+def build_written_question(q_data, q_num, styles, layout, content_w):
+    """Render a written/essay question with model answer, rubric, and explanation."""
+    fs    = layout["fs"]
+    elems = []
+
+    aid      = q_num
+    q_anchor = f"q{aid}"
+
+    elems.append(Anchor(q_anchor))
+
+    # Question header
+    elems.append(TrackedLabel(
+        f"QUESTION {q_num}",
+        font_size=round(10.5 * fs, 1), color=COBALT, tracking=0.9,
+    ))
+    elems.append(HRule(content_w, thickness=1.5, color=ROYAL,
+                       before=sp(1, fs), after=sp(2, fs)))
+
+    # Question body with markdown
+    q_text = q_data.get("question", "")
+    for fb in _build_flowables(q_text, styles["q_body"], content_w, fs):
+        elems.append(fb)
+
+    # Model answer
+    model_answer = q_data.get("modelAnswer", "") or q_data.get("model_answer", "")
+    if model_answer:
+        elems.append(Spacer(1, sp(1, fs)))
+        elems.append(_callout_box(
+            "MODEL ANSWER", model_answer, content_w,
+            bg=PALE_BLUE, border_color=ROYAL, fs=fs,
+        ))
+
+    # Separator
+    elems.append(HRule(content_w, thickness=0.4, color=RULE_GRAY,
+                       before=sp(2, fs), after=sp(3, fs)))
+
+    return elems
+
+
 def build_mcqnotes_question(q_data, q_num, styles, layout, show_expl, content_w):
     """Ultra-compact MCQ notes: question + ✓ answer + explanation on tight spacing."""
     fs    = layout["fs"]
@@ -1491,6 +1530,7 @@ def generate_pdf(config_path, output_path):
 
         # Questions — with reliable per-chapter numbering
         ch_questions = quiz.get("questions", [])
+        is_written   = quiz.get("type", "") == "written"
         ch_qnum = 0
         for q_data in ch_questions:
             global_qnum[0] += 1
@@ -1498,7 +1538,11 @@ def generate_pdf(config_path, output_path):
             qnum = ch_qnum if numbering == "perchapter" else global_qnum[0]
             anchor_id = global_qnum[0]  # always globally unique for PDF bookmarks
 
-            if is_mcqnotes:
+            if is_written:
+                elems = build_written_question(
+                    q_data, qnum, styles, layout, content_w
+                )
+            elif is_mcqnotes:
                 elems = build_mcqnotes_question(
                     q_data, qnum, styles, layout, show_expl, content_w
                 )
@@ -1511,7 +1555,7 @@ def generate_pdf(config_path, output_path):
                 )
             story.append(KeepTogether(elems))
 
-            if answers_mode in ("endchapter", "endbook"):
+            if answers_mode in ("endchapter", "endbook") and not is_written:
                 chapter_ans.append((qnum, q_data, anchor_id))
                 all_answers.append((qnum, q_data, anchor_id))
 

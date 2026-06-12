@@ -115,11 +115,13 @@ pub fn ensure_deps() -> Result<bool, String> {
 
 #[derive(Clone)]
 pub struct QuestionData {
-    pub number:      usize,
-    pub text:        String,
-    pub options:     Vec<String>,
-    pub correct:     usize,
-    pub explanation: String,
+    pub number:       usize,
+    pub text:         String,
+    pub options:      Vec<String>,
+    pub correct:      usize,
+    pub explanation:  String,
+    pub model_answer: String,
+    pub rubric:       String,
 }
 
 #[derive(Clone)]
@@ -127,6 +129,7 @@ pub struct QuizData {
     pub title:       String,
     pub description: String,
     pub icon:        String,
+    pub r#type:      String,
     pub questions:   Vec<QuestionData>,
 }
 
@@ -162,12 +165,15 @@ impl ExportConfig {
                             .unwrap_or_default(),
                         correct:     qd["correct"].as_u64().unwrap_or(0) as usize,
                         explanation: qd["explanation"].as_str().unwrap_or("").to_string(),
+                        model_answer: qd["modelAnswer"].as_str().unwrap_or("").to_string(),
+                        rubric:       qd["rubric"].as_str().unwrap_or("").to_string(),
                     }).collect())
                     .unwrap_or_default();
                 QuizData {
                     title:       q["title"].as_str().unwrap_or("Untitled").to_string(),
                     description: q["description"].as_str().unwrap_or("").to_string(),
                     icon:        q["icon"].as_str().unwrap_or("").to_string(),
+                    r#type:      q["type"].as_str().unwrap_or("").to_string(),
                     questions,
                 }
             }).collect())
@@ -220,12 +226,15 @@ impl ExportConfig {
                 "title": q.title,
                 "description": q.description,
                 "icon": q.icon,
+                "type": q.r#type,
                 "questions": q.questions.iter().map(|qd| json!({
                     "number": qd.number,
                     "question": qd.text,
                     "options": qd.options,
                     "correct": qd.correct,
                     "explanation": qd.explanation,
+                    "modelAnswer": qd.model_answer,
+                    "rubric": qd.rubric,
                 })).collect::<Vec<_>>(),
             })).collect::<Vec<_>>(),
         })
