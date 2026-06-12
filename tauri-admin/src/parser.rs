@@ -225,7 +225,7 @@ pub fn sanitize_jsonish(block: &str) -> String {
         // Trailing comma before `]` or `}` → remove
         if b == b',' {
             let mut j = i + 1;
-            while j < bytes.len() && bytes[j] == b' ' {
+            while j < bytes.len() && bytes[j].is_ascii_whitespace() {
                 j += 1;
             }
             if j < bytes.len() && (bytes[j] == b']' || bytes[j] == b'}') {

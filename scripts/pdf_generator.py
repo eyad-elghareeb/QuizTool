@@ -540,10 +540,8 @@ def _correct_badge(letter, opt_text, col_w, fs=1.0):
 def _callout_box(label, body_text, col_w, bg, border_color, fs=1.0):
     """
     Explanation / objective callout box.
-    IMPECCABLE FIX: OUTLINE 0.75pt full-perimeter hairline + background tint.
-    NEVER a LINEBEFORE side-stripe (explicitly banned in impeccable).
-    Body text is split into separate rows per paragraph so long
-    content can split across pages naturally.
+    Single Table with one continuous OUTLINE — no internal rules,
+    no KeepTogether, rows split freely across pages.
     """
     lbl_sty = ParagraphStyle(
         "_cl", fontName=_F["H"],
@@ -555,33 +553,25 @@ def _callout_box(label, body_text, col_w, bg, border_color, fs=1.0):
         fontSize=round(8.5 * fs, 1), leading=round(12.5 * fs, 1),
         textColor=SLATE,
     )
-    # Split body into paragraphs so each table row stays page-splittable
-    body_rows = []
-    for para in body_text.split('\n\n'):
-        para = para.strip()
-        if para:
-            html = _md_to_html(xesc(para))
-            body_rows.append([Paragraph(html, txt_sty)])
+    pad_total = sp(3, fs) + sp(2, fs)
+    inner_w   = max(col_w - pad_total, 10)
+    body_flows = _build_flowables(body_text, txt_sty, inner_w, fs)
+    if not body_flows:
+        return [Paragraph(label, lbl_sty)]
 
-    if not body_rows:
-        return Paragraph(label, lbl_sty)  # fallback: plain label
-
-    # Build table: label row + one row per body paragraph
-    rows = [[Paragraph(label, lbl_sty)]] + body_rows
-    nrows = len(rows)
+    rows = [[Paragraph(label, lbl_sty)]] + [[fb] for fb in body_flows]
     t = Table(rows, colWidths=[col_w])
     t.setStyle(TableStyle([
         ("BACKGROUND",    (0, 0), (-1, -1), bg),
-        ("TOPPADDING",    (0, 0), (0, 0),   sp(1)),
-        ("BOTTOMPADDING", (0, 0), (0, 0),   sp(1)),
-        ("TOPPADDING",    (0, 1), (-1, -1), sp(1)),
-        ("BOTTOMPADDING", (0, 1), (-1, -1), sp(1)),
-        ("LEFTPADDING",   (0, 0), (-1, -1), sp(3)),
-        ("RIGHTPADDING",  (0, 0), (-1, -1), sp(2)),
-        # Full-perimeter hairline — impeccable-compliant
+        ("TOPPADDING",    (0, 0), (0, 0),   sp(1.5, fs)),
+        ("BOTTOMPADDING", (0, 0), (0, 0),   sp(0.5, fs)),
+        ("TOPPADDING",    (0, 1), (-1, -1), sp(0.5, fs)),
+        ("BOTTOMPADDING", (0, 1), (-1, -1), sp(0.5, fs)),
+        ("LEFTPADDING",   (0, 0), (-1, -1), sp(3, fs)),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), sp(2, fs)),
         ("OUTLINE",       (0, 0), (-1, -1), 0.75, border_color),
     ]))
-    return t
+    return [t]
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -1187,7 +1177,7 @@ def build_question(q_data, q_num, styles, layout, answers_mode,
             ))
         if expl and show_expl:
             elems.append(Spacer(1, sp(1, fs)))
-            elems.append(_callout_box(
+            elems.extend(_callout_box(
                 "EXPLANATION", expl, content_w,
                 bg=PALE_GREEN, border_color=SAGE, fs=fs,
             ))
@@ -1236,11 +1226,11 @@ def build_written_question(q_data, q_num, styles, layout, content_w):
     for fb in _build_flowables(q_text, styles["q_body"], content_w, fs):
         elems.append(fb)
 
-    # Model answer
+    # Model answer — callout box (single Table, continuous outline, rows split freely)
     model_answer = q_data.get("modelAnswer", "") or q_data.get("model_answer", "")
     if model_answer:
         elems.append(Spacer(1, sp(1, fs)))
-        elems.append(_callout_box(
+        elems.extend(_callout_box(
             "MODEL ANSWER", model_answer, content_w,
             bg=PALE_BLUE, border_color=ROYAL, fs=fs,
         ))
