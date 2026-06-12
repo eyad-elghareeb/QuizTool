@@ -8,6 +8,12 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::sync::OnceLock;
 
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
 // ── Embedded Python scripts ───────────────────────────────────────────────
 // These are compiled into the binary so the EXE is fully self-contained.
 const EMBED_PDF_GENERATOR: &str = include_str!("../../scripts/pdf_generator.py");
@@ -37,7 +43,11 @@ fn extract_script(name: &str, content: &str) -> Result<PathBuf, String> {
 
 fn find_python() -> Option<String> {
     for name in &["python3", "python"] {
-        if let Ok(output) = Command::new(name).arg("--version").output() {
+        let mut cmd = Command::new(name);
+        cmd.arg("--version");
+        #[cfg(windows)]
+        cmd.creation_flags(CREATE_NO_WINDOW);
+        if let Ok(output) = cmd.output() {
             if output.status.success() {
                 return Some(name.to_string());
             }
@@ -68,10 +78,12 @@ pub fn ensure_deps() -> Result<bool, String> {
 
     let script_path = extract_script("ensure_pdf_deps.py", EMBED_ENSURE_DEPS)?;
 
-    let output = Command::new(&python)
-        .arg(&script_path)
-        .env("PYTHONIOENCODING", "utf-8")
-        .output()
+    let mut cmd = Command::new(&python);
+    cmd.arg(&script_path)
+        .env("PYTHONIOENCODING", "utf-8");
+    #[cfg(windows)]
+    cmd.creation_flags(CREATE_NO_WINDOW);
+    let output = cmd.output()
         .map_err(|e| format!("Failed to run dependency check: {e}"))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -245,12 +257,14 @@ pub fn generate_pdf(config: &ExportConfig) -> Result<Vec<u8>, String> {
     std::fs::write(&config_path, &json_str)
         .map_err(|e| format!("Failed to write temp config: {e}"))?;
 
-    let output = Command::new(&python)
-        .arg(&script_path)
+    let mut cmd = Command::new(&python);
+    cmd.arg(&script_path)
         .arg(&config_path)
         .arg(&output_path)
-        .env("PYTHONIOENCODING", "utf-8")
-        .output()
+        .env("PYTHONIOENCODING", "utf-8");
+    #[cfg(windows)]
+    cmd.creation_flags(CREATE_NO_WINDOW);
+    let output = cmd.output()
         .map_err(|e| format!("Failed to run PDF generator: {e}"))?;
 
     let stderr = String::from_utf8_lossy(&output.stderr);

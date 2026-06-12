@@ -38,9 +38,11 @@ def install_reportlab():
     """Install reportlab via pip."""
     python = sys.executable
     try:
+        kwargs = {"capture_output": True, "text": True, "timeout": 120}
+        if sys.platform == "win32":
+            kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
         result = subprocess.run(
-            [python, "-m", "pip", "install", "reportlab", "--quiet"],
-            capture_output=True, text=True, timeout=120
+            [python, "-m", "pip", "install", "reportlab", "--quiet"], **kwargs
         )
         if result.returncode != 0:
             return {"status": "error", "detail": f"pip install failed: {result.stderr.strip()}"}
@@ -61,7 +63,10 @@ def ensure_pip():
 
     try:
         # Try python -m pip
-        r = subprocess.run([python, "-m", "pip", "--version"], capture_output=True, text=True, timeout=30)
+        kwargs2 = {"capture_output": True, "text": True, "timeout": 30}
+        if sys.platform == "win32":
+            kwargs2["creationflags"] = subprocess.CREATE_NO_WINDOW
+        r = subprocess.run([python, "-m", "pip", "--version"], **kwargs2)
         if r.returncode == 0:
             return {"status": "ok", "detail": "pip available via python -m pip"}
     except Exception:
@@ -70,9 +75,11 @@ def ensure_pip():
     # On Windows, try to ensure pip
     if sys.platform == "win32":
         try:
+            kwargs3 = {"capture_output": True, "text": True, "timeout": 60}
+            if sys.platform == "win32":
+                kwargs3["creationflags"] = subprocess.CREATE_NO_WINDOW
             result = subprocess.run(
-                [python, "-m", "ensurepip", "--upgrade"],
-                capture_output=True, text=True, timeout=60
+                [python, "-m", "ensurepip", "--upgrade"], **kwargs3
             )
             if result.returncode == 0:
                 return {"status": "installed", "detail": "pip installed via ensurepip"}

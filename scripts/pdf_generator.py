@@ -22,7 +22,7 @@ Usage:
     python pdf_generator.py <config.json> <output.pdf>
 """
 
-import json, sys, os
+import json, sys, os, re
 from reportlab.lib.pagesizes import A3, A4, A5, LETTER, LEGAL, TABLOID, landscape
 from reportlab.lib.colors   import HexColor, white
 from reportlab.lib.styles   import ParagraphStyle
@@ -392,7 +392,129 @@ def _preview(text, n=22):
     return (" ".join(words[:n]) + "\u2026") if len(words) > n else text
 
 
-def _correct_badge(letter, opt_text, col_w, fs=1.0):
+def _md_to_html(text):
+    """Convert inline markdown (**bold**, *italic*, ~~strikethrough~~) to HTML tags.
+    Call AFTER xesc() since asterisks/tildes aren't HTML-special characters."""
+    if not text:
+        return text
+    text = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', text)
+    text = re.sub(r'(?<!\*)\*(?!\*)([^*]+?)(?<!\*)\*(?!\*)', r'<i>\1</i>', text)
+    text = re.sub(r'~~(.+?)~~', r'<strike>\1</strike>', text)
+    return text
+
+
+def _detect_pipe_table(lines, start):
+    """Check if lines[start] starts a pipe table. Returns end index or -1."""
+    if start >= len(lines) or not lines[start].lstrip().startswith('|'):
+        return -1
+    if start + 1 >= len(lines):
+        return -1
+    sep = lines[start + 1].strip()
+    if not re.match(r'^\|[-| :]+\|$', sep):
+        return -1
+    end = start + 2
+    while end < len(lines) and lines[end].lstrip().startswith('|'):
+        end += 1
+    return end
+
+
+def _parse_table_cells(row):
+    """Split a pipe-table row into trimmed cell values."""
+    parts = row.split('|')
+    if parts and parts[0].strip() == '':
+        parts = parts[1:]
+    if parts and parts[-1].strip() == '':
+        parts = parts[:-1]
+    return [p.strip() for p in parts]
+
+
+def _build_table_flowable(table_lines, content_w, fs=1.0):
+    """Convert pipe-table lines into a ReportLab Table flowable."""
+    header = _parse_table_cells(table_lines[0])
+    align_row = table_lines[1] if len(table_lines) > 1 else ''
+    aligns = re.findall(r':?-{3,}:?', align_row)
+    ncols = max(len(header), len(aligns))
+    data = [header[:ncols]]
+    for row in table_lines[2:]:
+        cells = _parse_table_cells(row)
+        cells = (cells + [''] * ncols)[:ncols]
+        data.append(cells)
+
+    col_w = content_w / max(ncols, 1)
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.platypus import Paragraph as RlParagraph
+
+    cell_style = ParagraphStyle(
+        '_tc', fontName=_F["Hn"],
+        fontSize=round(8 * fs, 1), leading=round(11 * fs, 1),
+        textColor=SLATE,
+    )
+    head_style = ParagraphStyle(
+        '_th', fontName=_F["H"],
+        fontSize=round(8 * fs, 1), leading=round(11 * fs, 1),
+        textColor=COBALT,
+    )
+
+    styled = []
+    for ri, row in enumerate(data):
+        sty = head_style if ri == 0 else cell_style
+        styled.append([RlParagraph(_md_to_html(xesc(c)), sty) for c in row])
+
+    from reportlab.lib.colors import HexColor, white as rl_white
+    t = Table(styled, colWidths=[col_w] * ncols)
+    t.setStyle(TableStyle([
+        ("BACKGROUND",     (0, 0), (-1, 0), COBALT),
+        ("TEXTCOLOR",      (0, 0), (-1, 0), rl_white),
+        ("FONTNAME",       (0, 0), (-1, 0), _F["H"]),
+        ("FONTSIZE",       (0, 0), (-1, 0), round(8 * fs, 1)),
+        ("BOTTOMPADDING",  (0, 0), (-1, 0), sp(1, fs)),
+        ("TOPPADDING",     (0, 0), (-1, 0), sp(1, fs)),
+        ("GRID",           (0, 0), (-1, -1), 0.5, RULE_GRAY),
+        ("VALIGN",         (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING",    (0, 0), (-1, -1), sp(1, fs)),
+        ("RIGHTPADDING",   (0, 0), (-1, -1), sp(1, fs)),
+        ("TOPPADDING",     (0, 1), (-1, -1), sp(1, fs)),
+        ("BOTTOMPADDING",  (0, 1), (-1, -1), sp(1, fs)),
+    ]))
+    # Alternate row shading
+    for ri in range(1, len(styled)):
+        if ri % 2 == 0:
+            t.setStyle(TableStyle([
+                ("BACKGROUND", (0, ri), (-1, ri), PALE_GRAY),
+            ]))
+    return t
+
+
+def _build_flowables(text, style, content_w, fs=1.0):
+    """Convert text (with markdown + pipe tables) into a list of ReportLab flowables."""
+    if not text:
+        return []
+    raw = text.strip()
+    if not raw:
+        return []
+    lines = raw.split('\n')
+    result = []
+    i = 0
+    while i < len(lines):
+        table_end = _detect_pipe_table(lines, i)
+        if table_end > 0:
+            tbl = _build_table_flowable(lines[i:table_end], content_w, fs)
+            result.append(tbl)
+            i = table_end
+        else:
+            chunk = []
+            while i < len(lines) and _detect_pipe_table(lines, i) < 0:
+                chunk.append(lines[i])
+                i += 1
+            text_block = '\n'.join(chunk).strip()
+            if text_block:
+                html = _md_to_html(xesc(text_block))
+                result.append(Paragraph(html, style))
+    return result
+
+
+def xesc(text):
+    """XML-escape text and convert newlines to <br/>."""
     """
     Green correct-answer badge.
     IMPECCABLE: full-perimeter background — no side stripe.
@@ -403,7 +525,7 @@ def _correct_badge(letter, opt_text, col_w, fs=1.0):
         textColor=white,
     )
     cell = Paragraph(
-        f"\u2713\u2003Correct Answer: \u2002{letter}.\u2002{xesc(opt_text)}", inner
+        f"\u2713\u2003Correct Answer: \u2002{letter}.\u2002{_md_to_html(xesc(opt_text))}", inner
     )
     t = Table([[cell]], colWidths=[col_w])
     t.setStyle(TableStyle([
@@ -434,7 +556,7 @@ def _callout_box(label, body_text, col_w, bg, border_color, fs=1.0):
     )
     rows = [
         [Paragraph(label, lbl_sty)],
-        [Paragraph(xesc(body_text), txt_sty)],
+        [Paragraph(_md_to_html(xesc(body_text)), txt_sty)],
     ]
     t = Table(rows, colWidths=[col_w])
     t.setStyle(TableStyle([
@@ -813,7 +935,7 @@ def build_cover(cfg, styles, layout):
         story.append(Spacer(1, sp(2, fs)))
 
     if desc:
-        story.append(Paragraph(xesc(desc), styles["cv_meta"]))
+        story.append(Paragraph(_md_to_html(xesc(desc)), styles["cv_meta"]))
         story.append(Spacer(1, sp(3, fs)))
 
     # Stats
@@ -952,7 +1074,7 @@ def build_chapter_header(quiz, styles, layout, ch_num, is_single=False, content_
             f"{icon_str}{xesc(title)}", styles["ch_title"]
         ))
         if sub:
-            story.append(Paragraph(xesc(sub), styles["ch_desc"]))
+            story.append(Paragraph(_md_to_html(xesc(sub)), styles["ch_desc"]))
 
         story.append(HRule(content_w, thickness=1.5, color=GOLD,
                            before=sp(1, fs), after=sp(3, fs)))
@@ -1007,8 +1129,10 @@ def build_question(q_data, q_num, styles, layout, answers_mode,
         elems.append(HRule(content_w, thickness=1.5, color=ROYAL,
                            before=sp(1, fs), after=sp(2, fs)))
 
-    # Question body — Lora justified
-    elems.append(Paragraph(xesc(q_data.get("question", "")), styles["q_body"]))
+    # Question body — Lora justified, with markdown rendering (bold, italic, tables)
+    q_text = q_data.get("question", "")
+    q_flowables = _build_flowables(q_text, styles["q_body"], content_w, fs)
+    elems.extend(q_flowables)
 
     # Options
     opts    = q_data.get("options", [])
@@ -1024,20 +1148,20 @@ def build_question(q_data, q_num, styles, layout, answers_mode,
             opt_color = EMERALD if (show_inline_correct and is_correct) else ROYAL
             opt_html = (
                 f'<font name="{_F["H"]}" color="#{_hx(opt_color)}">'
-                f'{ltr})</font>\u2002{xesc(opt)}'
+                f'{ltr})</font>\u2002{_md_to_html(xesc(opt))}'
             )
             elems.append(Paragraph(opt_html, styles["q_option"]))
         elif show_inline_correct and is_correct:
             opt_html = (
                 f'<font name="{_F["H"]}" color="#{_hx(EMERALD)}">'
                 f'\u2713\u2002{ltr})</font>'
-                f'\u2002{xesc(opt)}'
+                f'\u2002{_md_to_html(xesc(opt))}'
             )
             elems.append(Paragraph(opt_html, styles["q_option_correct"]))
         else:
             opt_html = (
                 f'<font name="{_F["H"]}" color="#{_hx(ROYAL)}">{ltr})</font>'
-                f'\u2002{xesc(opt)}'
+                f'\u2002{_md_to_html(xesc(opt))}'
             )
             elems.append(Paragraph(opt_html, styles["q_option"]))
 
@@ -1088,17 +1212,16 @@ def build_mcqnotes_question(q_data, q_num, styles, layout, show_expl, content_w)
     ans_letter = LETTERS[correct] if 0 <= correct < len(LETTERS) else "?"
     ans_text   = opts[correct] if 0 <= correct < len(opts) else ""
 
+    # Question with inline markdown rendering
+    for fb in _build_flowables(q_data.get("question", ""), styles["note_q"], content_w, fs):
+        elems.append(fb)
     elems.append(Paragraph(
-        f'<font name="{_F["H"]}">{q_num}.</font>\u2002{xesc(q_data.get("question",""))}',
-        styles["note_q"]
-    ))
-    elems.append(Paragraph(
-        f'\u2713\u2002<font name="{_F["H"]}">{ans_letter}.</font>\u2002{xesc(ans_text)}',
+        f'\u2713\u2002<font name="{_F["H"]}">{ans_letter}.</font>\u2002{_md_to_html(xesc(ans_text))}',
         styles["note_ans"]
     ))
     expl = q_data.get("explanation", "")
     if expl and show_expl:
-        elems.append(Paragraph(xesc(expl), styles["note_expl"]))
+        elems.append(Paragraph(_md_to_html(xesc(expl)), styles["note_expl"]))
 
     elems.append(HRule(content_w, thickness=0.3, color=RULE_GRAY,
                        before=2, after=sp(2, fs)))
@@ -1138,7 +1261,7 @@ def build_answer_block(q_data, q_num, styles, layout, content_w, show_expl=True,
     # Question preview in 8pt Lora-Italic
     preview_text = _preview(q_data.get("question", ""), 18)
     elems.append(Paragraph(
-        f'\u201c{xesc(preview_text)}\u201d', styles["a_preview"]
+        f'\u201c{_md_to_html(xesc(preview_text))}\u201d', styles["a_preview"]
     ))
 
     # Correct answer badge
@@ -1149,10 +1272,11 @@ def build_answer_block(q_data, q_num, styles, layout, content_w, show_expl=True,
         elems.append(_correct_badge(ltr, opts[correct], content_w, fs))
         elems.append(Spacer(1, sp(3, fs)))
 
-    # Explanation — omitted when show_expl is False
+    # Explanation — omitted when show_expl is False, with markdown rendering
     expl = q_data.get("explanation", "")
     if expl and show_expl:
-        elems.append(Paragraph(xesc(expl), styles["a_expl"]))
+        for fb in _build_flowables(expl, styles["a_expl"], content_w, fs):
+            elems.append(fb)
 
     # Back link
     back_html = (
