@@ -214,6 +214,7 @@ fn main() {
             commands::parse_json_questions,
             commands::load_exports_batch,
             commands::export_pdf,
+            commands::check_pdf_deps,
         ])
         .run(tauri::generate_context!())
         .expect("error while running QuizTool Admin");

@@ -3,910 +3,1199 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PDF Exporter - QuizTool</title>
+<title>PDF Exporter</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=DM+Serif+Display:ital@0;1&family=Source+Serif+4:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;700;900&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
 <style>
+/* ── Tokens ──────────────────────────────────────────────────────────────── */
 :root {
-  --bg: #0d1117; --surface: #161b22; --surface2: #1c2330; --surface3: #11161d;
-  --border: #30363d; --border2: #21262d;
-  --text: #e6edf3; --text-muted: #8b949e; --text-dim: #6e7681;
-  --accent: #f0a500; --accent-dim: rgba(240,165,0,0.12);
-  --accent-glow: rgba(240,165,0,0.25);
-  --radius: 10px; --radius-sm: 6px;
-  --shadow: 0 4px 24px rgba(0,0,0,0.4);
-  --transition: 0.2s ease;
-  --wrong: #da3633; --success: #2ea043; --blue: #58a6ff; --purple: #d2a8ff;
+  --bg:#0d1117; --surface:#161b22; --surface2:#1c2330; --surface3:#11161d;
+  --border:#30363d; --border2:#21262d;
+  --text:#e6edf3; --text-muted:#8b949e; --text-dim:#6e7681;
+  --accent:#f0a500; --accent-dim:rgba(240,165,0,.12); --accent-glow:rgba(240,165,0,.25);
+  --wrong:#da3633; --success:#2ea043; --blue:#58a6ff; --purple:#d2a8ff;
+  --radius:10px; --radius-sm:6px; --shadow:0 4px 24px rgba(0,0,0,.45);
+  --tr:.18s ease;
 }
 [data-theme="light"] {
-  --bg: #f3f0eb; --surface: #ffffff; --surface2: #f8f6f1; --surface3: #f0ece5;
-  --border: #d0ccc5; --border2: #e0dcd5;
-  --text: #1c1917; --text-muted: #78716c; --text-dim: #a39e97;
-  --accent: #c27803; --accent-dim: rgba(194,120,3,0.10);
-  --shadow: 0 4px 24px rgba(0,0,0,0.10);
+  --bg:#f3f0eb; --surface:#fff; --surface2:#f8f6f1; --surface3:#f0ece5;
+  --border:#d0ccc5; --border2:#e0dcd5;
+  --text:#1c1917; --text-muted:#78716c; --text-dim:#a39e97;
+  --accent:#c27803; --accent-dim:rgba(194,120,3,.10);
+  --shadow:0 4px 24px rgba(0,0,0,.10);
 }
 
+/* ── Reset ───────────────────────────────────────────────────────────────── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{
-  font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);
   line-height:1.6;min-height:100vh;display:flex;flex-direction:column;
-  transition:background var(--transition),color var(--transition);
-}
+  transition:background var(--tr),color var(--tr)}
 
+/* ── Topbar ──────────────────────────────────────────────────────────────── */
 .topbar{
-  display:flex;align-items:center;padding:0.75rem 1.5rem;
+  display:flex;align-items:center;padding:0 1.5rem;height:52px;
   background:var(--surface);border-bottom:1px solid var(--border);
-  position:sticky;top:0;z-index:100;gap:0.75rem;
-  box-shadow:0 1px 0 var(--border2);
+  position:sticky;top:0;z-index:200;gap:.75rem;
 }
-.topbar-title{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;flex:1;min-width:0;letter-spacing:-0.01em}
+.topbar-logo{
+  width:34px;height:34px;border-radius:8px;background:var(--accent);
+  color:#17120a;display:grid;place-items:center;font-weight:800;font-size:.82rem;
+  flex-shrink:0;letter-spacing:-.02em;font-family:'Outfit',sans-serif;
+}
+.topbar-title{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;flex:1}
+.badge-multi{
+  font-size:.68rem;padding:.18rem .55rem;border-radius:999px;
+  background:var(--accent-dim);color:var(--accent);font-weight:700;
+  display:none;letter-spacing:.04em;
+}
 .icon-btn{
-  width:36px;height:36px;border-radius:8px;background:var(--surface2);
-  border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
-  color:var(--text-muted);transition:all var(--transition);font-size:1.05rem;
-  cursor:pointer;text-decoration:none;flex-shrink:0;
+  width:34px;height:34px;border-radius:8px;background:var(--surface2);
+  border:1px solid var(--border);display:grid;place-items:center;
+  color:var(--text-muted);cursor:pointer;font-size:1rem;transition:all var(--tr);
 }
 .icon-btn:hover{color:var(--text);border-color:var(--accent)}
-.icon-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
 
-.container{max-width:960px;margin:0 auto;padding:1.25rem 1.25rem 2rem;flex:1;width:100%}
-.two-col{display:grid;grid-template-columns:1fr 340px;gap:1.25rem;align-items:start}
-@media(max-width:900px){.two-col{grid-template-columns:1fr}}
+/* ── Step progress ───────────────────────────────────────────────────────── */
+.steps{
+  display:flex;align-items:flex-start;padding:.9rem 2rem;
+  background:var(--surface);border-bottom:1px solid var(--border2);
+  position:sticky;top:52px;z-index:199;
+}
+.step-item{
+  display:flex;flex-direction:column;align-items:center;gap:.25rem;
+  cursor:pointer;min-width:62px;
+}
+.step-dot{
+  width:30px;height:30px;border-radius:50%;
+  border:2px solid var(--border);background:var(--surface2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.75rem;font-weight:700;color:var(--text-muted);
+  transition:all .25s;
+}
+.step-item.active .step-dot{
+  border-color:var(--accent);background:var(--accent);color:#000;
+  box-shadow:0 0 0 4px var(--accent-dim);
+}
+.step-item.done .step-dot{border-color:var(--success);background:var(--success);color:#fff}
+.step-label{font-size:.65rem;font-weight:700;color:var(--text-dim);
+  letter-spacing:.04em;text-transform:uppercase;}
+.step-item.active .step-label{color:var(--accent)}
+.step-item.done  .step-label{color:var(--success)}
+.step-line{
+  flex:1;height:2px;background:var(--border);
+  margin-top:14px;border-radius:2px;transition:background .3s;
+}
+.step-line.done{background:var(--success)}
 
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.25rem;box-shadow:var(--shadow)}
-.card h3{font-size:0.95rem;font-weight:700;margin-bottom:0.85rem;display:flex;align-items:center;gap:0.5rem;letter-spacing:0.01em;color:var(--text)}
-.card h3 .badge{font-size:0.7rem;background:var(--accent-dim);color:var(--accent);padding:0.15rem 0.5rem;border-radius:999px;font-weight:600}
+/* ── Layout ──────────────────────────────────────────────────────────────── */
+.container{max-width:960px;margin:0 auto;padding:1.25rem 1.25rem 3rem;flex:1;width:100%}
+.two-col{display:grid;grid-template-columns:1fr 290px;gap:1.25rem;align-items:start}
+@media(max-width:860px){.two-col{grid-template-columns:1fr}}
+.section{display:none}.section.active{display:block}
 
-.section{display:none}
-.section.active{display:block}
+/* ── Cards ───────────────────────────────────────────────────────────────── */
+.card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:1.25rem;margin-bottom:1rem;
+  box-shadow:var(--shadow);
+}
+.card h3{
+  font-size:.78rem;font-weight:700;margin-bottom:.9rem;
+  display:flex;align-items:center;gap:.5rem;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);
+}
+.card h3 .badge{
+  font-size:.65rem;background:var(--accent-dim);color:var(--accent);
+  padding:.1rem .5rem;border-radius:999px;font-weight:700;
+  text-transform:none;letter-spacing:0;
+}
 
+/* ── Option Cards ────────────────────────────────────────────────────────── */
+.opt-grid{display:grid;gap:.55rem}
+.opt-grid.cols-5{grid-template-columns:repeat(5,1fr)}
+.opt-grid.cols-2{grid-template-columns:1fr 1fr}
+.opt-grid.cols-4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:700px){
+  .opt-grid.cols-5{grid-template-columns:repeat(3,1fr)}
+  .opt-grid.cols-4{grid-template-columns:1fr 1fr}
+}
+@media(max-width:480px){.opt-grid.cols-5{grid-template-columns:1fr 1fr}}
+
+.opt-card{
+  display:flex;flex-direction:column;padding:.8rem .85rem;
+  border-radius:var(--radius);border:2px solid var(--border);
+  background:var(--surface2);cursor:pointer;transition:all .15s;
+  user-select:none;position:relative;
+}
+.opt-card:hover{border-color:rgba(240,165,0,.45);background:rgba(240,165,0,.04)}
+.opt-card.selected{
+  border-color:var(--accent);background:var(--accent-dim);
+}
+.opt-card.selected::after{
+  content:'✓';position:absolute;top:.45rem;right:.6rem;
+  font-size:.72rem;color:var(--accent);font-weight:700;
+}
+.opt-icon{font-size:1.25rem;margin-bottom:.3rem;line-height:1}
+.opt-title{font-weight:700;font-size:.83rem;color:var(--text)}
+.opt-desc{font-size:.7rem;color:var(--text-muted);margin-top:.15rem;line-height:1.35}
+
+/* ── Page size pills ─────────────────────────────────────────────────────── */
+.size-pills{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.4rem}
+.size-pill{
+  padding:.28rem .75rem;border-radius:999px;
+  border:1.5px solid var(--border);background:var(--surface2);
+  cursor:pointer;font-size:.8rem;font-weight:600;color:var(--text-muted);
+  transition:all .15s;user-select:none;
+}
+.size-pill:hover{border-color:rgba(240,165,0,.4);color:var(--text)}
+.size-pill.selected{border-color:var(--accent);background:var(--accent-dim);color:var(--accent)}
+
+/* ── Cover mini preview ──────────────────────────────────────────────────── */
+.preview-wrap{position:sticky;top:108px}
+.cover-mini{
+  aspect-ratio:.707;background:#0c1018;
+  border-radius:9px;border:1px solid var(--border);
+  overflow:hidden;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:1.25rem .85rem;position:relative;
+  box-shadow:0 12px 40px rgba(0,0,0,.65);
+}
+.cm-bar{
+  position:absolute;left:0;right:0;height:5px;
+  background:linear-gradient(90deg,#b07400,#f0a500,#ffc94d,#f0a500,#b07400);
+}
+.cm-bar.top{top:0}.cm-bar.bot{bottom:0}
+.cm-kicker{
+  font-family:'Outfit',sans-serif;font-size:.38rem;
+  letter-spacing:.16em;color:#f0a500;font-weight:700;
+  margin-bottom:.4rem;text-transform:uppercase;
+}
+.cm-icon{font-size:1.5rem;margin-bottom:.2rem;min-height:1.6rem;line-height:1}
+.cm-title{
+  font-family:'DM Serif Display',serif;font-size:.8rem;font-weight:900;
+  color:#e6edf3;text-align:center;line-height:1.2;margin-bottom:.2rem;
+  word-break:break-word;max-width:100%;
+}
+.cm-subtitle{
+  font-size:.38rem;color:#8b949e;text-align:center;
+  text-transform:uppercase;letter-spacing:.07em;margin-bottom:.25rem;
+  min-height:.5rem;
+}
+.cm-divider{
+  width:55%;height:1px;margin:.3rem 0;
+  background:linear-gradient(90deg,transparent,#f0a500,transparent);
+}
+.cm-meta{font-size:.38rem;color:#8b949e;text-align:center;min-height:.45rem}
+.cm-stats{
+  font-size:.42rem;color:#f0a500;font-weight:700;
+  margin-top:.3rem;font-family:'Outfit',sans-serif;
+}
+.preview-label{
+  text-align:center;font-size:.72rem;color:var(--text-dim);
+  margin-top:.5rem;font-weight:500;
+}
+
+/* ── Pre-flight summary ──────────────────────────────────────────────────── */
+.preflight{
+  display:flex;flex-wrap:wrap;gap:.45rem;
+  padding:.85rem 1rem;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--radius);
+  margin-bottom:1rem;
+}
+.pf-chip{
+  display:inline-flex;align-items:center;gap:.3rem;
+  font-size:.75rem;padding:.22rem .65rem;border-radius:999px;
+  background:var(--surface2);border:1px solid var(--border);
+  color:var(--text-muted);font-weight:500;
+}
+.pf-chip b{color:var(--text);font-weight:700}
+
+/* ── Result card ─────────────────────────────────────────────────────────── */
+.result-card{
+  background:var(--surface);border:1.5px solid var(--success);
+  border-radius:var(--radius);padding:1.25rem;margin-top:1rem;
+}
+.result-stats{
+  display:flex;gap:1.5rem;flex-wrap:wrap;
+  padding-bottom:.85rem;border-bottom:1px solid var(--border2);margin-bottom:.9rem;
+}
+.rstat-val{font-size:1.3rem;font-weight:800;line-height:1}
+.rstat-lbl{font-size:.68rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-top:.15rem}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
 .btn{
-  padding:0.6rem 1.25rem;border-radius:var(--radius);font-weight:600;font-size:0.9rem;
-  transition:all var(--transition);cursor:pointer;border:1px solid transparent;
-  font-family:'Outfit',sans-serif;display:inline-flex;align-items:center;gap:0.45rem;
+  padding:.58rem 1.2rem;border-radius:var(--radius);font-weight:600;font-size:.9rem;
+  transition:all var(--tr);cursor:pointer;border:1px solid transparent;
+  font-family:'Outfit',sans-serif;display:inline-flex;align-items:center;gap:.45rem;
 }
 .btn-primary{background:var(--accent);color:#000;border-color:var(--accent)}
-.btn-primary:hover{opacity:0.9;transform:translateY(-1px)}
-.btn-primary:disabled{opacity:0.4;cursor:not-allowed;transform:none}
+.btn-primary:hover{opacity:.9;transform:translateY(-1px)}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none}
 .btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
 .btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
 .btn-success{background:var(--success);color:#fff;border-color:var(--success)}
-.btn-success:hover{opacity:0.9}
-.btn-sm{padding:0.35rem 0.75rem;font-size:0.82rem}
+.btn-success:hover{opacity:.9;transform:translateY(-1px)}
+.btn-success:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn-sm{padding:.32rem .7rem;font-size:.82rem}
+.btn-block{width:100%;justify-content:center}
 
-.text-input,.select-input{
-  width:100%;padding:0.55rem 0.75rem;border-radius:var(--radius-sm);
-  border:1px solid var(--border);background:var(--surface2);color:var(--text);
-  outline:none;transition:border-color var(--transition);font-family:'Outfit',sans-serif;font-size:0.9rem;
-}
-.text-input:focus,.select-input:focus{border-color:var(--accent)}
-select.select-input{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 0.75rem center;background-size:1em;padding-right:2.2rem;cursor:pointer}
-label{font-weight:600;font-size:0.85rem;display:flex;flex-direction:column;gap:0.3rem}
-label .hint{font-weight:400;font-size:0.78rem;color:var(--text-muted)}
-
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem}
+/* ── Forms ───────────────────────────────────────────────────────────────── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
 @media(max-width:640px){.form-grid{grid-template-columns:1fr}}
-.form-group{display:flex;flex-direction:column;gap:0.3rem}
-.form-group.full{grid-column:1/-1}
-.form-row{display:flex;flex-wrap:wrap;gap:0.6rem;align-items:center}
-
-.toggle-wrap{display:flex;align-items:center;gap:0.5rem;cursor:pointer;user-select:none;flex-direction:row}
-.toggle-wrap input[type="checkbox"]{width:17px;height:17px;accent-color:var(--accent);cursor:pointer}
-
-.file-selector{min-height:200px;max-height:420px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface3);font-size:0.82rem}
-.file-item{
-  display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.65rem;
-  cursor:pointer;transition:background var(--transition);border-bottom:1px solid var(--border2);
-  font-size:0.85rem;
+.fg{display:flex;flex-direction:column;gap:.3rem}
+.fg.full{grid-column:1/-1}
+.form-row{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center}
+label.fl{
+  font-weight:600;font-size:.78rem;color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:.04em;
+  display:flex;flex-direction:column;gap:.3rem;
 }
-.file-item:hover{background:var(--surface2)}
-.file-item.selected{background:var(--accent-dim);color:var(--accent)}
-.file-icon{font-size:1rem;width:22px;text-align:center;flex-shrink:0}
-.file-path{color:var(--text-dim);font-size:0.72rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
-
-.styled-tabs{display:flex;gap:0;background:var(--surface2);border-radius:var(--radius);padding:4px;margin-bottom:1.25rem;border:1px solid var(--border);box-shadow:inset 0 1px 3px rgba(0,0,0,0.15)}
-.styled-tab{flex:1;padding:0.6rem 0.85rem;border:none;background:transparent;color:var(--text-muted);
-  font-family:'Outfit',sans-serif;font-weight:600;font-size:0.8rem;border-radius:7px;
-  cursor:pointer;transition:all var(--transition);text-align:center;display:flex;align-items:center;justify-content:center;gap:0.35rem;letter-spacing:0.01em;
+label.fl .hint{font-weight:400;font-size:.76rem;color:var(--text-dim);text-transform:none;letter-spacing:0}
+.text-input,.sel{
+  width:100%;padding:.52rem .72rem;border-radius:var(--radius-sm);
+  border:1px solid var(--border);background:var(--surface2);color:var(--text);
+  outline:none;transition:border-color var(--tr);
+  font-family:'Outfit',sans-serif;font-size:.9rem;
 }
-.styled-tab:hover{color:var(--text);background:rgba(255,255,255,0.04)}
-.styled-tab.active{background:var(--accent);color:#000;box-shadow:0 2px 10px var(--accent-glow),0 1px 3px rgba(0,0,0,0.2);font-weight:700}
-
-.status-msg{text-align:center;margin-top:0.75rem;padding:0.6rem;border-radius:var(--radius-sm);font-weight:500;font-size:0.88rem;display:none}
-.status-msg.info{display:block;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent)}
-.status-msg.success{display:block;background:rgba(46,160,67,0.1);color:var(--success);border:1px solid var(--success)}
-.status-msg.error{display:block;background:rgba(218,54,51,0.1);color:var(--wrong);border:1px solid var(--wrong)}
-.status-msg.loading{display:flex;align-items:center;justify-content:center;gap:0.5rem;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent)}
-
-.summary-strip{
-  display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;
-  padding:0.65rem 1rem;background:var(--surface2);border:1px solid var(--border);
-  border-radius:var(--radius-sm);margin-bottom:1rem;font-size:0.85rem;
+.text-input:focus,.sel:focus{border-color:var(--accent)}
+select.sel{
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right .75rem center;
+  background-size:1em;padding-right:2.2rem;cursor:pointer;
 }
-.summary-stat{display:flex;align-items:center;gap:0.3rem}
-.summary-stat strong{color:var(--accent)}
-
-.progress-bar{height:4px;background:var(--border2);border-radius:4px;overflow:hidden;margin:1rem 0}
-.progress-fill{height:100%;background:var(--accent);border-radius:4px;transition:width 0.3s ease;width:0%}
-
-@keyframes spin{to{transform:rotate(360deg)}}
-.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--accent-dim);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle}
-
-.selected-list{display:flex;flex-direction:column;gap:0.35rem;max-height:300px;overflow-y:auto}
-.selected-item{
-  display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.65rem;
-  background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);
-  cursor:grab;font-size:0.88rem;transition:border-color var(--transition);
+.chk-row{
+  display:flex;align-items:center;gap:.5rem;cursor:pointer;
+  font-size:.88rem;font-weight:500;color:var(--text);user-select:none;
 }
-.selected-item:hover{border-color:var(--accent)}
-.selected-item .item-title{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.selected-item .item-qcount{color:var(--text-dim);font-size:0.78rem;white-space:nowrap}
-.selected-item .remove-btn{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:1rem;padding:0.2rem;transition:color var(--transition)}
-.selected-item .remove-btn:hover{color:var(--wrong)}
-.selected-empty{text-align:center;padding:2rem;color:var(--text-muted);font-size:0.9rem;border:1px dashed var(--border);border-radius:var(--radius-sm)}
+.chk-row input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
 
-.file-tree, .file-tree ul{list-style:none;margin:0;padding:0}
-.file-tree ul{margin-left:0.55rem;padding-left:0.5rem;border-left:1px solid var(--border)}
-.tree-row{width:100%;display:flex;align-items:center;gap:0.35rem;padding:0.2rem 0.4rem;border-radius:5px;cursor:pointer;transition:background var(--transition),color var(--transition);min-height:28px}
+/* ── File tree ───────────────────────────────────────────────────────────── */
+.file-selector{min-height:190px;max-height:400px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface3)}
+.file-tree,.file-tree ul{list-style:none;margin:0;padding:0}
+.file-tree ul{margin-left:.55rem;padding-left:.5rem;border-left:1px solid var(--border)}
+.tree-row{width:100%;display:flex;align-items:center;gap:.35rem;padding:.22rem .4rem;border-radius:5px;cursor:pointer;transition:background var(--tr);min-height:28px}
 .tree-row:hover{background:var(--surface2)}
 .tree-row.selected{background:var(--accent-dim);color:var(--accent)}
-.tree-chevron{background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:0.65rem;flex:none;transition:transform 0.15s ease;border-radius:3px}
+.tree-chevron{background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:.6rem;flex:none;transition:transform .15s;border-radius:3px}
 .tree-chevron:hover{background:var(--surface3)}
 .tree-chevron.open{transform:rotate(90deg)}
-.tree-icon{width:18px;text-align:center;flex:none;font-size:0.85rem}
-.tree-name{font-size:0.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
-.tree-path{font-size:0.72rem;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tree-type-dot{width:8px;height:8px;border-radius:50%;flex:none;display:inline-block}
-.tree-type-dot.type-quiz{background:var(--accent)}
-.tree-type-dot.type-bank{background:var(--purple)}
-.tree-type-dot.type-flashcard{background:var(--success)}
-.tree-type-dot.type-written{background:#d946ef}
-.tree-type-dot.type-folder{background:var(--text-muted);opacity:0.5}
-.folder-select-area{flex:1;display:flex;align-items:center;gap:0.35rem;cursor:pointer;min-width:0;padding:0.1rem 0;border-radius:4px;transition:background var(--transition)}
-.folder-select-area:hover{background:rgba(240,165,0,0.08)}
-.tree-row.folder-sel-all{background:var(--accent-dim)}
-.tree-row.folder-sel-all>.folder-select-area>.tree-name{color:var(--accent)}
-.tree-row.folder-sel-partial>.folder-select-area>.tree-name{color:var(--accent)}
+.tree-icon{width:18px;text-align:center;flex:none;font-size:.85rem}
+.tree-name{font-size:.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+.tree-dot{width:7px;height:7px;border-radius:50%;flex:none}
+.tree-dot.quiz{background:var(--accent)}.tree-dot.bank{background:var(--purple)}
+.tree-dot.flashcard{background:var(--success)}.tree-dot.written{background:#d946ef}
+.tree-dot.folder{background:var(--text-muted);opacity:.5}
+.folder-area{flex:1;display:flex;align-items:center;gap:.35rem;cursor:pointer;min-width:0;padding:.1rem 0;border-radius:4px;transition:background var(--tr)}
+.folder-area:hover{background:rgba(240,165,0,.07)}
+.folder-sel-all>.folder-area>.tree-name{color:var(--accent)}
+.folder-sel-all{background:var(--accent-dim)}
+.folder-sel-partial>.folder-area>.tree-name{color:var(--accent)}
 
-.flex{display:flex;align-items:center;gap:0.5rem}
-.flex-wrap{flex-wrap:wrap}
-.gap-sm{gap:0.35rem}
-.mt-1{margin-top:0.75rem}
-.mb-1{margin-bottom:0.75rem}
-.text-muted{color:var(--text-muted)}
-.text-center{text-align:center}
-.w-full{width:100%}
-.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* ── Selected list ───────────────────────────────────────────────────────── */
+.sel-list{display:flex;flex-direction:column;gap:.3rem;max-height:260px;overflow-y:auto}
+.sel-item{
+  display:flex;align-items:center;gap:.45rem;padding:.45rem .6rem;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--radius-sm);cursor:grab;font-size:.86rem;
+  transition:border-color var(--tr);
+}
+.sel-item:hover{border-color:var(--accent)}
+.sel-item.drag-over{border-color:var(--accent);background:var(--accent-dim)}
+.drag-handle{color:var(--text-dim);font-size:.8rem;cursor:grab;flex-shrink:0}
+.sel-title{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sel-qc{color:var(--text-dim);font-size:.74rem;white-space:nowrap}
+.rm-btn{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:.95rem;padding:.15rem;transition:color var(--tr);line-height:1;flex-shrink:0}
+.rm-btn:hover{color:var(--wrong)}
+.sel-empty{text-align:center;padding:2rem;color:var(--text-muted);font-size:.87rem;border:1px dashed var(--border);border-radius:var(--radius-sm)}
 
+/* ── Status / spinner ────────────────────────────────────────────────────── */
+.status{text-align:center;padding:.6rem;border-radius:var(--radius-sm);font-weight:500;font-size:.87rem;display:none;margin-top:.75rem}
+.status.info{display:block;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent)}
+.status.success{display:block;background:rgba(46,160,67,.1);color:var(--success);border:1px solid var(--success)}
+.status.error{display:block;background:rgba(218,54,51,.1);color:var(--wrong);border:1px solid var(--wrong)}
+.status.loading{display:flex;align-items:center;justify-content:center;gap:.5rem;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent)}
+.progress-bar{height:4px;background:var(--border2);border-radius:4px;overflow:hidden;margin:.85rem 0 0}
+.progress-fill{height:100%;background:var(--accent);border-radius:4px;transition:width .3s;width:0%}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--accent-dim);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle}
+
+/* ── Nav row ─────────────────────────────────────────────────────────────── */
+.step-nav{display:flex;justify-content:center;gap:.75rem;margin-top:.25rem}
+
+/* ── Info box ────────────────────────────────────────────────────────────── */
+.info-box{
+  padding:.75rem 1rem;background:var(--surface2);
+  border:1px solid var(--border2);border-radius:var(--radius);
+  font-size:.82rem;color:var(--text-muted);
+  display:flex;gap:.75rem;align-items:flex-start;margin-top:.85rem;
+}
+.info-box strong{color:var(--text);display:block;margin-bottom:.2rem}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
 @media(max-width:640px){
-  .topbar{padding:0.5rem 0.75rem}
-  .container{padding:0 0.75rem}
-  .card{padding:0.85rem}
-  .form-grid{grid-template-columns:1fr}
+  .topbar{padding:0 .75rem}
+  .steps{padding:.75rem 1rem}
+  .step-label{display:none}
+  .container{padding:.75rem .75rem 2.5rem}
+  .card{padding:.9rem}
 }
 </style>
 </head>
 <body>
+
+<!-- ════════════════════════════════════════════════════════════ TOPBAR -->
 <div class="topbar">
-  <div style="display:flex;align-items:center;gap:0.75rem;flex:1;min-width:0">
-    <div style="width:34px;height:34px;border-radius:8px;background:var(--accent);color:#17120a;display:grid;place-items:center;font-weight:800;font-size:0.9rem;flex-shrink:0">PDF</div>
-    <div class="topbar-title">PDF Exporter</div>
+  <div class="topbar-logo">PDF</div>
+  <div class="topbar-title">PDF Exporter</div>
+  <span id="badge-multi" class="badge-multi">MULTI-QUIZ</span>
+  <button class="icon-btn" onclick="toggleTheme()" id="theme-toggle" title="Toggle theme">☀</button>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ STEP PROGRESS -->
+<div class="steps">
+  <div class="step-item active" id="si-select" onclick="switchStep('select')">
+    <div class="step-dot" id="sd-select">1</div>
+    <div class="step-label">Select</div>
   </div>
-  <div style="display:flex;gap:0.45rem;align-items:center">
-    <span id="export-mode-badge" style="font-size:0.72rem;padding:0.2rem 0.55rem;border-radius:999px;background:var(--accent-dim);color:var(--accent);font-weight:700;display:none;letter-spacing:0.03em">MULTI-QUIZ</span>
-    <button class="icon-btn" onclick="toggleTheme()" id="theme-toggle" title="Toggle theme">☀</button>
+  <div class="step-line" id="sl-1"></div>
+  <div class="step-item" id="si-cover" onclick="switchStep('cover')">
+    <div class="step-dot" id="sd-cover">2</div>
+    <div class="step-label">Cover</div>
+  </div>
+  <div class="step-line" id="sl-2"></div>
+  <div class="step-item" id="si-style" onclick="switchStep('style')">
+    <div class="step-dot" id="sd-style">3</div>
+    <div class="step-label">Style</div>
+  </div>
+  <div class="step-line" id="sl-3"></div>
+  <div class="step-item" id="si-export" onclick="switchStep('export')">
+    <div class="step-dot" id="sd-export">4</div>
+    <div class="step-label">Export</div>
   </div>
 </div>
 
+<!-- ════════════════════════════════════════════════════════════ CONTAINER -->
 <div class="container">
-  <div class="styled-tabs" id="main-tabs">
-    <button class="styled-tab active" data-step="select" onclick="switchStep('select')"> Select Quizzes</button>
-    <button class="styled-tab" data-step="cover" onclick="switchStep('cover')"> Cover Page</button>
-    <button class="styled-tab" data-step="style" onclick="switchStep('style')"> Styling</button>
-    <button class="styled-tab" data-step="export" onclick="switchStep('export')"> Export</button>
+
+<!-- ─────────────────────────────────────── STEP 1 · SELECT QUIZZES -->
+<div class="section active" id="step-select">
+  <div class="two-col">
+    <div class="card">
+      <h3>📂 Project Quizzes <span class="badge" id="badge-total">0 available</span></h3>
+      <div style="position:relative;margin-bottom:.6rem">
+        <input class="text-input" id="file-search" placeholder="Filter quizzes…" oninput="filterFileList()" style="padding-left:2rem">
+        <span style="position:absolute;left:.65rem;top:50%;transform:translateY(-50%);color:var(--text-dim);font-size:.82rem">🔍</span>
+      </div>
+      <div class="file-selector" id="file-list"></div>
+      <div class="status" id="file-status"></div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h3>✅ Selected <span class="badge" id="badge-selected">0</span></h3>
+        <div class="sel-list" id="selected-list">
+          <div class="sel-empty">Select quizzes from the list.</div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>🔗 Load from URL</h3>
+        <div class="form-row">
+          <input class="text-input" id="url-input" placeholder="https://…/quiz.html" style="flex:1">
+          <button class="btn btn-secondary btn-sm" onclick="loadFromUrl()">Load</button>
+        </div>
+        <div class="status" id="url-status"></div>
+      </div>
+    </div>
+  </div>
+  <div class="step-nav">
+    <button class="btn btn-primary" onclick="switchStep('cover')" id="btn-next-cover">
+      Continue → Cover Page
+    </button>
+  </div>
+</div><!-- /step-select -->
+
+<!-- ─────────────────────────────────────── STEP 2 · COVER PAGE -->
+<div class="section" id="step-cover">
+  <div class="two-col">
+    <div>
+      <div class="card">
+        <h3>🎨 Cover Page</h3>
+        <div class="form-grid">
+          <div class="fg full">
+            <label class="fl">Document Title <span class="hint">Shows on cover &amp; every page header</span></label>
+            <input class="text-input" id="cover-title" value="Quiz Compilation"
+                   placeholder="e.g. Surgery MCQ Compendium" oninput="livePreview()">
+          </div>
+          <div class="fg">
+            <label class="fl">Subtitle</label>
+            <input class="text-input" id="cover-subtitle"
+                   placeholder="500+ Board-Style Questions" oninput="livePreview()">
+          </div>
+          <div class="fg">
+            <label class="fl">Cover Icon <span class="hint">Emoji symbol</span></label>
+            <input class="text-input" id="cover-icon" placeholder="📚" maxlength="4"
+                   oninput="livePreview()" style="font-size:1.35rem">
+          </div>
+          <div class="fg">
+            <label class="fl">Author</label>
+            <input class="text-input" id="cover-author" placeholder="Your name" oninput="livePreview()">
+          </div>
+          <div class="fg">
+            <label class="fl">Date</label>
+            <input class="text-input" id="cover-date" oninput="livePreview()">
+          </div>
+          <div class="fg full">
+            <label class="fl">Description <span class="hint">Short blurb for the cover</span></label>
+            <textarea class="text-input" id="cover-description" rows="2"
+                      placeholder="A comprehensive review of high-yield clinical topics…"
+                      style="resize:vertical" oninput="livePreview()"></textarea>
+          </div>
+          <div class="fg">
+            <label class="chk-row">
+              <input type="checkbox" id="include-cover" checked>
+              Include cover page
+            </label>
+          </div>
+          <div class="fg">
+            <label class="chk-row">
+              <input type="checkbox" id="include-toc" checked>
+              Include table of contents
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live mini preview -->
+    <div class="preview-wrap">
+      <div class="card" style="padding:.9rem">
+        <h3 style="margin-bottom:.6rem">👁 Live Preview</h3>
+        <div class="cover-mini">
+          <div class="cm-bar top"></div>
+          <div class="cm-kicker">◆ QUIZ COMPILATION ◆</div>
+          <div class="cm-icon" id="p-icon"></div>
+          <div class="cm-title" id="p-title">Quiz Compilation</div>
+          <div class="cm-subtitle" id="p-subtitle"></div>
+          <div class="cm-divider"></div>
+          <div class="cm-meta" id="p-meta"></div>
+          <div class="cm-stats" id="p-stats">0 quizzes ◆ 0 questions</div>
+          <div class="cm-bar bot"></div>
+        </div>
+        <div class="preview-label">PDF cover miniature</div>
+      </div>
+    </div>
+  </div>
+  <div class="step-nav">
+    <button class="btn btn-secondary" onclick="switchStep('select')">← Back</button>
+    <button class="btn btn-primary"   onclick="switchStep('style')">Continue → Styling</button>
+  </div>
+</div><!-- /step-cover -->
+
+<!-- ─────────────────────────────────────── STEP 3 · STYLING -->
+<div class="section" id="step-style">
+
+  <div class="card">
+    <h3>✦ Style Mode</h3>
+    <div class="opt-grid cols-5" id="cards-style">
+      <div class="opt-card selected" data-g="styleMode" data-v="standard" onclick="setOpt('styleMode','standard')">
+        <div class="opt-icon">≡</div>
+        <div class="opt-title">Standard</div>
+        <div class="opt-desc">Numbered questions, clean option list</div>
+      </div>
+      <div class="opt-card" data-g="styleMode" data-v="styled" onclick="setOpt('styleMode','styled')">
+        <div class="opt-icon">✦</div>
+        <div class="opt-title">Styled</div>
+        <div class="opt-desc">Gold Q-badges, hairline dividers, premium</div>
+      </div>
+      <div class="opt-card" data-g="styleMode" data-v="compact" onclick="setOpt('styleMode','compact')">
+        <div class="opt-icon">⊟</div>
+        <div class="opt-title">Compact</div>
+        <div class="opt-desc">Small fonts, tight spacing, more per page</div>
+      </div>
+      <div class="opt-card" data-g="styleMode" data-v="detailed" onclick="setOpt('styleMode','detailed')">
+        <div class="opt-icon">⊞</div>
+        <div class="opt-title">Detailed</div>
+        <div class="opt-desc">Large text, generous spacing, full annotations</div>
+      </div>
+      <div class="opt-card" data-g="styleMode" data-v="mcqnotes" onclick="setOpt('styleMode','mcqnotes')">
+        <div class="opt-icon">⚡</div>
+        <div class="opt-title">MCQ Notes</div>
+        <div class="opt-desc">Question + answer only, ultra-compact revision</div>
+      </div>
+    </div>
   </div>
 
-  <!-- STEP 1 -->
-  <div class="section active" id="step-select">
-    <div class="two-col">
-      <div class="card">
-        <h3> Project Quizzes <span class="badge" id="total-files-badge">0 available</span></h3>
-        <div class="search-wrap" style="position:relative;margin-bottom:0.5rem">
-          <input type="text" class="text-input" id="file-search" placeholder="Filter quizzes..." oninput="filterFileList()" style="padding-left:2rem">
-          <span style="position:absolute;left:0.65rem;top:50%;transform:translateY(-50%);color:var(--text-dim);font-size:0.85rem"></span>
-        </div>
-        <div class="file-selector" id="file-list"></div>
-        <div class="status-msg" id="file-status"></div>
+  <div class="card">
+    <h3>⊞ Layout</h3>
+    <div class="opt-grid cols-2" id="cards-layout">
+      <div class="opt-card selected" data-g="layout" data-v="single" onclick="setOpt('layout','single')">
+        <div class="opt-icon">▌</div>
+        <div class="opt-title">Single Column</div>
+        <div class="opt-desc">Full-width questions, easiest reading</div>
+      </div>
+      <div class="opt-card" data-g="layout" data-v="twocol" onclick="setOpt('layout','twocol')">
+        <div class="opt-icon">▌▌</div>
+        <div class="opt-title">Two-Column</div>
+        <div class="opt-desc">Textbook side-by-side, higher density</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🗝 Answer Key</h3>
+    <div class="opt-grid cols-4" id="cards-answers">
+      <div class="opt-card selected" data-g="answers" data-v="inline" onclick="setOpt('answers','inline')">
+        <div class="opt-icon">↩</div>
+        <div class="opt-title">Inline</div>
+        <div class="opt-desc">After each question</div>
+      </div>
+      <div class="opt-card" data-g="answers" data-v="endchapter" onclick="setOpt('answers','endchapter')">
+        <div class="opt-icon">📋</div>
+        <div class="opt-title">End of Chapter</div>
+        <div class="opt-desc">Key page per chapter</div>
+      </div>
+      <div class="opt-card" data-g="answers" data-v="endbook" onclick="setOpt('answers','endbook')">
+        <div class="opt-icon">📖</div>
+        <div class="opt-title">End of Book</div>
+        <div class="opt-desc">Complete key at the end</div>
+      </div>
+      <div class="opt-card" data-g="answers" data-v="none" onclick="setOpt('answers','none')">
+        <div class="opt-icon">⊘</div>
+        <div class="opt-title">Hidden</div>
+        <div class="opt-desc">No answers shown</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>📐 Page Settings</h3>
+    <div style="margin-bottom:1rem">
+      <label class="fl" style="margin-bottom:.3rem">Page Size</label>
+      <div class="size-pills" id="size-pills">
+        <span class="size-pill" data-v="a3"      onclick="setPageSize('a3')">A3</span>
+        <span class="size-pill selected" data-v="a4" onclick="setPageSize('a4')">A4</span>
+        <span class="size-pill" data-v="a5"      onclick="setPageSize('a5')">A5</span>
+        <span class="size-pill" data-v="letter"  onclick="setPageSize('letter')">Letter</span>
+        <span class="size-pill" data-v="legal"   onclick="setPageSize('legal')">Legal</span>
+        <span class="size-pill" data-v="tabloid" onclick="setPageSize('tabloid')">Tabloid</span>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="fg">
+        <label class="fl">Orientation</label>
+        <select class="sel" id="page-orientation">
+          <option value="portrait">Portrait</option>
+          <option value="landscape">Landscape</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label class="fl">Question Numbering</label>
+        <select class="sel" id="numbering-mode">
+          <option value="global">Global (1→N across all)</option>
+          <option value="perchapter">Per chapter (resets)</option>
+        </select>
+      </div>
+      <div class="fg" style="align-self:end">
+        <label class="chk-row">
+          <input type="checkbox" id="show-explanations" checked>
+          Include explanations
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="step-nav">
+    <button class="btn btn-secondary" onclick="switchStep('cover')">← Back</button>
+    <button class="btn btn-primary"   onclick="switchStep('export')">Continue → Export</button>
+  </div>
+</div><!-- /step-style -->
+
+<!-- ─────────────────────────────────────── STEP 4 · EXPORT -->
+<div class="section" id="step-export">
+
+  <!-- Settings summary chips -->
+  <div class="preflight" id="preflight"></div>
+
+  <div class="card">
+    <h3>⚡ Generate PDF</h3>
+    <div id="status-area"></div>
+    <button id="generate-btn" class="btn btn-success btn-block"
+            style="padding:1rem 1.25rem;font-size:1rem;border-radius:10px;flex-direction:column;gap:.15rem"
+            onclick="generatePdf()">
+      <span style="font-weight:700;font-size:1rem">⬇ Generate PDF</span>
+      <span style="font-size:.74rem;font-weight:400;opacity:.75">Native vector · selectable text · page headers &amp; footers</span>
+    </button>
+    <div class="status" id="gen-status"></div>
+    <div class="progress-bar" id="progress-wrap" style="display:none">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+  </div>
+
+  <!-- Result — shown after generation -->
+  <div class="result-card" id="result-card" style="display:none">
+    <div class="result-stats">
+      <div>
+        <div class="rstat-val" id="r-size">—</div>
+        <div class="rstat-lbl">File size</div>
       </div>
       <div>
-        <div class="card">
-          <h3> Selected Quizzes <span class="badge" id="selected-count-badge">0</span></h3>
-          <div class="selected-list" id="selected-list">
-            <div class="selected-empty">Select quizzes from the list to add them here.</div>
-          </div>
-        </div>
-        <div class="card" style="margin-top:0.75rem">
-          <h3> Or Load from URL</h3>
-          <div class="form-row">
-            <input type="text" class="text-input" id="url-input" placeholder="https://example.com/quiz.html" style="flex:1">
-            <button class="btn btn-secondary btn-sm" onclick="loadFromUrl()">Load</button>
-          </div>
-          <div id="url-status" class="status-msg"></div>
-        </div>
+        <div class="rstat-val" id="r-quizzes">—</div>
+        <div class="rstat-lbl">Quizzes</div>
+      </div>
+      <div>
+        <div class="rstat-val" id="r-questions">—</div>
+        <div class="rstat-lbl">Questions</div>
       </div>
     </div>
-    <div style="padding:0.5rem 0 0.25rem;text-align:center">
-      <button class="btn btn-primary" onclick="switchStep('cover')" id="next-to-cover">Continue  Cover Page</button>
-    </div>
+    <button class="btn btn-primary btn-block" style="padding:.85rem;font-size:1rem;border-radius:10px"
+            onclick="downloadPdf()">
+      ⬇ Download PDF
+    </button>
   </div>
 
-  <!-- STEP 2 -->
-  <div class="section" id="step-cover">
-    <div class="card">
-      <h3> Cover Page Settings</h3>
-      <div class="form-grid">
-        <div class="form-group full">
-          <label>Document Title <span class="hint">Appears on cover &amp; page headers</span></label>
-          <input type="text" class="text-input" id="cover-title" placeholder="e.g. Surgery MCQ Compendium" value="Quiz Compilation">
-        </div>
-        <div class="form-group">
-          <label>Subtitle</label>
-          <input type="text" class="text-input" id="cover-subtitle" placeholder="e.g. 500+ Board-Style Questions">
-        </div>
-        <div class="form-group">
-          <label>Author</label>
-          <input type="text" class="text-input" id="cover-author" placeholder="Your name">
-        </div>
-        <div class="form-group">
-          <label>Date</label>
-          <input type="text" class="text-input" id="cover-date">
-        </div>
-        <div class="form-group">
-          <label>Include Cover Page</label>
-          <label class="toggle-wrap" style="flex-direction:row;font-weight:400;padding-top:0.3rem">
-            <input type="checkbox" id="include-cover" checked> Show cover page in PDF
-          </label>
-        </div>
-        <div class="form-group full">
-          <label>Description <span class="hint">A short blurb for the cover</span></label>
-          <textarea class="text-input" id="cover-description" rows="2" placeholder="Brief description of this compilation..." style="resize:vertical"></textarea>
-        </div>
-      </div>
-    </div>
-    <div class="card">
-      <h3> Table of Contents</h3>
-      <label class="toggle-wrap" style="flex-direction:row;font-weight:400">
-        <input type="checkbox" id="include-toc" checked> Include Table of Contents page
-      </label>
-    </div>
-    <div style="padding:0.5rem 0 0.25rem;display:flex;justify-content:center;gap:0.75rem">
-      <button class="btn btn-secondary" onclick="switchStep('select')"> Back</button>
-      <button class="btn btn-primary" onclick="switchStep('style')">Continue  Styling</button>
+  <div class="info-box">
+    <span style="font-size:1.1rem;flex-shrink:0;margin-top:-.1rem">ℹ</span>
+    <div>
+      <strong>ReportLab PDF engine</strong>
+      Generated via Python sidecar using <strong>ReportLab</strong>. All text is vector-based,
+      fully selectable and searchable. Supports Unicode, all 5 style modes, and three answer key layouts.
     </div>
   </div>
+</div><!-- /step-export -->
 
-  <!-- STEP 3 -->
-  <div class="section" id="step-style">
-    <div class="card">
-      <h3> Layout &amp; Style</h3>
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Style</label>
-          <select class="select-input" id="style-mode">
-            <option value="standard">Standard</option>
-            <option value="compact">Compact</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Layout</label>
-          <select class="select-input" id="layout-mode">
-            <option value="single">Single Column</option>
-            <option value="twocol">Two-Column Textbook</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Page Size</label>
-          <select class="select-input" id="page-size">
-            <option value="a3">A3</option>
-            <option value="a4" selected>A4</option>
-            <option value="a5">A5</option>
-            <option value="letter">Letter</option>
-            <option value="legal">Legal</option>
-            <option value="tabloid">Tabloid</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Orientation</label>
-          <select class="select-input" id="page-orientation">
-            <option value="portrait">Portrait</option>
-            <option value="landscape">Landscape</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Question Numbering</label>
-          <select class="select-input" id="numbering-mode">
-            <option value="global">Global (1N)</option>
-            <option value="perchapter">Per Chapter</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Answer Key</label>
-          <select class="select-input" id="answers-mode">
-            <option value="inline">Inline (after each question)</option>
-            <option value="endchapter">End of Each Chapter</option>
-            <option value="none">Hidden</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Show Explanations</label>
-          <label class="toggle-wrap" style="flex-direction:row;font-weight:400;padding-top:0.3rem">
-            <input type="checkbox" id="show-explanations" checked> Include explanations
-          </label>
-        </div>
-      </div>
-    </div>
-    <div style="padding:0.5rem 0 0.25rem;display:flex;justify-content:center;gap:0.75rem">
-      <button class="btn btn-secondary" onclick="switchStep('cover')"> Back</button>
-      <button class="btn btn-primary" onclick="switchStep('export')">Continue  Export</button>
-    </div>
-  </div>
+</div><!-- /container -->
 
-  <!-- STEP 4: Export -->
-  <div class="section" id="step-export">
-    <div class="summary-strip" id="export-summary">
-      <span class="summary-stat"> <strong id="export-count">0</strong> quizzes</span>
-      <span class="summary-stat"> <strong id="export-questions">0</strong> questions</span>
-      <span class="summary-stat"> <strong id="export-style">Standard</strong></span>
-      <span class="summary-stat"> <strong id="export-pagesize">A4</strong></span>
-    </div>
-    <div class="card">
-      <h3> Generate Native PDF</h3>
-      <div style="display:flex;flex-direction:column;gap:1rem">
-        <button class="btn btn-success" style="width:100%;justify-content:center;padding:0.85rem 1.25rem;font-size:1rem;border-radius:10px" onclick="generatePdf()" id="generate-btn">
-          <span style="display:flex;align-items:center;gap:0.5rem;font-size:1rem"> Generate PDF</span>
-          <span style="font-size:0.77rem;font-weight:400;opacity:0.8">Native vector PDF  selectable text  page headers &amp; footers</span>
-        </button>
-
-        <div id="generate-status" class="status-msg"></div>
-        <div class="progress-bar" id="progress-bar-wrap" style="display:none">
-          <div class="progress-fill" id="progress-fill"></div>
-        </div>
-
-        <div style="display:none;gap:0.6rem;flex-direction:column" id="download-area">
-          <button class="btn btn-primary" style="width:100%;justify-content:center;padding:0.75rem;font-size:1rem;border-radius:10px" onclick="downloadPdf()" id="download-btn">
-             Download PDF
-          </button>
-          <div style="font-size:0.82rem;text-align:center;color:var(--text-muted)" id="download-info"></div>
-        </div>
-
-        <div style="padding:0.75rem 1rem;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);font-size:0.82rem;color:var(--text-muted);display:flex;gap:0.75rem;align-items:flex-start">
-          <span style="font-size:1.2rem;flex-shrink:0;margin-top:-1px">i</span>
-          <div>
-            <strong style="color:var(--text);display:block;margin-bottom:0.25rem">Rust-powered PDF generation</strong>
-            The PDF is generated natively by the Rust backend using the <strong>genpdf</strong> engine. Three layout modes: Standard, Compact, and Two-Column Textbook. All text is vector-based and fully selectable.
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+<!-- Hidden selects — keep IDs so gatherConfig() reads them unchanged -->
+<select id="style-mode"   style="display:none"><option value="standard">standard</option><option value="styled">styled</option><option value="compact">compact</option><option value="detailed">detailed</option><option value="mcqnotes">mcqnotes</option></select>
+<select id="layout-mode"  style="display:none"><option value="single">single</option><option value="twocol">twocol</option></select>
+<select id="answers-mode" style="display:none"><option value="inline">inline</option><option value="endchapter">endchapter</option><option value="endbook">endbook</option><option value="none">none</option></select>
+<input  id="page-size"    type="hidden" value="a4">
 
 <script>
-// STATE
+// ═══════════════════════════════════════════════════════ STATE
 const state = {
   selectedQuizzes: [],
   openFolders: new Set(),
   allFiles: [],
   allQuestionsLoad: [],
   cover: {
-    title: 'Quiz Compilation', subtitle: '', author: '',
-    date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-    description: '', include: true,
+    title:'Quiz Compilation', subtitle:'', author:'', icon:'',
+    date: new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}),
+    description:'', include:true,
   },
-  toc: { include: true },
-  style: {
-    mode: 'standard', layout: 'single', pageSize: 'a4',
-    orientation: 'portrait', numbering: 'global',
-    answers: 'inline', showExplanations: true,
-  },
+  toc:   { include: true },
+  style: { mode:'standard', layout:'single', pageSize:'a4',
+           orientation:'portrait', numbering:'global',
+           answers:'inline', showExplanations:true },
   isTauri: false,
+  depsStatus: null,
   pdfData: null,
   pdfFilename: 'export.pdf',
 };
 
-function detectTauri() {
-  return typeof window.__TAURI__ !== 'undefined' && window.__TAURI__ !== null;
-}
-
-async function tauriInvoke(cmd, args = {}) {
-  try {
-    return await window.__TAURI__.core.invoke(cmd, args);
-  } catch (err) {
-    let parsed = null;
-    if (typeof err === 'string') { try { parsed = JSON.parse(err); } catch(_) {} }
-    if (parsed && parsed.message) throw new Error(parsed.message);
-    throw new Error(typeof err === 'string' ? err : JSON.stringify(err));
-  }
-}
-
-function esc(str) {
-  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function toggleTheme() {
-  const html = document.documentElement;
-  const isDark = html.getAttribute('data-theme') === 'dark';
-  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
-  localStorage.setItem('quiz-theme', html.getAttribute('data-theme'));
-  document.getElementById('theme-toggle').textContent = isDark ? '\u263E' : '\u2600';
-}
+// ═══════════════════════════════════════════════════════ STEP NAV
+const STEP_ORDER = ['select','cover','style','export'];
+let currentStep = 'select';
 
 function switchStep(step) {
+  currentStep = step;
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.getElementById('step-' + step).classList.add('active');
-  document.querySelectorAll('.styled-tab').forEach(t => {
-    t.classList.toggle('active', t.dataset.step === step);
+  syncStepDots(step);
+  if (step === 'export') buildPreflight();
+  if (step === 'cover')  livePreview();
+}
+
+function syncStepDots(active) {
+  const idx = STEP_ORDER.indexOf(active);
+  STEP_ORDER.forEach((s, i) => {
+    const item = document.getElementById('si-' + s);
+    const dot  = document.getElementById('sd-' + s);
+    item.classList.remove('active','done');
+    if (i === idx) { item.classList.add('active'); dot.textContent = i + 1; }
+    else if (i < idx) { item.classList.add('done'); dot.innerHTML = '✓'; }
+    else { dot.textContent = i + 1; }
+    if (i < 3) {
+      document.getElementById('sl-' + (i+1)).classList.toggle('done', i < idx);
+    }
   });
 }
 
-// FILE LIST RENDERING
-async function loadProjectFiles() {
-  if (!state.isTauri) return;
-  try {
-    const result = await tauriInvoke('list_files');
-    const files = (result.files || []).filter(f =>
-      f.type === 'quiz' || f.type === 'bank' || f.type === 'flashcard' || f.type === 'written'
-    );
-    state.allFiles = files;
-    renderFileList();
-    document.getElementById('total-files-badge').textContent = files.length + ' available';
-  } catch (err) {
-    showFileStatus(err.message, 'error');
+// ═══════════════════════════════════════════════════════ OPTION CARDS
+function setOpt(group, val) {
+  document.querySelectorAll(`[data-g="${group}"]`).forEach(c => {
+    c.classList.toggle('selected', c.dataset.v === val);
+  });
+  const map = { styleMode:'style-mode', layout:'layout-mode', answers:'answers-mode' };
+  const el = document.getElementById(map[group]);
+  if (el) el.value = val;
+  if (group === 'styleMode') state.style.mode    = val;
+  if (group === 'layout')    state.style.layout   = val;
+  if (group === 'answers')   state.style.answers  = val;
+  if (currentStep === 'export') buildPreflight();
+}
+
+function setPageSize(val) {
+  document.querySelectorAll('.size-pill').forEach(p => p.classList.toggle('selected', p.dataset.v === val));
+  document.getElementById('page-size').value = val;
+  state.style.pageSize = val;
+  if (currentStep === 'export') buildPreflight();
+}
+
+// ═══════════════════════════════════════════════════════ LIVE COVER PREVIEW
+function livePreview() {
+  const title = document.getElementById('cover-title').value  || 'Quiz Compilation';
+  const sub   = document.getElementById('cover-subtitle').value || '';
+  const icon  = document.getElementById('cover-icon').value   || '';
+  const auth  = document.getElementById('cover-author').value || '';
+  const date  = document.getElementById('cover-date').value   || '';
+  document.getElementById('p-title').textContent    = title;
+  document.getElementById('p-subtitle').textContent = sub ? sub.toUpperCase() : '';
+  document.getElementById('p-icon').textContent     = icon;
+  document.getElementById('p-meta').textContent     = [auth, date].filter(Boolean).join('  ·  ');
+  const qc   = state.selectedQuizzes.length;
+  const totalQ = state.allQuestionsLoad.reduce((s,f) => s + (f.questions ? f.questions.length : 0), 0);
+  document.getElementById('p-stats').textContent =
+    qc + (qc===1?' quiz':' quizzes') + '  ◆  ' + totalQ + (totalQ===1?' question':' questions');
+}
+
+// ═══════════════════════════════════════════════════════ PRE-FLIGHT SUMMARY
+function buildPreflight() {
+  gatherConfig();
+  const s = state;
+  const mL = {standard:'Standard',styled:'Styled ✦',compact:'Compact',detailed:'Detailed',mcqnotes:'MCQ Notes'};
+  const lL = {single:'Single Column',twocol:'Two-Column'};
+  const aL = {inline:'Inline',endchapter:'End of Chapter',endbook:'End of Book',none:'Hidden'};
+  const totalQ = s.allQuestionsLoad.reduce((n,f) => n + (f.questions?f.questions.length:0), 0);
+  const chips = [
+    ['📁', s.selectedQuizzes.length + (s.selectedQuizzes.length===1?' quiz':' quizzes')],
+    ['❓', totalQ + ' questions'],
+    ['✦', mL[s.style.mode] || s.style.mode],
+    ['⊞', lL[s.style.layout] || s.style.layout],
+    ['🗝', aL[s.style.answers] || s.style.answers],
+    ['📐', s.style.pageSize.toUpperCase() + ' · ' + s.style.orientation],
+    ['📑', s.toc.include   ? 'TOC on'    : 'No TOC'],
+    ['🎨', s.cover.include ? 'Cover on'  : 'No cover'],
+  ];
+  document.getElementById('preflight').innerHTML = chips.map(([ic,v]) =>
+    `<span class="pf-chip">${ic} <b>${v}</b></span>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════ UTILS
+function detectTauri() { return typeof window.__TAURI__ !== 'undefined' && window.__TAURI__ !== null; }
+
+async function tauriInvoke(cmd, args={}) {
+  try { return await window.__TAURI__.core.invoke(cmd, args); }
+  catch(err) {
+    let p=null; if (typeof err==='string') try{p=JSON.parse(err)}catch(_){}
+    if (p?.message) throw new Error(p.message);
+    throw new Error(typeof err==='string'?err:JSON.stringify(err));
   }
 }
 
-function getFilteredFiles() {
-  const q = (document.getElementById('file-search').value || '').toLowerCase();
-  if (!q) return state.allFiles;
-  return state.allFiles.filter(f =>
-    (f.title || '').toLowerCase().includes(q) ||
-    (f.path || '').toLowerCase().includes(q)
-  );
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function showDepsWarning(detail) {
+  const existing = document.getElementById('deps-warning');
+  if (existing) existing.remove();
+  const warn = document.createElement('div');
+  warn.id = 'deps-warning';
+  warn.style.cssText = 'background:var(--surface2);border:1px solid var(--accent);border-radius:8px;padding:12px 16px;margin:8px 0;font-size:.85rem;display:flex;align-items:center;gap:10px';
+  warn.innerHTML = `
+    <span style="font-size:1.2rem">⚠️</span>
+    <span style="flex:1;color:var(--text)">
+      <b>PDF dependencies not ready</b><br>
+      <span style="color:var(--text-muted);font-size:.8rem">${esc(detail)}</span>
+    </span>
+    <button onclick="retryDeps()" class="pf-btn pf-btn-sm" style="white-space:nowrap">Retry Install</button>`;
+  const target = document.getElementById('status-area') || document.getElementById('generate-btn')?.parentNode;
+  if (target?.parentNode) target.parentNode.insertBefore(warn, target.nextSibling);
 }
 
-function buildTreeFromFiles(files) {
-  const root = {};
-  for (const file of files) {
-    const parts = file.path.split('/');
-    let cursor = root;
-    let running = '';
-    for (let i = 0; i < parts.length - 1; i++) {
-      running = running ? running + '/' + parts[i] : parts[i];
-      if (!cursor[parts[i]]) cursor[parts[i]] = { kind: 'folder', path: running, children: {} };
-      cursor = cursor[parts[i]].children;
+async function retryDeps() {
+  const btn = document.querySelector('#deps-warning button');
+  if (btn) { btn.disabled = true; btn.textContent = 'Installing…'; }
+  try {
+    const deps = await tauriInvoke('check_pdf_deps');
+    const warn = document.getElementById('deps-warning');
+    if (deps.status === 'ok' || deps.status === 'installed') {
+      state.depsStatus = null;
+      if (warn) warn.remove();
+      showToast('PDF dependencies ready!');
+    } else {
+      state.depsStatus = deps.detail || 'Unknown error';
+      if (warn) warn.querySelector('span span').textContent = esc(state.depsStatus);
     }
-    cursor[parts[parts.length - 1]] = { kind: 'file', record: file };
+  } catch(e) {
+    state.depsStatus = e.message;
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Retry Install'; }
+  }
+}
+
+function toggleTheme() {
+  const h = document.documentElement, d = h.getAttribute('data-theme')==='dark';
+  h.setAttribute('data-theme', d?'light':'dark');
+  localStorage.setItem('quiz-theme', h.getAttribute('data-theme'));
+  document.getElementById('theme-toggle').textContent = d ? '☾' : '☀';
+}
+
+// ═══════════════════════════════════════════════════════ FILE TREE
+async function loadProjectFiles() {
+  if (!state.isTauri) return;
+  try {
+    const res = await tauriInvoke('list_files');
+    state.allFiles = (res.files||[]).filter(f=>['quiz','bank','flashcard','written'].includes(f.type));
+    renderFileList();
+    document.getElementById('badge-total').textContent = state.allFiles.length + ' available';
+  } catch(e) { showStatus('file-status', e.message, 'error'); }
+}
+
+function getFilteredFiles() {
+  const q = (document.getElementById('file-search').value||'').toLowerCase();
+  return q ? state.allFiles.filter(f=>(f.title||'').toLowerCase().includes(q)||(f.path||'').toLowerCase().includes(q))
+           : state.allFiles;
+}
+
+function buildTree(files) {
+  const root={};
+  for (const f of files) {
+    const p=f.path.split('/'); let c=root, r='';
+    for (let i=0;i<p.length-1;i++){
+      r=r?r+'/'+p[i]:p[i];
+      if(!c[p[i]])c[p[i]]={kind:'folder',path:r,children:{}};
+      c=c[p[i]].children;
+    }
+    c[p[p.length-1]]={kind:'file',record:f};
   }
   return root;
 }
 
-function sortTreeEntries(entries) {
-  return Object.entries(entries).sort((a, b) => {
-    const aF = a[1].kind === 'folder';
-    const bF = b[1].kind === 'folder';
-    if (aF !== bF) return aF ? -1 : 1;
-    return a[0].localeCompare(b[0]);
+function sortEntries(obj) {
+  return Object.entries(obj).sort((a,b)=>{
+    const af=a[1].kind==='folder',bf=b[1].kind==='folder';
+    return af!==bf ? (af?-1:1) : a[0].localeCompare(b[0]);
   });
 }
 
 function toggleFolder(path) {
-  if (state.openFolders.has(path)) state.openFolders.delete(path);
-  else state.openFolders.add(path);
+  state.openFolders.has(path)?state.openFolders.delete(path):state.openFolders.add(path);
   renderFileList();
 }
 
-function getFilesInFolder(folderPath) {
-  const prefix = folderPath + '/';
-  return state.allFiles.filter(f => f.path === folderPath || f.path.startsWith(prefix));
+function filesInFolder(fp) {
+  return state.allFiles.filter(f=>f.path===fp||f.path.startsWith(fp+'/'));
 }
 
-function toggleFolderSelect(folderPath) {
-  const files = getFilesInFolder(folderPath);
-  if (files.length === 0) return;
-  const selPaths = new Set(state.selectedQuizzes.map(s => s.path));
-  const allSelected = files.every(f => selPaths.has(f.path));
-  if (allSelected) {
-    const fps = new Set(files.map(f => f.path));
-    state.selectedQuizzes = state.selectedQuizzes.filter(s => !fps.has(s.path));
-  } else {
-    files.forEach(f => {
-      if (!selPaths.has(f.path)) state.selectedQuizzes.push({ path: f.path, meta: f });
-    });
-  }
-  renderFileList();
-  renderSelectedList();
+function toggleFolderSel(fp) {
+  const files=filesInFolder(fp); if(!files.length)return;
+  const sel=new Set(state.selectedQuizzes.map(s=>s.path));
+  const all=files.every(f=>sel.has(f.path));
+  if(all){const fps=new Set(files.map(f=>f.path));state.selectedQuizzes=state.selectedQuizzes.filter(s=>!fps.has(s.path));}
+  else files.forEach(f=>{if(!sel.has(f.path))state.selectedQuizzes.push({path:f.path,meta:f});});
+  renderFileList(); renderSelList();
 }
 
-function renderTreeLevel(node, q) {
-  const selPaths = new Set(state.selectedQuizzes.map(s => s.path));
-  const items = sortTreeEntries(node).map(([name, item]) => {
-    if (item.kind === 'folder') {
-      const open = q ? true : state.openFolders.has(item.path);
-      const childrenHtml = open ? renderTreeLevel(item.children, q) : '';
-      const hasChildren = Object.keys(item.children).length > 0;
-      if (!hasChildren) return '';
-      const selState = (() => {
-        const files = getFilesInFolder(item.path);
-        if (files.length === 0) return 'none';
-        const selCount = files.filter(f => selPaths.has(f.path)).length;
-        if (selCount === files.length) return 'all';
-        if (selCount > 0) return 'partial';
-        return 'none';
-      })();
-      const selClass = selState === 'all' ? 'folder-sel-all' : selState === 'partial' ? 'folder-sel-partial' : '';
-      const pathEsc = item.path.replace(/'/g, "\\'");
-      return '<li><div class="tree-row folder-row ' + selClass + '">' +
-        '<button class="tree-chevron ' + (open ? 'open' : '') + '" onclick="event.stopPropagation();toggleFolder(\'' + pathEsc + '\')">\u25B6</button>' +
-        '<span class="folder-select-area" onclick="event.stopPropagation();toggleFolderSelect(\'' + pathEsc + '\')">' +
-        '<span class="tree-icon">' + (open ? '\uD83D\uDCC2' : '\uD83D\uDCC1') + '</span>' +
-        '<span class="tree-name">' + esc(name) + '</span></span>' +
-        '<span class="tree-type-dot type-folder"></span></div>' +
-        (open ? '<ul class="file-tree">' + childrenHtml + '</ul>' : '') + '</li>';
+function renderTreeLevel(node, expandAll) {
+  const sel = new Set(state.selectedQuizzes.map(s=>s.path));
+  return '<ul class="file-tree">' + sortEntries(node).map(([name,item])=>{
+    if (item.kind==='folder') {
+      if (!Object.keys(item.children).length) return '';
+      const open = expandAll || state.openFolders.has(item.path);
+      const fc=filesInFolder(item.path), sc=fc.filter(f=>sel.has(f.path)).length;
+      const cls = sc===fc.length&&fc.length?'folder-sel-all':sc>0?'folder-sel-partial':'';
+      const pe=item.path.replace(/'/g,"\\'");
+      return `<li><div class="tree-row folder-row ${cls}">` +
+        `<button class="tree-chevron${open?' open':''}" onclick="event.stopPropagation();toggleFolder('${pe}')">▶</button>` +
+        `<span class="folder-area" onclick="event.stopPropagation();toggleFolderSel('${pe}')">` +
+        `<span class="tree-icon">${open?'📂':'📁'}</span>` +
+        `<span class="tree-name">${esc(name)}</span></span>` +
+        `<span class="tree-dot folder"></span></div>` +
+        (open?`<ul class="file-tree">${renderTreeLevel(item.children,expandAll).slice(21,-5)}</ul>`:'')+
+        '</li>';
     }
-    const file = item.record;
-    const sel = selPaths.has(file.path) ? 'selected' : '';
-    const icon = file.icon || (file.type === 'bank' ? '\uD83D\uDDC3\uFE0F' : file.type === 'written' ? '\u270D\uFE0F' : file.type === 'flashcard' ? '\uD83C\uDCCF' : '\uD83D\uDCDD');
-    const qc = file.question_count || '?';
-    const pathEsc = file.path.replace(/'/g, "\\'");
-    return '<li><div class="tree-row ' + sel + '" onclick="toggleFileSelect(\'' + pathEsc + '\')">' +
-      '<input type="checkbox" ' + (sel ? 'checked' : '') + ' onclick="event.stopPropagation();toggleFileSelect(\'' + pathEsc + '\')" style="accent-color:var(--accent);cursor:pointer;width:14px;height:14px;">' +
-      '<span class="tree-icon" style="margin-left:2px">' + icon + '</span>' +
-      '<span class="tree-name">' + esc(file.title || file.name) + '</span>' +
-      '<span class="tree-type-dot type-' + file.type + '"></span>' +
-      '<span style="font-size:0.75rem;color:var(--text-muted);margin-left:0.5rem;white-space:nowrap;">' + qc + ' Q</span></div></li>';
-  });
-  return '<ul class="file-tree">' + items.join('') + '</ul>';
+    const f=item.record, s=sel.has(f.path)?'selected':'';
+    const ic=f.icon||(f.type==='bank'?'🗃️':f.type==='written'?'✍️':f.type==='flashcard'?'🃏':'📝');
+    const pe=f.path.replace(/'/g,"\\'");
+    return `<li><div class="tree-row ${s}" onclick="toggleFileSel('${pe}')">` +
+      `<input type="checkbox" ${s?'checked':''} onclick="event.stopPropagation();toggleFileSel('${pe}')" style="accent-color:var(--accent);cursor:pointer;width:14px;height:14px">` +
+      `<span class="tree-icon" style="margin-left:2px">${ic}</span>` +
+      `<span class="tree-name">${esc(f.title||f.name)}</span>` +
+      `<span class="tree-dot ${f.type}"></span>` +
+      `<span style="font-size:.72rem;color:var(--text-muted);margin-left:.4rem;white-space:nowrap">${f.question_count||'?'} Q</span>` +
+      `</div></li>`;
+  }).join('') + '</ul>';
 }
 
 function renderFileList() {
-  const container = document.getElementById('file-list');
-  const q = (document.getElementById('file-search').value || '').toLowerCase();
-  const filtered = getFilteredFiles();
-  if (filtered.length === 0) {
-    container.innerHTML = '<div style="padding:1.5rem;text-align:center;color:var(--text-muted);font-size:0.85rem">No quiz files found.</div>';
-    return;
-  }
-  container.innerHTML = renderTreeLevel(buildTreeFromFiles(filtered), q);
+  const el=document.getElementById('file-list');
+  const q=(document.getElementById('file-search').value||'').toLowerCase();
+  const files=getFilteredFiles();
+  if(!files.length){el.innerHTML='<div style="padding:1.5rem;text-align:center;color:var(--text-muted);font-size:.85rem">No quiz files found.</div>';return;}
+  el.innerHTML=renderTreeLevel(buildTree(files),!!q);
 }
 
-function toggleFileSelect(path) {
-  const idx = state.selectedQuizzes.findIndex(s => s.path === path);
-  const file = state.allFiles.find(f => f.path === path);
-  if (!file) return;
-  if (idx === -1) state.selectedQuizzes.push({ path: file.path, meta: file });
-  else state.selectedQuizzes.splice(idx, 1);
-  renderFileList();
-  renderSelectedList();
+function toggleFileSel(path) {
+  const idx=state.selectedQuizzes.findIndex(q=>q.path===path);
+  const f=state.allFiles.find(f=>f.path===path); if(!f)return;
+  if(idx===-1)state.selectedQuizzes.push({path:f.path,meta:f});
+  else state.selectedQuizzes.splice(idx,1);
+  renderFileList(); renderSelList(); updateSummary(); livePreview();
 }
+function filterFileList(){renderFileList();}
 
-function filterFileList() { renderFileList(); }
+function showStatus(id,msg,type){const el=document.getElementById(id);el.innerHTML=msg;el.className='status '+type;}
 
-function showFileStatus(msg, type) {
-  const el = document.getElementById('file-status');
-  el.textContent = msg;
-  el.className = 'status-msg ' + type;
-}
-
-function renderSelectedList() {
-  const container = document.getElementById('selected-list');
-  const badge = document.getElementById('selected-count-badge');
-  badge.textContent = state.selectedQuizzes.length;
-  if (state.selectedQuizzes.length === 0) {
-    container.innerHTML = '<div class="selected-empty">Select quizzes from the list to add them here.</div>';
-    return;
-  }
-  container.innerHTML = state.selectedQuizzes.map((q, i) =>
-    '<div class="selected-item" data-index="' + i + '">' +
-    '<span class="item-title">' + esc(q.meta.title || q.path) + '</span>' +
-    '<span class="item-qcount">' + (q.meta.question_count || '?') + ' Q</span>' +
-    '<button class="remove-btn" onclick="removeSelected(' + i + ')" title="Remove">\u2715</button></div>'
+// ═══════════════════════════════════════════════════════ SELECTED LIST
+function renderSelList() {
+  const el=document.getElementById('selected-list');
+  document.getElementById('badge-selected').textContent=state.selectedQuizzes.length;
+  if(!state.selectedQuizzes.length){el.innerHTML='<div class="sel-empty">Select quizzes from the list.</div>';return;}
+  el.innerHTML=state.selectedQuizzes.map((q,i)=>
+    `<div class="sel-item" draggable="true" data-i="${i}">` +
+    `<span class="drag-handle">⠿</span>` +
+    `<span class="sel-title">${esc(q.meta.title||q.path)}</span>` +
+    `<span class="sel-qc">${q.meta.question_count||'?'} Q</span>` +
+    `<button class="rm-btn" onclick="removeSelected(${i})">✕</button></div>`
   ).join('');
+  setupDrag(el);
 }
 
-function removeSelected(idx) {
-  state.selectedQuizzes.splice(idx, 1);
-  renderSelectedList();
-  renderFileList();
+function removeSelected(i){state.selectedQuizzes.splice(i,1);renderSelList();renderFileList();updateSummary();livePreview();}
+
+function setupDrag(container) {
+  let src=null;
+  container.querySelectorAll('.sel-item').forEach(item=>{
+    item.addEventListener('dragstart',()=>{src=item;item.style.opacity='.4';});
+    item.addEventListener('dragend',()=>{item.style.opacity='';src=null;container.querySelectorAll('.sel-item').forEach(x=>x.classList.remove('drag-over'));});
+    item.addEventListener('dragover',e=>{e.preventDefault();if(src&&src!==item){container.querySelectorAll('.sel-item').forEach(x=>x.classList.remove('drag-over'));item.classList.add('drag-over');}});
+    item.addEventListener('drop',e=>{
+      e.preventDefault();item.classList.remove('drag-over');
+      if(!src||src===item)return;
+      const si=+src.dataset.i,di=+item.dataset.i;
+      const [moved]=state.selectedQuizzes.splice(si,1);
+      state.selectedQuizzes.splice(di,0,moved);
+      renderSelList();renderFileList();updateSummary();
+    });
+  });
 }
 
-// URL LOADING
+// ═══════════════════════════════════════════════════════ URL LOADING
 async function loadFromUrl() {
-  const input = document.getElementById('url-input');
-  const status = document.getElementById('url-status');
-  let url = input.value.trim();
-  if (!url) { showUrlStatus('Enter a URL.', 'error'); return; }
-  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
-  showUrlStatus('<span class="spinner"></span> Fetching...', 'loading');
+  let url=(document.getElementById('url-input').value||'').trim();
+  if(!url){showStatus('url-status','Enter a URL.','error');return;}
+  if(!/^https?:\/\//i.test(url))url='https://'+url;
+  showStatus('url-status','<span class="spinner"></span> Fetching…','loading');
   try {
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const content = await resp.text();
-    const parsed = parseContent(content);
-    if (!parsed) throw new Error('No quiz data found in page');
-    const title = parsed.config.title || 'Quiz from URL';
-    const qc = parsed.questions ? parsed.questions.length : 0;
-    const pseudo = {
-      path: url,
-      meta: { title, question_count: qc, type: parsed.isWritten ? 'written' : (parsed.isBank ? 'bank' : 'quiz') },
-      config: parsed.config,
-      questions: parsed.questions,
-      isWritten: parsed.isWritten,
-    };
+    const resp=await fetch(url);
+    if(!resp.ok)throw new Error('HTTP '+resp.status);
+    const parsed=parseContent(await resp.text());
+    if(!parsed)throw new Error('No quiz data found in page');
+    const title=parsed.config.title||'Quiz from URL', qc=parsed.questions?.length||0;
+    const pseudo={path:url,meta:{title,question_count:qc,type:parsed.isWritten?'written':(parsed.isBank?'bank':'quiz')},config:parsed.config,questions:parsed.questions};
     state.allQuestionsLoad.push(pseudo);
-    state.selectedQuizzes.push({ path: url, meta: pseudo.meta });
-    showUrlStatus('Loaded "' + title + '" (' + qc + ' questions)', 'success');
-    renderSelectedList();
-    updateExportSummary();
-  } catch (err) {
-    showUrlStatus('Error: ' + err.message, 'error');
-  }
-}
-
-function showUrlStatus(msg, type) {
-  const el = document.getElementById('url-status');
-  el.innerHTML = msg;
-  el.className = 'status-msg ' + type;
+    state.selectedQuizzes.push({path:url,meta:pseudo.meta});
+    showStatus('url-status',`Loaded "${title}" (${qc} questions)`,'success');
+    renderSelList();updateSummary();livePreview();
+  } catch(e){showStatus('url-status','Error: '+e.message,'error');}
 }
 
 function parseContent(content) {
-  const extract = (start, end, fallback) => {
-    const si = content.indexOf(start);
-    const ei = content.indexOf(end);
-    if (si !== -1 && ei !== -1) {
-      const block = content.slice(si + start.length, ei).trim();
-      const m = block.match(/(?:const|let|var)\s+\w+\s*=\s*([\s\S]*?);?$/);
-      if (m) try { return JSON.parse(m[1]); } catch(_) { try { return new Function('return ' + m[1])(); } catch(_2) {} }
-    }
-    const gm = content.match(fallback);
-    if (gm) try { return JSON.parse(gm[2]); } catch(_) { try { return new Function('return ' + gm[2])(); } catch(_2) {} }
+  const extract=(s,e,fb)=>{
+    const si=content.indexOf(s),ei=content.indexOf(e);
+    if(si!==-1&&ei!==-1){const b=content.slice(si+s.length,ei).trim();const m=b.match(/(?:const|let|var)\s+\w+\s*=\s*([\s\S]*?);?$/);if(m)try{return JSON.parse(m[1]);}catch(_){try{return new Function('return '+m[1])();}catch(_2){}}}
+    const gm=content.match(fb);if(gm)try{return JSON.parse(gm[2]);}catch(_){try{return new Function('return '+gm[2])();}catch(_2){}}
     return null;
   };
-  let isWritten = false, isBank = false;
-  let config = extract('/* [QUIZ_CONFIG_START] */', '/* [QUIZ_CONFIG_END] */', /(?:const|let|var)\s+QUIZ_CONFIG\s*=\s*([\s\S]*?);?(?:\n|\r|$)/);
-  let questions = extract('/* [QUESTIONS_START] */', '/* [QUESTIONS_END] */', /(?:const|let|var)\s+QUESTIONS\s*=\s*([\s\S]*?);?(?:\n|\r|$)/);
-  if (!config || !questions) {
-    config = extract('/* [BANK_CONFIG_START] */', '/* [BANK_CONFIG_END] */', /(?:const|let|var)\s+BANK_CONFIG\s*=\s*([\s\S]*?);?(?:\n|\r|$)/);
-    questions = extract('/* [QUESTION_BANK_START] */', '/* [QUESTION_BANK_END] */', /(?:const|let|var)\s+QUESTION_BANK\s*=\s*([\s\S]*?);?(?:\n|\r|$)/);
-    if (config && questions) isBank = true;
-  }
-  if (!config || !questions) {
-    config = extract('/* [WRITTEN_CONFIG_START] */', '/* [WRITTEN_CONFIG_END] */', /(?:const|let|var)\s+WRITTEN_CONFIG\s*=\s*([\s\S]*?);?(?:\n|\r|$)/);
-    questions = extract('/* [WRITTEN_QUESTIONS_START] */', '/* [WRITTEN_QUESTIONS_END] */', /(?:const|let|var)\s+WRITTEN_QUESTIONS\s*=\s*([\s\S]*?);?(?:\n|\r|$)/);
-    if (config && questions) isWritten = true;
-  }
-  if (!config || !questions) return null;
-  return { config, questions, isWritten, isBank };
+  let isWritten=false,isBank=false;
+  let cfg=extract('/* [QUIZ_CONFIG_START] */','/* [QUIZ_CONFIG_END] */',/(?:const|let|var)\s+QUIZ_CONFIG\s*=\s*([\s\S]*?);?(?:\n|\r|$)/);
+  let qs=extract('/* [QUESTIONS_START] */','/* [QUESTIONS_END] */',/(?:const|let|var)\s+QUESTIONS\s*=\s*([\s\S]*?);?(?:\n|\r|$)/);
+  if(!cfg||!qs){cfg=extract('/* [BANK_CONFIG_START] */','/* [BANK_CONFIG_END] */',/(?:const|let|var)\s+BANK_CONFIG\s*=\s*([\s\S]*?);?(?:\n|\r|$)/);qs=extract('/* [QUESTION_BANK_START] */','/* [QUESTION_BANK_END] */',/(?:const|let|var)\s+QUESTION_BANK\s*=\s*([\s\S]*?);?(?:\n|\r|$)/);if(cfg&&qs)isBank=true;}
+  if(!cfg||!qs){cfg=extract('/* [WRITTEN_CONFIG_START] */','/* [WRITTEN_CONFIG_END] */',/(?:const|let|var)\s+WRITTEN_CONFIG\s*=\s*([\s\S]*?);?(?:\n|\r|$)/);qs=extract('/* [WRITTEN_QUESTIONS_START] */','/* [WRITTEN_QUESTIONS_END] */',/(?:const|let|var)\s+WRITTEN_QUESTIONS\s*=\s*([\s\S]*?);?(?:\n|\r|$)/);if(cfg&&qs)isWritten=true;}
+  if(!cfg||!qs)return null;
+  return{config:cfg,questions:qs,isWritten,isBank};
 }
 
-// LOAD QUIZ DATA
+// ═══════════════════════════════════════════════════════ LOAD QUIZZES
 async function loadSelectedQuizzes() {
-  if (state.selectedQuizzes.length === 0) return;
-  const paths = state.selectedQuizzes.map(q => q.path);
+  if(!state.selectedQuizzes.length)return;
+  const paths=state.selectedQuizzes.map(q=>q.path);
   try {
-    if (state.isTauri) {
-      const result = await tauriInvoke('load_exports_batch', { paths });
-      const loaded = result.files || [];
-      state.allQuestionsLoad = loaded.map(f => {
-        const cfg = f.meta.config ? (typeof f.meta.config === 'string' ? JSON.parse(f.meta.config) : f.meta.config) : {};
-        const qs = f.meta.questions ? (typeof f.meta.questions === 'string' ? JSON.parse(f.meta.questions) : f.meta.questions) : [];
-        return { path: f.path, meta: f.meta, config: cfg, questions: qs, isWritten: f.meta.type === 'written' || !!cfg.WRITTEN_CONFIG };
+    if(state.isTauri){
+      const res=await tauriInvoke('load_exports_batch',{paths});
+      state.allQuestionsLoad=(res.files||[]).map(f=>{
+        const cfg=f.meta.config?(typeof f.meta.config==='string'?JSON.parse(f.meta.config):f.meta.config):{};
+        const qs=f.meta.questions?(typeof f.meta.questions==='string'?JSON.parse(f.meta.questions):f.meta.questions):[];
+        return{path:f.path,meta:f.meta,config:cfg,questions:qs};
       });
     } else {
-      state.allQuestionsLoad = [];
-      for (const q of state.selectedQuizzes) {
-        try {
-          const resp = await fetch(q.path);
-          if (!resp.ok) continue;
-          const content = await resp.text();
-          const parsed = parseContent(content);
-          if (parsed) state.allQuestionsLoad.push({ path: q.path, ...parsed });
-        } catch(e) { console.warn('Failed to load', q.path, e); }
+      state.allQuestionsLoad=[];
+      for(const q of state.selectedQuizzes){
+        try{const resp=await fetch(q.path);if(!resp.ok)continue;const p=parseContent(await resp.text());if(p)state.allQuestionsLoad.push({path:q.path,...p});}
+        catch(e){console.warn('Failed to load',q.path,e);}
       }
     }
-    updateExportSummary();
-  } catch (err) {
-    console.error('Failed to load quiz data:', err);
-    showGenerateStatus('Failed to load quiz data: ' + err.message, 'error');
-  }
+    updateSummary();
+  } catch(e){console.error(e);showStatus('gen-status','Failed to load quiz data: '+e.message,'error');}
 }
 
-function updateExportSummary() {
-  const totalQ = state.allQuestionsLoad.reduce((sum, f) => sum + (f.questions ? f.questions.length : 0), 0);
-  document.getElementById('export-count').textContent = state.allQuestionsLoad.length;
-  document.getElementById('export-questions').textContent = totalQ;
-  const styleLabel = state.style.mode === 'compact' ? 'Compact' : 'Standard';
-  document.getElementById('export-style').textContent = styleLabel;
-  document.getElementById('export-pagesize').textContent = (state.style.pageSize || 'a4').toUpperCase();
-  document.getElementById('export-mode-badge').style.display = state.allQuestionsLoad.length > 1 ? 'inline' : 'none';
-  const btn = document.getElementById('next-to-cover');
-  if (btn) btn.textContent = state.selectedQuizzes.length > 0
-    ? 'Continue \u2192 Cover Page (' + state.selectedQuizzes.length + ' selected)'
-    : 'Continue \u2192 Cover Page';
+// ═══════════════════════════════════════════════════════ SUMMARY
+function updateSummary() {
+  document.getElementById('badge-multi').style.display = state.allQuestionsLoad.length > 1 ? 'inline' : 'none';
+  const n = state.selectedQuizzes.length;
+  const btn = document.getElementById('btn-next-cover');
+  if (btn) btn.textContent = n > 0 ? `Continue → Cover Page (${n} selected)` : 'Continue → Cover Page';
 }
 
-// EXPORT SUMMARY
-function updateExportSummary() {
-  const totalQ = state.allQuestionsLoad.reduce((sum, f) => sum + (f.questions ? f.questions.length : 0), 0);
-  document.getElementById('export-count').textContent = state.allQuestionsLoad.length;
-  document.getElementById('export-questions').textContent = totalQ;
-  const styleLabel = state.style.mode === 'compact' ? 'Compact' : (state.style.layout === 'twocol' ? 'Two-Column' : 'Standard');
-  document.getElementById('export-style').textContent = styleLabel;
-  document.getElementById('export-pagesize').textContent = (state.style.pageSize || 'a4').toUpperCase();
-  document.getElementById('export-mode-badge').style.display = state.allQuestionsLoad.length > 1 ? 'inline' : 'none';
-}
-
-// GATHER CONFIG
+// ═══════════════════════════════════════════════════════ GATHER CONFIG
 function gatherConfig() {
-  state.cover.title = document.getElementById('cover-title').value || 'Quiz Compilation';
-  state.cover.subtitle = document.getElementById('cover-subtitle').value || '';
-  state.cover.author = document.getElementById('cover-author').value || '';
-  state.cover.date = document.getElementById('cover-date').value || state.cover.date;
+  state.cover.title       = document.getElementById('cover-title').value       || 'Quiz Compilation';
+  state.cover.subtitle    = document.getElementById('cover-subtitle').value    || '';
+  state.cover.author      = document.getElementById('cover-author').value      || '';
+  state.cover.date        = document.getElementById('cover-date').value        || state.cover.date;
   state.cover.description = document.getElementById('cover-description').value || '';
-  state.cover.include = document.getElementById('include-cover').checked;
-  state.toc.include = document.getElementById('include-toc').checked;
-  state.style.mode = document.getElementById('style-mode').value;
-  state.style.layout = document.getElementById('layout-mode').value;
-  state.style.pageSize = document.getElementById('page-size').value;
+  state.cover.icon        = document.getElementById('cover-icon').value        || '';
+  state.cover.include     = document.getElementById('include-cover').checked;
+  state.toc.include       = document.getElementById('include-toc').checked;
+  state.style.mode        = document.getElementById('style-mode').value;
+  state.style.layout      = document.getElementById('layout-mode').value;
+  state.style.pageSize    = document.getElementById('page-size').value;
   state.style.orientation = document.getElementById('page-orientation').value;
-  state.style.numbering = document.getElementById('numbering-mode').value;
-  state.style.answers = document.getElementById('answers-mode').value;
+  state.style.numbering   = document.getElementById('numbering-mode').value;
+  state.style.answers     = document.getElementById('answers-mode').value;
   state.style.showExplanations = document.getElementById('show-explanations').checked;
 }
 
-// BUILD PAYLOAD
 function buildPayload() {
-  const quizzes = state.allQuestionsLoad.map(f => ({
-    title: (f.config && f.config.title) || (f.meta && f.meta.title) || 'Untitled',
-    description: (f.config && f.config.description) || (f.meta && f.meta.description) || '',
-    icon: (f.config && f.config.icon) || (f.meta && f.meta.icon) || '',
-    questions: (f.questions || []).map(q => ({
-      question: q.question || '',
-      options: q.options || [],
-      correct: typeof q.correct === 'number' ? q.correct : 0,
-      explanation: q.explanation || '',
-    })),
-  }));
   return {
-    quizzes,
+    quizzes: state.allQuestionsLoad.map(f=>({
+      title:       (f.config?.title)       || (f.meta?.title)       || 'Untitled',
+      description: (f.config?.description) || (f.meta?.description) || '',
+      icon:        (f.config?.icon)        || (f.meta?.icon)        || '',
+      questions:   (f.questions||[]).map(q=>({
+        question:    q.question    || '',
+        options:     q.options     || [],
+        correct:     typeof q.correct==='number' ? q.correct : 0,
+        explanation: q.explanation || '',
+      })),
+    })),
     cover: state.cover,
-    toc: state.toc,
+    toc:   state.toc,
     style: state.style,
   };
 }
 
-// GENERATE PDF
+// ═══════════════════════════════════════════════════════ GENERATE PDF
 async function generatePdf() {
   gatherConfig();
-  const status = document.getElementById('generate-status');
-  const progressWrap = document.getElementById('progress-bar-wrap');
-  const progressFill = document.getElementById('progress-fill');
-  const downloadArea = document.getElementById('download-area');
-  const btn = document.getElementById('generate-btn');
+  const btn=document.getElementById('generate-btn');
+  const pwrap=document.getElementById('progress-wrap');
+  const pfill=document.getElementById('progress-fill');
+  const result=document.getElementById('result-card');
 
-  downloadArea.style.display = 'none';
-  btn.disabled = true;
-  progressWrap.style.display = 'block';
-  progressFill.style.width = '15%';
-  status.className = 'status-msg loading';
-  status.innerHTML = '<span class="spinner"></span> Loading quiz data...';
-
-  await loadSelectedQuizzes();
-
-  if (state.allQuestionsLoad.length === 0) {
-    status.className = 'status-msg error';
-    status.textContent = 'No quiz data loaded. Select quizzes first.';
-    btn.disabled = false;
-    progressWrap.style.display = 'none';
+  // Check PDF deps before starting
+  if (state.depsStatus) {
+    showStatus('gen-status','Dependencies not ready: '+state.depsStatus+'. Click Retry in the warning banner.','error');
+    btn.disabled=false;
     return;
   }
 
-  progressFill.style.width = '40%';
-  status.innerHTML = '<span class="spinner"></span> Sending to PDF engine...';
+  result.style.display='none';
+  btn.disabled=true;
+  pwrap.style.display='block';
+  pfill.style.width='12%';
+  showStatus('gen-status','<span class="spinner"></span> Loading quiz data…','loading');
 
-  const payload = buildPayload();
+  await loadSelectedQuizzes();
+  if(!state.allQuestionsLoad.length){
+    showStatus('gen-status','No quiz data loaded. Select quizzes first.','error');
+    btn.disabled=false; pwrap.style.display='none'; return;
+  }
+
+  pfill.style.width='42%';
+  showStatus('gen-status','<span class="spinner"></span> Sending to PDF engine…','loading');
 
   try {
-    progressFill.style.width = '60%';
-    status.innerHTML = '<span class="spinner"></span> Generating PDF with Rust backend...';
+    pfill.style.width='68%';
+    showStatus('gen-status','<span class="spinner"></span> Generating PDF…','loading');
 
-    const result = await tauriInvoke('export_pdf', { config: payload });
+    const res = await tauriInvoke('export_pdf',{config:buildPayload()});
+    pfill.style.width='100%';
 
-    progressFill.style.width = '100%';
+    state.pdfData=res.pdf_base64;
+    state.pdfFilename=res.filename||'export.pdf';
+    const kb=Math.round((res.size||0)/1024);
+    const qzc=res.quiz_count||state.allQuestionsLoad.length;
+    const qtc=res.question_count||state.allQuestionsLoad.reduce((s,f)=>s+(f.questions?f.questions.length:0),0);
 
-    state.pdfData = result.pdf_base64;
-    state.pdfFilename = result.filename || 'export.pdf';
-    const sizeKB = Math.round((result.size || 0) / 1024);
+    btn.disabled=false;
+    showStatus('gen-status','✓ PDF generated successfully!','success');
+    document.getElementById('r-size').textContent     = kb + ' KB';
+    document.getElementById('r-quizzes').textContent  = qzc;
+    document.getElementById('r-questions').textContent= qtc;
+    result.style.display='block';
 
-    btn.disabled = false;
-    status.className = 'status-msg success';
-    status.innerHTML = ' PDF generated successfully! (' + sizeKB + ' KB)';
-    document.getElementById('download-info').textContent =
-      result.quiz_count + ' quiz(zes), ' + result.question_count + ' questions  ' + sizeKB + ' KB';
-
-    // Auto-download
     downloadPdf();
-
-    setTimeout(() => { progressWrap.style.display = 'none'; }, 800);
-  } catch (err) {
-    btn.disabled = false;
-    progressWrap.style.display = 'none';
-    status.className = 'status-msg error';
-    status.textContent = 'PDF generation failed: ' + err.message;
+    setTimeout(()=>{pwrap.style.display='none';},1000);
+  } catch(e){
+    btn.disabled=false; pwrap.style.display='none';
+    showStatus('gen-status','PDF generation failed: '+e.message,'error');
   }
 }
 
 function downloadPdf() {
-  if (!state.pdfData) {
-    showGenerateStatus('No PDF data available. Generate the PDF first.', 'error');
-    return;
-  }
+  if(!state.pdfData){showStatus('gen-status','No PDF data. Generate first.','error');return;}
   try {
-    const dataUri = 'data:application/pdf;base64,' + state.pdfData;
-    const a = document.createElement('a');
-    a.href = dataUri;
-    a.download = state.pdfFilename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  } catch (err) {
-    // Fallback: try Tauri save dialog
+    const a=document.createElement('a');
+    a.href='data:application/pdf;base64,'+state.pdfData;
+    a.download=state.pdfFilename;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+  } catch(e){
     try {
-      const byteChars = atob(state.pdfData);
-      const bytes = new Uint8Array(byteChars.length);
-      for (let i = 0; i < byteChars.length; i++) bytes[i] = byteChars.charCodeAt(i);
-      const blob = new Blob([bytes], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank');
-      setTimeout(() => URL.revokeObjectURL(url), 30000);
-    } catch (fallbackErr) {
-      showGenerateStatus('Download failed: ' + err.message + ' | Fallback: ' + fallbackErr.message, 'error');
-    }
+      const bytes=new Uint8Array(atob(state.pdfData).split('').map(c=>c.charCodeAt(0)));
+      const url=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'}));
+      window.open(url,'_blank');
+      setTimeout(()=>URL.revokeObjectURL(url),30000);
+    } catch(e2){showStatus('gen-status','Download failed: '+e.message,'error');}
   }
 }
 
-function showGenerateStatus(msg, type) {
-  const el = document.getElementById('generate-status');
-  el.innerHTML = msg;
-  el.className = 'status-msg ' + type;
-}
-
-// INIT
+// ═══════════════════════════════════════════════════════ INIT
 (async function init() {
-  const savedTheme = localStorage.getItem('quiz-theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', savedTheme);
-  document.getElementById('theme-toggle').textContent = savedTheme === 'dark' ? '\u2600' : '\u263E';
+  const t=localStorage.getItem('quiz-theme')||'dark';
+  document.documentElement.setAttribute('data-theme',t);
+  document.getElementById('theme-toggle').textContent = t==='dark'?'☀':'☾';
 
-  const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-  document.getElementById('cover-date').value = today;
+  document.getElementById('cover-date').value = state.cover.date;
 
   state.isTauri = detectTauri();
 
-  const params = new URLSearchParams(window.location.search);
-  const quizUrl = params.get('url') || params.get('quiz');
-  if (quizUrl) {
-    document.getElementById('url-input').value = quizUrl;
+  const params=new URLSearchParams(window.location.search);
+  const quizUrl=params.get('url')||params.get('quiz');
+  if(quizUrl){
+    document.getElementById('url-input').value=quizUrl;
     await loadFromUrl();
     switchStep('style');
   }
 
-  if (state.isTauri) {
+  if(state.isTauri) {
     await loadProjectFiles();
-  } else {
-    document.getElementById('file-list').innerHTML =
-      '<div style="padding:1.5rem;text-align:center;color:var(--text-muted);font-size:0.85rem">Open this tool from the Admin Dashboard to browse project files.</div>';
+    // Check PDF dependencies (Python + ReportLab) on load
+    try {
+      const deps = await tauriInvoke('check_pdf_deps');
+      if (deps.status === 'error') {
+        state.depsStatus = deps.detail || 'Unknown error';
+        showDepsWarning(state.depsStatus);
+      }
+    } catch(_) { /* will show error at generation time */ }
   }
+  else document.getElementById('file-list').innerHTML=
+    '<div style="padding:1.5rem;text-align:center;color:var(--text-muted);font-size:.85rem">Open this tool from the Admin Dashboard to browse project files.</div>';
 
-  updateExportSummary();
+  syncStepDots('select');
+  updateSummary();
+  livePreview();
 })();
 </script>
 </body>

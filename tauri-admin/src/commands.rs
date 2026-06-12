@@ -722,6 +722,14 @@ pub fn export_pdf(config: Value) -> Result<Value, String> {
 }
 
 #[tauri::command]
+pub fn check_pdf_deps() -> Result<Value, String> {
+    match pdf::ensure_deps() {
+        Ok(_) => Ok(json!({"status": "ok"})),
+        Err(e) => Ok(json!({"status": "error", "detail": e})),
+    }
+}
+
+#[tauri::command]
 pub fn parse_json_questions(content: String) -> Result<Value, String> {
     // Remove BOM first (common in Windows-saved JSON files)
     let trimmed = content.trim().strip_prefix('\u{FEFF}').unwrap_or(content.trim()).to_string();
