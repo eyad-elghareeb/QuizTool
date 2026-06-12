@@ -83,7 +83,7 @@ def register_fonts():
                 pdfmetrics.registerFont(TTFont(name, path))
                 ok.add(name)
             except Exception as e:
-                print(f"⚠  Font not loaded — {name}: {e}", file=sys.stderr)
+                print(f"[WARN] Font not loaded — {name}: {e}", file=sys.stderr)
 
     if "Poppins" in ok:
         registerFontFamily("Poppins", normal="Poppins", bold="Poppins-Bold",
@@ -1374,7 +1374,7 @@ def generate_pdf(config_path, output_path):
 
     # ── BUILD ─────────────────────────────────────────────────
     doc.build(story)
-    print(f"✓  PDF generated: {output_path}")
+    print(f"[OK] PDF generated: {output_path}")
     return True
 
 

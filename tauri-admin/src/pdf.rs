@@ -70,6 +70,7 @@ pub fn ensure_deps() -> Result<bool, String> {
 
     let output = Command::new(&python)
         .arg(&script_path)
+        .env("PYTHONIOENCODING", "utf-8")
         .output()
         .map_err(|e| format!("Failed to run dependency check: {e}"))?;
 
@@ -248,6 +249,7 @@ pub fn generate_pdf(config: &ExportConfig) -> Result<Vec<u8>, String> {
         .arg(&script_path)
         .arg(&config_path)
         .arg(&output_path)
+        .env("PYTHONIOENCODING", "utf-8")
         .output()
         .map_err(|e| format!("Failed to run PDF generator: {e}"))?;
 
