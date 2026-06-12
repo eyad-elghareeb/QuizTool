@@ -513,8 +513,7 @@ def _build_flowables(text, style, content_w, fs=1.0):
     return result
 
 
-def xesc(text):
-    """XML-escape text and convert newlines to <br/>."""
+def _correct_badge(letter, opt_text, col_w, fs=1.0):
     """
     Green correct-answer badge.
     IMPECCABLE: full-perimeter background — no side stripe.
