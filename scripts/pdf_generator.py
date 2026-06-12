@@ -542,6 +542,8 @@ def _callout_box(label, body_text, col_w, bg, border_color, fs=1.0):
     Explanation / objective callout box.
     IMPECCABLE FIX: OUTLINE 0.75pt full-perimeter hairline + background tint.
     NEVER a LINEBEFORE side-stripe (explicitly banned in impeccable).
+    Body text is split into separate rows per paragraph so long
+    content can split across pages naturally.
     """
     lbl_sty = ParagraphStyle(
         "_cl", fontName=_F["H"],
@@ -553,17 +555,27 @@ def _callout_box(label, body_text, col_w, bg, border_color, fs=1.0):
         fontSize=round(8.5 * fs, 1), leading=round(12.5 * fs, 1),
         textColor=SLATE,
     )
-    rows = [
-        [Paragraph(label, lbl_sty)],
-        [Paragraph(_md_to_html(xesc(body_text)), txt_sty)],
-    ]
+    # Split body into paragraphs so each table row stays page-splittable
+    body_rows = []
+    for para in body_text.split('\n\n'):
+        para = para.strip()
+        if para:
+            html = _md_to_html(xesc(para))
+            body_rows.append([Paragraph(html, txt_sty)])
+
+    if not body_rows:
+        return Paragraph(label, lbl_sty)  # fallback: plain label
+
+    # Build table: label row + one row per body paragraph
+    rows = [[Paragraph(label, lbl_sty)]] + body_rows
+    nrows = len(rows)
     t = Table(rows, colWidths=[col_w])
     t.setStyle(TableStyle([
         ("BACKGROUND",    (0, 0), (-1, -1), bg),
         ("TOPPADDING",    (0, 0), (0, 0),   sp(1)),
         ("BOTTOMPADDING", (0, 0), (0, 0),   sp(1)),
-        ("TOPPADDING",    (0, 1), (0, 1),   0),
-        ("BOTTOMPADDING", (0, 1), (0, 1),   sp(2)),
+        ("TOPPADDING",    (0, 1), (-1, -1), sp(1)),
+        ("BOTTOMPADDING", (0, 1), (-1, -1), sp(1)),
         ("LEFTPADDING",   (0, 0), (-1, -1), sp(3)),
         ("RIGHTPADDING",  (0, 0), (-1, -1), sp(2)),
         # Full-perimeter hairline — impeccable-compliant
@@ -1539,13 +1551,14 @@ def generate_pdf(config_path, output_path):
             anchor_id = global_qnum[0]  # always globally unique for PDF bookmarks
 
             if is_written:
-                elems = build_written_question(
+                story.extend(build_written_question(
                     q_data, qnum, styles, layout, content_w
-                )
+                ))
             elif is_mcqnotes:
                 elems = build_mcqnotes_question(
                     q_data, qnum, styles, layout, show_expl, content_w
                 )
+                story.append(KeepTogether(elems))
             else:
                 elems = build_question(
                     q_data, qnum, styles, layout,
@@ -1553,7 +1566,7 @@ def generate_pdf(config_path, output_path):
                     style_mode=style_mode,
                     anchor_id=anchor_id,
                 )
-            story.append(KeepTogether(elems))
+                story.append(KeepTogether(elems))
 
             if answers_mode in ("endchapter", "endbook") and not is_written:
                 chapter_ans.append((qnum, q_data, anchor_id))
