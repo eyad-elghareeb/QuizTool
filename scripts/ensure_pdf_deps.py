@@ -9,9 +9,11 @@ Returns JSON on stdout:
 """
 
 import json
+import os
 import subprocess
 import sys
 import shutil
+import urllib.request
 
 
 def check_python():
@@ -81,6 +83,44 @@ def ensure_pip():
     return {"status": "error", "detail": "pip not found and ensurepip failed"}
 
 
+def check_fonts():
+    """Check if PDF premium fonts are available, try to download if missing."""
+    fonts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts")
+    required = [
+        "Poppins-Regular.ttf", "Poppins-Bold.ttf", "Poppins-Italic.ttf",
+        "Poppins-BoldItalic.ttf", "Poppins-Medium.ttf", "Poppins-Light.ttf",
+        "Poppins-LightItalic.ttf", "Lora[wght].ttf", "Lora-Italic[wght].ttf",
+    ]
+    missing = [f for f in required if not os.path.exists(os.path.join(fonts_dir, f))]
+    if not missing:
+        return {"status": "ok", "detail": "All premium fonts found"}
+
+    try:
+        # Inline download logic
+        GF = "https://raw.githubusercontent.com/google/fonts/main/ofl"
+        os.makedirs(fonts_dir, exist_ok=True)
+        for fname, url_path in [
+            ("Poppins-Regular.ttf", "/poppins/Poppins-Regular.ttf"),
+            ("Poppins-Bold.ttf", "/poppins/Poppins-Bold.ttf"),
+            ("Poppins-Italic.ttf", "/poppins/Poppins-Italic.ttf"),
+            ("Poppins-BoldItalic.ttf", "/poppins/Poppins-BoldItalic.ttf"),
+            ("Poppins-Medium.ttf", "/poppins/Poppins-Medium.ttf"),
+            ("Poppins-Light.ttf", "/poppins/Poppins-Light.ttf"),
+            ("Poppins-LightItalic.ttf", "/poppins/Poppins-LightItalic.ttf"),
+            ("Lora[wght].ttf", "/lora/Lora%5Bwght%5D.ttf"),
+            ("Lora-Italic[wght].ttf", "/lora/Lora-Italic%5Bwght%5D.ttf"),
+        ]:
+            dest = os.path.join(fonts_dir, fname)
+            if not os.path.exists(dest):
+                urllib.request.urlretrieve(GF + url_path, dest)
+        still_missing = [f for f in missing if not os.path.exists(os.path.join(fonts_dir, f))]
+        if not still_missing:
+            return {"status": "installed", "detail": "Premium fonts downloaded"}
+        return {"status": "partial", "detail": f"Missing: {', '.join(still_missing)}"}
+    except Exception as e:
+        return {"status": "missing", "detail": f"Fonts not available: {e}"}
+
+
 def main():
     result = {"checks": {}}
 
@@ -107,8 +147,14 @@ def main():
     result["checks"]["reportlab"] = rl_check
 
     if rl_check["status"] == "ok":
+        # Step 4: Check / download premium fonts
+        font_check = check_fonts()
+        result["checks"]["fonts"] = font_check
         result["status"] = "ok"
-        result["detail"] = "All dependencies satisfied"
+        detail_parts = ["All dependencies satisfied"]
+        if font_check["status"] != "ok":
+            detail_parts.append(f"Fonts: {font_check['detail']}")
+        result["detail"] = " | ".join(detail_parts)
         print(json.dumps(result))
         sys.exit(0)
 
@@ -117,11 +163,12 @@ def main():
     result["checks"]["reportlab_install"] = install_result
 
     if install_result["status"] == "installed":
-        # Verify
         verify = check_reportlab()
         if verify["status"] == "ok":
+            font_check = check_fonts()
+            result["checks"]["fonts"] = font_check
             result["status"] = "installed"
-            result["detail"] = "reportlab was installed successfully"
+            result["detail"] = "reportlab installed" + (f" | Fonts: {font_check['detail']}" if font_check["status"] != "ok" else "")
             print(json.dumps(result))
             sys.exit(0)
 

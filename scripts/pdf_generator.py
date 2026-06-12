@@ -60,28 +60,57 @@ _F = {
 
 
 def register_fonts():
-    """Register Poppins + Lora + LiberationMono with graceful fallback to built-ins."""
+    """Register Poppins + Lora + LiberationMono with graceful fallback to built-ins.
+    
+    Search order:
+      1. Local fonts/ directory next to this script (for bundled fonts)
+      2. C:\\Windows\\Fonts (Windows system fonts)
+      3. /usr/share/fonts/truetype/... (Linux paths)
+    """
+    _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+    _FONTS_DIR  = os.path.join(_SCRIPT_DIR, "fonts")
+    _WF         = "C:\\Windows\\Fonts"
+
+    def _resolve(fname):
+        """Find the first existing path for a font filename across search dirs."""
+        for d in [_FONTS_DIR, _WF, _GF, _LIB]:
+            p = os.path.join(d, fname)
+            if os.path.exists(p):
+                return p
+            # Also try lowercase (Windows is case-insensitive but just in case)
+            p_lower = os.path.join(d, fname.lower())
+            if os.path.exists(p_lower):
+                return p_lower
+        return None
+
     candidates = [
-        ("Poppins",             f"{_GF}/Poppins-Regular.ttf"),
-        ("Poppins-Bold",        f"{_GF}/Poppins-Bold.ttf"),
-        ("Poppins-Italic",      f"{_GF}/Poppins-Italic.ttf"),
-        ("Poppins-BoldItalic",  f"{_GF}/Poppins-BoldItalic.ttf"),
-        ("Poppins-Medium",      f"{_GF}/Poppins-Medium.ttf"),
-        ("Poppins-Light",       f"{_GF}/Poppins-Light.ttf"),
-        ("Poppins-LightItalic", f"{_GF}/Poppins-LightItalic.ttf"),
-        ("Lora",                f"{_GF}/Lora-Variable.ttf"),
-        ("Lora-Italic",         f"{_GF}/Lora-Italic-Variable.ttf"),
-        ("LoraB",               f"{_LIB}/LiberationSerif-Bold.ttf"),
-        ("LoraBI",              f"{_LIB}/LiberationSerif-BoldItalic.ttf"),
-        ("Mono",                f"{_LIB}/LiberationMono-Regular.ttf"),
-        ("Mono-Bold",           f"{_LIB}/LiberationMono-Bold.ttf"),
+        ("Poppins",             "Poppins-Regular.ttf"),
+        ("Poppins-Bold",        "Poppins-Bold.ttf"),
+        ("Poppins-Italic",      "Poppins-Italic.ttf"),
+        ("Poppins-BoldItalic",  "Poppins-BoldItalic.ttf"),
+        ("Poppins-Medium",      "Poppins-Medium.ttf"),
+        ("Poppins-Light",       "Poppins-Light.ttf"),
+        ("Poppins-LightItalic", "Poppins-LightItalic.ttf"),
+        ("Lora",                "Lora[wght].ttf"),
+        ("Lora",                "Lora-Variable.ttf"),      # fallback filename
+        ("Lora-Italic",         "Lora-Italic[wght].ttf"),
+        ("Lora-Italic",         "Lora-Italic-Variable.ttf"),  # fallback filename
+        ("LoraB",               "LiberationSerif-Bold.ttf"),
+        ("LoraBI",              "LiberationSerif-BoldItalic.ttf"),
+        ("Mono",                "LiberationMono-Regular.ttf"),
+        ("Mono-Bold",           "LiberationMono-Bold.ttf"),
     ]
     ok = set()
-    for name, path in candidates:
-        if os.path.exists(path):
+    registered = set()
+    for name, fname in candidates:
+        if name in registered:
+            continue  # skip fallback filename if primary was already registered
+        path = _resolve(fname)
+        if path:
             try:
                 pdfmetrics.registerFont(TTFont(name, path))
                 ok.add(name)
+                registered.add(name)
             except Exception as e:
                 print(f"[WARN] Font not loaded — {name}: {e}", file=sys.stderr)
 
