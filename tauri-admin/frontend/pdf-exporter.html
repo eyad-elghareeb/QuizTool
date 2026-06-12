@@ -912,7 +912,7 @@ function renderTreeLevel(node, expandAll) {
         `<span class="tree-icon">${open?'📂':'📁'}</span>` +
         `<span class="tree-name">${esc(name)}</span></span>` +
         `<span class="tree-dot folder"></span></div>` +
-        (open?`<ul class="file-tree">${renderTreeLevel(item.children,expandAll).slice(21,-5)}</ul>`:'')+
+        (open?`<ul class="file-tree">${renderTreeLevel(item.children,expandAll).slice(22,-5)}</ul>`:'')+
         '</li>';
     }
     const f=item.record, s=sel.has(f.path)?'selected':'';
