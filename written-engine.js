@@ -15,11 +15,15 @@
   var questions = normalizeQuestions(sourceData.questions);
   var currentIndex = 0;
   var answerSaveTimer = null;
+  var _gradingChildIdx = null; // tracks which child is being graded (null = parent-level)
+  var _gradingIsBatch = false; // true when grading all children at once
   var state = {
     answers: {},
     evaluations: {},
     flagged: {},
-    photoAnswers: {}
+    photoAnswers: {},
+    childAnswers: {},
+    childEvaluations: {}
   };
 
   var STORAGE = {
@@ -272,14 +276,33 @@
     if (!Array.isArray(raw)) return [];
     return raw.map(function (q, index) {
       q = q || {};
-      return {
+      var norm = {
         id: textOr(pickField(q, 'id', 'questionId', 'qid', 'uid'), 'wq-' + (index + 1)),
         question: textOr(pickField(q, 'question', 'q', 'prompt', 'text', 'question_text', 'questionText'), 'Untitled written question'),
         modelAnswer: textOr(pickField(q, 'modelAnswer', 'model_answer', 'answer', 'expected_answer', 'expectedAnswer', 'correct_answer', 'correctAnswer', 'model_answer_text'), ''),
         rubric: textOr(pickField(q, 'rubric', 'grading_rubric', 'marking_scheme', 'criteria'), ''),
         explanation: textOr(pickField(q, 'explanation', 'notes', 'note', 'background', 'explanation_text'), ''),
-        tags: Array.isArray(q.tags) ? q.tags.map(String).filter(Boolean) : []
+        tags: Array.isArray(q.tags) ? q.tags.map(String).filter(Boolean) : [],
+        _hasChildren: false,
+        _childCount: 0,
+        children: []
       };
+      if (Array.isArray(q.children) && q.children.length) {
+        norm._hasChildren = true;
+        norm._childCount = q.children.length;
+        norm.children = q.children.map(function (child, ci) {
+          child = child || {};
+          return {
+            id: textOr(pickField(child, 'id', 'questionId', 'qid', 'uid'), norm.id + '-' + (ci + 1)),
+            label: textOr(pickField(child, 'label', 'name', 'part'), ''),
+            question: textOr(pickField(child, 'question', 'q', 'prompt', 'text', 'question_text', 'questionText'), ''),
+            modelAnswer: textOr(pickField(child, 'modelAnswer', 'model_answer', 'answer', 'expected_answer', 'expectedAnswer', 'correct_answer', 'correctAnswer'), ''),
+            rubric: textOr(pickField(child, 'rubric', 'grading_rubric', 'marking_scheme', 'criteria'), ''),
+            explanation: textOr(pickField(child, 'explanation', 'notes', 'note', 'background', 'explanation_text'), '')
+          };
+        });
+      }
+      return norm;
     });
   }
 
@@ -361,7 +384,7 @@
       '.screen{display:none;min-height:100%;height:100%;overflow:hidden}.screen.active{display:flex}.start-screen{align-items:center;justify-content:center;padding:1.5rem;overflow:auto}.start-shell{width:min(620px,100%)}.hub-back-btn{position:absolute;top:1.5rem;left:1.5rem;display:flex;align-items:center;gap:0.5rem;color:var(--muted);text-decoration:none;font-weight:600;font-size:0.95rem;transition:color var(--fast);z-index:10}.hub-back-btn:hover{color:var(--text)}.hub-back-btn svg{transition:transform var(--fast)}.hub-back-btn:hover svg{transform:translateX(-3px)}#theme-start{position:absolute;top:1.5rem;right:1.5rem;z-index:10}.start-card{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:2.5rem;box-shadow:var(--shadow);text-align:center}.start-icon{width:64px;height:64px;display:grid;place-items:center;border-radius:16px;background:var(--accent-soft);color:var(--accent);font-weight:800;font-size:1.8rem;margin:0 auto 1.25rem}.start-card h1{font-family:"Playfair Display",Georgia,serif;font-size:clamp(1.8rem,4vw,2.4rem);line-height:1.2;margin:0 0 .5rem}.start-card p{margin:0 0 1.25rem;color:var(--muted);font-size:.95rem}',
       '.meta-grid{display:grid;grid-template-columns:1fr;gap:1rem;margin-bottom:1.25rem}.meta-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;text-align:center;transition:border-color var(--fast)}.meta-item:hover{border-color:var(--accent)}.meta-item .val{font-size:1.5rem;font-weight:700;color:var(--accent);display:block}.meta-item .lbl{font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em}',
       '.config-grid{display:grid;grid-template-columns:1fr;gap:.9rem;margin:1.5rem 0;text-align:left}.field-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem}.field-label{display:block;color:var(--accent);font-size:.78rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px}.api-row{display:flex;gap:8px}.api-row input,.field-box select{width:100%;min-width:0;border:1.5px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);padding:.65rem .8rem;outline:0}.api-row input:focus,.field-box select:focus{border-color:var(--accent)}.field-note{font-size:.82rem;color:var(--muted);margin-top:8px}.grading-note{margin-top:10px;padding:10px 12px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-size:.86rem}.start-actions{display:flex;gap:10px;align-items:center}.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:var(--radius);font-weight:700;min-height:40px;padding:.7rem 1.25rem;transition:transform var(--fast),background var(--fast),border-color var(--fast),color var(--fast)}.btn:hover{transform:translateY(-1px)}.btn-primary{background:var(--accent);color:#111}.btn-secondary{background:var(--surface2);border:1.5px solid var(--border);color:var(--text)}.btn-secondary:hover{border-color:var(--accent)}.btn-danger{background:var(--bad-soft);border:1px solid var(--bad);color:var(--bad)}.btn-icon,.icon-btn{width:36px;height:36px;min-width:36px;padding:0;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:1rem;text-decoration:none}.btn-icon:hover,.icon-btn:hover{border-color:var(--accent);color:var(--text)}.btn-icon.danger:hover,.icon-btn.danger:hover{border-color:var(--bad);color:var(--bad)}.settings-gear{transition:transform .3s ease,border-color var(--fast),color var(--fast);flex-shrink:0}.settings-gear:hover{transform:rotate(60deg);border-color:var(--accent);color:var(--accent)}',
-      '.practice-screen{flex-direction:column}.topbar{display:flex;align-items:center;gap:1rem;padding:0.75rem 1.25rem;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;z-index:10}.topbar-title{font-family:"Playfair Display",Georgia,serif;font-size:1.05rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}.topbar-spacer,.topbar-title{min-width:0}.topbar-actions{display:flex;gap:.5rem;align-items:center;flex-shrink:0}.layout{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) var(--nav-size);overflow:hidden}.nav-pane{min-height:0;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}.nav-pane-header{padding:1rem;color:var(--muted);font-size:.78rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--border)}.legend{display:flex;flex-wrap:wrap;gap:0.4rem 0.75rem;margin-top:8px}.legend-item{display:flex;align-items:center;gap:0.3rem;font-size:0.72rem;color:var(--muted)}.legend-item .dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}.legend-item .dot.answered{background:var(--correct)}.legend-item .dot.wrong{background:var(--wrong)}.legend-item .dot.flagged{background:var(--flag)}.legend-item .dot.unanswered{background:var(--surface2);border:1px solid var(--border)}.nav-grid-wrap{flex:1;min-height:0;overflow:auto;padding:.5rem}.nav-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:5px}.nav-btn{aspect-ratio:1;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text-muted);font-size:.85rem;font-weight:700;display:flex;align-items:center;justify-content:center;transition:all var(--fast);position:relative;line-height:1;padding:0}.nav-btn:hover{border-color:var(--accent);color:var(--accent)}.nav-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 2px var(--accent-dim)}.nav-btn.pass{background:var(--correct-bg);border-color:var(--correct);color:var(--correct)}.nav-btn.fail{background:var(--wrong-bg);border-color:var(--wrong);color:var(--wrong)}.nav-btn.flag{box-shadow:0 0 0 3px var(--flag-soft);background:var(--flag-soft);border-color:var(--flag);color:var(--flag)}.nav-stats{padding:0.75rem 1rem;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;flex-shrink:0}.stat-item{text-align:center}.stat-item .sv{font-size:1rem;font-weight:700}.stat-item .sl{font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em}.sv.green{color:var(--correct)}.sv.blue{color:var(--flag)}.sv.muted{color:var(--muted)}',
+      '.practice-screen{flex-direction:column}.topbar{display:flex;align-items:center;gap:1rem;padding:0.75rem 1.25rem;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;z-index:10}.topbar-title{font-family:"Playfair Display",Georgia,serif;font-size:1.05rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}.topbar-spacer,.topbar-title{min-width:0}.topbar-actions{display:flex;gap:.5rem;align-items:center;flex-shrink:0}.layout{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) var(--nav-size);overflow:hidden}.nav-pane{min-height:0;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}.nav-pane-header{padding:1rem;color:var(--muted);font-size:.78rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--border)}.legend{display:flex;flex-wrap:wrap;gap:0.4rem 0.75rem;margin-top:8px}.legend-item{display:flex;align-items:center;gap:0.3rem;font-size:0.72rem;color:var(--muted)}.legend-item .dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}.legend-item .dot.answered{background:var(--correct)}.legend-item .dot.wrong{background:var(--wrong)}.legend-item .dot.flagged{background:var(--flag)}.legend-item .dot.unanswered{background:var(--surface2);border:1px solid var(--border)}.nav-grid-wrap{flex:1;min-height:0;overflow:auto;padding:.5rem}.nav-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:5px}.nav-btn{aspect-ratio:1;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text-muted);font-size:.85rem;font-weight:700;display:flex;align-items:center;justify-content:center;transition:all var(--fast);position:relative;line-height:1;padding:0}.nav-btn:hover{border-color:var(--accent);color:var(--accent)}.nav-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 2px var(--accent-dim)}.nav-btn.partial{background:var(--flag-soft);border-color:var(--flag);color:var(--flag)}.nav-btn.flag{background:var(--flagged-bg);border-color:var(--flag);color:var(--flag)}.nav-btn.pass{background:var(--correct-bg);border-color:var(--correct);color:var(--correct)}.nav-btn.fail{background:var(--wrong-bg);border-color:var(--wrong);color:var(--wrong)}.nav-btn.pass{background:var(--correct-bg);border-color:var(--correct);color:var(--correct)}.nav-btn.fail{background:var(--wrong-bg);border-color:var(--wrong);color:var(--wrong)}.nav-btn.flag{box-shadow:0 0 0 3px var(--flag-soft);background:var(--flag-soft);border-color:var(--flag);color:var(--flag)}.nav-stats{padding:0.75rem 1rem;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;flex-shrink:0}.stat-item{text-align:center}.stat-item .sv{font-size:1rem;font-weight:700}.stat-item .sl{font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em}.sv.green{color:var(--correct)}.sv.blue{color:var(--flag)}.sv.muted{color:var(--muted)}',
       '.content{position:relative;min-width:0;min-height:0;overflow:auto;padding:22px}.work-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;max-width:1100px;margin:0 auto}.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow)}.question-panel{padding:20px}.question-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;color:var(--muted);font-size:.83rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em}.tag-row{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.tag{display:inline-flex;align-items:center;min-height:22px;border-radius:6px;background:var(--surface-2);border:1px solid var(--border);padding:2px 7px;color:var(--muted);font-size:.76rem;text-transform:none;letter-spacing:0}.question-text{font-size:1.14rem;font-weight:600;white-space:pre-wrap}.answer-panel{padding:16px}.answer-panel textarea{width:100%;min-height:230px;resize:vertical;border:1.5px solid var(--border);border-radius:var(--radius);background:var(--surface-2);color:var(--text);padding:14px;outline:0;transition:border-color var(--fast),box-shadow var(--fast)}.answer-panel textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}.answer-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;flex-wrap:wrap}.counter{color:var(--muted);font-size:.86rem;white-space:nowrap}.action-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}',
       '.feedback{display:none;gap:16px}.feedback.active{display:grid}.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.compare-card{padding:16px;background:var(--surface2)}.compare-card.user{border-left:4px solid var(--flag)}.compare-card.model{border-left:4px solid var(--accent)}.compare-title{color:var(--muted);font-weight:800;font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}.compare-body{white-space:pre-wrap;color:var(--text);font-size:.92rem;line-height:1.6}.eval-panel{padding:18px;background:var(--surface-3)}.eval-head{display:flex;align-items:center;gap:14px;margin-bottom:14px}.score{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;font-weight:800;border:3px solid var(--border);background:var(--surface)}.score.pass{border-color:var(--ok);background:var(--ok-soft);color:var(--ok)}.score.fail{border-color:var(--bad);background:var(--bad-soft);color:var(--bad)}.verdict{font-size:1.1rem;font-weight:800}.eval-source{color:var(--muted);font-size:.86rem}.bullet-list{display:grid;gap:8px;margin:12px 0}.bullet{position:relative;padding-left:18px;font-size:.92rem;line-height:1.5}.bullet::before{content:"";position:absolute;left:0;top:.65em;width:7px;height:7px;border-radius:99px;background:var(--accent)}.bullet.good::before{background:var(--ok)}.bullet.gap::before{background:var(--bad)}.feedback-text{border-top:1px solid var(--border);padding-top:12px;margin-top:8px;white-space:pre-wrap;font-size:.92rem;line-height:1.6;color:var(--text)}.manual-bar{display:flex;flex-direction:column;align-items:center;gap:12px;padding:18px 16px;text-align:center}.manual-copy strong{display:block;font-size:.95rem;margin-bottom:2px}.manual-copy span{color:var(--muted);font-size:.86rem}.manual-bar .action-row{justify-content:center}.pass-choice.active{background:var(--ok);border-color:var(--ok);color:white}.fail-choice.active{background:var(--bad);border-color:var(--bad);color:white}',
       '.loading{position:fixed;inset:0;z-index:20;display:none;place-items:center;background:rgba(13,17,23,.72)}[data-theme="light"] .loading{background:rgba(243,240,235,.72)}.loading.active{display:grid}.loading-box{background:var(--surface);border:1px solid var(--accent-dim);border-radius:16px;padding:24px;box-shadow:0 0 24px var(--accent-dim),var(--shadow);text-align:center;max-width:360px;transition:box-shadow .6s ease}.loading-box.glow{box-shadow:0 0 40px var(--accent-soft),var(--shadow)}.brain-icon{font-size:48px;display:block;margin:0 auto 10px;animation:brain-pulse 1.4s ease-in-out infinite;user-select:none}.loading-box strong{display:block;font-size:1.05rem;margin-bottom:4px}@keyframes brain-pulse{0%,100%{transform:scale(1) rotate(0deg)}25%{transform:scale(1.06) rotate(-3deg)}75%{transform:scale(1.06) rotate(3deg)}}.empty{padding:22px;border:1px dashed var(--border);border-radius:12px;background:var(--surface-2);color:var(--muted)}.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:0.65rem 1.2rem;font-size:.88rem;font-weight:500;box-shadow:var(--shadow);z-index:9999;transition:transform .3s ease,opacity .3s ease;white-space:nowrap;display:flex;align-items:center;gap:.5rem;max-width:90%}.toast.show{transform:translateX(-50%) translateY(0)}',
@@ -371,7 +394,8 @@
       'table{border-collapse:collapse;width:100%;margin:8px 0;font-size:.88rem;background:var(--surface2);border:1px solid var(--border);border-radius:8px;overflow:hidden}th,td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}th{background:var(--surface3);font-weight:700;color:var(--accent);font-size:.82rem;text-transform:uppercase;letter-spacing:.03em}tr:last-child td{border-bottom:0}td:first-child{font-weight:600;white-space:nowrap}[data-theme="light"] td:first-child{font-weight:600}[data-theme="light"] table{background:#fff}',
       '@media (orientation: portrait) and (max-width:860px){.layout{grid-template-columns:1fr}.nav-pane{border-left:0;border-top:1px solid var(--border);max-height:200px}.nav-grid-wrap{display:flex;overflow-x:auto;overflow-y:hidden;padding-bottom:10px}.nav-grid{grid-template-columns:repeat(auto-fill,minmax(42px,1fr));grid-template-rows:42px;grid-auto-flow:column;gap:5px}.nav-btn{width:42px;height:42px;min-width:42px;aspect-ratio:unset;border-radius:6px}}',
       '@media (max-width:860px){.config-grid,.compare-grid{grid-template-columns:1fr}.layout{grid-template-columns:1fr}.nav-pane{border-left:0;border-top:1px solid var(--border);max-height:200px}.nav-grid-wrap{display:flex;overflow-x:auto;overflow-y:hidden;padding-bottom:10px}.nav-grid{grid-template-columns:repeat(auto-fill,minmax(42px,1fr));grid-template-rows:42px;grid-auto-flow:column;gap:5px}.nav-btn{width:42px;height:42px;min-width:42px;aspect-ratio:unset;border-radius:6px}.content{padding:16px}.manual-bar{align-items:center}.action-row{justify-content:flex-start}.manual-bar .action-row{justify-content:center}}',
-      '@media (max-width:560px){.start-screen{padding:14px}.start-card{padding:20px}.start-actions,.answer-foot{align-items:stretch;flex-direction:column}.start-actions .btn,.answer-foot .btn,.manual-bar .btn{width:100%}}'
+      '@media (max-width:560px){.start-screen{padding:14px}.start-card{padding:20px}.start-actions,.answer-foot{align-items:stretch;flex-direction:column}.start-actions .btn,.answer-foot .btn,.manual-bar .btn{width:100%}}',
+      '.child-block{border:1px solid var(--border);border-radius:10px;margin-top:12px;overflow:hidden}.child-header{display:flex;align-items:flex-start;gap:10px;padding:12px 14px 6px;background:var(--surface2);font-weight:600;font-size:.92rem}.child-header .child-label{color:var(--accent);font-weight:700;white-space:nowrap;flex-shrink:0}.child-question{white-space:pre-wrap;color:var(--text)}.child-answer{padding:8px 14px 6px}.child-answer textarea{width:100%;min-height:100px;resize:vertical;border:1.5px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text);padding:10px;outline:0;transition:border-color var(--fast),box-shadow var(--fast);font-size:.92rem}.child-answer textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}.child-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 14px 10px;flex-wrap:wrap}.child-counter{color:var(--muted);font-size:.8rem;white-space:nowrap}.child-actions{display:flex;gap:6px;flex-wrap:wrap}.child-actions .btn{min-height:32px;padding:.4rem .85rem;font-size:.82rem}.child-feedback{display:none;border-top:1px solid var(--border);background:var(--surface);padding:12px 14px}.child-feedback.active{display:block}.child-feedback .compare-mini{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}.child-feedback .compare-mini-card{padding:10px;background:var(--surface2);border-radius:8px;font-size:.85rem}.child-feedback .compare-mini-card .cm-title{color:var(--muted);font-weight:700;font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}.child-feedback .compare-mini-card .cm-body{white-space:pre-wrap;line-height:1.5}.child-feedback .child-eval-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}.child-feedback .child-score{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.85rem;border:2.5px solid var(--border);background:var(--surface);flex-shrink:0}.child-feedback .child-score.pass{border-color:var(--ok);background:var(--ok-soft);color:var(--ok)}.child-feedback .child-score.fail{border-color:var(--bad);background:var(--bad-soft);color:var(--bad)}.child-feedback .child-verdict{font-weight:700;font-size:.9rem}.child-feedback .child-bullets{display:grid;gap:5px;margin:6px 0}.child-feedback .child-bullet{position:relative;padding-left:15px;font-size:.85rem;line-height:1.4}.child-feedback .child-bullet::before{content:"";position:absolute;left:0;top:.55em;width:6px;height:6px;border-radius:99px;background:var(--accent)}.child-feedback .child-bullet.good::before{background:var(--ok)}.child-feedback .child-bullet.gap::before{background:var(--bad)}.child-feedback .child-feedback-text{border-top:1px solid var(--border);padding-top:8px;margin-top:6px;font-size:.85rem;line-height:1.5;color:var(--text)}.child-feedback .child-manual-actions{display:flex;gap:6px;justify-content:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}.child-feedback .child-manual-actions .btn{min-height:30px;padding:.35rem .75rem;font-size:.8rem}.batch-grade-row{display:flex;gap:8px;justify-content:flex-end;margin-top:8px;padding-top:10px;border-top:2px dashed var(--border)}.batch-grade-row .btn{min-height:36px}.child-reminder{margin:10px 14px 4px;font-size:.82rem;color:var(--muted);padding:8px 10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)}'
     ].join('\n');
     document.head.appendChild(style);
   }
@@ -434,7 +458,7 @@
       '  <div class="layout">',
       '    <main class="content">',
       '      <div class="work-grid" id="work-grid">',
-      '        <section class="panel question-panel">',
+      '        <section class="panel question-panel" id="question-panel">',
       '          <div class="question-meta"><span id="question-number"></span><div class="tag-row" id="tag-row"></div></div>',
       '          <div class="question-text" id="question-text"></div>',
       '        </section>',
@@ -460,6 +484,7 @@
       '          </div>',
       '          <div class="grading-note" id="grading-note">Grading tries AI first. If AI is unavailable or the request fails, this screen automatically falls back to manual grading and tells you why.</div>',
       '        </section>',
+      '        <div class="children-container" id="children-container" style="display:none"></div>',
       '        <section class="feedback" id="feedback">',
       '          <div class="compare-grid">',
       '            <article class="panel compare-card user"><div class="compare-title">Your answer</div><div class="compare-body" id="feedback-user"></div></article>',
@@ -799,7 +824,8 @@
   }
 
   function updateResumeButton() {
-    var hasSaved = Object.keys(state.answers).length || Object.keys(state.evaluations).length || Object.keys(state.flagged).length || Object.keys(state.photoAnswers || {}).length;
+    var hasSaved = Object.keys(state.answers).length || Object.keys(state.evaluations).length || Object.keys(state.flagged).length || Object.keys(state.photoAnswers || {}).length
+      || Object.keys(state.childAnswers || {}).length || Object.keys(state.childEvaluations || {}).length;
     $('#resume-last').disabled = !hasSaved;
   }
 
@@ -816,14 +842,31 @@
     var skippedCount = 0;
 
     questions.forEach(function (question, index) {
-      var evaluation = state.evaluations[index];
-      var passed = evaluation ? isPassed(evaluation) : null;
       var isFlagged = !!state.flagged[index];
-      var isAnswered = !!(state.answers[index] || (state.photoAnswers && state.photoAnswers[index] && state.photoAnswers[index].data));
+      var isDone = false;
+      var passed = null;
 
-      if (evaluation) doneCount++;
+      if (question._hasChildren) {
+        var childEvals = state.childEvaluations[index] || [];
+        var doneChildren = childEvals.filter(function (e) { return !!e; }).length;
+        if (doneChildren === question._childCount) {
+          isDone = true;
+          doneCount++;
+        } else if (doneChildren > 0) {
+          // partially done counts as flagged (needs attention)
+          isFlagged = true;
+        }
+        if (doneChildren === 0 && !isFlagged) skippedCount++;
+      } else {
+        var evaluation = state.evaluations[index];
+        passed = evaluation ? isPassed(evaluation) : null;
+        var isAnswered = !!(state.answers[index] || (state.photoAnswers && state.photoAnswers[index] && state.photoAnswers[index].data));
+        if (evaluation) { isDone = true; doneCount++; }
+        if (isFlagged) flaggedCount++;
+        if (!isAnswered && !evaluation) skippedCount++;
+      }
+
       if (isFlagged) flaggedCount++;
-      if (!isAnswered && !evaluation) skippedCount++;
 
       var btn = create('button', 'nav-btn' + (index === currentIndex ? ' active' : ''));
       btn.type = 'button';
@@ -835,6 +878,18 @@
       if (passed === true) btn.classList.add('pass');
       if (passed === false) btn.classList.add('fail');
       if (isFlagged) btn.classList.add('flag');
+
+      if (question._hasChildren) {
+        var childEvals = state.childEvaluations[index] || [];
+        var doneChildCount = childEvals.filter(function (e) { return !!e; }).length;
+        if (doneChildCount > 0 && doneChildCount < question._childCount) {
+          btn.classList.add('partial');
+        }
+        if (doneChildCount > 0) {
+          btn.textContent = doneChildCount + '/' + question._childCount;
+          btn.style.fontSize = '.7rem';
+        }
+      }
 
       list.appendChild(btn);
     });
@@ -858,33 +913,201 @@
       tagRow.appendChild(create('span', 'tag', tag));
     });
 
-    var input = $('#answer-input');
-    var photoArea = $('#photo-answer-area');
     var hasPhotoAnswer = state.photoAnswers && state.photoAnswers[index] && state.photoAnswers[index].data;
 
-    if (hasPhotoAnswer) {
-      input.style.display = 'none';
-      photoArea.style.display = 'block';
-      $('#photo-preview-img').src = 'data:' + state.photoAnswers[index].mimeType + ';base64,' + state.photoAnswers[index].data;
-      $('#answer-counter').textContent = '📷 Photo answer';
+    if (question._hasChildren) {
+      // Children mode: hide single answer panel, show children container
+      $('#answer-panel').style.display = 'none';
+      $('#feedback').classList.remove('active');
+      renderChildren(index);
     } else {
-      input.style.display = '';
-      photoArea.style.display = 'none';
-      input.value = state.answers[index] || '';
-      updateCounter();
-    }
-    updateFlagButton();
-
-    var evaluation = state.evaluations[index];
-    if (evaluation) {
-      renderFeedback(evaluation);
-    } else {
+      // Standard mode: single answer panel
       $('#answer-panel').style.display = '';
       $('#feedback').classList.remove('active');
+      var container = $('#children-container');
+      if (container) container.style.display = 'none';
+
+      var input = $('#answer-input');
+      var photoArea = $('#photo-answer-area');
+      if (hasPhotoAnswer) {
+        input.style.display = 'none';
+        photoArea.style.display = 'block';
+        $('#photo-preview-img').src = 'data:' + state.photoAnswers[index].mimeType + ';base64,' + state.photoAnswers[index].data;
+        $('#answer-counter').textContent = '📷 Photo answer';
+      } else {
+        input.style.display = '';
+        photoArea.style.display = 'none';
+        input.value = state.answers[index] || '';
+        updateCounter();
+      }
+
+      var evaluation = state.evaluations[index];
+      if (evaluation) {
+        renderFeedback(evaluation);
+      }
+    }
+    updateFlagButton();
+    renderQuestionList();
+  }
+
+  function renderChildren(pIdx) {
+    var question = questions[pIdx];
+    var container = $('#children-container');
+    container.style.display = 'block';
+    container.innerHTML = '';
+
+    var childAnswers = state.childAnswers[pIdx] = state.childAnswers[pIdx] || [];
+    var childEvals = state.childEvaluations[pIdx] = state.childEvaluations[pIdx] || [];
+
+    // Ensure arrays are long enough
+    while (childAnswers.length < question._childCount) childAnswers.push('');
+    while (childEvals.length < question._childCount) childEvals.push(null);
+
+    var hasAllChildModelAnswers = question.children.every(function (c) { return !!c.modelAnswer; });
+
+    // Photo area shared across all children (parent-level)
+    var parentPhoto = state.photoAnswers && state.photoAnswers[pIdx];
+    if (parentPhoto && parentPhoto.data) {
+      var photoBanner = create('div', 'panel');
+      photoBanner.style.padding = '12px';
+      photoBanner.style.marginBottom = '8px';
+      photoBanner.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:var(--muted);font-size:.85rem"><span>📷</span> Photo answer attached for all parts</div>'
+        + '<img src="data:' + parentPhoto.mimeType + ';base64,' + parentPhoto.data + '" style="max-height:160px;border-radius:8px;max-width:100%;display:block;margin:8px auto 0;object-fit:contain;background:var(--surface-2)">';
+      container.appendChild(photoBanner);
     }
 
-    renderQuestionList();
-    if (!hasPhotoAnswer) input.focus({ preventScroll: true });
+    question.children.forEach(function (child, ci) {
+      var block = create('div', 'child-block');
+
+      // Header: label + question
+      var header = create('div', 'child-header');
+      if (child.label) {
+        var labelSpan = create('span', 'child-label', child.label);
+        header.appendChild(labelSpan);
+      }
+      var qSpan = create('span', 'child-question', child.question);
+      header.appendChild(qSpan);
+      block.appendChild(header);
+
+      // Answer textarea
+      var answerDiv = create('div', 'child-answer');
+      var textarea = document.createElement('textarea');
+      textarea.placeholder = 'Write your answer for part ' + (child.label || (ci + 1)) + '...';
+      textarea.value = childAnswers[ci] || '';
+      textarea.dataset.pIdx = pIdx;
+      textarea.dataset.cIdx = ci;
+      textarea.addEventListener('input', function () {
+        onChildAnswerInput(pIdx, ci, this.value);
+      });
+      answerDiv.appendChild(textarea);
+      block.appendChild(answerDiv);
+
+      // Footer: counter + grade buttons
+      var foot = create('div', 'child-foot');
+      var counter = create('div', 'child-counter', countWords(childAnswers[ci] || ''));
+      counter.id = 'child-counter-' + pIdx + '-' + ci;
+      foot.appendChild(counter);
+
+      var actions = create('div', 'child-actions');
+      var manualBtn = create('button', 'btn btn-secondary');
+      manualBtn.textContent = 'Manual Grade';
+      manualBtn.type = 'button';
+      manualBtn.dataset.pIdx = pIdx;
+      manualBtn.dataset.cIdx = ci;
+      manualBtn.addEventListener('click', function () {
+        createChildManualEvaluation(pIdx, ci);
+      });
+      actions.appendChild(manualBtn);
+
+      var aiBtn = create('button', 'btn btn-primary');
+      aiBtn.textContent = 'Grade with AI';
+      aiBtn.type = 'button';
+      aiBtn.dataset.pIdx = pIdx;
+      aiBtn.dataset.cIdx = ci;
+      aiBtn.addEventListener('click', function () {
+        submitChildForAiGrade(pIdx, ci);
+      });
+      actions.appendChild(aiBtn);
+      foot.appendChild(actions);
+      block.appendChild(foot);
+
+      // Child feedback section
+      var feedback = create('div', 'child-feedback');
+      feedback.id = 'child-feedback-' + pIdx + '-' + ci;
+      if (childEvals[ci]) {
+        renderChildFeedback(pIdx, ci, childEvals[ci]);
+      }
+      block.appendChild(feedback);
+
+      container.appendChild(block);
+    });
+
+    // Batch grade row (only show when not all children have individual model answers)
+    var batchRow = create('div', 'batch-grade-row');
+    if (!hasAllChildModelAnswers) {
+      var batchNote = create('div', 'child-reminder');
+      batchNote.textContent = '💡 Parts share a single model answer. Use "Grade All with AI" to grade all parts together, or grade individually with Manual Grade.';
+      container.appendChild(batchNote);
+
+      var batchAiBtn = create('button', 'btn btn-primary');
+      batchAiBtn.textContent = 'Grade All with AI';
+      batchAiBtn.type = 'button';
+      batchAiBtn.addEventListener('click', function () {
+        submitBatchAiGrade(pIdx);
+      });
+      batchRow.appendChild(batchAiBtn);
+
+      var photoBtn = create('button', 'btn btn-secondary');
+      photoBtn.textContent = '📷 Photo';
+      photoBtn.type = 'button';
+      photoBtn.addEventListener('click', function () {
+        $('#photo-toggle').click();
+      });
+      batchRow.appendChild(photoBtn);
+    } else {
+      var allAiBtn = create('button', 'btn btn-primary');
+      allAiBtn.textContent = 'Grade All with AI';
+      allAiBtn.type = 'button';
+      allAiBtn.addEventListener('click', function () {
+        submitBatchAiGrade(pIdx);
+      });
+      batchRow.appendChild(allAiBtn);
+    }
+    container.appendChild(batchRow);
+  }
+
+  function countWords(text) {
+    if (!text || !text.trim()) return '0 words | 0 characters';
+    var value = text.trim();
+    var words = value ? value.split(/\s+/).length : 0;
+    var chars = value.length;
+    return words + ' word' + (words === 1 ? '' : 's') + ' | ' + chars + ' character' + (chars === 1 ? '' : 's');
+  }
+
+  // Extract the section of parent modelAnswer that matches a child label (e.g. "A)" or "a)")
+  function getChildModelAnswer(parentAnswer, childLabel) {
+    if (!parentAnswer || !childLabel) return parentAnswer || '';
+    var sections = parentAnswer.split(/\n\s*\n(?:\s*(?=[A-Za-z]\)|\d[A-Za-z]?\)))/);
+    if (sections.length < 2) return parentAnswer;
+    var lowerLabel = childLabel.toLowerCase().replace(/[)\.\s]/g, '');
+    for (var i = 0; i < sections.length; i++) {
+      var sec = sections[i].trim();
+      var secLabel = sec.split(/\s/)[0].toLowerCase().replace(/[)\.\s]/g, '');
+      if (secLabel === lowerLabel) return sec;
+    }
+    return parentAnswer;
+  }
+
+  function onChildAnswerInput(pIdx, cIdx, value) {
+    if (!state.childAnswers[pIdx]) state.childAnswers[pIdx] = [];
+    state.childAnswers[pIdx][cIdx] = value;
+    var counter = document.getElementById('child-counter-' + pIdx + '-' + cIdx);
+    if (counter) counter.textContent = countWords(value);
+    clearTimeout(answerSaveTimer);
+    answerSaveTimer = setTimeout(function () {
+      saveProgress();
+      renderQuestionList();
+    }, 250);
   }
 
   function onAnswerInput() {
@@ -942,6 +1165,27 @@
     updateResumeButton();
   }
 
+  function createChildManualEvaluation(pIdx, cIdx) {
+    var question = questions[pIdx];
+    var child = question.children[cIdx];
+    if (!state.childAnswers[pIdx]) state.childAnswers[pIdx] = [];
+    if (!state.childEvaluations[pIdx]) state.childEvaluations[pIdx] = [];
+    var answer = (state.childAnswers[pIdx][cIdx] || '').trim();
+    var hasContent = !!answer;
+    state.childEvaluations[pIdx][cIdx] = {
+      score: null,
+      passed: hasContent,
+      strengths: hasContent ? ['Answer attempted for part ' + (child.label || (cIdx + 1)) + ' and ready for self review.'] : [],
+      gaps: hasContent ? [] : ['No answer was provided for this part before self grading.'],
+      feedback: 'Compare your response with the model answer, then choose Pass or Fail for the final mark.',
+      source: 'Manual grade',
+      manualVerdict: hasContent ? 'pass' : 'fail'
+    };
+    renderChildFeedback(pIdx, cIdx, state.childEvaluations[pIdx][cIdx]);
+    saveProgress();
+    renderQuestionList();
+  }
+
   function submitForAiGrade() {
     var apiKey = (_readKey() || '').trim();
     var answer = ($('#answer-input').value || '').trim();
@@ -993,6 +1237,124 @@
       })
       .finally(function () {
         setLoading(false);
+      });
+  }
+
+  function submitChildForAiGrade(pIdx, cIdx) {
+    var apiKey = (_readKey() || '').trim();
+    var question = questions[pIdx];
+    var child = question.children[cIdx];
+    if (!state.childAnswers[pIdx]) state.childAnswers[pIdx] = [];
+    var answer = (state.childAnswers[pIdx][cIdx] || '').trim();
+    var hasPhoto = !!(state.photoAnswers && state.photoAnswers[pIdx] && state.photoAnswers[pIdx].data);
+
+    if (!answer && !hasPhoto) {
+      showToast('Write an answer for part ' + (child.label || (cIdx + 1)) + ' before requesting AI grading.');
+      return;
+    }
+    if (!apiKey) {
+      createChildManualEvaluation(pIdx, cIdx);
+      showToast('No Gemini API key found. Falling back to manual grading.');
+      return;
+    }
+
+    // Grade this child independently (extracts child's section from parent modelAnswer if needed)
+    _gradeSingleChild(pIdx, cIdx, apiKey, child);
+  }
+
+  function submitBatchAiGrade(pIdx) {
+    var apiKey = (_readKey() || '').trim();
+    if (!apiKey) {
+      showToast('Set a Gemini API key for AI grading, or grade each part manually.');
+      return;
+    }
+    _gradeBatchChildren(pIdx, apiKey);
+  }
+
+  function _gradeSingleChild(pIdx, cIdx, apiKey, child) {
+    var question = questions[pIdx];
+    var answer = (state.childAnswers[pIdx] && state.childAnswers[pIdx][cIdx]) || '';
+    var modelId = $('#model-select').value;
+    _gradingAbortController = new AbortController();
+    _gradingChildIdx = cIdx;
+    _gradingIsBatch = false;
+    setLoading(true, _getModelLabel(modelId));
+
+    // Build a mini-question object for this child
+    var childQuestion = {
+      question: child.question || question.question,
+      modelAnswer: child.modelAnswer || getChildModelAnswer(question.modelAnswer, child.label) || question.modelAnswer,
+      rubric: child.rubric || question.rubric,
+      explanation: child.explanation || question.explanation
+    };
+
+    var hasPhoto = !!(state.photoAnswers && state.photoAnswers[pIdx] && state.photoAnswers[pIdx].data);
+
+    gradeWithGemini(childQuestion, hasPhoto ? null : answer, apiKey, modelId, _gradingAbortController.signal)
+      .then(function (evaluation) {
+        if (!state.childEvaluations[pIdx]) state.childEvaluations[pIdx] = [];
+        state.childEvaluations[pIdx][cIdx] = evaluation;
+        renderChildFeedback(pIdx, cIdx, evaluation);
+        saveProgress();
+        renderQuestionList();
+        showToast('Part ' + (child.label || (cIdx + 1)) + ' graded.');
+      })
+      .catch(function (error) {
+        if (error && error.name === 'AbortError') { showToast('Grading cancelled.'); return; }
+        console.error(error);
+        createChildManualEvaluation(pIdx, cIdx);
+        showToast('AI grading failed. Falling back to manual grading.');
+      })
+      .finally(function () {
+        setLoading(false);
+        _gradingChildIdx = null;
+      });
+  }
+
+  function _gradeBatchChildren(pIdx, apiKey) {
+    var question = questions[pIdx];
+    var modelId = $('#model-select').value;
+    _gradingAbortController = new AbortController();
+    _gradingIsBatch = true;
+    _gradingChildIdx = null;
+    setLoading(true, _getModelLabel(modelId));
+
+    // Build combined answers string from all children
+    var childAnswers = state.childAnswers[pIdx] || [];
+    var combinedParts = [];
+    question.children.forEach(function (child, ci) {
+      var label = child.label || (ci + 1);
+      var ans = (childAnswers[ci] || '').trim();
+      if (ans) {
+        combinedParts.push(label + ' ' + ans);
+      } else {
+        combinedParts.push(label + ' (No answer)');
+      }
+    });
+    var combinedAnswer = combinedParts.join('\n\n');
+
+    var hasPhoto = !!(state.photoAnswers && state.photoAnswers[pIdx] && state.photoAnswers[pIdx].data);
+
+    gradeWithGemini(question, hasPhoto ? null : combinedAnswer, apiKey, modelId, _gradingAbortController.signal)
+      .then(function (evaluation) {
+        // Apply same evaluation to all children
+        if (!state.childEvaluations[pIdx]) state.childEvaluations[pIdx] = [];
+        question.children.forEach(function (child, ci) {
+          state.childEvaluations[pIdx][ci] = evaluation;
+          renderChildFeedback(pIdx, ci, evaluation);
+        });
+        saveProgress();
+        renderQuestionList();
+        showToast('All parts graded together.');
+      })
+      .catch(function (error) {
+        if (error && error.name === 'AbortError') { showToast('Grading cancelled.'); return; }
+        console.error(error);
+        showToast('AI grading failed. Try grading individually with Manual Grade.');
+      })
+      .finally(function () {
+        setLoading(false);
+        _gradingIsBatch = false;
       });
   }
 
@@ -1423,6 +1785,9 @@
     var question = questions[currentIndex];
     $('#answer-panel').style.display = 'none';
     $('#feedback').classList.add('active');
+    if (question._hasChildren) {
+      $('#children-container').style.display = 'none';
+    }
     var photo = state.photoAnswers && state.photoAnswers[currentIndex];
     if (photo && photo.data) {
       var html = '<img src="data:' + photo.mimeType + ';base64,' + photo.data + '" class="feedback-photo">';
@@ -1459,6 +1824,94 @@
     $('#mark-fail').classList.toggle('active', !passed);
   }
 
+  function renderChildFeedback(pIdx, cIdx, evaluation) {
+    var question = questions[pIdx];
+    var child = question.children[cIdx];
+    var fb = document.getElementById('child-feedback-' + pIdx + '-' + cIdx);
+    if (!fb) return;
+
+    fb.classList.add('active');
+    fb.innerHTML = '';
+
+    var answer = (state.childAnswers[pIdx] && state.childAnswers[pIdx][cIdx]) || '(No answer written.)';
+    var modelAnswer = child.modelAnswer || getChildModelAnswer(question.modelAnswer, child.label) || '(No model answer supplied.)';
+
+    // Compare mini
+    var compare = create('div', 'compare-mini');
+    compare.innerHTML = '<div class="compare-mini-card user"><div class="cm-title">Your answer</div><div class="cm-body">' + escapeHtml(answer) + '</div></div>'
+      + '<div class="compare-mini-card model"><div class="cm-title">Model answer</div><div class="cm-body">' + md(modelAnswer) + '</div></div>';
+    fb.appendChild(compare);
+
+    // Eval head
+    var passed = isPassed(evaluation);
+    var eHead = create('div', 'child-eval-head');
+    var score = create('div', 'child-score ' + (passed ? 'pass' : 'fail'));
+    score.textContent = evaluation.score === null || evaluation.score === undefined ? 'Self' : String(evaluation.score);
+    eHead.appendChild(score);
+    var vDiv = create('div');
+    vDiv.innerHTML = '<div class="child-verdict">' + (passed ? 'Passed' : 'Needs revision') + '</div>'
+      + '<div style="font-size:.75rem;color:var(--muted)">' + (evaluation.source || 'Evaluation') + '</div>';
+    eHead.appendChild(vDiv);
+    fb.appendChild(eHead);
+
+    // Bullets
+    var bullets = create('div', 'child-bullets');
+    (evaluation.strengths || []).forEach(function (item) {
+      bullets.appendChild(create('div', 'child-bullet good', item));
+    });
+    (evaluation.gaps || []).forEach(function (item) {
+      bullets.appendChild(create('div', 'child-bullet gap', item));
+    });
+    if (!bullets.children.length) {
+      bullets.appendChild(create('div', 'child-bullet', 'No detailed points for this evaluation.'));
+    }
+    fb.appendChild(bullets);
+
+    // Feedback text
+    if (evaluation.feedback) {
+      var ft = create('div', 'child-feedback-text', evaluation.feedback);
+      fb.appendChild(ft);
+    }
+
+    // Manual override buttons
+    var mBar = create('div', 'child-manual-actions');
+    var failBtn = create('button', 'btn btn-secondary' + (!passed ? ' fail-choice active' : ''));
+    failBtn.textContent = 'Fail';
+    failBtn.type = 'button';
+    failBtn.addEventListener('click', function () {
+      markChildVerdict(pIdx, cIdx, 'fail');
+    });
+    mBar.appendChild(failBtn);
+
+    var passBtn = create('button', 'btn btn-secondary' + (passed ? ' pass-choice active' : ''));
+    passBtn.textContent = 'Pass';
+    passBtn.type = 'button';
+    passBtn.addEventListener('click', function () {
+      markChildVerdict(pIdx, cIdx, 'pass');
+    });
+    mBar.appendChild(passBtn);
+
+    fb.appendChild(mBar);
+
+    // Action row: Retry + Next
+    var actionRow = create('div', 'action-row');
+    var retryBtn = create('button', 'btn btn-secondary');
+    retryBtn.innerHTML = '↺ Retry';
+    retryBtn.type = 'button';
+    retryBtn.addEventListener('click', function () {
+      submitChildForAiGrade(pIdx, cIdx);
+    });
+    actionRow.appendChild(retryBtn);
+
+    var nextBtn = create('button', 'btn btn-primary');
+    nextBtn.textContent = 'Next';
+    nextBtn.type = 'button';
+    nextBtn.addEventListener('click', goNext);
+    actionRow.appendChild(nextBtn);
+
+    fb.appendChild(actionRow);
+  }
+
   function isPassed(evaluation) {
     if (!evaluation) return false;
     if (evaluation.manualVerdict) return evaluation.manualVerdict === 'pass';
@@ -1479,12 +1932,29 @@
     showToast('Marked ' + verdict + '.');
   }
 
+  function markChildVerdict(pIdx, cIdx, verdict) {
+    if (!state.childEvaluations[pIdx]) state.childEvaluations[pIdx] = [];
+    var evaluation = state.childEvaluations[pIdx][cIdx];
+    if (!evaluation) {
+      createChildManualEvaluation(pIdx, cIdx);
+      evaluation = state.childEvaluations[pIdx][cIdx];
+    }
+    evaluation.manualVerdict = verdict;
+    evaluation.passed = verdict === 'pass';
+    renderChildFeedback(pIdx, cIdx, evaluation);
+    saveProgress();
+    renderQuestionList();
+    showToast('Part ' + ((questions[pIdx].children[cIdx] && questions[pIdx].children[cIdx].label) || (cIdx + 1)) + ': ' + verdict + '.');
+  }
+
   function retryQuestion() {
     delete state.answers[currentIndex];
     delete state.evaluations[currentIndex];
     if (state.photoAnswers) delete state.photoAnswers[currentIndex];
     state.flagged[currentIndex] = false;
     delete state.flagged[currentIndex];
+    if (state.childAnswers) delete state.childAnswers[currentIndex];
+    if (state.childEvaluations) delete state.childEvaluations[currentIndex];
     saveProgress();
     showQuestion(currentIndex);
     renderQuestionList();
@@ -1511,10 +1981,21 @@
   function buildResults() {
     var passed = 0, failed = 0, skipped = 0;
     questions.forEach(function(q, i) {
-      var ev = state.evaluations[i];
-      if (!ev) { skipped++; return; }
-      if (isPassed(ev)) passed++;
-      else failed++;
+      if (q._hasChildren) {
+        var childEvals = state.childEvaluations[i] || [];
+        var hasEval = childEvals.some(function (e) { return !!e; });
+        if (!hasEval) { skipped++; return; }
+        var allPassed = childEvals.every(function (e) { return e ? isPassed(e) : true; });
+        // If any child is evaluated and passed → count as passed
+        var anyFailed = childEvals.some(function (e) { return e && !isPassed(e); });
+        if (anyFailed) failed++;
+        else if (hasEval) passed++;
+      } else {
+        var ev = state.evaluations[i];
+        if (!ev) { skipped++; return; }
+        if (isPassed(ev)) passed++;
+        else failed++;
+      }
     });
     var total = questions.length;
     if (!total) { showToast('No questions loaded.'); return; }
@@ -1548,12 +2029,76 @@
     var itemsRendered = 0;
 
     questions.forEach(function(q, i) {
-      var ev = state.evaluations[i];
-      var evPassed = ev ? isPassed(ev) : null;
-      var isSkipped = !ev;
       var isFlagged = !!state.flagged[i];
+      var statusClass, statusIcon, ev, evPassed, isSkipped;
 
-      var statusClass = isSkipped ? 'skipped' : (evPassed ? 'pass' : 'fail');
+      if (q._hasChildren) {
+        var childEvals = state.childEvaluations[i] || [];
+        var evaluatedChildren = childEvals.filter(function (e) { return !!e; });
+        var passCount = evaluatedChildren.filter(function (e) { return isPassed(e); }).length;
+        var failCount = evaluatedChildren.filter(function (e) { return !isPassed(e); }).length;
+        isSkipped = evaluatedChildren.length === 0;
+        if (isSkipped) { statusClass = 'skipped'; statusIcon = '—'; }
+        else if (failCount > 0) { statusClass = 'fail'; statusIcon = '✗'; }
+        else { statusClass = 'pass'; statusIcon = '✓'; }
+
+        var showItem = filter === 'all'
+          || (filter === 'pass' && statusClass === 'pass' && !isSkipped)
+          || (filter === 'fail' && statusClass === 'fail' && !isSkipped)
+          || (filter === 'skipped' && isSkipped)
+          || (filter === 'flagged' && isFlagged);
+        if (!showItem) return;
+        itemsRendered++;
+
+        var el = document.createElement('div');
+        el.className = 'result-item ' + statusClass;
+        el.dataset.idx = i;
+
+        var header = document.createElement('div');
+        header.className = 'result-item-header';
+        header.onclick = function() { toggleResultItem(this); };
+        var childSummary = isSkipped ? '' : ' · ' + passCount + '/' + (passCount + failCount) + ' passed';
+        header.innerHTML = '<div class="result-status-icon">' + statusIcon + '</div>'
+          + '<div class="result-q-meta">'
+          + '<div class="result-q-num">Question ' + (i + 1) + (isFlagged ? ' · ⚑ Flagged' : '') + childSummary + '</div>'
+          + '<div class="result-q-text">' + q.question + '</div>'
+          + '</div>'
+          + '<div class="expand-arrow">▼</div>';
+
+        var body = document.createElement('div');
+        body.className = 'result-item-body';
+
+        if (!isSkipped) {
+          q.children.forEach(function (child, ci) {
+            var childEval = childEvals[ci];
+            var childPassed = childEval ? isPassed(childEval) : null;
+            var childAnswer = (state.childAnswers[i] && state.childAnswers[i][ci]) || '';
+            var childIcon = childEval ? (childPassed ? '✅' : '❌') : '—';
+            var childModel = child.modelAnswer || q.modelAnswer;
+            body.innerHTML += '<div style="margin:8px 0;padding:8px 10px;background:var(--surface2);border-radius:8px;border-left:3px solid ' + (childPassed ? 'var(--ok)' : (childEval ? 'var(--bad)' : 'var(--border)')) + '">'
+              + '<div style="font-weight:700;font-size:.85rem;margin-bottom:4px;color:var(--accent)">' + childIcon + ' ' + (child.label || 'Part ' + (ci+1)) + ' — ' + (child.question || '') + '</div>'
+              + '<div style="font-size:.85rem;margin:2px 0"><strong>Your answer:</strong> ' + (childAnswer || 'Not answered') + '</div>'
+              + '<div style="font-size:.85rem"><strong>Model:</strong> ' + childModel + '</div>'
+              + (childEval && childEval.feedback ? '<div style="font-size:.82rem;color:var(--muted);margin-top:4px">' + childEval.feedback + '</div>' : '')
+              + '</div>';
+          });
+        }
+        if (q.explanation) {
+          body.innerHTML += '<div class="explanation-box"><strong>Explanation</strong>' + md(q.explanation) + '</div>';
+        }
+
+        el.appendChild(header);
+        el.appendChild(body);
+        list.appendChild(el);
+        return;
+      }
+
+      // Standard (non-child) question
+      ev = state.evaluations[i];
+      evPassed = ev ? isPassed(ev) : null;
+      isSkipped = !ev;
+
+      statusClass = isSkipped ? 'skipped' : (evPassed ? 'pass' : 'fail');
 
       var showItem = filter === 'all'
         || (filter === 'pass' && evPassed && !isSkipped)
@@ -1565,7 +2110,7 @@
 
       itemsRendered++;
 
-      var statusIcon = isSkipped ? '—' : (evPassed ? '✓' : '✗');
+      statusIcon = isSkipped ? '—' : (evPassed ? '✓' : '✗');
       var userAnswer = state.answers[i] || '';
 
       var el = document.createElement('div');
@@ -1629,11 +2174,14 @@
     state.evaluations = {};
     state.flagged = {};
     state.photoAnswers = {};
+    state.childAnswers = {};
+    state.childEvaluations = {};
     localStorage.removeItem(STORAGE.progress);
     currentIndex = 0;
     showScreen('start-screen');
     updateResumeButton();
     renderQuestionList();
+    showQuestion(currentIndex);
     showToast('Assessment reset.');
   }
 
@@ -1652,10 +2200,18 @@
   function updateExportBadges() {
     var allC = 0, failedC = 0, flaggedC = 0;
     questions.forEach(function(q, i) {
-      var ev = state.evaluations[i];
-      var isFailed = ev && !isPassed(ev);
-      allC++;
-      if (isFailed) failedC++;
+      if (q._hasChildren) {
+        var childEvals = state.childEvaluations[i] || [];
+        var hasEval = childEvals.some(function (e) { return !!e; });
+        if (hasEval) allC++;
+        var anyFailed = childEvals.some(function (e) { return e && !isPassed(e); });
+        if (anyFailed) failedC++;
+      } else {
+        var ev = state.evaluations[i];
+        var isFailed = ev && !isPassed(ev);
+        allC++;
+        if (isFailed) failedC++;
+      }
       if (state.flagged[i]) flaggedC++;
     });
     document.getElementById('badge-all').textContent = allC;
@@ -1694,11 +2250,24 @@
 
     var toExport = [];
     questions.forEach(function(q, i) {
-      var ev = state.evaluations[i];
-      var evPassed = ev ? isPassed(ev) : null;
-      var isSkipped = !ev;
-      var isFailed = ev && !evPassed;
       var isFlagged = !!state.flagged[i];
+      var ev, evPassed, isSkipped, isFailed;
+
+      if (q._hasChildren) {
+        var childEvals = state.childEvaluations[i] || [];
+        var evaluatedChildren = childEvals.filter(function (e) { return !!e; });
+        var passCount = evaluatedChildren.filter(function (e) { return isPassed(e); }).length;
+        var failCount = evaluatedChildren.filter(function (e) { return !isPassed(e); }).length;
+        isSkipped = evaluatedChildren.length === 0;
+        isFailed = failCount > 0;
+        evPassed = !isFailed && !isSkipped;
+      } else {
+        ev = state.evaluations[i];
+        evPassed = ev ? isPassed(ev) : null;
+        isSkipped = !ev;
+        isFailed = ev && !evPassed;
+      }
+
       var show = filter === 'all'
         || (filter === 'failed' && isFailed)
         || (filter === 'flagged' && isFlagged)
@@ -1737,7 +2306,27 @@
       var sc = isSkipped ? '#78716c' : (evPassed ? '#16a34a' : '#dc2626');
       var icon = isSkipped ? '-' : (evPassed ? 'OK' : 'X');
       var bgH = isSkipped ? '#f8f6f1' : (evPassed ? 'rgba(22,163,74,.06)' : 'rgba(220,38,38,.06)');
-      var userAnswer = state.answers[i] || '';
+
+      var answerHtml = '';
+      if (q._hasChildren) {
+        var childEvals = state.childEvaluations[i] || [];
+        var childAnswers = state.childAnswers[i] || [];
+        q.children.forEach(function (child, ci) {
+          var ce = childEvals[ci];
+          var cp = ce ? isPassed(ce) : null;
+          var ca = childAnswers[ci] || '';
+          var cIcon = ce ? (cp ? '✅' : '❌') : '—';
+          answerHtml += '<div style="margin:8px 0;padding:8px 10px;background:#f8f6f1;border-radius:6px;border-left:3px solid ' + (cp ? '#16a34a' : (ce ? '#dc2626' : '#d0ccc5')) + '">'
+            + '<div style="font-weight:700;font-size:11px;margin-bottom:2px;color:#c27803">' + cIcon + ' ' + (child.label || 'Part ' + (ci+1)) + ' — ' + escapeHtml(child.question) + '</div>'
+            + '<div style="font-size:10px;margin:2px 0"><strong>Answer:</strong> ' + escapeHtml(ca || 'Not answered') + '</div>'
+            + '<div style="font-size:10px"><strong>Model:</strong> ' + (child.modelAnswer || q.modelAnswer || '—') + '</div>'
+            + '</div>';
+        });
+      } else {
+        var userAnswer = state.answers[i] || '';
+        answerHtml = '<div style="background:' + (evPassed ? 'rgba(22,163,74,.08)' : 'rgba(220,38,38,.08)') + ';border-radius:6px;padding:7px 11px;margin-bottom:7px;font-size:12px;"><span style="font-size:10px;text-transform:uppercase;font-weight:700;opacity:.6;margin-right:8px;">Your Answer</span>' + (userAnswer || 'Not answered') + '</div>'
+          + '<div style="background:rgba(22,163,74,.08);border-radius:6px;padding:7px 11px;margin-bottom:7px;font-size:12px;"><span style="font-size:10px;text-transform:uppercase;font-weight:700;opacity:.6;margin-right:8px;">Model Answer</span>' + (q.modelAnswer ? md(q.modelAnswer) : '(No model answer supplied)') + '</div>';
+      }
 
       currentChunkHtml += '<div style="border:1.5px solid ' + sc + ';border-radius:10px;margin-bottom:14px;overflow:hidden;page-break-inside:avoid;">'
         +   '<div style="padding:12px 15px;background:' + bgH + ';">'
@@ -1750,9 +2339,8 @@
         +     '</div>'
         +   '</div>'
         +   '<div style="padding:10px 15px 12px;border-top:1px solid #e5e0db;">'
-        +     '<div style="background:' + (evPassed ? 'rgba(22,163,74,.08)' : 'rgba(220,38,38,.08)') + ';border-radius:6px;padding:7px 11px;margin-bottom:7px;font-size:12px;"><span style="font-size:10px;text-transform:uppercase;font-weight:700;opacity:.6;margin-right:8px;">Your Answer</span>' + (userAnswer || 'Not answered') + '</div>'
-        +     '<div style="background:rgba(22,163,74,.08);border-radius:6px;padding:7px 11px;margin-bottom:7px;font-size:12px;"><span style="font-size:10px;text-transform:uppercase;font-weight:700;opacity:.6;margin-right:8px;">Model Answer</span>' + (q.modelAnswer ? md(q.modelAnswer) : '(No model answer supplied)') + '</div>'
-        + (q.explanation ? '<div style="background:#f8f6f1;border-left:3px solid #c27803;border-radius:0 6px 6px 0;padding:9px 11px;font-size:12px;color:#44403c;line-height:1.6;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#1c1917;margin-bottom:3px;">Explanation</div>' + md(q.explanation) + '</div>' : '')
+        +     answerHtml
+        + (q.explanation ? '<div style="background:#f8f6f1;border-left:3px solid #c27803;border-radius:0 6px 6px 0;padding:9px 11px;font-size:12px;color:#44403c;line-height:1.6;margin-top:6px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#1c1917;margin-bottom:3px;">Explanation</div>' + md(q.explanation) + '</div>' : '')
         + '</div></div>';
 
       if ((idx + 1) % questionsPerChunk === 0 || idx === toExport.length - 1) {
@@ -1811,6 +2399,8 @@
     state.evaluations = {};
     state.flagged = {};
     state.photoAnswers = {};
+    state.childAnswers = {};
+    state.childEvaluations = {};
     localStorage.removeItem(STORAGE.progress);
     closeResetModal();
     currentIndex = 0;
@@ -1938,6 +2528,9 @@
       state.answers = saved.answers || {};
       state.evaluations = saved.evaluations || {};
       state.flagged = saved.flagged || {};
+      state.photoAnswers = saved.photoAnswers || {};
+      state.childAnswers = saved.childAnswers || {};
+      state.childEvaluations = saved.childEvaluations || {};
     } catch (error) {
       console.error('Could not restore written assessment progress.', error);
     }
@@ -1948,6 +2541,9 @@
       answers: state.answers,
       evaluations: state.evaluations,
       flagged: state.flagged,
+      photoAnswers: state.photoAnswers,
+      childAnswers: state.childAnswers,
+      childEvaluations: state.childEvaluations,
       timestamp: Date.now()
     };
     try {

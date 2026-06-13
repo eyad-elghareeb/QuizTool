@@ -540,8 +540,8 @@ def _correct_badge(letter, opt_text, col_w, fs=1.0):
 def _callout_box(label, body_text, col_w, bg, border_color, fs=1.0):
     """
     Explanation / objective callout box.
-    Single Table with one continuous OUTLINE — no internal rules,
-    no KeepTogether, rows split freely across pages.
+    Single Table, one continuous OUTLINE — exactly as originally designed.
+    Body text is split via _build_flowables so pipe tables render.
     """
     lbl_sty = ParagraphStyle(
         "_cl", fontName=_F["H"],
@@ -557,21 +557,21 @@ def _callout_box(label, body_text, col_w, bg, border_color, fs=1.0):
     inner_w   = max(col_w - pad_total, 10)
     body_flows = _build_flowables(body_text, txt_sty, inner_w, fs)
     if not body_flows:
-        return [Paragraph(label, lbl_sty)]
+        return Paragraph(label, lbl_sty)
 
     rows = [[Paragraph(label, lbl_sty)]] + [[fb] for fb in body_flows]
     t = Table(rows, colWidths=[col_w])
     t.setStyle(TableStyle([
         ("BACKGROUND",    (0, 0), (-1, -1), bg),
-        ("TOPPADDING",    (0, 0), (0, 0),   sp(1.5, fs)),
-        ("BOTTOMPADDING", (0, 0), (0, 0),   sp(0.5, fs)),
-        ("TOPPADDING",    (0, 1), (-1, -1), sp(0.5, fs)),
-        ("BOTTOMPADDING", (0, 1), (-1, -1), sp(0.5, fs)),
-        ("LEFTPADDING",   (0, 0), (-1, -1), sp(3, fs)),
-        ("RIGHTPADDING",  (0, 0), (-1, -1), sp(2, fs)),
+        ("TOPPADDING",    (0, 0), (0, 0),   sp(1)),
+        ("BOTTOMPADDING", (0, 0), (0, 0),   sp(1)),
+        ("TOPPADDING",    (0, 1), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 1), (-1, -1), sp(2)),
+        ("LEFTPADDING",   (0, 0), (-1, -1), sp(3)),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), sp(2)),
         ("OUTLINE",       (0, 0), (-1, -1), 0.75, border_color),
     ]))
-    return [t]
+    return t
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -1177,7 +1177,7 @@ def build_question(q_data, q_num, styles, layout, answers_mode,
             ))
         if expl and show_expl:
             elems.append(Spacer(1, sp(1, fs)))
-            elems.extend(_callout_box(
+            elems.append(_callout_box(
                 "EXPLANATION", expl, content_w,
                 bg=PALE_GREEN, border_color=SAGE, fs=fs,
             ))
@@ -1230,7 +1230,7 @@ def build_written_question(q_data, q_num, styles, layout, content_w):
     model_answer = q_data.get("modelAnswer", "") or q_data.get("model_answer", "")
     if model_answer:
         elems.append(Spacer(1, sp(1, fs)))
-        elems.extend(_callout_box(
+        elems.append(_callout_box(
             "MODEL ANSWER", model_answer, content_w,
             bg=PALE_BLUE, border_color=ROYAL, fs=fs,
         ))
