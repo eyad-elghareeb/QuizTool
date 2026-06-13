@@ -20,7 +20,7 @@
   var MODELS = [
     ['gemini-3.1-flash-lite', 'Gemini 3.1 Flash-Lite (default, fast & modern)'],
     ['gemini-3.5-flash',      'Gemini 3.5 Flash (latest, strongest Flash)'],
-    ['gemini-3.1-pro',        'Gemini 3.1 Pro (most capable, premium)'],
+    ['gemini-3.1-pro-preview', 'Gemini 3.1 Pro Preview (most capable, premium)'],
     ['gemma-4-26b-a4b-it',    'Gemma 4 26B IT (open model, strong & free)'],
     ['gemma-4-31b-it',        'Gemma 4 31B IT (larger open model)'],
     ['gemini-2.5-flash',      'Gemini 2.5 Flash (older fallback)']
@@ -169,6 +169,7 @@
 
   function tryGeminiRequests(systemPrompt, userPrompt, apiKey, attempts, cancelSignal) {
     var lastError = null;
+    var primaryModel = attempts.length > 0 ? attempts[0].model : null;
     var chain = Promise.reject(new Error('AI request did not start.'));
     attempts.forEach(function (attempt, index) {
       chain = chain.catch(function () {
@@ -178,6 +179,12 @@
           return Promise.reject(err);
         }
         return requestGemini(systemPrompt, userPrompt, apiKey, attempt.model, cancelSignal)
+          .then(function (text) {
+            if (index > 0 && primaryModel) {
+              showToast('⚠ ' + _getModelLabel(primaryModel) + ' unavailable, using ' + _getModelLabel(attempt.model) + ' instead');
+            }
+            return text;
+          })
           .catch(function (error) {
             lastError = error;
             if (index === attempts.length - 1) throw lastError;
@@ -239,6 +246,7 @@
 
   function tryGeminiChatRequests(systemPrompt, contents, apiKey, attempts, cancelSignal) {
     var lastError = null;
+    var primaryModel = attempts.length > 0 ? attempts[0].model : null;
     var chain = Promise.reject(new Error('AI request did not start.'));
     attempts.forEach(function (attempt, index) {
       chain = chain.catch(function () {
@@ -248,6 +256,12 @@
           return Promise.reject(err);
         }
         return requestGeminiChat(systemPrompt, contents, apiKey, attempt.model, cancelSignal)
+          .then(function (text) {
+            if (index > 0 && primaryModel) {
+              showToast('⚠ ' + _getModelLabel(primaryModel) + ' unavailable, using ' + _getModelLabel(attempt.model) + ' instead');
+            }
+            return text;
+          })
           .catch(function (error) {
             lastError = error;
             if (index === attempts.length - 1) throw lastError;
