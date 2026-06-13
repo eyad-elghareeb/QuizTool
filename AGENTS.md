@@ -1,85 +1,25 @@
-# AGENTS.md — QuizTool
+# AGENTS.md — QuizTool V5
 
-> **Purpose:** Complete reference for any LLM agent working on this repository. Read this before touching any file. Covers both the authoring toolkit and the project generator.
+> **Purpose:** Complete reference for any LLM agent working on this repository. Read this before touching any file. Covers the authoring toolkit, engines, project generator, Tauri desktop apps, and PDF generation system.
 >
-> **Generated projects:** Each generated quiz site (e.g., MU61S8) has its own `AGENTS.md` with site-specific reference. Those files focus on the quiz-site runtime (engines, file schemas, CI/CD, sync script). This file covers the QuizTool toolkit itself — the tools, the generator, and the authoring workflows.
+> **Generated projects:** Each generated quiz site (e.g., MU61S8) has its own `AGENTS.md` with site-specific reference. That file covers the quiz-site runtime (engines, file schemas, CI/CD, sync script). This file covers QuizTool itself.
 
-12-rule template
+## Rules
 
-These rules apply to every task in this project unless explicitly overridden.
-Bias: caution over speed on non-trivial work. Use judgment on trivial tasks.
+These rules apply to every task unless explicitly overridden.
 
-## Rule 1 — Think Before Coding
-
-State assumptions explicitly. If uncertain, ask rather than guess.
-Present multiple interpretations when ambiguity exists.
-Push back when a simpler approach exists.
-Stop when confused. Name what's unclear.
-
-## Rule 2 — Simplicity First
-
-Minimum code that solves the problem. Nothing speculative.
-No features beyond what was asked. No abstractions for single-use code.
-Test: would a senior engineer say this is overcomplicated? If yes, simplify.
-
-## Rule 3 — Surgical Changes
-
-Touch only what you must. Clean up only your own mess.
-Don't "improve" adjacent code, comments, or formatting.
-Don't refactor what isn't broken. Match existing style.
-
-## Rule 4 — Goal-Driven Execution
-
-Define success criteria. Loop until verified.
-Don't follow steps. Define success and iterate.
-Strong success criteria let you loop independently.
-
-## Rule 5 — Use the model only for judgment calls
-
-Use me for: classification, drafting, summarization, extraction.
-Do NOT use me for: routing, retries, deterministic transforms.
-If code can answer, code answers.
-
-## Rule 6 — Token budgets are not advisory
-
-Per-task: 4,000 tokens. Per-session: 30,000 tokens.
-If approaching budget, summarize and start fresh.
-Surface the breach. Do not silently overrun.
-
-## Rule 7 — Surface conflicts, don't average them
-
-If two patterns contradict, pick one (more recent / more tested).
-Explain why. Flag the other for cleanup.
-Don't blend conflicting patterns.
-
-## Rule 8 — Read before you write
-
-Before adding code, read exports, immediate callers, shared utilities.
-"Looks orthogonal" is dangerous. If unsure why code is structured a way, ask.
-
-## Rule 9 — Tests verify intent, not just behavior
-
-Tests must encode WHY behavior matters, not just WHAT it does.
-A test that can't fail when business logic changes is wrong.
-
-## Rule 10 — Checkpoint after every significant step
-
-Summarize what was done, what's verified, what's left.
-Don't continue from a state you can't describe back.
-If you lose track, stop and restate.
-
-## Rule 11 — Match the codebase's conventions, even if you disagree
-
-Conformance > taste inside the codebase.
-If you genuinely think a convention is harmful, surface it. Don't fork silently.
-
-## Rule 12 — Fail loud
-
-"Completed" is wrong if anything was skipped silently.
-"Tests pass" is wrong if any were skipped.
-Default to surfacing uncertainty, not hiding it.
-
-
+1. **Think Before Coding** — State assumptions. If uncertain, ask. Push back when a simpler approach exists.
+2. **Simplicity First** — Minimum code that solves the problem. Nothing speculative. No abstractions for single-use code.
+3. **Surgical Changes** — Touch only what you must. Don't "improve" adjacent code. Match existing style.
+4. **Goal-Driven Execution** — Define success criteria. Loop until verified.
+5. **Use the model only for judgment calls** — If code can answer, code answers.
+6. **Token budgets are not advisory** — Per-task: 4,000 tokens. Per-session: 30,000 tokens.
+7. **Surface conflicts, don't average them** — Pick one (more recent / more tested). Flag the other.
+8. **Read before you write** — Check exports, callers, shared utilities before adding code.
+9. **Tests verify intent, not just behavior** — A test that can't fail when business logic changes is wrong.
+10. **Checkpoint after every significant step** — Summarize what was done, verified, and what's left.
+11. **Match the codebase's conventions, even if you disagree** — Conformance > taste inside the codebase.
+12. **Fail loud** — "Completed" is wrong if anything was skipped silently.
 
 ---
 
@@ -89,8 +29,9 @@ Default to surfacing uncertainty, not hiding it.
 |-----|-------|
 | **Type** | Authoring toolkit + project generator — static HTML tools, no backend required for the tools themselves |
 | **Deployment** | GitHub Pages (the toolkit pages themselves are deployed here) |
-| **Generator** | `tauri/` (Tauri Desktop App) is the primary generator. `generate_project.py` is deprecated. |
-| **Output** | Generated ZIPs are MU61S8-equivalent sites (see `AGENTS.md` in generated projects) |
+| **Generator** | `tauri/` (Tauri Desktop App) is the primary generator. `generate_project.py` is deprecated but still maintained. |
+| **Release** | V5 — 8 engines, 10 authoring tools, 2 Tauri desktop apps, ReportLab PDF exporter |
+| **Output** | Generated ZIPs are MU61S8-equivalent sites (hub + quiz/bank/flashcard/written files + engines + SW) |
 
 ---
 
@@ -99,79 +40,126 @@ Default to surfacing uncertainty, not hiding it.
 ```
 QuizTool/
 ├── index.html                    ← QuizTool hub (lists all tools)
-├── index-engine.js               ← Hub engine (shared with generated sites)
-├── index-engine.css              ← Hub styles (shared with generated sites)
-├── quiz-engine.js                ← Quiz engine (shared with generated sites)
-├── bank-engine.js                ← Bank engine (shared with generated sites)
+│
+├── — ENGINES (8 total) —
+├── quiz-engine.js                ← MCQ quiz engine (single-quiz SPA)
+├── bank-engine.js                ← Question bank engine (session management)
+├── index-engine.js               ← Hub page engine (cards, tracker dashboard, theme)
+├── index-engine.css              ← Hub page styles
 ├── sync-engine.js                ← Synchronization engine (bundled/production)
 ├── sync-engine.src.js            ← Sync engine source (development)
-├── serve.py                      ← Local dev server (binds to 0.0.0.0 for cross-device sync testing)
-├── sw.js                         ← Service worker for QuizTool itself
-├── tracker-map.json              ← UID-to-Path mapping (auto-generated by sync script)
-├── manifest.webmanifest          ← PWA manifest
-├── favicon.svg
-├── icon-{48,72,96,144,192,512}.png
+├── flashcard-engine.js           ← Flashcard study engine (basic + cloze cards)
+├── written-engine.js             ← Written/essay engine with AI feedback
+├── uworld-engine.js              ← UWorld-style high-accuracy MCQ engine
+├── search-engine.js              ← Global search across all quiz content
+├── ai-assistant-engine.js        ← AI-powered Q&A assistant (browser-side)
 │
-├── — AUTHORING TOOLS —
+├── — AUTHORING TOOLS (10) —
 ├── quiz-maker.html               ← GUI quiz builder → downloads quiz HTML
 ├── quiz-maker-js.html            ← Paste-JSON quiz builder
 ├── bank-maker.html               ← GUI bank builder → downloads bank HTML
-├── quiz-editor.html              ← Edit existing quiz files
+├── quiz-editor.html              ← Edit existing quiz/bank files
 ├── index-editor.html             ← Edit/create index hub pages
 ├── quiz-combiner.html            ← Merge multiple quiz files into one bank
 ├── pdf-exporter.html             ← Export any quiz/bank to PDF standalone
 ├── js-question-bank.html         ← Browser-based question bank manager
+├── flashcard-maker.html          ← GUI flashcard deck builder
+├── flashcard-editor.html         ← Edit existing flashcard decks
+├── written-maker.html            ← GUI written assessment builder
 │
-├── — TEMPLATES (read by tools) —
+├── — TEMPLATES (5) —
 ├── quiz-template.html            ← Base template for quiz-maker output
 ├── question-bank-template.html   ← Base template for bank-maker output
 ├── index-template.html           ← Base template for index-editor output
+├── flashcard-template.html       ← Base template for flashcard-maker output
+├── written-template.html         ← Base template for written-maker output
 │
 ├── — GENERATOR —
-├── generate_project.py           ← [DEPRECATED] Flask server project generator (kept for backwards compatibility)
+├── generate_project.py           ← [DEPRECATED] Flask server project generator
 ├── generator_templates/
 │   └── index.html                ← 3-step wizard UI (Project Info → Structure → Publish)
 ├── start.bat                     ← Windows launcher (auto-installs Python deps)
 ├── build_exe.py                  ← PyInstaller build script for standalone EXE
+├── generate_icons.py             ← Multi-size PNG icon generator
+├── extract.py                    ← Bridge: extracts HTML from admin-dashboard.py → Tauri frontend
 ├── QUICKSTART.md                 ← 3-step quickstart guide
+├── GENERATOR_UPDATES.md          ← Generator changelog
 │
 ├── — SCRIPTS —
 ├── scripts/
-│   ├── build_sync_engine.ps1     ← Bundle tool: merges libraries + sync-engine.src.js
-│   ├── admin-dashboard.py       ← [DEPRECATED] Local Flask admin dashboard (kept for backwards compatibility)
+│   ├── build_sync_engine.ps1     ← Sync engine bundler (libs + src → production)
+│   ├── admin-dashboard.py       ← [DEPRECATED] Python Flask admin dashboard
 │   ├── sync_quiz_assets.py       ← Auto-index + SW updater for generated sites
-│   └── standardize_quiz_files.py ← One-time file formatter
+│   ├── standardize_quiz_files.py ← One-time file formatter
+│   ├── pdf_generator.py          ← Python-sidecar PDF generator (ReportLab)
+│   ├── ensure_pdf_deps.py        ← PDF dependency checker/installer
+│   ├── download_pdf_fonts.py     ← Download Poppins + Lora fonts
+│   ├── fonts/                    ← TTF font files for PDF generation
 │
 ├── — DESKTOP APPS (TAURI) —
-├── tauri/                        ← Tauri generator root
-│   ├── tauri.conf.json           ← Generator configuration
-│   ├── src/                      ← Rust generator logic (ported from generate_project.py)
-│   └── frontend/                 ← Generator wizard UI
+├── tauri/                        ← Tauri generator root (primary)
+│   ├── tauri.conf.json
+│   ├── src/
+│   │   ├── main.rs               ← App controller, command registration
+│   │   ├── generator.rs           ← Project generation logic
+│   │   ├── api_helpers.rs         ← GitHub/Netlify/Vercel API helpers
+│   │   └── engines.rs             ← Embedded engine constants (8 engines)
+│   └── frontend/
+│       └── index.html            ← Generator 3-step wizard UI
 │
-├── tauri-admin/                  ← Tauri admin dashboard root
-│   ├── tauri.conf.json           ← Dashboard configuration
-│   ├── src/                      ← Rust command handlers (FS, Git, validation)
-│   └── frontend/                 ← Dashboard SPA (ported from index.html)
+├── tauri-admin/                  ← Tauri admin dashboard root (primary)
+│   ├── tauri.conf.json
+│   ├── src/
+│   │   ├── main.rs               ← App controller
+│   │   ├── commands.rs           ← 25+ IPC command handlers (FS, Git, PDF, deploy)
+│   │   ├── deploy.rs             ← Provider-aware deploy (GitHub/Netlify/Vercel)
+│   │   ├── git.rs                 ← Git operations
+│   │   ├── parser.rs             ← File type detection (6 types), validation
+│   │   ├── pdf.rs                 ← PDF generation (Python sidecar orchestration)
+│   │   ├── server.rs             ← Lightweight HTTP preview server (tiny_http)
+│   │   └── templates.rs          ← HTML generation (quiz/bank/written/flashcard/index)
+│   └── frontend/
+│       ├── index.html            ← Admin dashboard SPA (extracted from admin-dashboard.py)
+│       └── pdf-exporter.html     ← Built-in PDF exporter UI
+│
+├── — TEST FILES —
+├── uworld-cardio-test.html       ← UWorld-style cardiology test
+├── flashcard-test.html           ← Flashcard test deck
+│
+├── — DEPLOYMENT —
+├── sw.js                         ← Service worker for QuizTool itself
+├── manifest.webmanifest          ← PWA manifest
+├── tracker-map.json              ← UID-to-Path mapping (auto-generated)
+├── favicon.svg
+├── icon-{48,72,96,144,192,512}.png
+├── serve.py                      ← Dev server (binds 0.0.0.0 for cross-device testing)
+├── dist/                         ← Built executables
 │
 └── .github/workflows/
-    └── jekyll-gh-pages.yml       ← Deploys QuizTool itself to GitHub Pages
+    ├── jekyll-gh-pages.yml       ← Deploys QuizTool to GitHub Pages
+    └── build-tauri-release.yml   ← Builds + releases Tauri desktop binaries
 ```
 
 ---
 
-## 3. The Three Engines
+## 3. The Eight Engines
 
-These three JS files are the **core shared assets**. They exist here, get deployed with QuizTool's own GitHub Pages, and are also **bundled into every ZIP** that `generate_project.py` produces.
+These JS files are the **core shared assets**. They exist in this repo, are deployed with QuizTool's GitHub Pages, and are bundled into every ZIP that the Tauri generator produces.
 
 | Engine | Consumed by | Role |
 |--------|------------|------|
 | `quiz-engine.js` | Individual quiz HTML files | Full SPA: injects all CSS+HTML, runs quiz, saves progress, tracker |
 | `bank-engine.js` | Question-bank HTML files | Same as quiz + session management for large question banks |
 | `index-engine.js` | All `index.html` hub pages | Renders quiz cards, tracker dashboard, theme |
+| `flashcard-engine.js` | Flashcard HTML files | Basic + cloze card study modes, spaced repetition |
+| `written-engine.js` | Written assessment HTML files | Essay questions with AI feedback, rubric, markdown rendering |
+| `uworld-engine.js` | UWorld-style quiz HTML files | High-accuracy mode, detailed analytics, timed sessions |
+| `search-engine.js` | Hub pages | Global search across all quiz/bank/written/flashcard content |
+| `ai-assistant-engine.js` | Any page | Browser-side AI Q&A assistant for explaining concepts |
 
 ### Engine Path Resolution
 
-Quiz/bank files self-locate the engine at runtime:
+Quiz/bank/written/flashcard files self-locate their engine at runtime:
 
 ```js
 window.__QUIZ_ENGINE_BASE = '../'.repeat(
@@ -180,61 +168,35 @@ window.__QUIZ_ENGINE_BASE = '../'.repeat(
 document.write('<scr'+'ipt src="'+window.__QUIZ_ENGINE_BASE+'quiz-engine.js"><\/scr'+'ipt>');
 ```
 
-This means a file at `gyn/dep/l1.html` computes `../../` and a file at `gyn/l1.html` computes `../`. **Never hardcode the path.**
+Each engine uses its own `__{NAME}_ENGINE_BASE` variable. **Never hardcode the path.**
 
 ---
 
-## 4. Templates — What They Are and How Tools Use Them
+## 4. Templates
 
-### `quiz-template.html`
-Base template for `quiz-maker.html` output. Contains:
-- FOUC-prevention inline script
-- `/* [QUIZ_CONFIG_START] */` + `/* [QUIZ_CONFIG_END] */` markers around `QUIZ_CONFIG`
-- `/* [QUESTIONS_START] */` + `/* [QUESTIONS_END] */` markers around `QUESTIONS`
-- The `__QUIZ_ENGINE_BASE` / `document.write` engine loader snippet
+| Template | Used by | Markers | Engine Loaded |
+|----------|---------|---------|---------------|
+| `quiz-template.html` | `quiz-maker.html` | `QUIZ_CONFIG`, `QUESTIONS` | `quiz-engine.js` |
+| `question-bank-template.html` | `bank-maker.html` | `BANK_CONFIG`, `QUESTION_BANK` | `bank-engine.js` |
+| `index-template.html` | `index-editor.html` | `QUIZZES` | `index-engine.js` |
+| `flashcard-template.html` | `flashcard-maker.html` | `FLASHCARD_CONFIG`, `FLASHCARD_BANK` | `flashcard-engine.js` |
+| `written-template.html` | `written-maker.html` | `WRITTEN_CONFIG`, `WRITTEN_QUESTIONS` | `written-engine.js` |
 
-Tools fill in `QUIZ_CONFIG` and `QUESTIONS` at download time. **Never remove the marker comments** — `sync_quiz_assets.py` parses them to extract metadata.
-
-### `question-bank-template.html`
-Same structure as quiz template but for `bank-maker.html` output. Uses `BANK_CONFIG` and `QUESTION_BANK`, loads `bank-engine.js`.
-
-### `index-template.html`
-Template for `index-editor.html` output. Contains:
-- Standardized topbar, hero, and grid structure
-- `const QUIZZES = [...]` array (populated by editor)
-- Full tracker dashboard HTML block
-- **Modernized Structure:** Uses `<link rel="stylesheet" href="index-engine.css">` instead of embedded styles.
-- SW registration block (depth-aware in generated output)
-
-**Critical:** `index-editor.html` fetches this template. Changes to the template affect all future hub pages produced by the editor.
+**Critical:** Tools fetch templates at runtime. Changes to templates affect all future output. **Never remove marker comments** — `sync_quiz_assets.py` and the Tauri admin parser parse them.
 
 ---
 
 ## 5. File Schemas
 
-### 5a. Quiz File Schema
+### 5a. Quiz / Bank File Schema
 
 ```html
-<!DOCTYPE html>
-<html lang="en" data-theme="dark">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>
-(function(){var t=localStorage.getItem('quiz-theme')||'dark';var s=document.createElement('style');
-s.textContent='html,body{background:'+(t==='light'?'#f3f0eb':'#0d1117')+';color:'+(t==='light'?'#1c1917':'#e6edf3')+';margin:0;padding:0;overflow:hidden;height:100%}';
-document.head.appendChild(s)})();
-</script>
-<title>Quiz Title</title>
-</head>
-<body>
-<script>
-
 /* [QUIZ_CONFIG_START] */
 const QUIZ_CONFIG = {
-  "uid": "unique_snake_case_id",  // REQUIRED — stable, never change after first use
+  "uid": "unique_snake_case_id",  // REQUIRED — stable, never change
   title: "Quiz Display Title",
-  description: "Short description shown on start screen",
+  description: "Short description",
 };
 /* [QUIZ_CONFIG_END] */
 
@@ -244,319 +206,169 @@ const QUESTIONS = [
     "question": "Question text?",
     "options": ["Option A", "Option B", "Option C", "Option D"],
     "correct": 0,          // 0-indexed
-    "explanation": "Why A is correct."
+    "explanation": "Why A is correct.",
+    "children": [           // optional sub-questions (for multi-part questions)
+      { "question": "Child?", "options": [...], "correct": 0 }
+    ]
   }
 ];
 /* [QUESTIONS_END] */
-
 </script>
-<script>
-(function(){
-  window.__QUIZ_ENGINE_BASE='../'.repeat(Math.max(0,location.pathname.split('/').filter(Boolean).length-2));
-  document.write('<scr'+'ipt src="'+window.__QUIZ_ENGINE_BASE+'quiz-engine.js"><\/scr'+'ipt>');
-})();
-</script>
-</body>
-</html>
 ```
 
-### 5b. Bank File Schema
+Bank files use `BANK_CONFIG` + `QUESTION_BANK`, load `bank-engine.js`. Same entry shape.
 
-Identical structure but with `BANK_CONFIG` + `QUESTION_BANK`, loads `bank-engine.js`:
+### 5b. Flashcard File Schema
 
 ```js
-/* [BANK_CONFIG_START] */
-const BANK_CONFIG = {
-  "uid": "unique_bank_id",
-  "title": "Bank Display Title",
-  "description": "Description",
-  "icon": "🗃️"             // optional
+/* [FLASHCARD_CONFIG_START] */
+var BANK_CONFIG = {
+  uid: "flashcard_deck_id",
+  title: "Flashcard Deck",
+  description: "Study your flashcards.",
+  icon: "🃏",
 };
-/* [BANK_CONFIG_END] */
+/* [FLASHCARD_CONFIG_END] */
 
-/* [QUESTION_BANK_START] */
-const QUESTION_BANK = [ /* same entry shape as QUESTIONS */ ];
-/* [QUESTION_BANK_END] */
+/* [FLASHCARD_BANK_START] */
+var FLASHCARD_BANK = [
+  {
+    type: "basic",           // "basic" or "cloze"
+    front: "Question / term",
+    back: "Answer / definition",
+    tags: ["tag1", "tag2"],
+    id: "unique-id"
+  },
+  {
+    type: "cloze",
+    text: "The {{c1::mitochondria}} is the {{c2::powerhouse}} of the cell.",
+    tags: ["biology"],
+    id: "bio-003"
+  }
+];
+/* [FLASHCARD_BANK_END] */
 ```
 
-Bank engine extras: sequential progress tracking, random vs sequential selection, configurable question count.
+Loads `flashcard-engine.js`.
 
-### 5c. Index / Hub File Schema
+### 5c. Written Assessment File Schema
+
+```js
+/* [WRITTEN_CONFIG_START] */
+const WRITTEN_CONFIG = {
+  uid: "written_assessment_id",
+  title: "Written Assessment",
+  description: "Answer in your own words.",
+  icon: "📝"
+};
+/* [WRITTEN_CONFIG_END] */
+
+/* [WRITTEN_QUESTIONS_START] */
+const WRITTEN_QUESTIONS = [
+  {
+    id: "wq-1",
+    question: "Explain the difference...",
+    modelAnswer: "Expected answer text",
+    rubric: "Grading rubric for AI context",
+    explanation: "Extra background",
+    tags: ["biology", "respiration"]
+  }
+];
+/* [WRITTEN_QUESTIONS_END] */
+```
+
+Loads `written-engine.js`. The engine supports AI feedback via browser-based LLM or API key.
+
+### 5d. Index / Hub File Schema
 
 ```html
 <body>
-  <div class="topbar">
-    <!-- For sub-hubs, add: <a href="../index.html" class="icon-btn back-btn">←</a> -->
-    <div class="topbar-title">Page Title</div>
-    <button class="icon-btn btn-tracker" onclick="openTrackerDashboard()">
-      <svg ...></svg><span class="tracker-badge" id="tracker-badge-count"></span>
-    </button>
-    <button class="icon-btn" id="theme-toggle" onclick="toggleTheme()">☀</button>
-  </div>
+  <div class="topbar">...</div>
   <div class="container">
-    <header class="hero"><h1>Title</h1><p>Description</p></header>
+    <header class="hero">...</header>
     <div class="quiz-grid" id="quiz-grid"></div>
   </div>
-
-<script>
-const QUIZZES = [
-  { title: "Quiz Name", description: "...", icon: "📘", tags: ["Tag1", "20 Questions"], url: "file.html" },
-  { title: "📁 Subfolder", description: "...", icon: "📁", tags: ["Folder"], url: "subfolder/index.html" }
-];
-</script>
-
-<!-- Tracker dashboard block — must be present exactly once -->
-<div class="dash-overlay" id="tracker-dashboard">...</div>
-
-<script src="index-engine.js"></script>  <!-- depth-adjusted -->
-<script>(function(){...theme + renderQuizzes init...})();</script>
-<script>if('serviceWorker' in navigator){...sw.js registration...}</script>
+  <script>
+  const QUIZZES = [
+    { title: "Quiz Name", description: "...", icon: "📘", tags: ["Tag1", "20 Questions"], url: "file.html" },
+    { title: "📁 Subfolder", description: "...", icon: "📁", tags: ["Folder"], url: "subfolder/index.html" }
+  ];
+  </script>
+  <div class="dash-overlay" id="tracker-dashboard">...</div>
+  <script src="index-engine.js"></script>
+  <script>if('serviceWorker' in navigator){...}</script>
 </body>
 ```
 
-**The `QUIZZES` array** is the only thing that changes between index pages. Everything else is boilerplate.
+**The `QUIZZES` array** is the only thing that changes between index pages.
 
 ---
 
-## 6. generate_project.py — The Project Generator
+## 6. Tauri Desktop Apps (Primary)
 
-> **DEPRECATED:** The Python-based `generate_project.py` is deprecated. All new features should be implemented in the Tauri native build (`tauri/`). This Python version is kept strictly for backwards compatibility.
+QuizTool provides two native desktop wrappers built with Tauri v2. **These are the primary, actively developed versions.**
 
-### Running it
+### 6a. Project Generator (`tauri/`)
 
+Replaces the deprecated `generate_project.py`.
+
+- **Architecture**: Pure Rust backend (`generator.rs`, `api_helpers.rs`) with embedded engine files (`engines.rs`)
+- **Embedded Assets (engines.rs)**: `INDEX_ENGINE_JS`, `INDEX_ENGINE_CSS`, `SEARCH_ENGINE_JS`, `QUIZ_ENGINE_JS`, `BANK_ENGINE_JS`, `SYNC_ENGINE_JS`, `FLASHCARD_ENGINE_JS`, `WRITTEN_ENGINE_JS`, `AI_ASSISTANT_ENGINE_JS` + templates, icons, configs
+- **Custom Protocol**: Serves frontend via `quiztool://localhost/`
+- **API helpers** (`api_helpers.rs`): GitHub (verify/publish with GIT_ASKPASS), Netlify (site + ZIP deploy), Vercel (file deployment)
+- **Frontend**: 3-step wizard UI (Project Info → Structure → Publish)
+
+### 6b. Admin Dashboard (`tauri-admin/`)
+
+Replaces the deprecated `admin-dashboard.py`.
+
+| Component | Role |
+|-----------|------|
+| `commands.rs` | 25+ IPC commands: FS CRUD, Git operations, PDF export, provider deploy, file conversion |
+| `parser.rs` | File type detection (6 types: Quiz, Bank, Index, Flashcard, Written, Html), validation |
+| `deploy.rs` | Provider-aware deploy (GitHub Pages, Netlify, Vercel) with metadata persistence |
+| `git.rs` | Git operations with `CREATE_NO_WINDOW` flag on Windows |
+| `pdf.rs` | PDF generation via Python ReportLab sidecar (see §9) |
+| `server.rs` | `tiny_http` preview server with CORS, dynamic engine path rewriting, asset fallbacks |
+| `templates.rs` | HTML generation for quiz/bank/written/flashcard/index files with depth-aware prefixes |
+
+**Features:**
+- File browser with type filters and context menus
+- New file wizard (presets, paste JSON/text, clone existing)
+- Structured editors for all 6 file types + raw HTML editor
+- Multi-tab viewer (Preview / Editor / Metadata / Raw HTML)
+- Convert files: quiz ↔ bank, quiz/bank → flashcard
+- Provider-aware deploy (GitHub, Netlify, Vercel)
+- PDF export (preview + download)
+- Git integration (status, commit, pull, push)
+- Quick open (`Ctrl+K`), keyboard shortcuts, unsaved changes protection
+
+### 6c. Frontend Build Pipeline (`extract.py`)
+
+The Tauri admin frontend is **not hand-written** — it is extracted from the deprecated `admin-dashboard.py`:
+
+```
+admin-dashboard.py
+    ↓ [extract.py]
+    ├── tauri-admin/frontend/index.html          (DASHBOARD_HTML → invoke-based IPC)
+    └── tauri-admin/frontend/pdf-exporter.html   (PDF_EXPORTER_HTML → standalone)
+```
+
+`extract.py` does:
+1. Extracts `DASHBOARD_HTML` and `PDF_EXPORTER_HTML` via regex
+2. Injects global Tauri bridge (`window.__TAURI__.core.invoke`)
+3. Replaces `fetchJson()` with IPC-based Rust command calls
+4. Rewrites preview URLs to `quiztool-preview://localhost/`
+5. Patches `/admin/pdf-exporter` links to local `pdf-exporter.html`
+6. Injects project name bootstrap script
+7. Writes output to `tauri-admin/frontend/`
+
+**Run after modifying `admin-dashboard.py`:**
 ```bash
-pip install flask
-python generate_project.py
-# Opens http://localhost:5500 automatically
+python extract.py
 ```
 
-Or double-click `start.bat` on Windows (auto-installs dependencies).
-
-### What it does
-
-Serves a 3-step wizard UI (`generator_templates/index.html`) where the user:
-1. **Step 1 — Project Info**: Configures name, title, hero text, theme
-2. **Step 2 — Structure**: Creates folders/subfolders, drag-drops quiz HTML files, adds quiz entries
-3. **Step 3 — Publish**: Publishes to GitHub Pages, Netlify, or Vercel via session-only provider tokens, or downloads a ZIP
-
-### API endpoints
-
-| Endpoint | Method | Input | Output | Purpose |
-|----------|--------|-------|--------|---------|
-| `/` | GET | — | HTML | 3-step wizard UI |
-| `/api/generate` | POST | JSON config | ZIP download | Generate and download project ZIP |
-| `/api/preview` | POST | JSON config | JSON stats | Preview project stats (file count, etc.) |
-| `/api/github/verify` | POST | `{token}` | JSON user info | Verify PAT + check `repo`/`workflow` scopes |
-| `/api/github/publish` | POST | `{token, config, visibility}` | JSON result | Create repo, push code, enable Pages |
-| `/api/netlify/verify` | POST | `{token}` | JSON user info | Verify Netlify PAT |
-| `/api/netlify/publish` | POST | `{token, config}` | JSON result | Create Netlify site + ZIP deploy |
-| `/api/vercel/verify` | POST | `{token}` | JSON user info | Verify Vercel access token |
-| `/api/vercel/publish` | POST | `{token, config}` | JSON result | Create production Vercel file deployment |
-| `/api/download-local` | POST | JSON config | JSON `{project_dir}` | Save project locally for admin dashboard |
-| `/api/launch-admin` | POST | `{project_dir}` | JSON `{admin_url}` | Launch admin-dashboard.py for a project |
-
-### GitHub Security Model
-
-The generator follows security best practices to avoid token leaks and GitHub bans:
-
-1. **PAT scope validation**: `/api/github/verify` checks `X-OAuth-Scopes` header for `repo` and `workflow`. Rejects tokens with missing scopes before any write operations.
-2. **GIT_ASKPASS for push**: Instead of embedding the token in the remote URL (`https://TOKEN@github.com/...`), the generator:
-   - Creates a temp `.bat` askpass script that reads `GIT_PASSWORD` env var
-   - Sets `GIT_ASKPASS` and `GIT_PASSWORD` in the subprocess environment
-   - Uses a clean remote URL (`https://username@github.com/...`)
-   - Deletes the askpass script immediately after use
-   - This prevents the token from appearing in `.git/config` or the process argument list
-3. **No repo deletion on failure**: If `git push` fails after repo creation, the generator does NOT delete the repo. It informs the user so they can decide what to do. Auto-deleting repos is aggressive and could destroy content.
-4. **Session-only tokens**: The token is stored in a JS variable only — never persisted to `localStorage`, disk, or logs.
-5. **GitHub API version header**: All API requests include `X-GitHub-Api-Version: 2022-11-28` for forward compatibility.
-6. **Pages error tolerance**: If GitHub Pages enablement fails (e.g., private repo without Pro), the generator returns a `pages_warning` message instead of failing the entire operation.
-
-### Multi-Provider Publishing
-
-- **GitHub Pages**: Uses GitHub REST APIs plus local `git` with `GIT_ASKPASS`; creates/updates a repository, pushes to `main`, and enables Pages with GitHub Actions.
-- **Netlify**: Uses Netlify's HTTPS API only; creates a site, uploads the generated project ZIP with `Content-Type: application/zip`, polls deploy state, and returns the live Netlify URL.
-- **Vercel**: Uses Vercel's HTTPS API only; converts ZIP entries into inline base64 deployment files, creates a production deployment, polls readiness, and returns the deployment URL.
-- **GUI only**: Users authenticate and publish only through `generator_templates/index.html`. Do not add CLI-only Netlify/Vercel flows as the primary path.
-- **Session-only provider tokens**: Netlify and Vercel tokens follow the same no-persistence rule as GitHub tokens. Do not write them to disk, logs, localStorage, generated projects, subprocess args, or config files.
-- **Persistent local project copy**: Successful Netlify/Vercel publishes also extract the generated ZIP to the local project directory so the Admin Dashboard can open just like the GitHub and ZIP flows.
-- **Admin Dashboard redeploy**: First publish writes non-secret `.quiztool/deploy.json` metadata. The Admin Dashboard uses this to offer one provider-aware Deploy flow for GitHub Pages, Netlify, and Vercel; tokens are still session-only.
-
-### Project Directory Persistence
-
-Generated project directories **persist on disk** after creation. They are never deleted by the generator — this is critical for the admin dashboard and user-added content workflows.
-
-- **Location**: Projects are created as siblings of the QuizTool repo (from source) or next to the EXE (frozen mode).
-- **Re-runs**: ZIP extraction overwrites existing files in-place but **preserves** any extra files the user added via the admin dashboard. The project dir is never `rmtree`'d.
-- **`_get_projects_dir()`**: Returns `BASE_DIR.parent` from source, `Path(sys.executable).parent` in frozen/EXE mode.
-- **`admin-dashboard.bat`**: Every project gets a Windows batch file for double-click launch. It is gitignored so it stays local-only.
-
-### Auto-Dependency Installation (`_ensure_tool`)
-
-The generator can auto-install missing system tools via **winget** (Windows Package Manager, built into Windows 11). This makes the standalone EXE fully autonomous on a fresh system.
-
-| Feature | Dependency | winget Package ID | Auto-Install? |
-|---------|-----------|-------------------|---------------|
-| GitHub publish | `git` | `Git.Git` | ✅ Yes |
-| Netlify publish | none | — | Not needed — HTTPS API only |
-| Vercel publish | none | — | Not needed — HTTPS API only |
-| Admin Dashboard (EXE mode) | `python` | `Python.Python.3.12` | ✅ Yes |
-| Admin Dashboard (EXE mode) | `flask` | via `pip install flask` | ✅ Yes (post-install hook) |
-
-How it works:
-1. `_ensure_tool(name, winget_id, post_install_hook)` checks PATH for the tool
-2. If not found and winget is available, runs `winget install --id <ID> -e --accept-source-agreements --accept-package-agreements`
-3. Re-checks PATH after install; runs post-install hook if provided
-4. If winget isn't available (non-Windows or missing), returns a clear error message
-5. `_install_flask(python_exe)` runs `pip install flask --quiet` after Python is found/installed
-
-### Frozen/EXE Mode Detection
-
-```python
-_FROZEN = getattr(sys, 'frozen', False)
-```
-
-Key behaviors when `_FROZEN` is True:
-- `_get_projects_dir()` → `Path(sys.executable).parent` (next to the EXE, not temp dir)
-- Admin dashboard launch → searches PATH for `python`, auto-installs via winget if missing
-- `sys.executable` is the EXE itself, NOT Python — never pass it as the interpreter for `.py` scripts
-
-### Front-End JSON Safety
-
-All `fetch()` calls to API endpoints use `resp.text()` → `JSON.parse()` in try/catch instead of `resp.json()`. This prevents `JSON.parse: unexpected character at line 1 column 1` errors when the server returns a non-JSON response (e.g., Flask 500 HTML error page).
-
-### Dropped File Placement
-
-When a user drag-drops quiz HTML files, the generator places them in the correct folder based on exact URL matching (`quiz.get('url') == filename`). The substring `in` operator is deliberately **not** used to prevent false matches (e.g., `"heart.html"` matching `"l1-heart.html"`).
-
-### Config schema (POST to `/api/generate`)
-
-```json
-{
-  "project_name": "MyMedQuiz",
-  "topbar_title": "MyMed Quiz Hub",
-  "hero_title": "Select Your <span>Subject</span>",
-  "hero_description": "Choose a subject to begin.",
-  "folders": [
-    {
-      "name": "Gynecology",
-      "icon": "🤰",
-      "description": "Gynecology topics",
-      "quizzes": [
-        {
-          "title": "L1 Anatomy",
-          "description": "Pelvic anatomy",
-          "icon": "📘",
-          "tags": ["Lecture", "30 Questions"],
-          "url": "l1-anatomy.html"
-        }
-      ],
-      "subfolders": [
-        {
-          "name": "Past Years",
-          "icon": "📅",
-          "description": "Past year exams",
-          "quizzes": [...],
-          "subfolders": []
-        }
-      ]
-    }
-  ],
-  "dropped_files": {
-    "l1-anatomy.html": "<entire file content as string>"
-  }
-}
-```
-
-### What the generator produces (ZIP contents)
-
-```
-project/
-├── index.html                 ← Root hub
-├── admin-dashboard.bat        ← Local launcher (gitignored)
-├── <FolderName>/
-│   ├── index.html             ← Folder hub
-│   └── *.html                 ← Quiz/bank files (from dropped_files)
-│   └── <SubFolder>/
-│       ├── index.html
-│       └── *.html
-├── index-engine.js            ← Copied from QuizTool
-├── index-engine.css           ← Copied from QuizTool
-├── quiz-engine.js             ← Copied from QuizTool
-├── bank-engine.js             ← Copied from QuizTool
-├── sync-engine.js             ← Copied from QuizTool
-├── sw.js                      ← Dynamically generated with full precache list
-├── manifest.webmanifest       ← Named after project_name
-├── netlify.toml                ← Static hosting config for Netlify ZIP/Git deploys
-├── vercel.json                 ← Static hosting headers for Vercel deployments
-├── .quiztool/deploy.json       ← Local, gitignored provider redeploy metadata (created after provider publish)
-├── tracker-map.json           ← UID-to-Path mapping
-├── favicon.svg
-├── icon-*.png
-├── scripts/
-│   ├── admin-dashboard.py      ← Copied from QuizTool/scripts/
-│   ├── sync_quiz_assets.py    ← Copied from QuizTool/scripts/
-│   └── standardize_quiz_files.py
-└── .github/workflows/
-    ├── sync-quiz-assets.yml
-    └── jekyll-gh-pages.yml
-```
-
-| Function | Purpose |
-|----------|---------|
-| `generate_sw_js(project_name, paths)` | Builds a robust `sw.js` with `REQUIRED` vs `others` install logic and `SHARED` asset fallback. |
-| `gen_index_html(...)` | Produces hub pages linking to `index-engine.css`. |
-| `build_project_zip(config)` | Full pipeline: ensures engines are prioritized in precache list. |
-| `read_file(name)` | Read from QuizTool root. |
-| `_netlify_request(...)` | Netlify API helper using bearer-token HTTPS requests. |
-| `_vercel_request(...)` | Vercel API helper using bearer-token HTTPS requests. |
-| `_save_zip_to_project_dir(...)` | Extracts generated ZIPs into persistent local project dirs for Admin Dashboard use. |
-
-### 6a. Robust SW Logic in Generator
-The generated `sw.js` includes:
-- **REQUIRED List**: Critical assets (engines, manifest, hubs) that must load for successful installation.
-- **SHARED Fallback**: Resolves `index-engine.css`, etc., from the root if requested from subfolders.
-- **Cache Name**: Prefixed with `quiz-cache-` for generated projects.
-
-### Script self-sufficiency
-
-`generate_project.py` reads scripts from `BASE_DIR / 'scripts'` (QuizTool's own `scripts/` folder). It does **not** depend on any sibling directory (e.g., MU61S8). If `scripts/` is missing, script fields in the ZIP will be empty — always ensure `scripts/admin-dashboard.py`, `scripts/sync_quiz_assets.py`, and `scripts/standardize_quiz_files.py` exist.
-
----
-
-## 7. Tauri Desktop Apps
-
-QuizTool provides two native desktop wrappers built with Tauri, offering zero-dependency execution and deep system integration. **These are the primary, actively developed versions of the generator and admin dashboard.**
-
-### 7a. Project Generator (`tauri/`)
-The primary project generator (replaces the deprecated `generate_project.py`).
-- **Embedded Logic**: Project generation logic ported to pure Rust (`tauri/src/generator.rs`).
-- **Embedded Assets**: Core engine files and scripts are embedded into the binary.
-- **Custom Protocol**: Serves the frontend via `quiztool://localhost/`.
-
-### 7b. Admin Dashboard (`tauri-admin/`)
-The primary local admin dashboard for managing existing projects (replaces the deprecated `admin-dashboard.py`).
-- **Architecture**: Rust backend handles all high-privilege filesystem and Git operations; HTML/JS frontend handles the UI.
-- **IPC Interface**: Frontend uses `invoke` to call Rust commands. The `fetchJson` wrapper bridges standard API calls to these native commands.
-- **Local Server**: Uses a lightweight, synchronous `tiny_http` server to host project files for the preview iframe and external browser windows. This avoids version conflicts with Tauri v2's internal tokio runtime.
-- **CORS & Security**: Implements an explicit `OPTIONS` preflight handler and aggressive Access-Control headers to satisfy browser security policies when communicating between the native protocol (`quiztool-admin://`) and the local server (`http://127.0.0.1`).
-- **Dynamic Path Rewriting**: The server automatically detects the folder depth of the requested file and rewrites the `window.__QUIZ_ENGINE_BASE` script using robust Regex to ensure engines (`quiz-engine.js`, etc.) resolve correctly.
-- **Aggressive Asset Fallbacks**: Shared assets (`sw.js`, manifest, engines, icons) are automatically served from the project root if requested from a subfolder and not found locally.
-- **Features**: 
-  - **Filesystem CRUD**: Native performance for creating, moving, duplicating, and deleting files.
-  - **Git Integration**: Direct execution of `git` commands for status, commit, pull, and push.
-  - **Windows Console Suppression**: Uses `CREATE_NO_WINDOW` flags and `shellexecute-on-windows` to ensure Git and browser actions never trigger console window popups.
-  - **Theme Persistence**: Robust restoration of Light/Dark mode via `localStorage` and native window attributes.
-- **Preview System**: Uses `previewUrl()` helper to point the sidebar iframe to the dynamic local HTTP server.
-
-### 7c. Technical Implementation (Common)
-
-| Component | Role | Implementation |
-|-----------|------|----------------|
-| `main.rs` | App Controller | Registers URI schemes, manages state, and exposes Tauri commands. |
-| `commands.rs` | Logic Layer | Implements backend functionality (FS, Git, etc.) returning `ApiResult<T>`. |
-| `frontend/` | UI Layer | Standard HTML/CSS/JS interface using Tauri's IPC bridge. |
-
-### 7d. Build Instructions
+### 6d. Build Instructions
 
 ```bash
 # Generator
@@ -566,7 +378,25 @@ npm run tauri build
 # Admin Dashboard
 cd tauri-admin/
 npm run tauri build
+
+# Extract frontend (after admin-dashboard.py changes)
+python extract.py
 ```
+
+---
+
+## 7. generate_project.py — The Python Generator (Deprecated)
+
+> **DEPRECATED:** All new features should be implemented in the Tauri native build (`tauri/`). This Python version is kept for backwards compatibility only.
+
+Full documentation preserved in the [previous version of AGENTS.md](https://github.com/eyad-elghareeb/QuizTool). Key points:
+
+- Flask server on `http://localhost:5500`
+- 3-step wizard UI at `generator_templates/index.html`
+- API endpoints for generate, preview, GitHub/Netlify/Vercel publish
+- Same engine files + scripts bundled
+- Same ZIP output structure
+- Project directories persist on disk (never deleted)
 
 ---
 
@@ -574,50 +404,99 @@ npm run tauri build
 
 | Tool | Input | Output | Notes |
 |------|-------|--------|-------|
-| `quiz-maker.html` | GUI form | `*.html` quiz file download | Uses `quiz-template.html` as base |
-| `quiz-maker-js.html` | Paste JSON `QUESTIONS` array | `*.html` quiz file | Fast path for bulk import |
-| `bank-maker.html` | GUI form | `*.html` bank file download | Uses `question-bank-template.html` |
-| `quiz-editor.html` | Upload existing quiz/bank | Modified `*.html` download | Reads `QUIZ_CONFIG` + `QUESTIONS` |
-| `index-editor.html` | Upload existing `index.html` or fresh | Modified `index.html` download | Fetches `index-template.html` as base |
-| `quiz-combiner.html` | Upload multiple quiz/bank files | Single merged bank file | Deduplicates questions |
+| `quiz-maker.html` | GUI form | `*.html` quiz file | Uses `quiz-template.html` |
+| `quiz-maker-js.html` | Paste JSON `QUESTIONS` | `*.html` quiz file | Fast bulk import |
+| `bank-maker.html` | GUI form | `*.html` bank file | Uses `question-bank-template.html` |
+| `quiz-editor.html` | Upload existing quiz/bank | Modified `*.html` | Reads QUIZ_CONFIG + QUESTIONS |
+| `index-editor.html` | Upload index.html or fresh | Modified `index.html` | Fetches `index-template.html` |
+| `quiz-combiner.html` | Upload multiple quiz/bank files | Single merged bank | Deduplicates questions |
+| `flashcard-maker.html` | GUI form + JSON paste | `*.html` flashcard deck | Basic + cloze cards |
+| `flashcard-editor.html` | Upload existing deck | Modified `*.html` | Edits FLASHCARD_BANK |
+| `written-maker.html` | GUI form | `*.html` written assessment | Questions with model answers |
 | `pdf-exporter.html` | Upload quiz/bank HTML | PDF download | Client-side via html2pdf |
-| `js-question-bank.html` | Manual entry in browser | localStorage bank, exportable | In-browser bank manager |
+| `js-question-bank.html` | Manual entry | localStorage bank | Exportable |
 
-All tools are **fully client-side** — no data is sent anywhere. Files are read via `FileReader` and downloaded via `Blob` + `URL.createObjectURL`.
+All tools are **fully client-side** — no data sent anywhere.
 
 ---
 
-## 9. The Sync Script (`scripts/sync_quiz_assets.py`)
+## 9. PDF Generator System
 
-This script is bundled into every generated ZIP and is designed to run inside a generated project (not inside QuizTool itself).
+The Tauri admin dashboard uses a **Python sidecar** architecture for premium PDF generation. The Rust backend (`pdf.rs`) orchestrates a Python process running `pdf_generator.py` (ReportLab).
 
-### What it does when run in a generated project
+### Architecture
 
-1. Scans all `index.html` files for `QUIZZES` arrays
-2. Scans each index's folder for new `*.html` files with `QUIZ_CONFIG` or `BANK_CONFIG`
-3. Appends missing quiz entries to the `QUIZZES` array (never removes existing ones)
-4. Updates root `index.html` with any new subject folders
-5. Rebuilds `sw.js` `PRECACHE_REL_PATHS` and `CACHE_VERSION` hash
-6. Generates/Updates `tracker-map.json` with latest UID-to-Path mapping
-
-### Skipped directories
-
-`.git`, `.github`, `__pycache__`, `_site`, `scripts`, `node_modules`
-
-### Cache version prefix
-
-`quiz-cache-<sha256_12chars>` — generic, not project-specific.
-
-### Running it
-
-```bash
-cd your-generated-project/
-python scripts/sync_quiz_assets.py
+```
+tauri-admin frontend
+    → invoke('export_pdf', {config})
+    → pdf.rs::generate_pdf()
+        → writes config.json to temp dir
+        → spawns python pdf_generator.py config.json output.pdf
+        → reads output.pdf bytes
+        → returns base64 to frontend
+    → frontend downloads
 ```
 
+### Key Files
+
+| File | Role |
+|------|------|
+| `tauri-admin/src/pdf.rs` | Rust sidecar orchestrator: `QuestionData`, `ChildQuestionData`, `QuizData`, `ExportConfig`, `ensure_deps()`, `generate_pdf()` |
+| `scripts/pdf_generator.py` | ReportLab PDF engine (1650 lines). Cover page, hyperlinked TOC, chapter headers, question rendering (standard/styled/detailed/written/mcqnotes), answer key, page templates |
+| `scripts/ensure_pdf_deps.py` | Checks Python 3.8+, pip, ReportLab; auto-installs if missing |
+| `scripts/download_pdf_fonts.py` | Downloads Poppins (headings) + Lora (body) from Google Fonts |
+| `scripts/fonts/` | 9 TTF font files: Poppins (Bold, BoldItalic, Italic, Light, LightItalic, Medium, Regular) + Lora (Italic, Regular) |
+
+### Design Principles
+
+- **Typography**: Poppins for headings/labels, Lora for body, LiberationMono for code
+- **Grid**: 4pt spacing base (4, 8, 12, 16, 24, 36, 48)
+- **Color 60/30/10**: Navy dominant (#1A3A5C), Cobalt/Emerald structure, Gold accent
+- **Cover**: Full-bleed dark with medical SVG icons (stethoscope, DNA, ECG, syringe)
+- **Page sizes**: A3/A4/A5/Letter/Legal/Tabloid, portrait/landscape, compact mode scaling
+
+### Style Modes
+
+| Mode | Description |
+|------|-------------|
+| `standard` | Clean black-on-white, question + options + answer key |
+| `styled` | Gold badge headers, rounded option cards, gradient chapter banners |
+| `detailed` | Extended spacing, section banners, callout explanations |
+| `written` | Essay questions with model answer callout box, children support |
+| `mcqnotes` | Ultra-compact: question + ✓ answer + explanation on tight spacing |
+
+### Child Question Support (`build_written_question`)
+
+Questions with `children` array render sub-questions first (with `a.`, `b.`, etc. labels inline with question text), followed by a single combined `MODEL ANSWER` callout box. Tighter spacing between children (`sp(0.5, fs)`).
+
 ---
 
-## 10. localStorage Key Reference
+## 10. Synchronization System (v2)
+
+Implemented in `sync-engine.src.js`, bundled into `sync-engine.js` via `scripts/build_sync_engine.ps1`.
+
+### Architecture
+- **Signaling**: Public MQTT (`broker.emqx.io`) via WebSockets (Port 8084)
+- **Discovery**: STUN-based room hashing. Devices on same public IP share a room.
+- **Data Transfer**: WebRTC P2P (primary) → MQTT Relay → Multi-Page QR → Text/File (fallback chain)
+
+### Data Integrity (v2.1)
+- Hybrid deduplication using `idx` + `text` matching
+- 1-to-1 matching prevents squashing
+- Counts recalculated post-merge
+- `timestamp`-based progress merging
+- `try...catch` per key for corrupted data safety
+
+### Critical Rules
+- Use `v2` topic prefix
+- `deviceId` stored in `sessionStorage`
+- MQTT auto-disconnect after 60s inactivity
+- Presence messages NOT retained
+- Camera scanning restricted to HTTPS/Localhost
+
+---
+
+## 11. localStorage Key Reference
 
 | Key | Set by | Value |
 |-----|--------|-------|
@@ -629,109 +508,83 @@ python scripts/sync_quiz_assets.py
 
 ---
 
-## 11. Global API: What the Engines Expose
+## 12. Global API: Engine Functions
 
-### quiz-engine.js (global functions)
-
+### quiz-engine.js
 `startQuiz()`, `goTo(idx)`, `nextQuestion()`, `toggleFlag(idx)`, `attemptSubmit()`, `confirmSubmit()`, `restartQuiz()`, `filterResults(filter, btn)`, `exportToPDF()`, `toggleTheme()`, `navigateToIndex(event)`, `showToast(msg, actions[])`, `confirmResetProgress()`, `saveTrackerData()`, `updateDashboardBadge()`, `openTrackerDashboard(scope?)`, `openKbHelp()`, `closeKbHelp()`
 
-**`navigateToIndex`** always goes to `index.html` — relative to the quiz file's location, navigating to its immediate parent folder's hub.
-
 ### bank-engine.js extras
+`selectSessionQuestions(count, order)`, `getBankProgress()`, `saveBankProgress(p)`, `resetBankProgress()`, `adjustCount(delta)`, `setCount(n)`, `autoSetTime(n)`
 
-`selectSessionQuestions(count, order)` — `order` is `'sequential'` or `'random'`
-`getBankProgress()`, `saveBankProgress(p)`, `resetBankProgress()`
-`adjustCount(delta)`, `setCount(n)`, `autoSetTime(n)`
-
-### index-engine.js (global functions)
-
+### index-engine.js
 `renderQuizzes()`, `toggleTheme()`, `showToast(msg)`, `openTrackerDashboard()`, `closeTrackerDashboard()`, `confirmClearTrackerData()`, `closeClearTrackerModal()`, `clearAllTrackerData()`, `removeTrackerItem(uid, qIdx)`, `exportTrackerToPDF()`, `updateDashboardBadge()`
 
-The modal (`#clear-tracker-modal`) and its styles are **dynamically injected by `index-engine.js`** at load time — do not add them to HTML manually.
+### flashcard-engine.js
+`startSession()`, `flipCard()`, `nextCard()`, `prevCard()`, `rateCard(difficulty)`, `shuffleDeck()`, `getDueCards()`, `resetSession()`
+
+### written-engine.js
+`startAssessment()`, `submitAnswer(qIdx)`, `getAiFeedback(qIdx)`, `renderMarkdown(text)`, `saveDraft()`, `loadDraft()`, `exportToPDF()`
+
+### search-engine.js
+`searchAll(query)`, `searchContent(query)`, `searchFiles(query)`, `highlightMatches(text, query)`, `openResult(result)`
 
 ---
 
-## 12. Question Tracker System
+## 13. Question Tracker System
 
-The tracker is a persistence layer that aggregates mistakes and flagged items across all sessions for long-term review. It is shared between all engines and hub pages.
+Aggregates mistakes and flagged items across all sessions for long-term review. Shared between all engines and hub pages.
 
-### 11a. Data Lifecycle
-1. **Capture**: On `confirmSubmit()`, the engine calls `saveTrackerData()`.
-2. **Merge**: It reads existing data for the UID and merges it with the current session.
-   - Questions in the **current session** (by global index for banks, or by text for quizzes) are updated.
-   - Historical questions **not present** in the current session are preserved.
-3. **Storage**: Data is saved in `localStorage` under `quiz_tracker_v2_<uid>`. The UID is added to a global index `quiz_tracker_keys`.
+### Data Lifecycle
+1. **Capture**: `confirmSubmit()` calls `saveTrackerData()`
+2. **Merge**: Existing data merged with current session (by global index for banks, by text for quizzes)
+3. **Storage**: `localStorage` under `quiz_tracker_v2_<uid>`, UID added to `quiz_tracker_keys`
 
-### 11b. Dashboard Features
-- **Scoped View**: Hub pages automatically filter the dashboard to the current folder's quizzes.
-- **Review Mode**: Users can select specific quizzes or folders and click "Start Review" to launch a dynamic session containing only those tracked questions.
-- **Deduplication**: The dashboard identifies questions by text + index to prevent duplicates. It only "hides" a flagged item into a wrong item's entry if it's a confirmed match (same index or missing index with identical text).
-- **Tracker Healing**: If a quiz is moved to a different folder or renamed, the tracker uses `tracker-map.json` to automatically update the stored paths in the background when the dashboard is opened.
-- **Selective Clearing**: `confirmClearTrackerData()` only deletes data for the currently visible scope (Current Folder, All, or This Quiz).
+### Dashboard Features
+- Scoped view (current folder, all, or single quiz)
+- Review mode: dynamic session from tracked questions
+- Deduplication by text + index
+- Tracker Healing: auto-updates stored paths via `tracker-map.json`
+- Selective clearing by scope
 
 ---
 
-## 13. Highlighter & Markup System
+## 14. Highlighter & Markup System
 
-A robust toolset for annotating questions during a session. Markups are persisted in the user's progress and restored on reload.
-
-### 12a. Highlighting
-- **Activation**: Toggle via the 🖍️ icon in the topbar or the `H` key.
-- **Colors**: Provides 4 highlight colors (Yellow, Green, Blue, Red) and an Eraser mode.
-- **Auto-Apply**: When active, simply selecting text (Mouse drag or Touch selection) automatically applies the last selected color.
-- **Persistence**: Stored in `state.highlights[qIdx]` as offsets. These are saved to `localStorage` progress automatically.
-
-### 12b. Strikethrough (Process of Elimination)
-- **Usage**: Right-click on an option label, or press the `S` key while hovering over an option.
-- **Visual**: Places a red line through the option text and dims it.
-- **Persistence**: Stored in `state.strikethrough[qIdx]`.
-
-### 12c. Technical Implementation
-Markups are applied dynamically during `renderQuestion()` by injecting `<mark>` tags into the text nodes based on stored offsets. This prevents breaking the underlying data while allowing rich visuals.
+- **Highlighting**: Toggle via 🖍️ icon or `H` key. 4 colors + Eraser. Auto-apply on selection.
+- **Strikethrough**: Right-click option label or `S` key while hovering. Red line + dim.
+- **Persistence**: Offsets stored in `state.highlights[qIdx]`, `state.strikethrough[qIdx]`, saved to localStorage.
 
 ---
 
-## 14. Keyboard Shortcut System
-
-The engine includes a full keyboard interface to speed up MCQ solving.
+## 15. Keyboard Shortcut System
 
 | Key | Action |
 |-----|--------|
 | `←` / `→` | Previous / Next question |
-| `1` - `4` | Select option A, B, C, or D (or set highlight color in hl mode) |
-| `F` | Toggle Flag for review |
-| `H` | Toggle Highlighter mode |
-| `S` | Toggle Strikethrough (while hovering an option) |
-| `Enter` | Submit quiz (from question screen) |
-| `/` | Show / Hide keyboard shortcut help |
-| `Esc` | Close modals or help panel |
+| `1` - `4` | Select option / set highlight color |
+| `F` | Toggle Flag |
+| `H` | Toggle Highlighter |
+| `S` | Toggle Strikethrough (on hover) |
+| `Enter` | Submit quiz |
+| `/` | Toggle keyboard help |
+| `Esc` | Close modals / help panel |
 
 ---
 
-## 15. Session Management & Persistence
+## 16. Session Management & Persistence
 
-The engine ensures that a user's progress is never lost, even if they close the browser or refresh the page.
-
-### 14a. Auto-Save Logic
-- **Triggers**: Every time an option is selected, a question is flagged, or a highlight is applied, `saveProgress()` is called.
-- **Data**: The current `state` (answers, flags, elapsed time, highlights, etc.) is serialized to JSON.
-- **Storage**: Saved in `localStorage` under `quiz_progress_v1_<uid_sanitized>`.
-
-### 14b. Restore Workflow
-1. **Detection**: On page load, the engine checks for an existing progress key for the current UID.
-2. **Toast**: If found, a toast notification appears: *"Resume previous session? [Restore] [Dismiss]"*.
-3. **Action**: 
-   - **Restore**: Overwrites the initial state with the saved data and jumps to the last seen question.
-   - **Dismiss**: Deletes the saved progress and starts fresh.
+- **Auto-Save**: Every option select, flag, or highlight triggers `saveProgress()`
+- **Restore**: On load, detects existing progress → toast with [Restore] [Dismiss]
+- **Storage**: `quiz_progress_v1_<uid_sanitized>` in localStorage
 
 ---
 
-## 16. CSS / Theme System
+## 17. CSS / Theme System
 
-All CSS is injected by the engines — do not add external stylesheets to quiz/bank files.
+All CSS injected by engines. No external stylesheets in quiz/bank/written/flashcard files.
 
-| Variable | Dark value | Light value |
-|----------|-----------|------------|
+| Variable | Dark | Light |
+|----------|------|-------|
 | `--bg` | `#0d1117` | `#f3f0eb` |
 | `--surface` | `#161b22` | `#ffffff` |
 | `--surface2` | `#1c2330` | `#f8f6f1` |
@@ -743,84 +596,27 @@ All CSS is injected by the engines — do not add external stylesheets to quiz/b
 | `--wrong` | `#da3633` | `#dc2626` |
 | `--flagged` | `#58a6ff` | `#2563eb` |
 
-`index-engine.css` handles hub page layout only (topbar, grid, cards). Quiz/bank pages have all styles embedded by their engine.
-
 ---
 
-## 17. CRITICAL RULES: DO NOT BREAK
+## 18. Performance & Offline Resilience
 
-To maintain the stability of the toolkit, the accuracy of the project generator, and the offline functionality of all produced sites, every agent MUST follow these rules:
+### Eager Folder Title Caching
+`saveTrackerData()` uses `_folderTitleCache` to maintain human-readable folder names offline. Never remove `_eagerFolderTitle` or `fetchFolderTitle`.
 
-### 16a. Project Generator (`generate_project.py`)
-- **Never reference external directories**: The generator MUST be self-contained. It should only read from the `QuizTool` root or its own subfolders. Never reference `../MU61S8/` or other sibling repos.
-- **Never skip `generate_sw_js`**: In the `build_project_zip` function, always use the dynamic `generate_sw_js` helper instead of reading a static `sw.js`. The generated SW needs a manifest specific to the new project's files.
-- **Prioritize Engines in ZIP**: When building the precache list for a generated project, the engines (`quiz-engine.js`, `index-engine.js`, `sync-engine.js`, etc.) MUST be included in the `REQUIRED` list to ensure the PWA is functional even if some quiz files fail to cache.
-- **Never embed tokens in git URLs**: When pushing to GitHub, always use `GIT_ASKPASS` with an env var instead of embedding the PAT in the remote URL. Tokens in URLs persist in `.git/config` and are visible in process lists.
-- **Never auto-delete repos on push failure**: If `git push` fails after repo creation, inform the user — do not call the GitHub DELETE repo API. The user may have content they want to preserve.
-- **Validate PAT scopes before use**: Always check `X-OAuth-Scopes` header for `repo` and `workflow` before attempting any write operations. A token with only `public_repo` will fail on private repo creation.
-- **Never delete project directories**: Project dirs must persist for admin dashboard and user-added content. ZIP extraction overwrites in-place but never `rmtree`s the directory.
-- **Never use `sys.executable` as Python in frozen mode**: In EXE mode, `sys.executable` points to the EXE itself. Use `_ensure_tool('python')` or `shutil.which('python')` instead.
-- **Use exact filename matching for dropped files**: When matching dropped files to folder quiz entries, use `quiz.get('url') == filename` only. Never use substring matching (`filename in url`) — it causes false matches like `"heart.html"` matching `"l1-heart.html"`.
-- **Always return `str(project_dir)` from `_extract_and_push`**: `Path` objects are not JSON serializable. Returning a Path crashes `jsonify()` with a 500 error.
-- **Guard all `fetch()` responses with `resp.text()` → `JSON.parse()`**: Never call `resp.json()` directly — it throws `JSON.parse: unexpected character` on non-JSON server responses (e.g., Flask 500 HTML pages).
-- **Always include `dropped_files` in provider publish requests**: The front-end provider publish functions must attach `config.dropped_files = droppedFilesContent`, otherwise uploaded quiz HTML files are missing from the deployed project.
+### O(1) Badge Rendering
+`updateDashboardBadge` uses regex on raw localStorage string — never `JSON.parse`. Preserve `wrongCount` and `flaggedCount` as top-level JSON properties.
 
-### 16b. Templates & Markers
-- **Never remove parsing markers**: The comments `/* [QUIZ_CONFIG_START/END] */`, `/* [QUESTIONS_START/END] */`, etc., are functional code. Removing them breaks the `sync_quiz_assets.py` script and the GUI editors (`quiz-editor.html`, etc.).
-- **SW Registration in `index-template.html`**: Every index page produced by the toolkit MUST include the service worker registration block. Never remove this from the template.
+### Quota Exceeded Safety
+All storage mutations wrapped in `try...catch`. `QuotaExceededError` (code 22) shows toast to clear tracker data.
 
-### 16c. Path Resolution & Engines
-- **Preserve `__QUIZ_ENGINE_BASE`**: This snippet is the only thing allowing quizzes to work in deep subfolders. Never replace it with a hardcoded `../` or `/` path.
-- **Shared Assets**: The `SHARED` fallback list in the service worker is critical. If you rename a core asset (like `index-engine.css` or `tracker-map.json`), you MUST update the fallback logic in both the toolkit `sw.js` and the generator's `generate_sw_js`.
+### Debounced State Persistence
+`debounceSaveProgress()` (500ms) ensures no data loss on quick close.
 
-### 16d. Data Safety (localStorage)
-- **Stable UIDs**: Never modify the `uid` of a quiz file once it has been distributed. This orphans all user progress and tracker data.
-- **Scoped Clear**: In `index-engine.js`, always use `confirmClearTrackerData()` before performing any deletion. Never call `localStorage.removeItem()` directly in a UI button without a confirmation step.
+### Tracker Healing
+Fetches `tracker-map.json` on dashboard open, silently updates stale `path`/`folderPath` entries.
 
-### 16e. Offline Logic
-- **Toolkit vs Project Caches**: The toolkit uses `quiz-tool-` as a cache prefix. Generated projects use `quiz-cache-`. Never mix these, as it causes cross-contamination of offline data.
-- **Network-First for Hubs**: All `index.html` (hub) pages MUST use a network-first strategy in the service worker to ensure users see the latest quiz list when online.
-
-### 16f. Tauri Build Artifacts
-- **Tauri outputs are gitignored**: Both QuizTool itself and generated projects exclude Tauri build directories via `.gitignore`. The entries `src-tauri/target/` and `tauri/target/` prevent Rust build artifacts from being tracked. If a Tauri desktop wrapper is added, install the [Tauri CLI](https://v2.tauri.app/) and initialize in a `src-tauri/` directory. The PWA remains the primary distribution channel; Tauri is an optional native wrapper.
-
----
-
-## 18. Performance & Offline Resilience Architecture
-
-The platform includes several optimizations to ensure high performance on mobile devices and robust offline capability:
-
-### 17a. Eager Folder Title Caching
-The tracker dashboard relies on folder titles (e.g., "Gynecology") rather than raw paths. Because fetching `index.html` fails when fully offline, the engines use an eager-fetching mechanism:
-- When a hub page loads, it fetches and caches all folder titles in memory (`_folderTitleCache`).
-- When saving tracker data, `saveTrackerData()` checks this cache or fetches it as a fallback, ensuring offline saves maintain human-readable folder names in the dashboard.
-- **Rule:** Never remove `_eagerFolderTitle` or `fetchFolderTitle` logic.
-
-### 17b. O(1) Badge Rendering
-To avoid main-thread blocking when tracking hundreds of quizzes, `updateDashboardBadge` and `updateBadge` DO NOT use `JSON.parse` to count wrong/flagged questions.
-- They use regex (`raw.match(/"wrongCount"\s*:\s*(\d+)/)`) directly on the `localStorage` string.
-- **Rule:** If you change the tracker schema, you MUST preserve `wrongCount` and `flaggedCount` as top-level string-matchable JSON properties.
-
-### 17c. Quota Exceeded Safety
-Because tracker data is stored indefinitely, heavy users may hit the 5MB `localStorage` limit.
-- All storage mutation functions (`saveProgress`, `saveTrackerData`, `saveBankProgress`) are wrapped in `try...catch` blocks.
-- If a `QuotaExceededError` (or code 22) is caught, the engine safely intercepts it and fires a toast notification instructing the user to clear tracker data, preventing silent failures.
-
-### 17d. Debounced State Persistence
-Quiz and bank states (`answers`, `flagged`) are saved *immediately* upon user interaction rather than waiting for an interval timer.
-- Handled via `debounceSaveProgress()` (500ms debounce).
-- This ensures no data is lost if the user quickly closes the browser after answering.
-
-### 17f. Tracker Healing (Background Sync)
-When the tracker dashboard is opened, the engine fetches `tracker-map.json` in the background.
-- It compares the stored `path` and `folderPath` for every tracked quiz against the master map.
-- If a discrepancy is found (e.g., a quiz was moved), it silently updates the `localStorage` entry.
-- This ensures that "Start Review" and "Go to Quiz" links always work even after repo restructures.
-
-### 17g. Animation & Render Optimizations
-- **Single-Reflow Transitions**: Screen transitions and start-card animations use a single `.offsetHeight` reflow on the parent container to reset all child animations simultaneously.
-- **Reduced will-change**: Used sparingly to prevent browser memory bloat while still ensuring smooth transforms.
-- **Timer Throttling**: The quiz timer UI updates every 500ms instead of 100ms, significantly reducing main-thread load on low-end mobile devices without losing perceived accuracy.
+### Animation Optimizations
+Single-reflow transitions, reduced `will-change`, timer throttled to 500ms.
 
 ---
 
@@ -831,8 +627,9 @@ When the tracker dashboard is opened, the engine fetches `tracker-map.json` in t
    ```js
    { title: "New Tool", description: "What it does", icon: "🔧", tags: ["Tool"], url: "new-tool.html" }
    ```
-3. The tool should be **fully client-side** — no server calls, no dependencies beyond what's already in the toolkit
+3. Fully client-side — no server calls
 4. Use `localStorage.getItem('quiz-theme')` to respect the current theme
+5. If it defines a new file format: add markers, add a template, register in `parser.rs` `FileType` enum, add validation in `validate_dashboard_content()`, add to `templates.rs::create_*_html()`, add engine to `engines.rs`, add the engine file to the repo root.
 
 ---
 
@@ -842,452 +639,108 @@ When the tracker dashboard is opened, the engine fetches `tracker-map.json` in t
 QuizTool (toolkit pages)
   index.html → index-engine.js, index-engine.css, sw.js (prefix: quiz-tool-)
 
-  quiz-maker.html      → quiz-template.html (fetched at runtime)
-  bank-maker.html      → question-bank-template.html (fetched at runtime)
-  index-editor.html    → index-template.html (fetched at runtime)
-  quiz-editor.html     → [uploads existing quiz file]
-  quiz-combiner.html   → [uploads multiple quiz/bank files]
+  quiz-maker.html      → quiz-template.html
+  bank-maker.html      → question-bank-template.html
+  index-editor.html    → index-template.html
+  flashcard-maker.html → flashcard-template.html
+  written-maker.html   → written-template.html
 
-generate_project.py (Flask)
-  → reads: index-engine.js, index-engine.css, quiz-engine.js, bank-engine.js
-  → reads: scripts/sync_quiz_assets.py, scripts/standardize_quiz_files.py, scripts/admin-dashboard.py
-  → reads: generator_templates/index.html  (the 3-step wizard UI)
-  → reads: icon-*.png, quiz-engine-test.html (optional)
-  → generates: gen_index_html() for all index pages
-  → generates: generate_sw_js() for sw.js with full precache list
-  → generates: admin-dashboard.bat (gitignored local launcher)
-  → GitHub API: /api/github/verify (PAT + scope check)
-  → GitHub API: /api/github/publish (create repo, GIT_ASKPASS push, enable Pages)
-  → Netlify API: /api/netlify/verify + /api/netlify/publish (site + ZIP deploy)
-  → Vercel API: /api/vercel/verify + /api/vercel/publish (production file deploy)
-  → auto-installs: git (via _ensure_tool + winget) if missing
-  → auto-installs: python + flask (via _ensure_tool + winget + pip) if missing (EXE mode)
-  → outputs: project.zip OR direct provider publish
-  → can launch: admin-dashboard.py for generated project
-  → project dirs persist on disk (never rmtree'd)
+tauri/ (Rust Generator)
+  engines.rs → embeds: 8 engines, templates, scripts, icons
+  generator.rs → build_project_zip()
+  api_helpers.rs → GitHub/Netlify/Vercel API
+
+tauri-admin/ (Rust Admin Dashboard)
+  commands.rs → 25+ IPC commands
+  parser.rs → FileType enum (6 types), validation
+  pdf.rs → Python ReportLab sidecar
+  deploy.rs → Provider publish
+  server.rs → HTTP preview server
+  templates.rs → HTML generators
+  frontend/ ← extracted from admin-dashboard.py via extract.py
+
+PDF Pipeline
+  pdf.rs → scripts/ensure_pdf_deps.py → scripts/pdf_generator.py → ReportLab
 ```
 
-### Standalone EXE Compatibility (`build_exe.py`)
+---
 
-The PyInstaller EXE is designed to run on a completely fresh Windows system:
+## 21. CI/CD — GitHub Actions
 
-| Feature | Standalone? | Requirement |
-|---------|------------|-------------|
-| Web UI + ZIP generation | ✅ Yes | All files bundled by PyInstaller |
-| Local download | ✅ Yes | Same — all content embedded |
-| GitHub token verify | ✅ Yes | Uses `urllib.request` (stdlib), needs internet |
-| GitHub publish | ✅ Auto-installs | `git` installed via winget if missing |
-| Netlify publish | ✅ Yes | Uses `urllib.request` (stdlib), needs internet |
-| Vercel publish | ✅ Yes | Uses `urllib.request` (stdlib), needs internet |
-| Admin Dashboard | ✅ Auto-installs | `python` + `flask` installed via winget + pip if missing |
-| Auto-open browser | ✅ Graceful | `webbrowser.open()` silently fails if no browser |
-
-Bundled data files in `build_exe.py`:
-- `generator_templates/` — the wizard UI
-- Engine JS/CSS — `quiz-engine.js`, `bank-engine.js`, `index-engine.js`, `index-engine.css`
-- `scripts/` — admin-dashboard.py, sync_quiz_assets.py, standardize_quiz_files.py
-- Icons — `icon-*.png`
-- Optional — `quiz-engine-test.html` (if exists)
-
-**NOT bundled** (generated dynamically): `sw.js`, `manifest.webmanifest`, `tracker-map.json`, `favicon.svg`, `.gitignore`
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `jekyll-gh-pages.yml` | Push to `main` | Deploys QuizTool hub to GitHub Pages |
+| `build-tauri-release.yml` | Push tags / manual | Builds `tauri/` and `tauri-admin/` → creates platform-specific release artifacts |
 
 ---
 
-## 21. Local Admin Dashboard (`scripts/admin-dashboard.py`)
+## 22. CRITICAL RULES: DO NOT BREAK
 
-> **DEPRECATED:** The Python-based `admin-dashboard.py` is deprecated. All new features should be implemented in the Tauri native build (`tauri-admin/`). This Python version is kept strictly for backwards compatibility.
+### Engines & Templates
+- **Never remove parsing markers**: `/* [QUIZ_CONFIG_START/END] */`, `/* [FLASHCARD_CONFIG_START/END] */`, etc. break `sync_quiz_assets.py`, editors, and the Tauri admin parser.
+- **Preserve engine path resolution**: Never replace `__{NAME}_ENGINE_BASE` with hardcoded paths.
+- **SW Registration**: Every index page MUST include the service worker registration block.
 
-A local Flask-based web interface for managing quiz projects. Bundled into generated ZIPs and used for development. Runs on `http://localhost:5500/admin/` by default (configurable via `--port` CLI arg or `QUIZTOOL_ADMIN_PORT` env var).
+### Data Safety
+- **Stable UIDs**: Never modify a file's `uid` after distribution — it orphans all learner progress.
+- **Scoped Clear**: Always use `confirmClearTrackerData()` before deleting tracker data.
 
-### 20a. Features
-- **Workspace Overview**: Project stats, recent files, git cleanliness summary, and links to reusable `QuizTool` reference editors/templates.
-- **Responsive Workspace**: Fluid layout with a responsive sidebar (`minmax(380px, 24%)`) and auto-fitting grids for optimal space utilization on all screen sizes.
-- **File Browser**: Searchable/filterable tree view of all HTML files in the project with type filters (All, Quiz, Bank, Index, Other HTML).
-- **Context Menus**: Right-click on files and folders for quick actions (new quiz/bank here, duplicate, move/rename, delete, copy path, collapse/expand).
-- **File Manager**: Create folders, create/move/rename/delete quiz or bank files, duplicate files to any folder.
-- **New File Wizard**: Multi-step guided creation (Setup → Source → Builder) with:
-  - **Presets**: Blank Quiz, Lecture MCQ, Past Paper, Quick Review, All Bank — each with tailored defaults
-  - **Source Modes**: Manual Builder, Paste JSON, Paste MCQ Text, Clone Existing Quiz/Bank
-  - **Import Helpers**: Drag-and-drop JSON files, plain-text MCQ parsing, clone from existing files
-  - **Live Summary Sidebar**: Shows derived UID, filename, target folder, and preflight validation in real time
-  - **Create & Keep Adding**: Create a file and immediately start another without closing the wizard
-- **Path-Safe Generation**:
-  - New folders automatically get a proper `index.html` hub page with depth-aware root asset prefixes.
-  - New quiz/bank files derive **stable path-based UIDs** using the `folder_subfolder_filename` pattern.
-- **Structured Editors**:
-  - **Quiz/Bank Editor**: Edit `QUIZ_CONFIG`/`BANK_CONFIG` metadata, reorder/duplicate/remove questions, add/remove options per question (not fixed at 4), and update options/explanations. Supports collapse/expand all questions for scanning large banks.
-  - **Index Editor**: Edit `QUIZZES` array entries, reorder cards, and update page title/hero copy.
-- **Multi-Tab Viewer**:
-  - **Preview**: Live iframe preview via an admin-specific preview route that rewrites quiz/bank engine base paths correctly.
-  - **Editor**: Structured metadata and content editor (for quiz/bank/index files).
-  - **Metadata**: Parsed JSON metadata view.
-  - **Raw HTML**: Raw HTML editor for direct text editing.
-- **Validation System**: Server-side + client-side validation of file content. Displays errors and warnings in a validation strip. Preflight checks in the New File Wizard before creation.
-- **UID Change Protection**: When saving a file with a changed UID, a confirmation modal warns about orphaning learner progress. Requires explicit user confirmation to proceed.
-- **PDF Export**: Integrated viewer with pre-filled URLs for the current file; supports direct download or opening in a new tab. Also available as a standalone tool at `/admin/pdf-exporter` with multiple layouts (standard, styled, MCQ notes, two-column) and quality options.
-- **Activity Feed**: Compact recent activity panel for the latest save/sync/deploy results.
-- **Provider-Aware Deploy**: Unified Deploy flow for GitHub Pages, Netlify, and Vercel. GitHub uses sync + pull + commit + token-safe push; Netlify/Vercel package the current project and deploy through HTTPS APIs. Individual Git commit/pull/push routes remain available for manual controls.
-- **Sync**: Run `sync_quiz_assets.py` to auto-update indexes, tracker map, and service worker after content changes.
-- **Conversion**: Convert quiz ↔ bank files while preserving the existing `uid`.
-- **Quick Open**: `Ctrl+K` command palette for fast file navigation by path, title, or UID.
-- **Keyboard Shortcuts**: `Ctrl+S` (save), `Ctrl+K` (quick open), `/` (focus search), `Esc` (close modals/context menus).
-- **Unsaved Changes Protection**: `beforeunload` handler prevents accidental tab close. Save indicator in topbar shows current state (ready / unsaved changes / saved, sync recommended / syncing / sync failed).
-- **UI Preferences Persistence**: Filter state, search query, expanded folders, recent folders, and recent presets are saved to `localStorage` and restored on reload.
+### Tauri
+- **Never commit `target/`**: Rust build directories can be 1GB+. `.gitignore` entries for `tauri/target/` and `src-tauri/target/` must remain.
+- **Run `extract.py` after `admin-dashboard.py` changes**: The Tauri admin frontend is derived from it. Without extraction, the frontend is stale.
+- **Keep CSP at `null`**: All engines inject inline `<style>` and `<script>` tags. A strict CSP breaks everything.
 
-### 20b. Running the Dashboard
+### PDF Generator
+- **Always check dependencies first**: `ensure_pdf_deps()` before `generate_pdf()`. Missing Python or ReportLab causes silent failure.
+- **Font fallback chain**: Poppins → Lora → LiberationMono → built-in Helvetica. Never assume a font is available.
+- **Thread safety**: `OnceLock` in `pdf.rs` ensures dep check runs once per session. Do not remove.
+- **Windows console**: Use `CREATE_NO_WINDOW` flag when spawning Python sidecar to prevent CMD popups.
 
-```bash
-cd your-quiz-project/
-pip install flask
-python scripts/admin-dashboard.py
-# Opens http://localhost:5500/admin/ automatically
+### Python Generator (deprecated but still maintained)
+- **Never embed tokens in git URLs**: Use `GIT_ASKPASS` with env var.
+- **Never delete project directories**: Persist for admin dashboard. `rmtree` is banned.
+- **Guard all `fetch()` with `resp.text()` → `JSON.parse()`**: Never `resp.json()` directly.
+- **Use exact filename matching for dropped files**: `quiz.get('url') == filename`. No substring matching.
 
-# Custom port:
-python scripts/admin-dashboard.py --port 5501
-# Or via environment variable:
-QUIZTOOL_ADMIN_PORT=5501 python scripts/admin-dashboard.py
-```
-
-### 20c. API Endpoints
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/admin/` | GET | Dashboard SPA |
-| `/admin/files` | GET | List all HTML files + folders |
-| `/admin/project-state` | GET | Project name, summary stats, git status, deploy metadata, builtin tools |
-| `/admin/deploy-info` | GET | Current provider deploy metadata + git status |
-| `/admin/provider-verify` | POST | Verify session-only provider token |
-| `/admin/provider-deploy` | POST | Run sync and deploy to GitHub Pages, Netlify, or Vercel |
-| `/admin/load-file?path=` | GET | Load file content + parsed metadata |
-| `/admin/preview/<path>` | GET | Preview HTML with rewritten engine base paths |
-| `/admin/save-file` | POST | Save file content (with UID change validation) |
-| `/admin/validate-file` | POST | Validate file content, return issues |
-| `/admin/create-folder` | POST | Create folder + hub index.html |
-| `/admin/create-file` | POST | Create quiz/bank file with questions |
-| `/admin/duplicate-file` | POST | Duplicate file to target folder with new UID |
-| `/admin/move-file` | POST | Move/rename file |
-| `/admin/delete-file` | POST | Delete file |
-| `/admin/delete-folder` | POST | Delete folder and all contents |
-| `/admin/convert-file` | POST | Convert quiz ↔ bank preserving UID |
-| `/admin/run-sync` | POST | Execute `sync_quiz_assets.py` |
-| `/admin/git-commit` | POST | `git add -A` + `git commit` |
-| `/admin/git-pull` | POST | `git pull --rebase --autostash` |
-| `/admin/git-push` | POST | `git push` |
-| `/admin/pdf-exporter` | GET | Standalone PDF exporter tool |
-
-### 20d. File Type Detection
-
-Files are automatically classified as:
-- **quiz**: Contains `QUIZ_CONFIG` + `QUESTIONS`
-- **bank**: Contains `BANK_CONFIG` + `QUESTION_BANK`
-- **index**: Contains `QUIZZES` array
-- **html**: Generic HTML file (raw editor only)
-
-### 20e. Validation Rules
-
-The dashboard validates files before saving:
-- **Errors** (block save): Missing question prompt, fewer than 2 options, invalid correct answer index, unparseable question data
-- **Warnings** (allow save): Empty question list, blank option text, UID change detected (requires confirmation)
-- Validation runs both server-side (on save) and client-side (on edit, debounced at 350ms)
-
-### 20f. Structured Editor Limitations
-- Quiz/bank editors automatically rebuild valid HTML when metadata or questions change
-- Index editor parses and updates the `QUIZZES` const block plus the page `<title>` and hero section
-- Existing UIDs are preserved automatically; new files generate path-based UIDs by default
-- Preview reflects the last saved version of the file, not unsaved editor changes
-- The inline preview is intended for local verification; the separate **Open Preview** action still loads the file directly from its real project path
-- Not recommended for complex custom HTML beyond the known schemas; use Raw HTML for advanced edits
-
-### 20g. Wizard Presets
-
-| Preset | Type | Starter Questions | Default Description |
-|--------|------|-------------------|---------------------|
-| Blank Quiz | quiz | 1 | — |
-| Lecture MCQ | quiz | 5 | Lecture MCQs |
-| Past Paper | quiz | 10 | Past paper MCQs |
-| Quick Review | quiz | 3 | Quick review questions |
-| All Bank | bank | 8 | All questions in one bank file |
-
-### 20h. Import Parsing
-
-The wizard's "Paste JSON" and "Paste MCQ Text" source modes use `parseImportedQuestions()` which supports:
-- Raw JSON arrays of question objects
-- JavaScript `const QUESTIONS = [...]` / `const QUESTION_BANK = [...]` blocks
-- Plain-text MCQ format: questions separated by blank lines, options prefixed with `-` or `A)`, answer lines like `Answer: C` or `Correct: 2`, explanation lines like `Explanation: ...`
-- Drag-and-drop of `.json` files onto the import textarea
-
-### 20i. Port Configuration
-
-The dashboard supports custom ports for cases where the default 5500 is occupied (e.g., when launched by the QuizTool generator):
-- CLI: `python scripts/admin-dashboard.py --port 5501`
-- Env var: `QUIZTOOL_ADMIN_PORT=5501 python scripts/admin-dashboard.py`
-- The generator uses `QUIZTOOL_ADMIN_PORT` to avoid conflicts with its own Flask server on 5500
-
-### 20j. PDF Exporter
-
-Available at `/admin/pdf-exporter` as a standalone built-in tool. Features:
-- Load any quiz/bank by URL
-- Multiple layout modes: Standard, Styled (badges + formatted), MCQ Notes (compact answer-only), Two-Column Textbook
-- Show/hide answers toggle
-- High-quality mode (2x scale rendering)
-- Direct PDF download via html2pdf.js or browser Print dialog
-
----
-
-## 21. Synchronization System (v2)
-
-The synchronization system is a high-performance, P2P-first engine designed for zero-config data exchange between devices. It is implemented in `sync-engine.src.js` and bundled with dependencies into `sync-engine.js`.
-
-### 21a. Architecture Overview
-- **Signaling**: Uses public MQTT (`broker.emqx.io`) via WebSockets (Port 8084).
-- **Discovery**: STUN-based room hashing. Devices on the same public IP automatically join the same "Room" and see each other's presence.
-- **Data Transfer**:
-    1. **WebRTC P2P**: Primary method. Fast, direct, and private.
-    2. **MQTT Relay Fallback**: Automatically activates if WebRTC is blocked by firewalls. Sends compressed data through the MQTT broker.
-    3. **Multi-Page QR**: Visual fallback. Splits large datasets into chunks with on-screen pagination.
-    4. **Text/File**: Manual fallback. Copy/paste or backup file import.
-
-### 21b. Data Integrity & Merging (v2.1)
-To prevent data loss and squashing, the engine uses a high-fidelity merge strategy:
-- **Hybrid Deduplication**: Uses a combination of `idx` (index) and `text` (question prompt). If a question is missing an index on one device but has it on another, it uses the text as a stable anchor for matching.
-- **1-to-1 Matching**: During sync, imported questions are matched to existing local questions exactly once. Once an existing question is "consumed" by a merge, it is no longer available for further merges. This prevents "squashing" different questions with generic text (like "Select the correct statement") into a single entry.
-- **Recalculated Counts**: The `wrongCount` and `flaggedCount` properties are automatically recalculated from the merged lists after every sync. This ensures that topbar badges and summary stats immediately reflect the new data without requiring a quiz reload.
-- **Progress Merging**: Uses `timestamp` comparison. If the incoming active session is newer than the local one, it replaces; otherwise, it preserves the local state.
-- **Safety**: Wrapped in `try...catch` per key. Corrupted keys are skipped to protect the rest of the database.
-
-### 21c. Technical Signaling Flow
-1. **Init**: Device fetches public IP via Google STUN → Hashes IP with salt → Joins MQTT topic `quiztool/sync/v2/{hash}/#`.
-2. **Presence**: Device publishes its name/ID to `.../presence/{id}`. Others see this and update their "Nearby Devices" list. The sync modal must always open on the `webrtc` / "Nearby Devices" tab by default; do not reuse a previously active tab when reopening the modal.
-3. **Connect**: Initiator sends WebRTC `offer` to `.../signal/{targetId}`.
-4. **Negotiation**: Receiver sends `answer` + `ice` candidates via signaling topics.
-5. **Channel**: Data channel opens → Both devices call `exportData()` → Data is exchanged and merged.
-6. **Fallback**: If Channel doesn't open in 6 seconds, initiator sends data to `.../relay/{targetId}`. Receiver imports and pushes back a response relay.
-
-### 21d. Library Dependencies
-Bundled into `sync-engine.js` via `scripts/build_sync_engine.ps1`:
-- **LZString**: Base64-safe compression for QR and MQTT payloads.
-- **Paho MQTT**: Browser-based MQTT client.
-- **QRCode.js**: For generating visual codes.
-- **Html5Qrcode**: Robust camera-based scanning.
-
-### 21e. Security & Privacy
-- **Privacy**: No user data is stored on the MQTT broker. Signaling messages are ephemeral.
-- **Relay Security**: Relay messages are transient and only accessible by the target device's specific topic.
-- **Room Isolation**: Hashing ensures only devices on the same local network (sharing a public IP) can easily "see" each other.
-
-### 21f. Critical Rules for Sync
-- **Topic Versioning**: Always use `v2` topic prefix to avoid "ghost" messages from older versions.
-- **sessionStorage Identity**: `deviceId` must be stored in `sessionStorage` to remain stable across refreshes while clearing on tab close.
-- **Auto-Disconnect**: MQTT connections automatically time out after 60 seconds of inactivity to save battery and reduce server load.
-- **No Retention**: Presence messages MUST NOT be "retained" in MQTT to prevent the "Flooded List" bug.
-- **Secure Contexts**: Camera scanning (`getUserMedia`) is restricted to **HTTPS** or **Localhost**.
-- **QR Multi-part Integrity**: Chunks must be prefixed with their part index and UID to prevent cross-contamination if scanning multiple codes in sequence.
-
----
-
-## 22. Local Development Testing (`serve.py`)
-
-A specialized Python server for cross-device testing.
-- **Network Access**: Binds to `0.0.0.0`, making the project accessible via `http://{local_ip}:5500` from mobile devices on the same WiFi.
-- **Automatic IP Detection**: Prints the exact URL to use on other devices at startup.
-- **Clean Registry**: Included in `.gitignore` to prevent deployment contamination.
+### Offline Logic
+- **Cache prefixes**: toolkit uses `quiz-tool-`, generated projects use `quiz-cache-`. Never mix.
+- **Network-First for Hubs**: All `index.html` pages use network-first SW strategy.
 
 ---
 
 ## 23. Build & Maintenance
 
 ### Bundling the Sync Engine
-Whenever you modify `sync-engine.src.js`, you MUST rebuild the production bundle:
 ```powershell
 .\scripts\build_sync_engine.ps1
 ```
-This script fetches the latest CDN dependencies and bundles the engine into a single production file for PWA performance.
+Fetches CDN dependencies (LZString, Paho MQTT, QRCode.js, Html5Qrcode) and bundles with `sync-engine.src.js` into `sync-engine.js`.
 
-### Propagating Sync Changes
-After rebuilding `sync-engine.js`, propagate the updated `sync-engine.src.js` and `sync-engine.js` into any maintained generated projects that vendor these files (for example `MU61S8`). Keep their local `AGENTS.md` notes aligned with any behavior or workflow changes you introduce.
+### Extracting the Tauri Admin Frontend
+```bash
+python extract.py
+```
+Must be run whenever `scripts/admin-dashboard.py` is modified. Extracts and patches `DASHBOARD_HTML` and `PDF_EXPORTER_HTML` into `tauri-admin/frontend/`.
+
+### Propagating Changes
+After modifying any engine file, propagate it to:
+1. `tauri/src/engines.rs` (embedded constant for generator ZIPs)
+2. Any maintained generated projects that vendor the engine files
+
+### Icon Generation
+```bash
+python generate_icons.py
+```
+Generates `icon-{48,72,96,144,192,512}.png` from a source SVG.
 
 ---
 
-## 24. Tauri Desktop Wrapper
+## 24. Local Development
 
-Tauri is a lightweight framework for wrapping web apps as native desktop applications using a Rust backend. Both QuizTool itself and the quiz sites it generates can optionally be wrapped as Tauri apps for an offline desktop experience.
-
-### 24a. When to Use Tauri
-
-The quiz-site PWA (service worker + offline cache) is the **primary distribution channel** — it works on any device with a browser, requires no install, and supports offline access out of the box.
-
-Tauri is beneficial when:
-- **Native file access** is needed (e.g., saving PDFs to a user-chosen directory, drag-drop file management)
-- **System integration** is desired (tray icon, global shortcuts, native notifications)
-- **Distribution** via app stores (Windows MSI, macOS DMG, Linux AppImage) is required
-- **Offline-first** desktop experience without browser chrome
-
-### 24b. Prerequisites
-
-```bash
-# Install Tauri CLI
-cargo install tauri-cli --version "^2"
-
-# Or via npm (alternative)
-npm install -g @tauri-apps/cli
-```
-
-System requirements:
-- **Rust toolchain** (`rustup` + `cargo`) — see [rustup.rs](https://rustup.rs)
-- **Windows**: WebView2 (built into Windows 11, available for Win 10)
-- **macOS**: built-in WebKit
-- **Linux**: `libwebkit2gtk-4.1-dev`, `libgtk-3-dev`, etc.
-
-### 24c. Adding Tauri to a Generated Quiz Project
-
-For a generated project (e.g., MU61S8):
-
-```bash
-cd your-quiz-project/
-cargo tauri init
-```
-
-This creates a `src-tauri/` directory at the project root. The default config will work for most quiz sites — point the window to the local hub `index.html`.
-
-Key config file: `src-tauri/tauri.conf.json`
-
-```json
-{
-  "productName": "MU61 Quiz",
-  "version": "1.0.0",
-  "identifier": "com.mu61.quiz",
-  "build": {
-    "frontendDist": "../",
-    "devUrl": "http://localhost:8000",
-    "beforeDevCommand": "",
-    "beforeBuildCommand": ""
-  },
-  "app": {
-    "windows": [
-      {
-        "title": "MU61 Quiz",
-        "width": 1024,
-        "height": 768,
-        "resizable": true,
-        "fullscreen": false
-      }
-    ],
-    "security": {
-      "csp": null
-    }
-  },
-  "bundle": {
-    "active": true,
-    "targets": "all",
-    "icon": [
-      "icon-32x32.png",
-      "icon-128x128.png",
-      "icon-128x128@2x.png",
-      "icon.icns",
-      "icon.ico"
-    ]
-  }
-}
-```
-
-**Important config notes:**
-- `frontendDist`: Set to `"../"` since the quiz site is static HTML at the project root
-- `devUrl`: Point to your local dev server (e.g., `python -m http.server 8000`)
-- `beforeDevCommand`/`beforeBuildCommand`: Leave empty — no bundler/build step needed
-- `csp`: Set to `null` to allow inline styles/scripts that the engines inject
-
-### 24d. Repository Layout with Tauri
-
-```
-quiz-project/
-├── index.html                  ← Existing hub
-├── quiz-engine.js
-├── index-engine.js
-├── ...
-├── src-tauri/                  ← Created by `cargo tauri init`
-│   ├── tauri.conf.json         ← Tauri configuration
-│   ├── Cargo.toml              ← Rust dependencies
-│   ├── build.rs                ← Build script
-│   ├── src/
-│   │   └── lib.rs              ← Rust entry point (default, usually no changes needed)
-│   ├── capabilities/
-│   │   └── default.json        ← Permissions
-│   ├── icons/                  ← App icons (generated)
-│   └── target/                 ← Build artifacts (gitignored)
-```
-
-### 24e. Common Commands
-
-```bash
-# Development — opens a native window with hot-reload
-cargo tauri dev
-
-# Build for production — produces installers in src-tauri/target/release/bundle/
-cargo tauri build
-
-# Customize the app window title, size, etc.
-# Edit src-tauri/tauri.conf.json → app → windows
-```
-
-### 24f. Permissions & Capabilities
-
-Tauri v2 uses a capability-based security model. The default `src-tauri/capabilities/default.json` allows basic window management. For additional features:
-
-```json
-{
-  "identifier": "default",
-  "windows": ["main"],
-  "permissions": [
-    "core:default",
-    "dialog:default",
-    "fs:default",
-    "shell:default"
-  ]
-}
-```
-
-Add permissions as needed (e.g., `dialog:allow-save` for PDF export, `fs:allow-write` for saving tracker exports).
-
-### 24g. Icon Generation
-
-Tauri requires platform-specific icons. Generate them from the project's existing PNGs:
-
-```bash
-# Using cargo tauri icon (requires imagemagick or similar)
-cargo tauri icon icon-512.png
-
-# Or manually place:
-#   src-tauri/icons/icon.ico          (Windows)
-#   src-tauri/icons/icon.icns         (macOS)
-#   src-tauri/icons/icon-32x32.png    (Linux)
-#   src-tauri/icons/icon-128x128.png  (Linux)
-#   src-tauri/icons/icon-128x128@2x.png (Linux)
-```
-
-### 24h. .gitignore Rules
-
-Both `src-tauri/target/` and `tauri/target/` are excluded to prevent Rust build artifacts from being tracked:
-
-```gitignore
-# Tauri
-src-tauri/target/
-tauri/target/
-```
-
-These entries are already present in both QuizTool's and generated projects' `.gitignore`.
-
-### 24i. Tauri + PWA Relationship
-
-- The **PWA** is the default distribution: works on all platforms, zero install, updated on every page load.
-- **Tauri** is an optional native wrapper: provides desktop-specific features (file system, system tray, etc.).
-- Both share the same static HTML/JS/CSS assets. No code changes are needed to support both.
-- The service worker continues to provide offline capability inside the Tauri webview.
-- The same `tracker-map.json` and `localStorage` data works identically in both environments.
-
-### 24j. Critical Rules for Tauri
-
-- **Never commit `src-tauri/target/`**: The Rust build directory can be 1GB+. Ensure the `.gitignore` entries are present.
-- **Keep `frontendDist` pointing to the project root**: Since quiz sites are flat HTML files with no bundler, `frontendDist: "../"` correctly resolves relative to `src-tauri/`.
-- **Inline scripts are expected**: The quiz/bank engines inject `<style>` and `<script>` tags at runtime. Do not set a strict CSP unless you've audited all injected content.
-- **Tauri is optional**: The generated ZIP and GitHub Pages deployment should never assume Tauri exists. All documentation and workflows must treat Tauri as an add-on, not a requirement.
-
+| Command | Purpose |
+|---------|---------|
+| `python serve.py` | Dev server on `0.0.0.0:5500` for cross-device sync testing |
+| `python scripts/admin-dashboard.py` | Deprecated Python admin dashboard on `http://localhost:5500/admin/` |
+| `cd tauri && cargo tauri dev` | Tauri generator in dev mode (native window + hot-reload) |
+| `cd tauri-admin && cargo tauri dev` | Tauri admin dashboard in dev mode |
+| `python generate_project.py` | Deprecated Python project generator on `http://localhost:5500` |
