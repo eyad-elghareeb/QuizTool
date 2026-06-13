@@ -57,6 +57,7 @@ pub struct ProjectConfig {
 }
 
 #[derive(Debug, Serialize)]
+#[allow(dead_code)]
 pub struct ProjectStats {
     pub total_folders: usize,
     pub total_quizzes: usize,
@@ -501,6 +502,7 @@ pub fn build_project_zip(config: &ProjectConfig) -> Result<Vec<u8>, String> {
     add_str(&mut zip, "sync-engine.js", engines::SYNC_ENGINE_JS)?;
     add_str(&mut zip, "flashcard-engine.js", engines::FLASHCARD_ENGINE_JS)?;
     add_str(&mut zip, "written-engine.js", engines::WRITTEN_ENGINE_JS)?;
+    add_str(&mut zip, "ai-assistant-engine.js", engines::AI_ASSISTANT_ENGINE_JS)?;
 
     // Static assets
     add_str(&mut zip, "favicon.svg", engines::FAVICON_SVG)?;
@@ -714,6 +716,7 @@ python "scripts\admin-dashboard.py"
 }
 
 /// Calculate project stats without building the full ZIP
+#[allow(dead_code)]
 pub fn preview_project(config: &ProjectConfig) -> ProjectStats {
     fn count_items(folders: &[FolderConfig]) -> (usize, usize) {
         let mut total_folders = 0;

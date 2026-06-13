@@ -1,6 +1,6 @@
 [package]
 name = "quiztool-tauri"
-version = "1.0.0"
+version = "5.0.0"
 description = "QuizTool Generator — Fully Standalone Native Desktop App (no Python, no sidecar)"
 authors = ["QuizTool"]
 edition = "2021"

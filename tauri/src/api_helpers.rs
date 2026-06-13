@@ -133,14 +133,14 @@ pub fn github_verify(token: &str) -> GithubUserInfo {
         .call()
     {
         Ok(r) => r,
-        Err(ureq::Error::Status(code, resp)) => {
+        Err(ureq::Error::Status(_code, resp)) => {
             let body = resp.into_string().unwrap_or_default();
             let msg = serde_json::from_str::<Value>(&body).ok()
-                .and_then(|v| v.get("message").and_then(|m| m.as_str()))
-                .unwrap_or("Invalid token");
+                .and_then(|v| v.get("message").and_then(|m| m.as_str().map(String::from)))
+                .unwrap_or_else(|| "Invalid token".to_string());
             return GithubUserInfo {
                 ok: false, username: String::new(), name: String::new(),
-                avatar: String::new(), repos_count: 0, error: msg.to_string(),
+                avatar: String::new(), repos_count: 0, error: msg,
             };
         }
         Err(e) => return GithubUserInfo {
