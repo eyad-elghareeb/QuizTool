@@ -1843,6 +1843,11 @@ input[type=radio] { display: none; }
     localStorage.setItem('quiz-theme', next);
     document.body.style.background = next === 'light' ? '#f3f0eb' : '#0d1117';
     document.body.style.color = next === 'light' ? '#1c1917' : '#e6edf3';
+    
+    // Keep the browser chrome (address bar / status bar) in sync.
+    var themeMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeMeta) themeMeta.content = next === 'light' ? '#f3f0eb' : '#0d1117';
+    
     var icon = document.getElementById('theme-toggle-icon');
     if (icon) {
       icon.textContent = next === 'dark' ? '☀' : '🌙';

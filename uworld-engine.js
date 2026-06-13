@@ -3707,6 +3707,11 @@ html, body {
     const newTheme = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     html.setAttribute('data-theme', newTheme);
     localStorage.setItem('quiz-theme', newTheme);
+    
+    // Keep the browser chrome (address bar / status bar) in sync.
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeMeta) themeMeta.content = newTheme === 'light' ? '#f3f0eb' : '#0d1117';
+    
     updateThemeIcon();
   };
   

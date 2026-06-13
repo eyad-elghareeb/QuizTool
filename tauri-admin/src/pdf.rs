@@ -122,6 +122,16 @@ pub struct QuestionData {
     pub explanation:  String,
     pub model_answer: String,
     pub rubric:       String,
+    pub children:     Vec<ChildQuestionData>,
+}
+
+#[derive(Clone)]
+pub struct ChildQuestionData {
+    pub label:        String,
+    pub text:         String,
+    pub model_answer: String,
+    pub rubric:       String,
+    pub explanation:  String,
 }
 
 #[derive(Clone)]
@@ -167,6 +177,15 @@ impl ExportConfig {
                         explanation: qd["explanation"].as_str().unwrap_or("").to_string(),
                         model_answer: qd["modelAnswer"].as_str().unwrap_or("").to_string(),
                         rubric:       qd["rubric"].as_str().unwrap_or("").to_string(),
+                        children:     qd["children"].as_array()
+                            .map(|ca| ca.iter().map(|c| ChildQuestionData {
+                                label:        c["label"].as_str().unwrap_or("").to_string(),
+                                text:         c["question"].as_str().unwrap_or("").to_string(),
+                                model_answer: c["modelAnswer"].as_str().unwrap_or("").to_string(),
+                                rubric:       c["rubric"].as_str().unwrap_or("").to_string(),
+                                explanation:  c["explanation"].as_str().unwrap_or("").to_string(),
+                            }).collect())
+                            .unwrap_or_default(),
                     }).collect())
                     .unwrap_or_default();
                 QuizData {
@@ -235,6 +254,13 @@ impl ExportConfig {
                     "explanation": qd.explanation,
                     "modelAnswer": qd.model_answer,
                     "rubric": qd.rubric,
+                    "children": qd.children.iter().map(|c| json!({
+                        "label": c.label,
+                        "question": c.text,
+                        "modelAnswer": c.model_answer,
+                        "rubric": c.rubric,
+                        "explanation": c.explanation,
+                    })).collect::<Vec<_>>(),
                 })).collect::<Vec<_>>(),
             })).collect::<Vec<_>>(),
         })
