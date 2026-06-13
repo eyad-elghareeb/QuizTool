@@ -508,8 +508,10 @@ def _build_flowables(text, style, content_w, fs=1.0):
                 i += 1
             text_block = '\n'.join(chunk).strip()
             if text_block:
-                html = _md_to_html(xesc(text_block))
-                result.append(Paragraph(html, style))
+                for para_text in re.split(r'\n[ \t]*\n', text_block):
+                    if para_text.strip():
+                        html = _md_to_html(xesc(para_text.strip()))
+                        result.append(Paragraph(html, style))
     return result
 
 
@@ -1226,7 +1228,25 @@ def build_written_question(q_data, q_num, styles, layout, content_w):
     for fb in _build_flowables(q_text, styles["q_body"], content_w, fs):
         elems.append(fb)
 
-    # Model answer — callout box (single Table, continuous outline, rows split freely)
+    # Child questions (rendered first when present)
+    children = q_data.get("children", [])
+    for idx, child in enumerate(children):
+        if idx > 0:
+            elems.append(Spacer(1, sp(0.5, fs)))
+        
+        c_label = child.get("label", "").rstrip(")")
+        c_label_text = f"{c_label}." if c_label else f"{idx+1}."
+        
+        c_text = child.get("question", "")
+        if c_text:
+            esc = _md_to_html(xesc(c_text))
+            combined = f'<font name="{_F["H"]}" color="#{_hx(COBALT)}">{c_label_text}</font>  {esc}'
+            elems.append(Paragraph(combined, styles["q_body"]))
+        else:
+            combined = f'<font name="{_F["H"]}" color="#{_hx(COBALT)}">{c_label_text}</font>'
+            elems.append(Paragraph(combined, styles["q_body"]))
+
+    # Model answer — callout box (after children, covers all parts)
     model_answer = q_data.get("modelAnswer", "") or q_data.get("model_answer", "")
     if model_answer:
         elems.append(Spacer(1, sp(1, fs)))
