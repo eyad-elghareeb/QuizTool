@@ -1230,13 +1230,23 @@ def build_written_question(q_data, q_num, styles, layout, content_w):
 
     # Child questions (rendered first when present)
     children = q_data.get("children", [])
+    # Track whether each child supplies its own model answer. When at least one
+    # child has its own, per-child MODEL ANSWER callouts are emitted inline and
+    # the parent-level callout is suppressed (mirrors the runtime engine's
+    # hasAllChildModelAnswers fallback semantics).
+    child_has_own_model = [
+        bool(child.get("modelAnswer", "") or child.get("model_answer", ""))
+        for child in children
+    ]
+    any_child_has_own = any(child_has_own_model)
+
     for idx, child in enumerate(children):
         if idx > 0:
             elems.append(Spacer(1, sp(0.5, fs)))
-        
+
         c_label = child.get("label", "").rstrip(")")
         c_label_text = f"{c_label}." if c_label else f"{idx+1}."
-        
+
         c_text = child.get("question", "")
         if c_text:
             esc = _md_to_html(xesc(c_text))
@@ -1246,9 +1256,21 @@ def build_written_question(q_data, q_num, styles, layout, content_w):
             combined = f'<font name="{_F["H"]}" color="#{_hx(COBALT)}">{c_label_text}</font>'
             elems.append(Paragraph(combined, styles["q_body"]))
 
-    # Model answer — callout box (after children, covers all parts)
+        # Per-child MODEL ANSWER callout when this part has its own model answer
+        if child_has_own_model[idx]:
+            c_model = child.get("modelAnswer", "") or child.get("model_answer", "")
+            elems.append(Spacer(1, sp(0.5, fs)))
+            elems.append(_callout_box(
+                f"MODEL ANSWER — {c_label_text.strip()}",
+                c_model, content_w,
+                bg=PALE_BLUE, border_color=ROYAL, fs=fs,
+            ))
+
+    # Parent-level MODEL ANSWER callout: emit only when no child supplied its
+    # own (i.e. the parent answer is the shared fallback for all parts), or
+    # when there are no children at all (standard written question).
     model_answer = q_data.get("modelAnswer", "") or q_data.get("model_answer", "")
-    if model_answer:
+    if model_answer and not any_child_has_own:
         elems.append(Spacer(1, sp(1, fs)))
         elems.append(_callout_box(
             "MODEL ANSWER", model_answer, content_w,

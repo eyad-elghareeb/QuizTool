@@ -101,6 +101,34 @@ pub fn git_push(project_root: &Path) -> Result<Value, String> {
     Ok(json!({ "message": "Push completed successfully.", "output": out.trim() }))
 }
 
+/// Force-push the current branch using `--force-with-lease`.
+///
+/// `--force-with-lease` (no-arg form) uses the recorded remote-tracking ref as
+/// the lease, so it refuses to overwrite remote commits the local ref hasn't
+/// seen. This protects collaborators: if someone else pushed after our last
+/// fetch, the push is rejected (rather than clobbering their work as plain
+/// `--force` would).
+///
+/// Used as the escape hatch when `gitSync`'s `pull --rebase --autostash` fails
+/// on diverging files (typical cause: sync regenerated sw.js locally).
+pub fn git_force_push(project_root: &Path) -> Result<Value, String> {
+    if !git_available(project_root) { return Err("Git is not available for this repository.".into()); }
+    let (_, branch, _) = run_git(&["rev-parse", "--abbrev-ref", "HEAD"], project_root);
+    let branch = branch.trim().to_string();
+    if branch.is_empty() { return Err("Could not determine the current branch.".into()); }
+
+    let (code, out, err) = run_git(&["push", "--force-with-lease", "origin", &branch], project_root);
+    if code != 0 {
+        let msg = if err.trim().is_empty() { out.trim().to_string() } else { err.trim().to_string() };
+        return Err(format!("Git force-push failed: {}", msg));
+    }
+    Ok(json!({
+        "message": "Force-push completed successfully.",
+        "branch": branch,
+        "output": out.trim()
+    }))
+}
+
 pub fn get_git_remote_url(project_root: &Path) -> String {
     if !git_available(project_root) { return String::new(); }
     let (code, out, _) = run_git(&["remote", "get-url", "origin"], project_root);

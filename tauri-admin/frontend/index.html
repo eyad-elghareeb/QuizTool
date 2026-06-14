@@ -1434,6 +1434,7 @@
       '/admin/git-commit': { cmd: 'git_commit', method: 'POST' },
       '/admin/git-pull': { cmd: 'git_pull', method: 'POST' },
       '/admin/git-push': { cmd: 'git_push', method: 'POST' },
+      '/admin/git-force-push': { cmd: 'git_force_push', method: 'POST' },
       '/admin/provider-verify': { cmd: 'provider_verify', method: 'POST' },
       '/admin/provider-deploy': { cmd: 'provider_deploy', method: 'POST' },
       '/admin/read-saved-token': { cmd: 'read_saved_token', method: 'GET', queryParam: 'provider' },
@@ -3212,53 +3213,120 @@
       `;
     }
 
+    function childLetter(n) {
+      // 0 -> 'A)', 1 -> 'B)', etc.
+      return String.fromCharCode(65 + n) + ')';
+    }
+
+    function renderWrittenChildRow(child, qIdx, cIdx, total) {
+      const label = child.label || childLetter(cIdx);
+      const summaryText = (child.question || 'Empty part').slice(0, 60);
+      return `
+        <div class="child-editor-card" data-cidx="${cIdx}" style="border:1px solid var(--border); border-radius:8px; padding:0.6rem 0.75rem; background:var(--surface2); margin-bottom:0.5rem;">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:0.5rem; margin-bottom:0.4rem;">
+            <div style="font-weight:700; font-size:0.8rem; color:var(--accent);">Part ${escapeHtml(label)}</div>
+            <div class="mini-actions">
+              <button class="mini-btn" onclick="moveChildPart(${qIdx}, ${cIdx}, -1)" ${cIdx === 0 ? 'disabled' : ''}>Up</button>
+              <button class="mini-btn" onclick="moveChildPart(${qIdx}, ${cIdx}, 1)" ${cIdx === total - 1 ? 'disabled' : ''}>Down</button>
+              <button class="mini-btn" onclick="duplicateChildPart(${qIdx}, ${cIdx})">Dup</button>
+              <button class="mini-btn delete" onclick="removeChildPart(${qIdx}, ${cIdx})">Remove</button>
+            </div>
+          </div>
+          <div class="field" style="margin-bottom:0.4rem;">
+            <label style="font-size:0.75rem;">Label</label>
+            <input class="text-input wq-child-label" data-index="${qIdx}" data-cidx="${cIdx}" value="${escapeHtml(child.label || childLetter(cIdx))}" oninput="syncQuizBankEditor()" placeholder="A)" style="max-width:120px;">
+          </div>
+          <div class="field" style="margin-bottom:0.4rem;">
+            <label style="font-size:0.75rem;">Part Question</label>
+            <textarea class="text-area wq-child-question" data-index="${qIdx}" data-cidx="${cIdx}" oninput="syncQuizBankEditor()" style="min-height:60px;">${escapeHtml(child.question || '')}</textarea>
+          </div>
+          <div class="field" style="margin-bottom:0.4rem;">
+            <label style="font-size:0.75rem;">Model Answer <span class="muted" style="font-weight:400;">(this part only)</span></label>
+            <textarea class="text-area wq-child-model-answer" data-index="${qIdx}" data-cidx="${cIdx}" oninput="syncQuizBankEditor()" style="min-height:80px;">${escapeHtml(child.modelAnswer || '')}</textarea>
+          </div>
+          <div class="field" style="margin-bottom:0.4rem;">
+            <label style="font-size:0.75rem;">Rubric <span class="muted" style="font-weight:400;">(optional)</span></label>
+            <textarea class="text-area wq-child-rubric" data-index="${qIdx}" data-cidx="${cIdx}" oninput="syncQuizBankEditor()" style="min-height:50px;">${escapeHtml(child.rubric || '')}</textarea>
+          </div>
+          <div class="field">
+            <label style="font-size:0.75rem;">Explanation <span class="muted" style="font-weight:400;">(optional)</span></label>
+            <textarea class="text-area wq-child-explanation" data-index="${qIdx}" data-cidx="${cIdx}" oninput="syncQuizBankEditor()" style="min-height:50px;">${escapeHtml(child.explanation || '')}</textarea>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderWrittenQuestionCard(question, index) {
+      const collapsed = state.collapsedQuestions.has(index);
+      const summary = `${(question.question || 'Untitled written question').slice(0, 90)}${(question.question || '').length > 90 ? '…' : ''}`;
+      const tags = Array.isArray(question.tags) ? question.tags.join(', ') : (typeof question.tags === 'string' ? question.tags : '');
+      const children = Array.isArray(question.children) ? question.children : [];
+      const childrenHtml = children.map((child, ci) => renderWrittenChildRow(child, index, ci, children.length)).join('');
+      const convertBtn = children.length
+        ? `<button class="mini-btn" onclick="convertToSingle(${index})">Convert to Single</button>`
+        : `<button class="mini-btn" onclick="convertToMultiPart(${index})">Convert to Multi-part</button>`;
+      return `
+        <div class="editor-card ${collapsed ? 'collapsed' : ''}" data-qidx="${index}">
+          <div class="editor-card-header">
+            <div>
+              <div class="editor-card-title">Written Question ${index + 1}${children.length ? ' <span style="color:var(--accent); font-size:0.75rem;">· ' + children.length + ' part' + (children.length === 1 ? '' : 's') + '</span>' : ''}</div>
+              <div class="editor-summary">${escapeHtml(summary)}</div>
+            </div>
+            <div class="mini-actions">
+              <button class="mini-btn" onclick="toggleQuestionCollapse(${index})">${collapsed ? 'Expand' : 'Collapse'}</button>
+              <button class="mini-btn" onclick="moveQuestion(${index}, -1)" ${index === 0 ? 'disabled' : ''}>Up</button>
+              <button class="mini-btn" onclick="moveQuestion(${index}, 1)" ${index === (state.currentData.meta.questions || []).length - 1 ? 'disabled' : ''}>Down</button>
+              <button class="mini-btn" onclick="duplicateQuestion(${index})">Duplicate</button>
+              <button class="mini-btn delete" onclick="removeQuestion(${index})">Remove</button>
+            </div>
+          </div>
+          <div class="editor-card-body">
+            <div class="field">
+              <label>Question Prompt</label>
+              <textarea class="text-area wq-question" data-index="${index}" oninput="syncQuizBankEditor()">${escapeHtml(question.question || '')}</textarea>
+              ${children.length ? '<small class="muted">Parent prompt shared by all parts. Each part has its own question and model answer below.</small>' : ''}
+            </div>
+            <div class="field">
+              <label>Model Answer ${children.length ? '<span class="muted" style="font-weight:400;">(parent fallback — used when a part has no model answer)</span>' : ''}</label>
+              <textarea class="text-area wq-model-answer" data-index="${index}" oninput="syncQuizBankEditor()">${escapeHtml(question.modelAnswer || question.answer || '')}</textarea>
+            </div>
+            <div class="field">
+              <label>Rubric (optional)</label>
+              <textarea class="text-area wq-rubric" data-index="${index}" oninput="syncQuizBankEditor()">${escapeHtml(question.rubric || '')}</textarea>
+              <small>Grading guidance for AI evaluation.</small>
+            </div>
+            <div class="field">
+              <label>Explanation (optional)</label>
+              <textarea class="text-area wq-explanation" data-index="${index}" oninput="syncQuizBankEditor()">${escapeHtml(question.explanation || '')}</textarea>
+            </div>
+            <div class="field">
+              <label>Tags (comma-separated)</label>
+              <input class="text-input wq-tags" data-index="${index}" value="${escapeHtml(tags)}" oninput="syncQuizBankEditor()" placeholder="e.g. biology, respiration">
+            </div>
+            <div class="field" style="border-top:1px dashed var(--border); padding-top:0.75rem; margin-top:0.5rem;">
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.5rem;">
+                <label style="margin:0;">Sub-parts ${children.length ? '<span class="muted" style="font-weight:400;">(multi-part question)</span>' : ''}</label>
+                <div class="mini-actions">
+                  ${convertBtn}
+                  ${children.length ? `<button class="mini-btn" onclick="addChildPart(${index})">+ Add Part</button>` : ''}
+                </div>
+              </div>
+              ${children.length
+                ? childrenHtml
+                : '<small class="muted">No sub-parts. Use "Convert to Multi-part" to split this question into parts (A, B, C…) each with its own model answer.</small>'
+              }
+              ${children.length ? `<button class="mini-btn" style="width:100%; border-style:dashed; margin-top:0.25rem;" onclick="addChildPart(${index})">+ Add Part</button>` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     function renderQuestionCard(question, index) {
       const isFlashcard = state.currentData?.meta?.type === 'flashcard';
       const isWritten = state.currentData?.meta?.type === 'written';
       if (isWritten) {
-        const collapsed = state.collapsedQuestions.has(index);
-        const summary = `${(question.question || 'Untitled written question').slice(0, 90)}${(question.question || '').length > 90 ? '…' : ''}`;
-        const tags = Array.isArray(question.tags) ? question.tags.join(', ') : (typeof question.tags === 'string' ? question.tags : '');
-        return `
-          <div class="editor-card ${collapsed ? 'collapsed' : ''}" data-qidx="${index}">
-            <div class="editor-card-header">
-              <div>
-                <div class="editor-card-title">Written Question ${index + 1}</div>
-                <div class="editor-summary">${escapeHtml(summary)}</div>
-              </div>
-              <div class="mini-actions">
-                <button class="mini-btn" onclick="toggleQuestionCollapse(${index})">${collapsed ? 'Expand' : 'Collapse'}</button>
-                <button class="mini-btn" onclick="moveQuestion(${index}, -1)" ${index === 0 ? 'disabled' : ''}>Up</button>
-                <button class="mini-btn" onclick="moveQuestion(${index}, 1)" ${index === (state.currentData.meta.questions || []).length - 1 ? 'disabled' : ''}>Down</button>
-                <button class="mini-btn" onclick="duplicateQuestion(${index})">Duplicate</button>
-                <button class="mini-btn delete" onclick="removeQuestion(${index})">Remove</button>
-              </div>
-            </div>
-            <div class="editor-card-body">
-              <div class="field">
-                <label>Question Prompt</label>
-                <textarea class="text-area wq-question" data-index="${index}" oninput="syncQuizBankEditor()">${escapeHtml(question.question || '')}</textarea>
-              </div>
-              <div class="field">
-                <label>Model Answer</label>
-                <textarea class="text-area wq-model-answer" data-index="${index}" oninput="syncQuizBankEditor()">${escapeHtml(question.modelAnswer || question.answer || '')}</textarea>
-              </div>
-              <div class="field">
-                <label>Rubric (optional)</label>
-                <textarea class="text-area wq-rubric" data-index="${index}" oninput="syncQuizBankEditor()">${escapeHtml(question.rubric || '')}</textarea>
-                <small>Grading guidance for AI evaluation.</small>
-              </div>
-              <div class="field">
-                <label>Explanation (optional)</label>
-                <textarea class="text-area wq-explanation" data-index="${index}" oninput="syncQuizBankEditor()">${escapeHtml(question.explanation || '')}</textarea>
-              </div>
-              <div class="field">
-                <label>Tags (comma-separated)</label>
-                <input class="text-input wq-tags" data-index="${index}" value="${escapeHtml(tags)}" oninput="syncQuizBankEditor()" placeholder="e.g. biology, respiration">
-              </div>
-            </div>
-          </div>
-        `;
+        return renderWrittenQuestionCard(question, index);
       }
       if (isFlashcard) {
         const collapsed = state.collapsedQuestions.has(index);
@@ -3484,7 +3552,23 @@
           const explanation = card.querySelector('.wq-explanation')?.value || '';
           const tagsStr = card.querySelector('.wq-tags')?.value || '';
           const tags = tagsStr.split(',').map(t => t.trim()).filter(Boolean);
-          return { question: q, modelAnswer, rubric, explanation, tags };
+          const entry = { question: q, modelAnswer, rubric, explanation, tags };
+          // Read children (multi-part) if present in the DOM
+          const childRows = Array.from(card.querySelectorAll('.child-editor-card'));
+          if (childRows.length) {
+            entry.children = childRows.map((row) => {
+              const label = row.querySelector('.wq-child-label')?.value?.trim() || '';
+              const childQ = row.querySelector('.wq-child-question')?.value || '';
+              const childModel = row.querySelector('.wq-child-model-answer')?.value || '';
+              const childRubric = row.querySelector('.wq-child-rubric')?.value || '';
+              const childExpl = row.querySelector('.wq-child-explanation')?.value || '';
+              const child = { label, question: childQ, modelAnswer: childModel };
+              if (childRubric) child.rubric = childRubric;
+              if (childExpl) child.explanation = childExpl;
+              return child;
+            });
+          }
+          return entry;
         });
       } else if (isFlashcard) {
         questions = cards.map((card, index) => {
@@ -3669,6 +3753,104 @@
       setTab('editor');
       syncQuizBankEditor();
     }
+
+    // ── Written multi-part (children) helpers ───────────────────────────────
+    function _ensureChildren(qIdx) {
+      const list = state.currentData?.meta?.questions;
+      if (!list || !list[qIdx]) return null;
+      const q = list[qIdx];
+      if (!Array.isArray(q.children)) q.children = [];
+      return q;
+    }
+
+    function _rerenderEditorAndSync() {
+      renderFilePanel();
+      setTab('editor');
+      syncQuizBankEditor();
+    }
+
+    function addChildPart(qIdx) {
+      const q = _ensureChildren(qIdx);
+      if (!q) return;
+      q.children.push({ label: childLetter(q.children.length), question: '', modelAnswer: '', rubric: '', explanation: '' });
+      _rerenderEditorAndSync();
+    }
+
+    function removeChildPart(qIdx, cIdx) {
+      const q = _ensureChildren(qIdx);
+      if (!q || !q.children[cIdx]) return;
+      q.children.splice(cIdx, 1);
+      // Re-letter labels so A/B/C… stays sequential unless user customized them
+      q.children.forEach((child, ci) => {
+        const def = childLetter(ci);
+        // Only auto-reletter if the label still matches a default pattern
+        if (/^[A-Z]\)$/.test(child.label || '') || !child.label) child.label = def;
+      });
+      _rerenderEditorAndSync();
+    }
+
+    function moveChildPart(qIdx, cIdx, delta) {
+      const q = _ensureChildren(qIdx);
+      if (!q || !q.children[cIdx]) return;
+      const next = cIdx + delta;
+      if (next < 0 || next >= q.children.length) return;
+      const tmp = q.children[cIdx];
+      q.children[cIdx] = q.children[next];
+      q.children[next] = tmp;
+      _rerenderEditorAndSync();
+    }
+
+    function duplicateChildPart(qIdx, cIdx) {
+      const q = _ensureChildren(qIdx);
+      if (!q || !q.children[cIdx]) return;
+      const copy = clone(q.children[cIdx]);
+      q.children.splice(cIdx + 1, 0, copy);
+      _rerenderEditorAndSync();
+    }
+
+    function convertToMultiPart(qIdx) {
+      const q = _ensureChildren(qIdx);
+      if (!q) return;
+      if (q.children.length) return; // already multi-part
+      q.children.push({ label: 'A)', question: '', modelAnswer: '', rubric: '', explanation: '' });
+      _rerenderEditorAndSync();
+    }
+
+    function convertToSingle(qIdx) {
+      const list = state.currentData?.meta?.questions;
+      if (!list || !list[qIdx]) return;
+      const q = list[qIdx];
+      if (!Array.isArray(q.children) || !q.children.length) return;
+      openModal({
+        title: 'Convert to Single Question?',
+        subtitle: 'This removes the sub-parts. The parent prompt and Model Answer are kept.',
+        body: `
+          <div class="empty-state" style="text-align:left;">
+            ${q.children.length} sub-part${q.children.length === 1 ? '' : 's'} will be deleted.
+            Consider copying any per-part model answers into the parent Model Answer first if you want to keep them.
+          </div>
+          <div class="modal-actions">
+            <button class="btn" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" style="background:var(--bad);border-color:var(--bad);color:#fff;" onclick="closeModal(); _confirmConvertToSingle(${qIdx})">Remove Parts</button>
+          </div>
+        `,
+      });
+    }
+
+    function _confirmConvertToSingle(qIdx) {
+      const list = state.currentData?.meta?.questions;
+      if (!list || !list[qIdx]) return;
+      delete list[qIdx].children;
+      _rerenderEditorAndSync();
+    }
+    window.addChildPart = addChildPart;
+    window.removeChildPart = removeChildPart;
+    window.moveChildPart = moveChildPart;
+    window.duplicateChildPart = duplicateChildPart;
+    window.convertToMultiPart = convertToMultiPart;
+    window.convertToSingle = convertToSingle;
+    window._confirmConvertToSingle = _confirmConvertToSingle;
+    window.childLetter = childLetter;
 
     function addOption(qIdx) {
       const isFlashcard = state.currentData?.meta?.type === 'flashcard';
@@ -4365,9 +4547,14 @@
           <input class="text-input mq-q" data-idx="${i}" value="${escapeHtml(q.question)}" placeholder="${isFlashcard ? 'Front text' : isWritten ? 'Written question text' : 'Question text'}" style="margin-bottom:0.5rem;">
           ${isWritten ? `
           <textarea class="text-area mq-model-answer" data-idx="${i}" placeholder="Model answer (required for AI grading)" style="min-height:80px; margin-bottom:0.5rem;">${escapeHtml(q.modelAnswer || '')}</textarea>
-          <input class="text-input" data-idx="${i}" value="${escapeHtml(q.rubric || '')}" placeholder="Rubric (optional grading guidance)" style="margin-bottom:0.5rem;" oninput="syncModalQuestionsFromUI()">
+          <input class="text-input mq-rubric" data-idx="${i}" value="${escapeHtml(q.rubric || '')}" placeholder="Rubric (optional grading guidance)" style="margin-bottom:0.5rem;" oninput="syncModalQuestionsFromUI()">
           <textarea class="text-area mq-exp" data-idx="${i}" placeholder="Explanation (optional)" style="min-height:60px; margin-bottom:0.5rem;">${escapeHtml(q.explanation || '')}</textarea>
-          <input class="text-input" data-idx="${i}" value="${escapeHtml((q.tags || []).join(', '))}" placeholder="Tags (comma-separated)" style="margin-bottom:0.5rem;" oninput="syncModalQuestionsFromUI()">
+          <input class="text-input mq-tags" data-idx="${i}" value="${escapeHtml((q.tags || []).join(', '))}" placeholder="Tags (comma-separated)" style="margin-bottom:0.5rem;" oninput="syncModalQuestionsFromUI()">
+          ${(Array.isArray(q.children) ? q.children : []).map((child, ci) => renderModalChildRow(child, i, ci, (q.children || []).length)).join('')}
+          <div style="display:flex; gap:0.4rem; flex-wrap:wrap; margin-top:0.25rem;">
+            <button type="button" class="mini-btn" onclick="addModalChildPart(${i})" style="border-style:dashed;">+ Add Part</button>
+            ${(Array.isArray(q.children) && q.children.length) ? `<button type="button" class="mini-btn" onclick="convertModalToSingle(${i})">Convert to Single</button>` : `<button type="button" class="mini-btn" onclick="convertModalToMulti(${i})">Convert to Multi-part</button>`}
+          </div>
           ` : isFlashcard ? `
           <textarea class="text-area mq-exp" data-idx="${i}" placeholder="Back text / answer" style="min-height:80px; margin-bottom:0.5rem;">${escapeHtml(q.explanation || '')}</textarea>
           ` : `
@@ -4397,23 +4584,25 @@
         const explanation = row.querySelector('.mq-exp')?.value || '';
         if (isWritten) {
           const modelAnswer = row.querySelector('.mq-model-answer')?.value || '';
-          const rubricInputs = row.querySelectorAll('.editor-card input[data-idx]');
-          let rubric = '';
-          let tagsStr = '';
-          rubricInputs.forEach(inp => {
-            const idx = parseInt(inp.dataset.idx);
-            if (idx === i && !inp.classList.contains('mq-q') && !inp.classList.contains('mq-exp') && !inp.classList.contains('mq-opt')) {
-              // This is either rubric or tags; rubric is text input, tags is second input
-            }
-          });
-          // Get all inputs with data-idx in this card
-          const allInputs = row.querySelectorAll('input[data-idx]');
-          // The rubric is typically the first non-mq-q, non-mq-opt input; tags the second
-          const nonQInputs = Array.from(allInputs).filter(inp => !inp.classList.contains('mq-q') && !inp.classList.contains('mq-opt'));
-          rubric = nonQInputs[0]?.value || '';
-          tagsStr = nonQInputs[1]?.value || '';
+          const rubric = row.querySelector('.mq-rubric')?.value || '';
+          const tagsStr = row.querySelector('.mq-tags')?.value || '';
           const tags = tagsStr.split(',').map(t => t.trim()).filter(Boolean);
-          questions.push({ question, modelAnswer, rubric, explanation, tags });
+          const entry = { question, modelAnswer, rubric, explanation, tags };
+          const childRows = Array.from(row.querySelectorAll('.modal-child-row'));
+          if (childRows.length) {
+            entry.children = childRows.map((cr) => {
+              const label = cr.querySelector('.mq-child-label')?.value?.trim() || '';
+              const cQ = cr.querySelector('.mq-child-question')?.value || '';
+              const cM = cr.querySelector('.mq-child-model-answer')?.value || '';
+              const cR = cr.querySelector('.mq-child-rubric')?.value || '';
+              const cE = cr.querySelector('.mq-child-explanation')?.value || '';
+              const child = { label, question: cQ, modelAnswer: cM };
+              if (cR) child.rubric = cR;
+              if (cE) child.explanation = cE;
+              return child;
+            });
+          }
+          questions.push(entry);
         } else {
           const opts = Array.from(row.querySelectorAll('.mq-opt')).map(input => input.value);
           const options = isFlashcard ? [] : opts;
@@ -4455,6 +4644,108 @@
       }
       renderNewFileModal();
     }
+
+    // ── Wizard (new-file) written multi-part helpers ────────────────────────
+    function renderModalChildRow(child, qIdx, cIdx, total) {
+      const label = child.label || childLetter(cIdx);
+      return `
+        <div class="modal-child-row" data-cidx="${cIdx}" style="border:1px solid var(--border); border-radius:8px; padding:0.5rem 0.6rem; background:var(--surface); margin-top:0.4rem;">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:0.4rem; margin-bottom:0.35rem;">
+            <div style="font-weight:700; font-size:0.78rem; color:var(--accent);">Part ${escapeHtml(label)}</div>
+            <div class="mini-actions">
+              <button type="button" class="mini-btn" onclick="moveModalChildPart(${qIdx}, ${cIdx}, -1)" ${cIdx === 0 ? 'disabled' : ''}>↑</button>
+              <button type="button" class="mini-btn" onclick="moveModalChildPart(${qIdx}, ${cIdx}, 1)" ${cIdx === total - 1 ? 'disabled' : ''}>↓</button>
+              <button type="button" class="mini-btn delete" onclick="removeModalChildPart(${qIdx}, ${cIdx})">Remove</button>
+            </div>
+          </div>
+          <input class="text-input mq-child-label" value="${escapeHtml(child.label || childLetter(cIdx))}" placeholder="A)" style="max-width:100px; margin-bottom:0.3rem;" oninput="syncModalQuestionsFromUI()">
+          <textarea class="text-area mq-child-question" placeholder="Part question" style="min-height:50px; margin-bottom:0.3rem;" oninput="syncModalQuestionsFromUI()">${escapeHtml(child.question || '')}</textarea>
+          <textarea class="text-area mq-child-model-answer" placeholder="Model answer for this part (optional)" style="min-height:60px; margin-bottom:0.3rem;" oninput="syncModalQuestionsFromUI()">${escapeHtml(child.modelAnswer || '')}</textarea>
+          <input class="text-input mq-child-rubric" value="${escapeHtml(child.rubric || '')}" placeholder="Rubric (optional)" style="margin-bottom:0.3rem;" oninput="syncModalQuestionsFromUI()">
+          <textarea class="text-area mq-child-explanation" placeholder="Explanation (optional)" style="min-height:40px;" oninput="syncModalQuestionsFromUI()">${escapeHtml(child.explanation || '')}</textarea>
+        </div>
+      `;
+    }
+
+    function _ensureModalChildren(qIdx) {
+      const q = state.modalQuestions[qIdx];
+      if (!q) return null;
+      if (!Array.isArray(q.children)) q.children = [];
+      return q;
+    }
+
+    function addModalChildPart(qIdx) {
+      syncModalQuestionsFromUI();
+      const q = _ensureModalChildren(qIdx);
+      if (!q) return;
+      q.children.push({ label: childLetter(q.children.length), question: '', modelAnswer: '', rubric: '', explanation: '' });
+      renderNewFileModal();
+    }
+
+    function removeModalChildPart(qIdx, cIdx) {
+      syncModalQuestionsFromUI();
+      const q = _ensureModalChildren(qIdx);
+      if (!q || !q.children[cIdx]) return;
+      q.children.splice(cIdx, 1);
+      q.children.forEach((child, ci) => {
+        const def = childLetter(ci);
+        if (/^[A-Z]\)$/.test(child.label || '') || !child.label) child.label = def;
+      });
+      renderNewFileModal();
+    }
+
+    function moveModalChildPart(qIdx, cIdx, delta) {
+      syncModalQuestionsFromUI();
+      const q = _ensureModalChildren(qIdx);
+      if (!q || !q.children[cIdx]) return;
+      const next = cIdx + delta;
+      if (next < 0 || next >= q.children.length) return;
+      const tmp = q.children[cIdx];
+      q.children[cIdx] = q.children[next];
+      q.children[next] = tmp;
+      renderNewFileModal();
+    }
+
+    function convertModalToMulti(qIdx) {
+      syncModalQuestionsFromUI();
+      const q = _ensureModalChildren(qIdx);
+      if (!q || q.children.length) return;
+      q.children.push({ label: 'A)', question: '', modelAnswer: '', rubric: '', explanation: '' });
+      renderNewFileModal();
+    }
+
+    function convertModalToSingle(qIdx) {
+      syncModalQuestionsFromUI();
+      const q = state.modalQuestions[qIdx];
+      if (!q || !Array.isArray(q.children) || !q.children.length) return;
+      openModal({
+        title: 'Convert to Single Question?',
+        subtitle: 'This removes the sub-parts. The parent prompt and Model Answer are kept.',
+        body: `
+          <div class="empty-state" style="text-align:left;">
+            ${q.children.length} sub-part${q.children.length === 1 ? '' : 's'} will be deleted.
+          </div>
+          <div class="modal-actions">
+            <button class="btn" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" style="background:var(--bad);border-color:var(--bad);color:#fff;" onclick="closeModal(); _confirmModalConvertToSingle(${qIdx})">Remove Parts</button>
+          </div>
+        `,
+      });
+    }
+
+    function _confirmModalConvertToSingle(qIdx) {
+      const q = state.modalQuestions[qIdx];
+      if (!q) return;
+      delete q.children;
+      renderNewFileModal();
+    }
+    window.renderModalChildRow = renderModalChildRow;
+    window.addModalChildPart = addModalChildPart;
+    window.removeModalChildPart = removeModalChildPart;
+    window.moveModalChildPart = moveModalChildPart;
+    window.convertModalToMulti = convertModalToMulti;
+    window.convertModalToSingle = convertModalToSingle;
+    window._confirmModalConvertToSingle = _confirmModalConvertToSingle;
 
     let pasteImportTimer = null;
     let _suppressPasteImport = false;
@@ -4874,6 +5165,10 @@
               <button class="ghost-btn" onclick="verifyProviderToken()">Verify Token</button>
               <button class="ghost-btn" onclick="commitChanges()">Commit Only</button>
               <button class="ghost-btn" onclick="runSync()" style="border-color: var(--accent); color: var(--accent);">Run Sync Now</button>
+              <button class="ghost-btn" onclick="gitSync()" style="border-color: var(--accent); color: var(--accent);">Sync (Pull/Commit/Push)</button>
+              <button class="ghost-btn" onclick="pullChanges()">Pull</button>
+              <button class="ghost-btn" onclick="pushChanges()">Push</button>
+              <button class="ghost-btn" onclick="openForcePushModal({})" style="border-color: var(--bad); color: var(--bad);">Force Push…</button>
             </div>
             <button class="btn btn-primary" onclick="providerDeploy()">Sync & Deploy</button>
           </div>
@@ -5263,10 +5558,59 @@
         await refreshWorkspace({ preserveCurrent: true });
         closeModal();
       } catch (err) {
+        const msg = (err && (err.message || String(err))) || '';
+        // Detect pull/rebase/merge failures (the typical sw.js divergence case)
+        const isMergeConflict = /merge|conflict|rebase|fetch-first|non-fast-forward|stale|overwritten|local changes|would be overwritten/i.test(msg);
         showToast('Git Sync failed. Check activity log.', 'error');
-        logActivity('Git Sync error', err.message || String(err), 'error');
+        logActivity('Git Sync error', msg, 'error');
+        if (isMergeConflict) {
+          // Escape the failing git modal context and offer force-push as the recovery path
+          openForcePushModal({ reason: msg });
+        }
       }
     }
+
+    function openForcePushModal({ reason = '' } = {}) {
+      closeModal();
+      openModal({
+        title: 'Git Sync Conflict',
+        subtitle: 'The local files (often sw.js after a sync) diverged from GitHub and the automatic rebase failed.',
+        body: `
+          <div class="empty-state" style="text-align:left;">
+            Force-push overwrites the remote <strong>current branch</strong> with your local version using
+            <code>--force-with-lease</code>. Remote commits not present locally will be lost. Use this when
+            your local copy is the source of truth (the typical case after a sync regenerated sw.js locally).
+            <br><br>
+            <span class="muted" style="font-size:0.82rem;">If a collaborator pushed new commits after your last fetch, the lease check will reject this push to protect their work — pull first in that case.</span>
+            ${reason ? `<details style="margin-top:0.75rem;"><summary style="cursor:pointer;color:var(--muted);font-size:.82rem;">Show git output</summary><pre style="white-space:pre-wrap;font-size:.78rem;margin-top:0.5rem;max-height:200px;overflow:auto;">${escapeHtml(reason)}</pre></details>` : ''}
+          </div>
+          <div class="modal-actions">
+            <button class="btn" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" style="background:var(--bad);border-color:var(--bad);color:#fff;" onclick="forcePush()">Force Push Local</button>
+          </div>
+        `,
+      });
+    }
+    window.openForcePushModal = openForcePushModal;
+
+    async function forcePush() {
+      try {
+        const result = await fetchJson('/admin/git-force-push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        });
+        showToast(result.message || 'Force-push completed.', 'success');
+        logActivity('Git force-push', result.output || result.message || ('branch: ' + (result.branch || '')), 'success');
+        await refreshWorkspace({ preserveCurrent: true });
+        closeModal();
+      } catch (err) {
+        const msg = (err && (err.message || String(err))) || 'Unknown error';
+        showToast('Force-push failed: ' + msg, 'error');
+        logActivity('Git force-push error', msg, 'error');
+      }
+    }
+    window.forcePush = forcePush;
 
     function getQuickOpenResults(query = '') {
       const lowered = String(query || '').toLowerCase().trim();

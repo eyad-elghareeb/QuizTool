@@ -205,6 +205,7 @@ fn main() {
             commands::git_commit,
             commands::git_pull,
             commands::git_push,
+            commands::git_force_push,
             commands::provider_verify,
             commands::provider_deploy,
             commands::open_in_browser,

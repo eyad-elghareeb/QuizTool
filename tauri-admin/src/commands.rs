@@ -573,6 +573,11 @@ pub fn git_push(state: State<ProjectRoot>) -> Result<Value, String> {
 }
 
 #[tauri::command]
+pub fn git_force_push(state: State<ProjectRoot>) -> Result<Value, String> {
+    git::git_force_push(&root(&state))
+}
+
+#[tauri::command]
 pub fn provider_verify(provider: String, token: String, _state: State<ProjectRoot>) -> Result<Value, String> {
     let provider = provider.trim().to_lowercase();
     if !["github", "netlify", "vercel"].contains(&provider.as_str()) {
