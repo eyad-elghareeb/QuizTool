@@ -41,7 +41,15 @@ const WRITTEN_CONFIG = {
      modelAnswer: "Expected/Model Answer text",
      rubric: "Optional grading rubric points for AI context",
      explanation: "Why this answer is structured this way / extra background",
-     tags: ["tag1", "tag2"]
+     tags: ["tag1", "tag2"],
+     children: [           // Optional sub-questions (for multi-part questions)
+       {
+         id: "A",
+         label: "A)",
+         question: "Sub-question text?",
+         modelAnswer: "Answer for this sub-question"
+       }
+     ]
    }
    ──────────────────────────────────────────────────────────────────*/
 /* [WRITTEN_QUESTIONS_START] */
@@ -53,6 +61,18 @@ const WRITTEN_QUESTIONS = [
     rubric: "Must mention oxygen requirement, approximate ATP yield difference, and end-products (lactic acid/ethanol vs CO2/H2O).",
     explanation: "Aerobic respiration utilizes the Krebs cycle and electron transport chain, while anaerobic respiration relies solely on glycolysis and fermentation.",
     tags: ["biology", "respiration"]
+  },
+  {
+    id: "wq-2",
+    question: "A 20-year-old female complains of fever, chest pain, and joint swelling.",
+    children: [
+      { id: "A", label: "A)", question: "What is the most likely diagnosis?", modelAnswer: "Rheumatic fever with mitral stenosis." },
+      { id: "B", label: "B)", question: "Mention 2 investigations.", modelAnswer: "ASO titer and Echocardiography." }
+    ],
+    modelAnswer: "",
+    rubric: "Part A: Must identify rheumatic fever. Part B: 2 relevant investigations.",
+    explanation: "This is a classic rheumatic fever presentation with cardiac involvement.",
+    tags: ["cardiology", "rheumatic-fever"]
   }
 ];
 /* [WRITTEN_QUESTIONS_END] */

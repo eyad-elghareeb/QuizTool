@@ -1042,38 +1042,168 @@
       container.appendChild(block);
     });
 
-    // Batch grade row (only show when not all children have individual model answers)
+    // Batch action row: AI grade, manual grade, photo
     var batchRow = create('div', 'batch-grade-row');
     if (!hasAllChildModelAnswers) {
       var batchNote = create('div', 'child-reminder');
       batchNote.textContent = '💡 Parts share a single model answer. Use "Grade All with AI" to grade all parts together, or grade individually with Manual Grade.';
       container.appendChild(batchNote);
-
-      var batchAiBtn = create('button', 'btn btn-primary');
-      batchAiBtn.textContent = 'Grade All with AI';
-      batchAiBtn.type = 'button';
-      batchAiBtn.addEventListener('click', function () {
-        submitBatchAiGrade(pIdx);
-      });
-      batchRow.appendChild(batchAiBtn);
-
-      var photoBtn = create('button', 'btn btn-secondary');
-      photoBtn.textContent = '📷 Photo';
-      photoBtn.type = 'button';
-      photoBtn.addEventListener('click', function () {
-        $('#photo-toggle').click();
-      });
-      batchRow.appendChild(photoBtn);
-    } else {
-      var allAiBtn = create('button', 'btn btn-primary');
-      allAiBtn.textContent = 'Grade All with AI';
-      allAiBtn.type = 'button';
-      allAiBtn.addEventListener('click', function () {
-        submitBatchAiGrade(pIdx);
-      });
-      batchRow.appendChild(allAiBtn);
     }
+
+    var batchAiBtn = create('button', 'btn btn-primary');
+    batchAiBtn.textContent = 'Grade All with AI';
+    batchAiBtn.type = 'button';
+    batchAiBtn.addEventListener('click', function () {
+      submitBatchAiGrade(pIdx);
+    });
+    batchRow.appendChild(batchAiBtn);
+
+    var manualBatchBtn = create('button', 'btn btn-secondary');
+    manualBatchBtn.textContent = 'Manual Grade';
+    manualBatchBtn.type = 'button';
+    manualBatchBtn.addEventListener('click', function () {
+      createBatchManualEvaluation(pIdx);
+    });
+    batchRow.appendChild(manualBatchBtn);
+
+    var photoBtn = create('button', 'btn btn-secondary');
+    photoBtn.textContent = '📷 Photo';
+    photoBtn.type = 'button';
+    photoBtn.addEventListener('click', function () {
+      $('#photo-toggle').click();
+    });
+    batchRow.appendChild(photoBtn);
     container.appendChild(batchRow);
+
+    // Show overall assessment section if parent-level evaluation exists (from batch grading)
+    var parentEval = state.evaluations[pIdx];
+    if (parentEval) {
+      var childAnswersArr = state.childAnswers[pIdx] || [];
+      var combinedUserParts = [];
+      question.children.forEach(function (child, ci) {
+        var label = child.label || (ci + 1);
+        var ans = (childAnswersArr[ci] || '').trim();
+        combinedUserParts.push(label + ': ' + (ans || '(No answer)'));
+      });
+      var combinedUserAnswer = combinedUserParts.join('\n\n');
+
+      var combinedModelParts = [];
+      var hasAllChildModelAnswers = question.children.every(function (c) { return !!c.modelAnswer; });
+      question.children.forEach(function (child, ci) {
+        var label = child.label || (ci + 1);
+        combinedModelParts.push(label + ': ' + (hasAllChildModelAnswers && child.modelAnswer ? child.modelAnswer : question.modelAnswer));
+      });
+      var combinedModelAnswer = combinedModelParts.join('\n\n');
+
+      var passed = isPassed(parentEval);
+      var scoreText = parentEval.score === null || parentEval.score === undefined ? 'Self' : String(parentEval.score);
+
+      var overallDiv = create('div', 'panel');
+      overallDiv.style.marginTop = '16px';
+      overallDiv.style.padding = '16px';
+      overallDiv.style.border = '2px solid ' + (passed ? 'var(--ok)' : 'var(--bad)');
+      overallDiv.innerHTML = ''
+        + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">'
+        + '<div style="width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:1rem;border:2.5px solid ' + (passed ? 'var(--ok)' : 'var(--bad)') + ';background:' + (passed ? 'var(--ok-soft)' : 'var(--bad-soft)') + ';color:' + (passed ? 'var(--ok)' : 'var(--bad)') + '">' + scoreText + '</div>'
+        + '<div><div style="font-weight:700;font-size:1.05rem">Overall: ' + (passed ? 'Passed' : 'Needs revision') + '</div>'
+        + '<div style="font-size:.82rem;color:var(--muted)">' + (parentEval.source || 'Evaluation') + '</div></div>'
+        + '</div>'
+        + '<div class="compare-grid" style="margin-bottom:12px">'
+        + '<div class="panel compare-card user" style="padding:12px;border-left:4px solid var(--flag)"><div class="compare-title">Your combined answer</div><div class="compare-body" style="white-space:pre-wrap;font-size:.88rem">' + escapeHtml(combinedUserAnswer) + '</div></div>'
+        + '<div class="panel compare-card model" style="padding:12px;border-left:4px solid var(--accent)"><div class="compare-title">Combined model answer</div><div class="compare-body" style="white-space:pre-wrap;font-size:.88rem">' + escapeHtml(combinedModelAnswer) + '</div></div>'
+        + '</div>';
+
+      if (parentEval.strengths && parentEval.strengths.length) {
+        overallDiv.innerHTML += '<div style="margin-bottom:6px;font-weight:700;font-size:.82rem;color:var(--ok)">\u2713 Strengths</div>';
+        parentEval.strengths.forEach(function (s) {
+          overallDiv.innerHTML += '<div style="padding-left:16px;font-size:.88rem;line-height:1.5;margin-bottom:2px">\u2022 ' + escapeHtml(s) + '</div>';
+        });
+      }
+      if (parentEval.gaps && parentEval.gaps.length) {
+        overallDiv.innerHTML += '<div style="margin-top:10px;margin-bottom:6px;font-weight:700;font-size:.82rem;color:var(--bad)">\u2717 Areas to improve</div>';
+        parentEval.gaps.forEach(function (g) {
+          overallDiv.innerHTML += '<div style="padding-left:16px;font-size:.88rem;line-height:1.5;margin-bottom:2px">\u2022 ' + escapeHtml(g) + '</div>';
+        });
+      }
+      if (parentEval.feedback) {
+        overallDiv.innerHTML += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:.9rem;line-height:1.6">' + escapeHtml(parentEval.feedback) + '</div>';
+      }
+
+      // Photo display in overall assessment
+      var parentPhoto = state.photoAnswers && state.photoAnswers[pIdx];
+      if (parentPhoto && parentPhoto.data) {
+        overallDiv.innerHTML += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">'
+          + '<img src="data:' + parentPhoto.mimeType + ';base64,' + parentPhoto.data + '" class="feedback-photo">'
+          + (parentEval.transcription ? '<div class="transcription-box" style="margin-top:8px"><div class="transcription-label">AI Transcription</div><div class="transcription-text">' + escapeHtml(parentEval.transcription) + '</div></div>' : '')
+          + '</div>';
+      }
+
+      // Buttons: same as normal questions (Pass/Fail, Retry, Next)
+      var btnBar = create('div', 'action-row');
+      btnBar.style.marginTop = '16px';
+      btnBar.style.borderTop = '1px solid var(--border)';
+      btnBar.style.paddingTop = '12px';
+      btnBar.style.flexWrap = 'wrap';
+
+      var failBtn = create('button', 'btn btn-secondary' + (!passed ? ' fail-choice active' : ''));
+      failBtn.textContent = 'Fail';
+      failBtn.type = 'button';
+      failBtn.addEventListener('click', function (idx) {
+        return function () {
+          state.evaluations[idx].manualVerdict = 'fail';
+          state.evaluations[idx].passed = false;
+          showQuestion(idx);
+          renderQuestionList();
+          saveProgress();
+          showToast('Marked fail.');
+        };
+      }(pIdx));
+      btnBar.appendChild(failBtn);
+
+      var passBtn = create('button', 'btn btn-secondary' + (passed ? ' pass-choice active' : ''));
+      passBtn.textContent = 'Pass';
+      passBtn.type = 'button';
+      passBtn.addEventListener('click', function (idx) {
+        return function () {
+          state.evaluations[idx].manualVerdict = 'pass';
+          state.evaluations[idx].passed = true;
+          showQuestion(idx);
+          renderQuestionList();
+          saveProgress();
+          showToast('Marked pass.');
+        };
+      }(pIdx));
+      btnBar.appendChild(passBtn);
+
+      var retryBtn = create('button', 'btn btn-secondary');
+      retryBtn.innerHTML = '\u21BA Retry';
+      retryBtn.type = 'button';
+      retryBtn.addEventListener('click', function (idx) {
+        return function () {
+          delete state.evaluations[idx];
+          if (state.childAnswers) delete state.childAnswers[idx];
+          if (state.childEvaluations) delete state.childEvaluations[idx];
+          if (state.photoAnswers) delete state.photoAnswers[idx];
+          state.flagged[idx] = false;
+          delete state.flagged[idx];
+          saveProgress();
+          showQuestion(idx);
+          renderQuestionList();
+          updateResumeButton();
+          showToast('Question cleared. Try again.');
+        };
+      }(pIdx));
+      btnBar.appendChild(retryBtn);
+
+      var nextBtn = create('button', 'btn btn-primary');
+      nextBtn.textContent = 'Next';
+      nextBtn.type = 'button';
+      nextBtn.addEventListener('click', goNext);
+      btnBar.appendChild(nextBtn);
+
+      overallDiv.appendChild(btnBar);
+      container.appendChild(overallDiv);
+    }
   }
 
   function countWords(text) {
@@ -1311,6 +1441,46 @@
       });
   }
 
+  function createBatchManualEvaluation(pIdx) {
+    var question = questions[pIdx];
+    var childAnswersArr = state.childAnswers[pIdx] || [];
+    var combinedParts = [];
+    question.children.forEach(function (child, ci) {
+      var label = child.label || (ci + 1);
+      var ans = (childAnswersArr[ci] || '').trim();
+      combinedParts.push(label + ': ' + (ans || '(No answer)'));
+    });
+    var combinedAnswer = combinedParts.join('\n\n');
+    var hasContent = combinedParts.some(function (p) { return p.indexOf('(No answer)') === -1; });
+    state.childEvaluations[pIdx] = state.childEvaluations[pIdx] || [];
+    question.children.forEach(function (child, ci) {
+      var ans = (childAnswersArr[ci] || '').trim();
+      state.childEvaluations[pIdx][ci] = {
+        score: null,
+        passed: !!ans,
+        strengths: ans ? ['Answer attempted for part ' + (child.label || (ci + 1)) + ' and ready for self review.'] : [],
+        gaps: ans ? [] : ['No answer was provided for this part before self grading.'],
+        feedback: 'Compare your response with the model answer, then choose Pass or Fail for the final mark.',
+        source: 'Manual grade',
+        manualVerdict: ans ? 'pass' : 'fail'
+      };
+    });
+    state.evaluations[pIdx] = {
+      score: null,
+      passed: hasContent,
+      strengths: hasContent ? ['All parts attempted and ready for self review.'] : [],
+      gaps: hasContent ? [] : ['No answers were provided before self grading.'],
+      feedback: 'Compare your combined response with the combined model answer, then choose Pass or Fail for the final mark.',
+      source: 'Manual grade',
+      manualVerdict: hasContent ? 'pass' : 'fail'
+    };
+    saveProgress();
+    currentIndex = pIdx;
+    showQuestion(pIdx);
+    renderQuestionList();
+    showToast('Batch manual grade created.');
+  }
+
   function _gradeBatchChildren(pIdx, apiKey) {
     var question = questions[pIdx];
     var modelId = $('#model-select').value;
@@ -1333,17 +1503,46 @@
     });
     var combinedAnswer = combinedParts.join('\n\n');
 
+    // Build combined model answer from children when each has its own
+    var hasAllChildModelAnswers = question.children.every(function (c) { return !!c.modelAnswer; });
+    var batchQuestion;
+    if (hasAllChildModelAnswers) {
+      var combinedModelParts = [];
+      question.children.forEach(function (child, ci) {
+        var label = child.label || (ci + 1);
+        combinedModelParts.push(label + ': ' + (child.modelAnswer || ''));
+      });
+      batchQuestion = {
+        question: question.question,
+        modelAnswer: [
+          question.modelAnswer || '',
+          '',
+          'Each part is graded separately against its own model answer:',
+          '',
+          combinedModelParts.join('\n\n')
+        ].join('\n'),
+        rubric: question.rubric,
+        explanation: question.explanation
+      };
+    } else {
+      batchQuestion = question;
+    }
+
     var hasPhoto = !!(state.photoAnswers && state.photoAnswers[pIdx] && state.photoAnswers[pIdx].data);
 
-    gradeWithGemini(question, hasPhoto ? null : combinedAnswer, apiKey, modelId, _gradingAbortController.signal)
+    gradeWithGemini(batchQuestion, hasPhoto ? null : combinedAnswer, apiKey, modelId, _gradingAbortController.signal)
       .then(function (evaluation) {
-        // Apply same evaluation to all children
+        // Store parent-level (whole-question) evaluation
+        state.evaluations[pIdx] = evaluation;
+        // Also store per-child for backward compatibility
         if (!state.childEvaluations[pIdx]) state.childEvaluations[pIdx] = [];
         question.children.forEach(function (child, ci) {
           state.childEvaluations[pIdx][ci] = evaluation;
-          renderChildFeedback(pIdx, ci, evaluation);
         });
         saveProgress();
+        // Re-render with children + overall assessment
+        currentIndex = pIdx;
+        showQuestion(pIdx);
         renderQuestionList();
         showToast('All parts graded together.');
       })
