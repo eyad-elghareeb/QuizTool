@@ -853,16 +853,17 @@
           isDone = true;
           doneCount++;
         } else if (doneChildren > 0) {
-          // partially done counts as flagged (needs attention)
           isFlagged = true;
         }
         if (doneChildren === 0 && !isFlagged) skippedCount++;
+        if (doneChildren > 0) {
+          passed = childEvals.every(function (e) { return e ? isPassed(e) : true; });
+        }
       } else {
         var evaluation = state.evaluations[index];
         passed = evaluation ? isPassed(evaluation) : null;
         var isAnswered = !!(state.answers[index] || (state.photoAnswers && state.photoAnswers[index] && state.photoAnswers[index].data));
         if (evaluation) { isDone = true; doneCount++; }
-        if (isFlagged) flaggedCount++;
         if (!isAnswered && !evaluation) skippedCount++;
       }
 
@@ -1034,10 +1035,10 @@
       // Child feedback section
       var feedback = create('div', 'child-feedback');
       feedback.id = 'child-feedback-' + pIdx + '-' + ci;
+      block.appendChild(feedback);
       if (childEvals[ci]) {
         renderChildFeedback(pIdx, ci, childEvals[ci]);
       }
-      block.appendChild(feedback);
 
       container.appendChild(block);
     });
@@ -1214,20 +1215,6 @@
     return words + ' word' + (words === 1 ? '' : 's') + ' | ' + chars + ' character' + (chars === 1 ? '' : 's');
   }
 
-  // Extract the section of parent modelAnswer that matches a child label (e.g. "A)" or "a)")
-  function getChildModelAnswer(parentAnswer, childLabel) {
-    if (!parentAnswer || !childLabel) return parentAnswer || '';
-    var sections = parentAnswer.split(/\n\s*\n(?:\s*(?=[A-Za-z]\)|\d[A-Za-z]?\)))/);
-    if (sections.length < 2) return parentAnswer;
-    var lowerLabel = childLabel.toLowerCase().replace(/[)\.\s]/g, '');
-    for (var i = 0; i < sections.length; i++) {
-      var sec = sections[i].trim();
-      var secLabel = sec.split(/\s/)[0].toLowerCase().replace(/[)\.\s]/g, '');
-      if (secLabel === lowerLabel) return sec;
-    }
-    return parentAnswer;
-  }
-
   function onChildAnswerInput(pIdx, cIdx, value) {
     if (!state.childAnswers[pIdx]) state.childAnswers[pIdx] = [];
     state.childAnswers[pIdx][cIdx] = value;
@@ -1237,6 +1224,7 @@
     answerSaveTimer = setTimeout(function () {
       saveProgress();
       renderQuestionList();
+      updateResumeButton();
     }, 250);
   }
 
@@ -1411,16 +1399,23 @@
     setLoading(true, _getModelLabel(modelId));
 
     // Build a mini-question object for this child
+    // The AI prompt becomes:
+    //   ## QUESTION  →  clinical scenario (for context)
+    //                  + child's specific question
+    //   ## MODEL ANSWER → only this child's expected answer
+    // This keeps scenario context for the AI without expecting the full parent answer.
     var childQuestion = {
-      question: child.question || question.question,
-      modelAnswer: child.modelAnswer || getChildModelAnswer(question.modelAnswer, child.label) || question.modelAnswer,
+      question: child.question
+        ? 'Clinical scenario (for context, do NOT grade this):\n' + question.question + '\n\nNow grade ONLY this specific part:\n' + child.question
+        : question.question,
+      modelAnswer: child.modelAnswer || question.modelAnswer || '',
       rubric: child.rubric || question.rubric,
       explanation: child.explanation || question.explanation
     };
 
     var hasPhoto = !!(state.photoAnswers && state.photoAnswers[pIdx] && state.photoAnswers[pIdx].data);
 
-    gradeWithGemini(childQuestion, hasPhoto ? null : answer, apiKey, modelId, _gradingAbortController.signal)
+    gradeWithGemini(childQuestion, hasPhoto ? null : answer, apiKey, modelId, _gradingAbortController.signal, pIdx)
       .then(function (evaluation) {
         if (!state.childEvaluations[pIdx]) state.childEvaluations[pIdx] = [];
         state.childEvaluations[pIdx][cIdx] = evaluation;
@@ -1530,14 +1525,14 @@
 
     var hasPhoto = !!(state.photoAnswers && state.photoAnswers[pIdx] && state.photoAnswers[pIdx].data);
 
-    gradeWithGemini(batchQuestion, hasPhoto ? null : combinedAnswer, apiKey, modelId, _gradingAbortController.signal)
+    gradeWithGemini(batchQuestion, hasPhoto ? null : combinedAnswer, apiKey, modelId, _gradingAbortController.signal, pIdx)
       .then(function (evaluation) {
         // Store parent-level (whole-question) evaluation
         state.evaluations[pIdx] = evaluation;
-        // Also store per-child for backward compatibility
+        // Store a deep copy per-child so verdicts can be adjusted independently
         if (!state.childEvaluations[pIdx]) state.childEvaluations[pIdx] = [];
         question.children.forEach(function (child, ci) {
-          state.childEvaluations[pIdx][ci] = evaluation;
+          state.childEvaluations[pIdx][ci] = JSON.parse(JSON.stringify(evaluation));
         });
         saveProgress();
         // Re-render with children + overall assessment
@@ -1709,8 +1704,9 @@
     }
   }
 
-  function gradeWithGemini(question, answer, apiKey, model, cancelSignal) {
-    var hasPhotoAnswer = state.photoAnswers && state.photoAnswers[currentIndex] && state.photoAnswers[currentIndex].data;
+  function gradeWithGemini(question, answer, apiKey, model, cancelSignal, photoIdx) {
+    var qIdx = photoIdx !== undefined ? photoIdx : currentIndex;
+    var hasPhotoAnswer = state.photoAnswers && state.photoAnswers[qIdx] && state.photoAnswers[qIdx].data;
 
     // ── System instruction ─────────────────────────────────────────────────
     // Sent on every request as a fallback. requestGemini replaces it with a
@@ -2033,7 +2029,7 @@
     fb.innerHTML = '';
 
     var answer = (state.childAnswers[pIdx] && state.childAnswers[pIdx][cIdx]) || '(No answer written.)';
-    var modelAnswer = child.modelAnswer || getChildModelAnswer(question.modelAnswer, child.label) || '(No model answer supplied.)';
+    var modelAnswer = child.modelAnswer || question.modelAnswer || '(No model answer supplied.)';
 
     // Compare mini
     var compare = create('div', 'compare-mini');
