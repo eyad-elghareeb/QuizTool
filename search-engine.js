@@ -397,7 +397,7 @@
           r.breadcrumbs.map(function (b) { return _highlightMatch(b, query); }).join('<span class="loc-sep"> \u2192 </span>') +
           '</div>';
       }
-      html += '<div class="search-result-item' + (sel ? ' selected' : '') + '" data-idx="' + i + '" onclick="window.__searchEngineNavigate(' + i + ')" onmouseenter="(function(){window.__searchEngineState.selectedIdx=' + i + ';window.__searchEngineRender(window.__searchEngineState.results,window.__searchEngineState.query)})()">';
+      html += '<div class="search-result-item' + (sel ? ' selected' : '') + '" data-idx="' + i + '">';
       html += '<div class="search-result-icon">' + (r.icon || '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>') + '</div>';
       html += '<div class="search-result-info">';
       html += '<div class="search-result-title">' + _highlightMatch(r.title, query) + '</div>';
@@ -428,7 +428,8 @@
     var r = _state.results[idx];
     if (!r) return;
     window.__searchEngineClose();
-    window.location.href = r.url;
+    var target = r.url ? _resolveUrl(r.url) : '';
+    if (target) window.location.href = target;
   };
 
   /* ── Open search ───────────────────────────────────────────── */
@@ -495,6 +496,28 @@
         }
       } else if (e.key === 'Escape') {
         window.__searchEngineClose();
+      }
+    });
+  })();
+
+  /* ── Event delegation for result clicks / hover ──────────── */
+  (function () {
+    var body = document.getElementById('search-modal-body');
+    if (!body) return;
+    body.addEventListener('click', function (e) {
+      var item = e.target.closest('.search-result-item');
+      if (item) {
+        var idx = parseInt(item.getAttribute('data-idx'), 10);
+        if (!isNaN(idx)) window.__searchEngineNavigate(idx);
+      }
+    });
+    body.addEventListener('mouseover', function (e) {
+      var item = e.target.closest('.search-result-item');
+      if (item) {
+        var idx = parseInt(item.getAttribute('data-idx'), 10);
+        if (!isNaN(idx) && idx !== _state.selectedIdx) {
+          _state.selectedIdx = idx;
+        }
       }
     });
   })();
