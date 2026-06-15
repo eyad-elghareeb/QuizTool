@@ -395,7 +395,7 @@
       '@media (orientation: portrait) and (max-width:860px){.layout{grid-template-columns:1fr}.nav-pane{border-left:0;border-top:1px solid var(--border);max-height:200px}.nav-grid-wrap{display:flex;overflow-x:auto;overflow-y:hidden;padding-bottom:10px}.nav-grid{grid-template-columns:repeat(auto-fill,minmax(42px,1fr));grid-template-rows:42px;grid-auto-flow:column;gap:5px}.nav-btn{width:42px;height:42px;min-width:42px;aspect-ratio:unset;border-radius:6px}}',
       '@media (max-width:860px){.config-grid,.compare-grid{grid-template-columns:1fr}.layout{grid-template-columns:1fr}.nav-pane{border-left:0;border-top:1px solid var(--border);max-height:200px}.nav-grid-wrap{display:flex;overflow-x:auto;overflow-y:hidden;padding-bottom:10px}.nav-grid{grid-template-columns:repeat(auto-fill,minmax(42px,1fr));grid-template-rows:42px;grid-auto-flow:column;gap:5px}.nav-btn{width:42px;height:42px;min-width:42px;aspect-ratio:unset;border-radius:6px}.content{padding:16px}.manual-bar{align-items:center}.action-row{justify-content:flex-start}.manual-bar .action-row{justify-content:center}}',
       '@media (max-width:560px){.start-screen{padding:14px}.start-card{padding:20px}.start-actions,.answer-foot{align-items:stretch;flex-direction:column}.start-actions .btn,.answer-foot .btn,.manual-bar .btn{width:100%}}',
-      '.child-block{border:1px solid var(--border);border-radius:10px;margin-top:12px;overflow:hidden}.child-header{display:flex;align-items:flex-start;gap:10px;padding:12px 14px 6px;background:var(--surface2);font-weight:600;font-size:.92rem}.child-header .child-label{color:var(--accent);font-weight:700;white-space:nowrap;flex-shrink:0}.child-question{white-space:pre-wrap;color:var(--text)}.child-answer{padding:8px 14px 6px}.child-answer textarea{width:100%;min-height:100px;resize:vertical;border:1.5px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text);padding:10px;outline:0;transition:border-color var(--fast),box-shadow var(--fast);font-size:.92rem}.child-answer textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}.child-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 14px 10px;flex-wrap:wrap}.child-counter{color:var(--muted);font-size:.8rem;white-space:nowrap}.child-actions{display:flex;gap:6px;flex-wrap:wrap}.child-actions .btn{min-height:32px;padding:.4rem .85rem;font-size:.82rem}.child-feedback{display:none;border-top:1px solid var(--border);background:var(--surface);padding:12px 14px}.child-feedback.active{display:block}.child-feedback .compare-mini{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}.child-feedback .compare-mini-card{padding:10px;background:var(--surface2);border-radius:8px;font-size:.85rem}.child-feedback .compare-mini-card .cm-title{color:var(--muted);font-weight:700;font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}.child-feedback .compare-mini-card .cm-body{white-space:pre-wrap;line-height:1.5}.child-feedback .child-eval-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}.child-feedback .child-score{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.85rem;border:2.5px solid var(--border);background:var(--surface);flex-shrink:0}.child-feedback .child-score.pass{border-color:var(--ok);background:var(--ok-soft);color:var(--ok)}.child-feedback .child-score.fail{border-color:var(--bad);background:var(--bad-soft);color:var(--bad)}.child-feedback .child-verdict{font-weight:700;font-size:.9rem}.child-feedback .child-bullets{display:grid;gap:5px;margin:6px 0}.child-feedback .child-bullet{position:relative;padding-left:15px;font-size:.85rem;line-height:1.4}.child-feedback .child-bullet::before{content:"";position:absolute;left:0;top:.55em;width:6px;height:6px;border-radius:99px;background:var(--accent)}.child-feedback .child-bullet.good::before{background:var(--ok)}.child-feedback .child-bullet.gap::before{background:var(--bad)}.child-feedback .child-feedback-text{border-top:1px solid var(--border);padding-top:8px;margin-top:6px;font-size:.85rem;line-height:1.5;color:var(--text)}.child-feedback .child-manual-actions{display:flex;gap:6px;justify-content:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}.child-feedback .child-manual-actions .btn{min-height:30px;padding:.35rem .75rem;font-size:.8rem}.batch-grade-row{display:flex;gap:8px;justify-content:flex-end;margin-top:8px;padding-top:10px;border-top:2px dashed var(--border)}.batch-grade-row .btn{min-height:36px}.child-reminder{margin:10px 14px 4px;font-size:.82rem;color:var(--muted);padding:8px 10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)}'
+      '.child-block{border:1px solid var(--border);border-radius:10px;margin-top:12px;overflow:hidden}.child-header{display:flex;align-items:flex-start;gap:10px;padding:12px 14px 6px;background:var(--surface2);font-weight:600;font-size:.92rem}.child-header .child-label{color:var(--accent);font-weight:700;white-space:nowrap;flex-shrink:0}.child-question{white-space:pre-wrap;color:var(--text)}.child-answer{padding:8px 14px 6px}.child-answer textarea{width:100%;min-height:100px;resize:vertical;border:1.5px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text);padding:10px;outline:0;transition:border-color var(--fast),box-shadow var(--fast);font-size:.92rem}.child-answer textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}.child-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 14px 10px;flex-wrap:wrap}.child-counter{color:var(--muted);font-size:.8rem;white-space:nowrap}.child-actions{display:flex;gap:6px;flex-wrap:wrap}.child-actions .btn{min-height:32px;padding:.4rem .85rem;font-size:.82rem}.child-feedback{display:none;border-top:1px solid var(--border);background:var(--surface);padding:12px 14px}.child-feedback.active{display:block}.child-feedback .compare-mini{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}.child-feedback .compare-mini-card{padding:10px;background:var(--surface2);border-radius:8px;font-size:.85rem}.child-feedback .compare-mini-card .cm-title{color:var(--muted);font-weight:700;font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}.child-feedback .compare-mini-card .cm-body{white-space:pre-wrap;line-height:1.5}.child-feedback .child-eval-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}.child-feedback .child-score{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.85rem;border:2.5px solid var(--border);background:var(--surface);flex-shrink:0}.child-feedback .child-score.pass{border-color:var(--ok);background:var(--ok-soft);color:var(--ok)}.child-feedback .child-score.fail{border-color:var(--bad);background:var(--bad-soft);color:var(--bad)}.child-feedback .child-verdict{font-weight:700;font-size:.9rem}.child-feedback .child-bullets{display:grid;gap:5px;margin:6px 0}.child-feedback .child-bullet{position:relative;padding-left:15px;font-size:.85rem;line-height:1.4}.child-feedback .child-bullet::before{content:"";position:absolute;left:0;top:.55em;width:6px;height:6px;border-radius:99px;background:var(--accent)}.child-feedback .child-bullet.good::before{background:var(--ok)}.child-feedback .child-bullet.gap::before{background:var(--bad)}.child-feedback .child-feedback-text{border-top:1px solid var(--border);padding-top:8px;margin-top:6px;font-size:.85rem;line-height:1.5;color:var(--text)}.child-feedback .child-manual-actions{display:flex;gap:6px;justify-content:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}.child-feedback .child-manual-actions .btn{min-height:30px;padding:.35rem .75rem;font-size:.8rem}.batch-grade-row{display:flex;gap:8px;justify-content:flex-start;margin-top:8px;padding-top:10px;border-top:2px dashed var(--border)}.batch-grade-row .btn{min-height:36px}.child-reminder{margin:10px 14px 4px;font-size:.82rem;color:var(--muted);padding:8px 10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)}'
     ].join('\n');
     document.head.appendChild(style);
   }
@@ -1036,11 +1036,10 @@
       var feedback = create('div', 'child-feedback');
       feedback.id = 'child-feedback-' + pIdx + '-' + ci;
       block.appendChild(feedback);
+      container.appendChild(block);
       if (childEvals[ci]) {
         renderChildFeedback(pIdx, ci, childEvals[ci]);
       }
-
-      container.appendChild(block);
     });
 
     // Batch action row: AI grade, manual grade, photo
@@ -1050,14 +1049,6 @@
       batchNote.textContent = '💡 Parts share a single model answer. Use "Grade All with AI" to grade all parts together, or grade individually with Manual Grade.';
       container.appendChild(batchNote);
     }
-
-    var batchAiBtn = create('button', 'btn btn-primary');
-    batchAiBtn.textContent = 'Grade All with AI';
-    batchAiBtn.type = 'button';
-    batchAiBtn.addEventListener('click', function () {
-      submitBatchAiGrade(pIdx);
-    });
-    batchRow.appendChild(batchAiBtn);
 
     var manualBatchBtn = create('button', 'btn btn-secondary');
     manualBatchBtn.textContent = 'Manual Grade';
@@ -1074,6 +1065,15 @@
       $('#photo-toggle').click();
     });
     batchRow.appendChild(photoBtn);
+
+    var batchAiBtn = create('button', 'btn btn-primary');
+    batchAiBtn.textContent = 'Grade All with AI';
+    batchAiBtn.type = 'button';
+    batchAiBtn.style.marginLeft = 'auto';
+    batchAiBtn.addEventListener('click', function () {
+      submitBatchAiGrade(pIdx);
+    });
+    batchRow.appendChild(batchAiBtn);
     container.appendChild(batchRow);
 
     // Show overall assessment section if parent-level evaluation exists (from batch grading)
@@ -1099,44 +1099,54 @@
       var passed = isPassed(parentEval);
       var scoreText = parentEval.score === null || parentEval.score === undefined ? 'Self' : String(parentEval.score);
 
-      var overallDiv = create('div', 'panel');
+      var overallDiv = create('div', 'eval-panel');
       overallDiv.style.marginTop = '16px';
-      overallDiv.style.padding = '16px';
-      overallDiv.style.border = '2px solid ' + (passed ? 'var(--ok)' : 'var(--bad)');
-      overallDiv.innerHTML = ''
-        + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">'
-        + '<div style="width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:1rem;border:2.5px solid ' + (passed ? 'var(--ok)' : 'var(--bad)') + ';background:' + (passed ? 'var(--ok-soft)' : 'var(--bad-soft)') + ';color:' + (passed ? 'var(--ok)' : 'var(--bad)') + '">' + scoreText + '</div>'
-        + '<div><div style="font-weight:700;font-size:1.05rem">Overall: ' + (passed ? 'Passed' : 'Needs revision') + '</div>'
-        + '<div style="font-size:.82rem;color:var(--muted)">' + (parentEval.source || 'Evaluation') + '</div></div>'
-        + '</div>'
-        + '<div class="compare-grid" style="margin-bottom:12px">'
-        + '<div class="panel compare-card user" style="padding:12px;border-left:4px solid var(--flag)"><div class="compare-title">Your combined answer</div><div class="compare-body" style="white-space:pre-wrap;font-size:.88rem">' + escapeHtml(combinedUserAnswer) + '</div></div>'
-        + '<div class="panel compare-card model" style="padding:12px;border-left:4px solid var(--accent)"><div class="compare-title">Combined model answer</div><div class="compare-body" style="white-space:pre-wrap;font-size:.88rem">' + escapeHtml(combinedModelAnswer) + '</div></div>'
-        + '</div>';
 
-      if (parentEval.strengths && parentEval.strengths.length) {
-        overallDiv.innerHTML += '<div style="margin-bottom:6px;font-weight:700;font-size:.82rem;color:var(--ok)">\u2713 Strengths</div>';
-        parentEval.strengths.forEach(function (s) {
-          overallDiv.innerHTML += '<div style="padding-left:16px;font-size:.88rem;line-height:1.5;margin-bottom:2px">\u2022 ' + escapeHtml(s) + '</div>';
-        });
+      var evalHead = create('div', 'eval-head');
+      var score = create('div', 'score ' + (passed ? 'pass' : 'fail'));
+      score.textContent = scoreText;
+      evalHead.appendChild(score);
+      var vDiv = create('div');
+      vDiv.innerHTML = '<div class="verdict">' + (passed ? 'Passed' : 'Needs revision') + '</div>'
+        + '<div class="eval-source">' + (parentEval.source || 'Evaluation') + '</div>';
+      evalHead.appendChild(vDiv);
+      overallDiv.appendChild(evalHead);
+
+      var compareGrid = create('div', 'compare-grid');
+      var userCard = create('div', 'panel compare-card user');
+      userCard.innerHTML = '<div class="compare-title">Your combined answer</div><div class="compare-body">' + escapeHtml(combinedUserAnswer) + '</div>';
+      compareGrid.appendChild(userCard);
+      var modelCard = create('div', 'panel compare-card model');
+      modelCard.innerHTML = '<div class="compare-title">Combined model answer</div><div class="compare-body">' + escapeHtml(combinedModelAnswer) + '</div>';
+      compareGrid.appendChild(modelCard);
+      overallDiv.appendChild(compareGrid);
+
+      var bulletList = create('div', 'bullet-list');
+      (parentEval.strengths || []).forEach(function (item) {
+        bulletList.appendChild(create('div', 'bullet good', item));
+      });
+      (parentEval.gaps || []).forEach(function (item) {
+        bulletList.appendChild(create('div', 'bullet gap', item));
+      });
+      if (!bulletList.children.length) {
+        bulletList.appendChild(create('div', 'bullet', 'No detailed points for this evaluation.'));
       }
-      if (parentEval.gaps && parentEval.gaps.length) {
-        overallDiv.innerHTML += '<div style="margin-top:10px;margin-bottom:6px;font-weight:700;font-size:.82rem;color:var(--bad)">\u2717 Areas to improve</div>';
-        parentEval.gaps.forEach(function (g) {
-          overallDiv.innerHTML += '<div style="padding-left:16px;font-size:.88rem;line-height:1.5;margin-bottom:2px">\u2022 ' + escapeHtml(g) + '</div>';
-        });
-      }
-      if (parentEval.feedback) {
-        overallDiv.innerHTML += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:.9rem;line-height:1.6">' + escapeHtml(parentEval.feedback) + '</div>';
-      }
+      overallDiv.appendChild(bulletList);
+
+      var feedbackText = create('div', 'feedback-text');
+      feedbackText.textContent = parentEval.feedback || '';
+      overallDiv.appendChild(feedbackText);
 
       // Photo display in overall assessment
       var parentPhoto = state.photoAnswers && state.photoAnswers[pIdx];
       if (parentPhoto && parentPhoto.data) {
-        overallDiv.innerHTML += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">'
-          + '<img src="data:' + parentPhoto.mimeType + ';base64,' + parentPhoto.data + '" class="feedback-photo">'
-          + (parentEval.transcription ? '<div class="transcription-box" style="margin-top:8px"><div class="transcription-label">AI Transcription</div><div class="transcription-text">' + escapeHtml(parentEval.transcription) + '</div></div>' : '')
-          + '</div>';
+        var photoDiv = create('div', '');
+        photoDiv.style.borderTop = '1px solid var(--border)';
+        photoDiv.style.paddingTop = '12px';
+        photoDiv.style.marginTop = '12px';
+        photoDiv.innerHTML = '<img src="data:' + parentPhoto.mimeType + ';base64,' + parentPhoto.data + '" class="feedback-photo">'
+          + (parentEval.transcription ? '<div class="transcription-box" style="margin-top:8px"><div class="transcription-label">AI Transcription</div><div class="transcription-text">' + escapeHtml(parentEval.transcription) + '</div></div>' : '');
+        overallDiv.appendChild(photoDiv);
       }
 
       // Buttons: same as normal questions (Pass/Fail, Retry, Next)
