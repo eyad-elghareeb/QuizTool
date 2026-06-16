@@ -47,7 +47,9 @@
 
   function md(text) {
     if (!text) return '';
+    // Handle backslash escapes before HTML escaping
     var html = text
+      .replace(/\\([*_~`#\[\]()>!|\\-])/g, '$1')
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     var lines = html.split('\n').map(function(l) { return l.replace(/\r$/, ''); });
     var out = [];
@@ -72,7 +74,7 @@
     }
     html = out.join('');
     html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    html = html.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+    html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
     html = html.replace(/~~(.+?)~~/g, '<del>$1</del>');
     return html;
   }

@@ -277,6 +277,9 @@
     if (!text) return '';
     text = String(text);
 
+    // Handle backslash escapes before HTML escaping
+    text = text.replace(/\\([*_~`#\[\]()>!|\\-])/g, '$1');
+
     // Escape HTML first (code blocks will be re-escaped after)
     text = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -301,8 +304,8 @@
     // Bold
     text = text.replace(/\*\*(.+?)\*\*/g, '<strong dir="auto">$1</strong>');
 
-    // Italic
-    text = text.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<em dir="auto">$1</em>');
+    // Italic — bold was processed above, so remaining *...* pairs are italic
+    text = text.replace(/\*([^*]+)\*/g, '<em dir="auto">$1</em>');
 
     // Links
     text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a dir="auto" href="$2" target="_blank" rel="noopener">$1</a>');
