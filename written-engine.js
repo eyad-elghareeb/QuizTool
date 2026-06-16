@@ -1091,10 +1091,9 @@
       var combinedUserAnswer = combinedUserParts.join('\n\n');
 
       var combinedModelParts = [];
-      var hasAllChildModelAnswers = question.children.every(function (c) { return !!c.modelAnswer; });
       question.children.forEach(function (child, ci) {
         var label = child.label || (ci + 1);
-        combinedModelParts.push(label + ': ' + (hasAllChildModelAnswers && child.modelAnswer ? child.modelAnswer : question.modelAnswer));
+        combinedModelParts.push(label + ': ' + (child.modelAnswer || '(No model answer supplied for this part.)'));
       });
       var combinedModelAnswer = combinedModelParts.join('\n\n');
 
@@ -1420,9 +1419,9 @@
       question: child.question
         ? 'Clinical scenario (for context, do NOT grade this):\n' + question.question + '\n\nNow grade ONLY this specific part:\n' + child.question
         : question.question,
-      modelAnswer: child.modelAnswer || question.modelAnswer || '',
-      rubric: child.rubric || question.rubric,
-      explanation: child.explanation || question.explanation
+      modelAnswer: child.modelAnswer || '(No model answer supplied for this part.)',
+      rubric: child.rubric || '',
+      explanation: child.explanation || ''
     };
 
     var hasPhoto = !!(state.photoAnswers && state.photoAnswers[pIdx] && state.photoAnswers[pIdx].data);
@@ -1532,7 +1531,12 @@
         explanation: question.explanation
       };
     } else {
-      batchQuestion = question;
+      batchQuestion = {
+        question: question.question,
+        modelAnswer: '(No model answer supplied for this part.)',
+        rubric: '',
+        explanation: question.explanation || ''
+      };
     }
 
     var hasPhoto = !!(state.photoAnswers && state.photoAnswers[pIdx] && state.photoAnswers[pIdx].data);
@@ -2041,7 +2045,7 @@
     fb.innerHTML = '';
 
     var answer = (state.childAnswers[pIdx] && state.childAnswers[pIdx][cIdx]) || '(No answer written.)';
-    var modelAnswer = child.modelAnswer || question.modelAnswer || '(No model answer supplied.)';
+    var modelAnswer = child.modelAnswer || '(No model answer supplied for this part.)';
 
     // Compare mini
     var compare = create('div', 'compare-mini');
