@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+(function(){var t=localStorage.getItem('quiz-theme')||'dark';var s=document.createElement('style');s.textContent='html,body{background:'+(t==='light'?'#f3f0eb':'#0d1117')+';color:'+(t==='light'?'#1c1917':'#e6edf3')+';margin:0;padding:0;overflow:hidden;height:100%}';document.head.appendChild(s)})();
+</script>
+<title>Wheezy Child — OSCE</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="favicon.svg">
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
+</script>
+</head>
+<body>
+<script>
+/* ────────────────────────────────────────────────────────────────
+   OSCE VIRTUAL PATIENT DATA  — only edit below this line
+   ──────────────────────────────────────────────────────────────────*/
+
+/* [OSCE_CONFIG_START] */
+const OSCE_CONFIG = {
+  uid: "osce_pediatrics_001",
+  title: "OSCE Virtual Patient — Pediatrics",
+  description: "Practice history-taking with a 6-year-old girl presenting with wheeze and cough.",
+};
+/* [OSCE_CONFIG_END] */
+
+/* ─────────────────────────────────────────────────────────────────
+   OSCE_CASE — single case per file
+   ──────────────────────────────────────────────────────────────────*/
+/* [OSCE_CASE_START] */
+const OSCE_CASE = {
+  title: "Wheezy 6-Year-Old Girl",
+  specialty: "Pediatrics",
+  difficulty: "Foundational",
+  patient: {
+    name: "Emma (with her mother)",
+    age: 6,
+    gender: "female",
+    avatarSeed: "emma-kiddo",
+    opening: "(mother speaking) She's been coughing all night and wheezing, doctor. It always happens when she catches a cold."
+  },
+  hiddenProfile: {
+    diagnosis: "Viral-induced wheeze / childhood asthma exacerbation",
+    keySymptoms: ["wheeze", "nighttime cough", "triggered by upper-respiratory infections"],
+    redFlags: ["no speech difficulty", "no cyanosis", "mild increased work of breathing"],
+    pastHistory: ["two similar episodes last winter", "eczema", "father has childhood asthma"],
+    vitalSigns: "RR 32, SpO2 95% room air, afebrile, mild subcostal recession"
+  },
+  rubric: {
+    mustAsk: ["onset and pattern of wheeze", "triggers (URTI, exercise, allergens)", "atopic history (eczema, asthma, allergies in family)", "red-flag screening (cyanosis, speech, feeding)", "response to any inhaler"],
+    bonus: ["feeding / hydration status", "immunisation status"]
+  }
+};
+/* [OSCE_CASE_END] */
+</script>
+<script>
+(function () {
+  window.__OSCE_ENGINE_BASE = '../'.repeat(
+    Math.max(0, location.pathname.split('/').filter(Boolean).length - 2)
+  );
+  document.write('<scr' + 'ipt src="' + window.__OSCE_ENGINE_BASE + 'osce-engine.js"><\/scr' + 'ipt>');
+})();
+</script>
+</body>
+</html>

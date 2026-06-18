@@ -30,7 +30,7 @@ These rules apply to every task unless explicitly overridden.
 | **Type** | Authoring toolkit + project generator — static HTML tools, no backend required for the tools themselves |
 | **Deployment** | GitHub Pages (the toolkit pages themselves are deployed here) |
 | **Generator** | `tauri/` (Tauri Desktop App) is the primary generator. `generate_project.py` is deprecated but still maintained. |
-| **Release** | V5 — 8 engines, 10 authoring tools, 2 Tauri desktop apps, ReportLab PDF exporter |
+| **Release** | V5 — 9 engines, 10 authoring tools, 2 Tauri desktop apps, ReportLab PDF exporter |
 | **Output** | Generated ZIPs are MU61S8-equivalent sites (hub + quiz/bank/flashcard/written files + engines + SW) |
 
 ---
@@ -103,7 +103,7 @@ QuizTool/
 │   │   ├── main.rs               ← App controller, command registration
 │   │   ├── generator.rs           ← Project generation logic
 │   │   ├── api_helpers.rs         ← GitHub/Netlify/Vercel API helpers
-│   │   └── engines.rs             ← Embedded engine constants (8 engines)
+│   │   └── engines.rs             ← Embedded engine constants (9 engines)
 │   └── frontend/
 │       └── index.html            ← Generator 3-step wizard UI
 │
@@ -142,7 +142,7 @@ QuizTool/
 
 ---
 
-## 3. The Eight Engines
+## 3. The Nine Engines
 
 These JS files are the **core shared assets**. They exist in this repo, are deployed with QuizTool's GitHub Pages, and are bundled into every ZIP that the Tauri generator produces.
 
@@ -156,6 +156,7 @@ These JS files are the **core shared assets**. They exist in this repo, are depl
 | `uworld-engine.js` | UWorld-style quiz HTML files | High-accuracy mode, detailed analytics, timed sessions |
 | `search-engine.js` | Hub pages | Global search across all quiz/bank/written/flashcard content |
 | `ai-assistant-engine.js` | Any page | Browser-side AI Q&A assistant for explaining concepts |
+| `osce-engine.js` | OSCE virtual-patient HTML files | Conversation-style history-taking with AI virtual patients; rubric-based examiner feedback |
 
 ### Engine Path Resolution
 
@@ -301,6 +302,50 @@ Loads `written-engine.js`. The engine supports AI feedback via browser-based LLM
 ```
 
 **The `QUIZZES` array** is the only thing that changes between index pages.
+
+### 5e. OSCE Virtual Patient File Schema
+
+```js
+/* [OSCE_CONFIG_START] */
+const OSCE_CONFIG = {
+  uid: "osce_test_cases",
+  title: "OSCE Virtual Patient — Test",
+  description: "Practice history-taking with AI virtual patients.",
+  icon: "🩺"
+};
+/* [OSCE_CONFIG_END] */
+
+/* [OSCE_CASES_START] */
+const OSCE_CASES = [
+  {
+    id: "case-001",
+    title: "Chest Pain in a 55-Year-Old Man",
+    specialty: "Cardiology",
+    difficulty: "Intermediate",
+    patient: {
+      name: "Mr. Robert Hayes",
+      age: 55,
+      gender: "male",
+      avatarSeed: "robert-hayes",
+      opening: "Doctor, I've been getting this awful pressure in my chest..."
+    },
+    hiddenProfile: {     // NEVER shown to student; given to Gemini as ground truth
+      diagnosis: "Stable angina pectoris",
+      keySymptoms: ["substernal pressure", "exertional", "relieved by rest"],
+      redFlags: ["diaphoresis", "radiation to left arm"],
+      pastHistory: ["hypertension", "former smoker"],
+      vitalSigns: "BP 148/92, HR 88, afebrile"
+    },
+    rubric: {            // examiner scoring criteria
+      mustAsk: ["SOCRATES pain characterization", "cardiac risk factors", "associated symptoms"],
+      bonus: ["family history of CAD", "medication reconciliation"]
+    }
+  }
+];
+/* [OSCE_CASES_END] */
+```
+
+Loads `osce-engine.js`.
 
 ---
 
@@ -644,9 +689,11 @@ QuizTool (toolkit pages)
   index-editor.html    → index-template.html
   flashcard-maker.html → flashcard-template.html
   written-maker.html   → written-template.html
+  osce-test.html       → osce-engine.js (loads via __OSCE_ENGINE_BASE)
+  osce-engine.js       → Gemini generateContent (patient chat + examiner scoring)
 
 tauri/ (Rust Generator)
-  engines.rs → embeds: 8 engines, templates, scripts, icons
+  engines.rs → embeds: 9 engines, templates, scripts, icons
   generator.rs → build_project_zip()
   api_helpers.rs → GitHub/Netlify/Vercel API
 

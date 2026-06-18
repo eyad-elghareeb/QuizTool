@@ -502,6 +502,7 @@ pub fn build_project_zip(config: &ProjectConfig) -> Result<Vec<u8>, String> {
     add_str(&mut zip, "sync-engine.js", engines::SYNC_ENGINE_JS)?;
     add_str(&mut zip, "flashcard-engine.js", engines::FLASHCARD_ENGINE_JS)?;
     add_str(&mut zip, "written-engine.js", engines::WRITTEN_ENGINE_JS)?;
+    add_str(&mut zip, "osce-engine.js", engines::OSCE_ENGINE_JS)?;
     add_str(&mut zip, "ai-assistant-engine.js", engines::AI_ASSISTANT_ENGINE_JS)?;
 
     // Static assets

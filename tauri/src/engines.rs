@@ -10,6 +10,7 @@ pub const BANK_ENGINE_JS: &str = include_str!("../../bank-engine.js");
 pub const SYNC_ENGINE_JS: &str = include_str!("../../sync-engine.js");
 pub const FLASHCARD_ENGINE_JS: &str = include_str!("../../flashcard-engine.js");
 pub const WRITTEN_ENGINE_JS: &str = include_str!("../../written-engine.js");
+pub const OSCE_ENGINE_JS: &str = include_str!("../../osce-engine.js");
 pub const AI_ASSISTANT_ENGINE_JS: &str = include_str!("../../ai-assistant-engine.js");
 
 pub const FAVICON_SVG: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">

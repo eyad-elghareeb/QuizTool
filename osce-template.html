@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+(function(){var t=localStorage.getItem('quiz-theme')||'dark';var s=document.createElement('style');s.textContent='html,body{background:'+(t==='light'?'#f3f0eb':'#0d1117')+';color:'+(t==='light'?'#1c1917':'#e6edf3')+';margin:0;padding:0;overflow:hidden;height:100%}';document.head.appendChild(s)})();
+</script>
+<title>OSCE Case</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="favicon.svg">
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
+</script>
+</head>
+<body>
+<script>
+/* ────────────────────────────────────────────────────────────────
+   OSCE VIRTUAL PATIENT DATA  — only edit below this line
+   ──────────────────────────────────────────────────────────────────*/
+
+/* [OSCE_CONFIG_START] */
+const OSCE_CONFIG = {
+  uid: "",
+  title: "OSCE Virtual Patient",
+  description: "Practice history-taking with an AI virtual patient, then get examiner feedback.",
+};
+/* [OSCE_CONFIG_END] */
+
+/* ─────────────────────────────────────────────────────────────────
+   OSCE_CASE OBJECT — single case per file
+   {
+     title:        "Case title",
+     specialty:    "Cardiology / Respiratory / etc.",
+     difficulty:   "Foundational / Intermediate / Advanced",
+     patient: {
+       name:        "Mr. Patient Name",
+       age:         55,
+       gender:      "male" or "female",
+       avatarSeed:  "unique-seed-for-avatar",
+       opening:     "First words the patient says to the student"
+     },
+     hiddenProfile: {   // NEVER shown to student; given to Gemini as ground truth
+       diagnosis:   "The diagnosis",
+       keySymptoms: ["symptom1", "symptom2"],
+       redFlags:    ["red flag 1"],
+       pastHistory: ["hypertension"],
+       vitalSigns:  "BP 120/80, HR 70"
+     },
+     rubric: {           // examiner scoring criteria
+       mustAsk: ["SOCRATES pain characterization", "cardiac risk factors"],
+       bonus:   ["family history of CAD"]
+     }
+   }
+   ──────────────────────────────────────────────────────────────────*/
+/* [OSCE_CASE_START] */
+const OSCE_CASE = {
+  title: "Case Title",
+  specialty: "General",
+  difficulty: "Intermediate",
+  patient: {
+    name: "Mr. Patient",
+    age: 40,
+    gender: "male",
+    avatarSeed: "patient-seed",
+    opening: "Hello doctor, thank you for seeing me."
+  },
+  hiddenProfile: {
+    diagnosis: "",
+    keySymptoms: [],
+    redFlags: [],
+    pastHistory: [],
+    vitalSigns: ""
+  },
+  rubric: {
+    mustAsk: [],
+    bonus: []
+  }
+};
+/* [OSCE_CASE_END] */
+</script>
+<script>
+/* Engine loader — computes correct relative path for any folder depth */
+(function () {
+  window.__OSCE_ENGINE_BASE = '../'.repeat(
+    Math.max(0, location.pathname.split('/').filter(Boolean).length - 2)
+  );
+  document.write('<scr' + 'ipt src="' + window.__OSCE_ENGINE_BASE + 'osce-engine.js"><\/scr' + 'ipt>');
+})();
+</script>
+</body>
+</html>
