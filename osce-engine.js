@@ -172,7 +172,146 @@
   }
 
   /* ================================================================
-     Avatar, prompt, UI, conversation, and Gemini code go here
+     AVATAR SYSTEM — procedural inline SVG, no external assets.
+     A seeded PRNG picks from parameter tables steered by gender +
+     age band, so the same case always renders the same patient.
+     ================================================================ */
+
+  // mulberry32 — tiny, fast, deterministic PRNG.
+  function _mulberry32(seedStr) {
+    var h = 1779033703 ^ seedStr.length;
+    for (var i = 0; i < seedStr.length; i++) {
+      h = Math.imul(h ^ seedStr.charCodeAt(i), 3432918353);
+      h = (h << 13) | (h >>> 19);
+    }
+    return function () {
+      h = Math.imul(h ^ (h >>> 16), 2246822507);
+      h = Math.imul(h ^ (h >>> 13), 3266489909);
+      h ^= h >>> 16;
+      return (h >>> 0) / 4294967296;
+    };
+  }
+
+  function _ageBand(age) {
+    if (age < 13) return 'child';
+    if (age < 20) return 'teen';
+    if (age < 60) return 'adult';
+    return 'elder';
+  }
+
+  var SKIN_TONES = ['#FCE4D6', '#F3C9A0', '#E0AC82', '#C68658', '#9E5F32', '#6B3F1C'];
+  var HAIR_COLORS = { dark: '#2B2118', brown: '#5A3A22', blonde: '#D9B26A', grey: '#B8B8B8', white: '#ECECEC', red: '#A14A23' };
+  var HAIR_STYLES = {
+    male:   { child: ['short','buzz','curly-short'], teen: ['short','buzz','spiky'], adult: ['short','side-part','bald'], elder: ['short','bald','side-part'] },
+    female: { child: ['long','pigtails','bob'], teen: ['long','bob','ponytail'], adult: ['long','bob','bun','hijab'], elder: ['bob','bun','short'] }
+  };
+  var FACE_SHAPES = ['oval','round','square','heart'];
+  var ACCESSORIES = { none: 0.6, glasses: 0.3, hearingAid: 0.1 }; // elder boosts hearingAid
+  var EXPRESSIONS = ['neutral','concerned','tired','mild-pain'];
+
+  function _pick(rnd, arr) { return arr[Math.floor(rnd() * arr.length)]; }
+  function _weighted(rnd, weights) {
+    var keys = Object.keys(weights), total = 0;
+    keys.forEach(function (k) { total += weights[k]; });
+    var r = rnd() * total, acc = 0;
+    for (var i = 0; i < keys.length; i++) { acc += weights[keys[i]]; if (r <= acc) return keys[i]; }
+    return keys[0];
+  }
+
+  function buildAvatarParams(gender, age, seed) {
+    gender = (gender || 'male').toLowerCase() === 'female' ? 'female' : 'male';
+    age = Number(age) || 40;
+    var band = _ageBand(age);
+    var rnd = _mulberry32(String(seed || 'x') + ':' + gender + ':' + age);
+
+    var headCovering = 'none';
+    var hairStyle = _pick(rnd, HAIR_STYLES[gender][band] || HAIR_STYLES[gender].adult);
+    if (hairStyle === 'hijab') { headCovering = 'hijab'; hairStyle = 'hidden'; }
+    if (hairStyle === 'bald') hairStyle = 'bald';
+
+    var hairColorKey = band === 'child' ? _pick(rnd, ['dark','brown','blonde','red'])
+                    : band === 'elder' ? _pick(rnd, ['grey','white','grey'])
+                    : _pick(rnd, ['dark','brown','blonde']);
+    var skin = _pick(rnd, SKIN_TONES);
+
+    var accWeights = Object.assign({}, ACCESSORIES);
+    if (band === 'elder') { accWeights.hearingAid = 0.25; accWeights.glasses = 0.4; accWeights.none = 0.35; }
+    var accessory = _weighted(rnd, accWeights);
+
+    var expression = band === 'elder' ? _pick(rnd, ['tired','concerned','mild-pain','neutral'])
+                                      : _pick(rnd, EXPRESSIONS);
+
+    return {
+      gender: gender, age: age, ageBand: band,
+      skin: skin, hair: HAIR_COLORS[hairColorKey], hairStyle: hairStyle,
+      hairColorKey: hairColorKey, headCovering: headCovering,
+      faceShape: _pick(rnd, FACE_SHAPES), accessory: accessory,
+      expression: expression, seed: String(seed || 'x')
+    };
+  }
+
+  function renderAvatar(p) {
+    // Centered head + shoulders cartoon. All coords in a 0..200 viewBox.
+    var cx = 100;
+    var faceYFor = function (band) { return band === 'child' ? 92 : band === 'elder' ? 88 : 90; };
+    var faceRY = p.ageBand === 'child' ? 42 : 46;
+    var faceRX = p.faceShape === 'round' ? 48 : p.faceShape === 'square' ? 50 : 44;
+    var mouth = p.expression === 'mild-pain' ? '<path d="M85 122 Q100 112 115 122" stroke="#7a2a2a" stroke-width="3" fill="none" stroke-linecap="round"/>'
+              : p.expression === 'concerned' ? '<path d="M85 122 Q100 116 115 122" stroke="#5a2a1a" stroke-width="3" fill="none" stroke-linecap="round"/>'
+              : p.expression === 'tired' ? '<path d="M86 123 L114 123" stroke="#5a2a1a" stroke-width="3" fill="none" stroke-linecap="round"/>'
+              : '<path d="M85 120 Q100 130 115 120" stroke="#5a2a1a" stroke-width="3" fill="none" stroke-linecap="round"/>';
+    var brow = (p.expression === 'concerned' || p.expression === 'mild-pain')
+      ? '<path d="M70 96 L88 92" stroke="#3a2a1a" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M112 92 L130 96" stroke="#3a2a1a" stroke-width="3" fill="none" stroke-linecap="round"/>'
+      : '';
+    var eyes = '<circle cx="82" cy="102" r="4" fill="#2a1d12"/><circle cx="118" cy="102" r="4" fill="#2a1d12"/>';
+    var glasses = p.accessory === 'glasses'
+      ? '<circle cx="82" cy="102" r="12" fill="none" stroke="#2b2118" stroke-width="3"/><circle cx="118" cy="102" r="12" fill="none" stroke="#2b2118" stroke-width="3"/><line x1="94" y1="102" x2="106" y2="102" stroke="#2b2118" stroke-width="3"/>'
+      : '';
+    var hearingAid = p.accessory === 'hearingAid'
+      ? '<circle cx="58" cy="104" r="4" fill="#c0b090"/><circle cx="142" cy="104" r="4" fill="#c0b090"/>'
+      : '';
+
+    // Hair / head covering
+    var hair = '';
+    if (p.headCovering === 'hijab') {
+      hair = '<path d="M44 96 Q100 24 156 96 L156 150 Q130 140 100 140 Q70 140 44 150 Z" fill="#3b6b8a"/>';
+    } else if (p.hairStyle === 'bald') {
+      hair = '';
+    } else if (p.hairStyle === 'buzz' || p.hairStyle === 'short') {
+      hair = '<path d="M52 88 Q100 44 148 88 L148 80 Q100 40 52 80 Z" fill="' + p.hair + '"/>';
+    } else if (p.hairStyle === 'curly-short') {
+      hair = '<g fill="' + p.hair + '">' +
+        '<circle cx="60" cy="74" r="10"/><circle cx="78" cy="62" r="11"/><circle cx="100" cy="58" r="12"/><circle cx="122" cy="62" r="11"/><circle cx="140" cy="74" r="10"/>' +
+        '</g>';
+    } else if (p.hairStyle === 'spiky') {
+      hair = '<path d="M54 86 L62 56 L72 84 L82 50 L92 84 L100 48 L108 84 L118 50 L128 84 L138 56 L146 86 Q100 40 54 86 Z" fill="' + p.hair + '"/>';
+    } else if (p.hairStyle === 'side-part') {
+      hair = '<path d="M52 88 Q100 38 148 88 L148 96 Q120 64 100 66 Q72 70 52 96 Z" fill="' + p.hair + '"/>';
+    } else if (p.hairStyle === 'bob' || p.hairStyle === 'long' || p.hairStyle === 'ponytail' || p.hairStyle === 'bun' || p.hairStyle === 'pigtails') {
+      // falls beside the face
+      hair = '<path d="M44 96 Q100 36 156 96 L156 150 L150 150 Q146 110 100 110 Q54 110 50 150 L44 150 Z" fill="' + p.hair + '"/>';
+      if (p.hairStyle === 'bun') hair += '<circle cx="100" cy="46" r="14" fill="' + p.hair + '"/>';
+      if (p.hairStyle === 'ponytail') hair += '<path d="M150 96 Q172 100 170 130 Q166 150 150 150 Z" fill="' + p.hair + '"/>';
+      if (p.hairStyle === 'pigtails') {
+        hair += '<circle cx="40" cy="116" r="12" fill="' + p.hair + '"/><circle cx="160" cy="116" r="12" fill="' + p.hair + '"/>';
+      }
+    }
+
+    var shoulders = '<path d="M40 200 Q40 150 100 146 Q160 150 160 200 Z" fill="' + (p.gender === 'female' ? '#7a5b8a' : '#3a4a6a') + '"/>';
+
+    return '' +
+      '<svg viewBox="0 0 200 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Patient avatar">' +
+        shoulders +
+        '<ellipse cx="' + cx + '" cy="' + faceYFor(p.ageBand) + '" rx="' + faceRX + '" ry="' + faceRY + '" fill="' + p.skin + '"/>' +
+        hair +
+        eyes + glasses + hearingAid + brow +
+        '<path d="M96 110 Q100 114 104 110" stroke="#7a4a2a" stroke-width="2" fill="none"/>' + // nose
+        mouth +
+      '</svg>';
+  }
+
+  /* ================================================================
+     Prompt, UI, conversation, and Gemini code go here
      in subsequent tasks. The module is bootstrapped at the very
      bottom so readOsceData() runs after page constants exist.
      ================================================================ */
@@ -182,8 +321,9 @@
   window.__OSCE_TEST_HOOKS = {
     normalizeConfig: normalizeConfig,
     normalizeCase: normalizeCase,
-    slugify: slugify
-    // buildAvatarParams + scoreRubric are added in later tasks.
+    slugify: slugify,
+    buildAvatarParams: buildAvatarParams,
+    renderAvatar: renderAvatar
   };
 
 })();
