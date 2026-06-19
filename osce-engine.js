@@ -1581,8 +1581,8 @@
     if (!content) return '';
     if (collapsed) {
       return '<div class="osce-images-wrap">' +
-        '<button class="osce-collapse-btn osce-img-toggle open" data-collapse="osce-lobby-images">🖼️ Clinical Images ('+images.length+') <span class="chev">▼</span></button>' +
-        '<div class="osce-collapse-content osce-images-content open" id="osce-lobby-images">'+content+'</div></div>';
+        '<button class="osce-collapse-btn osce-img-toggle" data-collapse="osce-lobby-images">🖼️ Clinical Images ('+images.length+') <span class="chev">▼</span></button>' +
+        '<div class="osce-collapse-content osce-images-content" id="osce-lobby-images">'+content+'</div></div>';
     }
     return '<div class="osce-images-wrap">'+content+'</div>';
   }
