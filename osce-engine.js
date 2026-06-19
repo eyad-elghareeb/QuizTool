@@ -1420,6 +1420,15 @@
   function _ensureRoot() {
     var root = document.getElementById('osce-root');
     if (!root) { root = document.createElement('div'); root.id = 'osce-root'; document.body.appendChild(root); }
+    if (!root._osceImgClickInit) {
+      root._osceImgClickInit = true;
+      root.addEventListener('click', function (e) {
+        var t = e.target;
+        if (t.tagName === 'IMG' && t.classList.contains('osce-clickable-img')) {
+          _openLightbox(t.src, t.alt || 'Clinical image');
+        }
+      });
+    }
     return root;
   }
   function _applyTheme() { document.documentElement.setAttribute('data-theme', localStorage.getItem(STORAGE.theme)||'dark'); }
@@ -1448,6 +1457,7 @@
           '<div class="osce-lobby-top">' +
             '<div class="osce-lobby-kicker">'+ (isDataInterp ? '🧑‍🏫 OSCE Data Interpretation' : '🩺 OSCE Virtual Patient') +'</div>' +
             '<div style="display:flex;gap:.4rem">' +
+              '<button class="osce-icon-btn" id="osce-lobby-back" title="Back to Hub">←</button>' +
               '<button class="osce-icon-btn" id="osce-lobby-settings" title="AI Settings">⚙</button>' +
               '<button class="osce-icon-btn" id="osce-lobby-theme" title="Toggle theme">'+themeIcon+'</button>' +
             '</div>' +
@@ -1518,6 +1528,8 @@
     document.getElementById('osce-start-btn').addEventListener('click', function () {
       _transcript = []; _renderedCount = 0; _timerRemaining = _activeCase.time||EXAM_TIME; _timerStarted = false; _openConversation();
     });
+    var lb = document.getElementById('osce-lobby-back');
+    if (lb) lb.addEventListener('click', function (e) { window.navigateToIndex(e); });
     document.getElementById('osce-lobby-theme').addEventListener('click', _toggleTheme);
     document.getElementById('osce-lobby-settings').addEventListener('click', _openSettings);
     document.getElementById('osce-lobby-settings2').addEventListener('click', _openSettings);
@@ -1541,6 +1553,20 @@
     return content;
   }
 
+  /* ── Image Lightbox ──────────────────────────────────────────── */
+  function _openLightbox(src, title) {
+    var ov = document.createElement('div');
+    ov.id = 'osce-lightbox';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;padding:1rem';
+    ov.innerHTML =
+      '<div style="max-width:min(94vw,1200px);max-height:92vh;display:flex;flex-direction:column;gap:.5rem">' +
+      (title ? '<div style="color:#e6edf3;font-size:.85rem;font-weight:700;text-align:center">'+_esc(title)+'</div>' : '') +
+      '<img src="'+src+'" style="display:block;max-width:100%;max-height:80vh;border-radius:8px;object-fit:contain;background:#000">' +
+      '<div style="color:#8b949e;font-size:.72rem;text-align:center">Click anywhere to close</div></div>';
+    ov.addEventListener('click', function() { document.body.removeChild(ov); });
+    document.body.appendChild(ov);
+  }
+
   /* ── Case Images Renderer (data-interp mode) ────────────────── */
   function _renderCaseImages(images, collapsed) {
     if (!images || !images.length) return '';
@@ -1550,13 +1576,13 @@
       var alt = im.alt || im.caption || im.title || 'Clinical image';
       var src = im.src || im.url || im.data || '';
       if (!src) return '';
-      return '<div class="osce-image-block">'+title+'<img src="'+src+'" alt="'+_esc(alt)+'" loading="lazy">'+caption+'</div>';
+      return '<div class="osce-image-block">'+title+'<img src="'+src+'" alt="'+_esc(alt)+'" loading="lazy" class="osce-clickable-img">'+caption+'</div>';
     }).join('');
     if (!content) return '';
     if (collapsed) {
       return '<div class="osce-images-wrap">' +
-        '<button class="osce-collapse-btn osce-img-toggle" data-collapse="osce-lobby-images">🖼️ Clinical Images ('+images.length+') <span class="chev">▼</span></button>' +
-        '<div class="osce-collapse-content osce-images-content" id="osce-lobby-images">'+content+'</div></div>';
+        '<button class="osce-collapse-btn osce-img-toggle open" data-collapse="osce-lobby-images">🖼️ Clinical Images ('+images.length+') <span class="chev">▼</span></button>' +
+        '<div class="osce-collapse-content osce-images-content open" id="osce-lobby-images">'+content+'</div></div>';
     }
     return '<div class="osce-images-wrap">'+content+'</div>';
   }
@@ -1737,8 +1763,9 @@
     }
 
     /* Event listeners */
-    document.getElementById('osce-back-btn').addEventListener('click', function () {
-      _stopTimer(); _cancelPending(); _Voice.stopSpeaking(); _Voice.disable(); _showDoorCard();
+    document.getElementById('osce-back-btn').addEventListener('click', function (e) {
+      _stopTimer(); _cancelPending(); _Voice.stopSpeaking(); _Voice.disable();
+      window.navigateToIndex(e);
     });
     document.getElementById('osce-theme-btn').addEventListener('click', _toggleTheme);
     document.getElementById('osce-settings-btn').addEventListener('click', _openSettings);
@@ -2082,8 +2109,8 @@
       _stopTimer(); _hideDebrief(); _clearSession(); _transcript = []; _renderedCount = 0;
       _timerRemaining = _activeCase.time||EXAM_TIME; _timerStarted = false; _showDoorCard();
     });
-    document.getElementById('osce-db-hub').addEventListener('click', function () {
-      window.location.href = (ENGINE_BASE||'') + 'index.html';
+    document.getElementById('osce-db-hub').addEventListener('click', function (e) {
+      window.navigateToIndex(e);
     });
 
     /* Confetti on excellent pass */
@@ -2262,6 +2289,16 @@
       })
       .catch(function(){st.textContent='✗ Connection failed. Check key or network.';});
   }
+
+  /* ── Navigate to parent index ───────────────────────────────── */
+  window.navigateToIndex = function(event) {
+    if (event) event.preventDefault();
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      window.location.href = 'index.html';
+    }
+  };
 
   /* ── Public API ──────────────────────────────────────────────── */
   window.OsceSimulator = { boot:boot, openSettings:_openSettings, hasApiKey:_hasApiKey };
