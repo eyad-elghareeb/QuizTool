@@ -33,34 +33,57 @@ const OSCE_CONFIG = {
 
 /* ─────────────────────────────────────────────────────────────────
    OSCE_CASE OBJECT — single case per file
+
+   Mode is selected via "type":
+   - "history" (default): Virtual patient history-taking OSCE
+   - "data-interp":       Examiner presents data + asks oral questions
+
+   HISTORY MODE EXAMPLE:
    {
      title:        "Case title",
+     type:         "history", // or omit (default)
      specialty:    "Cardiology / Respiratory / etc.",
      difficulty:   "Foundational / Intermediate / Advanced",
-     task:         "Take a focused history... (displayed in the lobby and sidebar)",
-     patient: {
-       name:        "Mr. Patient Name",
-       age:         55,
-       gender:      "male" or "female",
-       avatarSeed:  "unique-seed-for-avatar",
-       opening:     "First words the patient says to the student"
-     },
-     hiddenProfile: {   // NEVER shown to student; given to Gemini as ground truth
-       diagnosis:   "The diagnosis",
-       keySymptoms: ["symptom1", "symptom2"],
-       redFlags:    ["red flag 1"],
-       pastHistory: ["hypertension"],
-       vitalSigns:  "BP 120/80, HR 70"
-     },
-     rubric: {           // examiner scoring criteria
-       mustAsk: ["SOCRATES pain characterization", "cardiac risk factors"],
-       bonus:   ["family history of CAD"]
-     }
+     task:         "Take a focused history...",
+     patient: { ... },
+     hiddenProfile: { ... },
+     rubric: { mustAsk: [...], bonus: [...] }
    }
+
+   DATA-INTERP MODE EXAMPLE:
+   {
+     title:        "Data Interpretation — CBC",
+     type:         "data-interp",
+     specialty:    "Hematology",
+     difficulty:   "Advanced",
+     task:         "Interpret the data and answer the examiner's questions.",
+     examiner: { name: "Dr. Smith", title: "Consultant Hematologist" },
+     dataPresented: {
+       scenario: "A 65-year-old man presents with fever 10 days post-chemo.",
+       tables: [
+         { title: "Complete Blood Count",
+           headers: ["Parameter", "Result", "Reference"],
+           rows: [
+             ["Hb", "8.2 g/dL", "13.5-17.5"],
+             ["WBC", "1.1 ×10³/µL", "4.0-11.0"]
+           ]
+         }
+       ]
+     },
+     questions: [
+       { id: "q1", question: "What is the most likely diagnosis?",
+         answer: "Febrile neutropenia", rubric: "Must identify neutropenia" }
+     ],
+     rubric: { mustAsk: ["Identify febrile neutropenia"], bonus: [] }
+   }
+
    ──────────────────────────────────────────────────────────────────*/
+
+/* MODE: "history" (default) or "data-interp" — set via OSCE_CASE.type */
 /* [OSCE_CASE_START] */
 const OSCE_CASE = {
   title: "Case Title",
+  type: "history",
   specialty: "General",
   difficulty: "Intermediate",
   patient: {

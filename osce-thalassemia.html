@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+(function(){var t=localStorage.getItem('quiz-theme')||'dark';var s=document.createElement('style');s.textContent='html,body{background:'+(t==='light'?'#f3f0eb':'#0d1117')+';color:'+(t==='light'?'#1c1917':'#e6edf3')+';margin:0;padding:0;overflow:hidden;height:100%}';document.head.appendChild(s)})();
+</script>
+<title>Thalassemia — Data Interpretation</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="favicon.svg">
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
+</script>
+</head>
+<body>
+<script>
+/* ────────────────────────────────────────────────────────────────
+   OSCE DATA INTERPRETATION — only edit below this line
+   ──────────────────────────────────────────────────────────────────*/
+
+/* [OSCE_CONFIG_START] */
+const OSCE_CONFIG = {
+  uid: "osce_thalassemia_001",
+  title: "OSCE Data Interpretation — Thalassemia",
+  description: "Interpret CBC and Hb electrophoresis data in a case of microcytic anemia.",
+};
+/* [OSCE_CONFIG_END] */
+
+/* [OSCE_CASE_START] */
+const OSCE_CASE = {
+  type: "data-interp",
+  title: "Microcytic Anemia — Workup and Diagnosis",
+  specialty: "Hematology",
+  difficulty: "Intermediate",
+  time: 480,
+  task: "Review the CBC and iron studies below, then answer the examiner's questions regarding diagnosis, further testing, and management.",
+  examiner: {
+    name: "Dr. Youssef",
+    title: "Consultant Hematologist"
+  },
+  dataPresented: {
+    scenario: "A 32-year-old woman of Mediterranean origin presents with fatigue and pallor for the past 3 months. She has no menorrhagia, no GI symptoms, and no history of blood loss. Diet is unremarkable. Family history is notable for anemia in her father and paternal aunt.",
+    tables: [
+      {
+        title: "Complete Blood Count",
+        headers: ["Parameter", "Result", "Reference Range"],
+        rows: [
+          ["Hb", "9.2 g/dL", "12.0–15.5"],
+          ["RBC", "5.8 × 10¹²/L", "4.0–5.2"],
+          ["MCV", "64 fL", "80–100"],
+          ["MCH", "19 pg", "27–34"],
+          ["MCHC", "29 g/dL", "32–36"],
+          ["RDW", "14.5%", "11.5–14.5"],
+          ["WBC", "6.8 × 10⁹/L", "4.0–11.0"],
+          ["Platelets", "310 × 10⁹/L", "150–450"]
+        ]
+      },
+      {
+        title: "Iron Studies",
+        headers: ["Parameter", "Result", "Reference Range"],
+        rows: [
+          ["Serum Iron", "90 µg/dL", "50–150"],
+          ["Ferritin", "120 ng/mL", "20–200"],
+          ["TIBC", "280 µg/dL", "250–400"],
+          ["Transferrin Saturation", "32%", "20–50"]
+        ]
+      }
+    ]
+  },
+  questions: [
+    {
+      id: "q1",
+      question: "What pattern does this CBC suggest, and why is iron deficiency unlikely?",
+      answer: "Microcytic anemia with an inappropriately high RBC count (increased RBC / low MCV). Iron deficiency is unlikely because ferritin and transferrin saturation are normal — this is not iron-depleted.",
+      rubric: "Must mention elevated RBC count despite low MCV, and note normal iron stores."
+    },
+    {
+      id: "q2",
+      question: "What is the most likely diagnosis, and which confirmatory test would you order?",
+      answer: "Beta-thalassemia trait (heterozygous β-thalassemia). Confirm with Hb electrophoresis — look for elevated HbA₂ (>3.5%) with or without elevated HbF.",
+      rubric: "Must suggest thalassemia trait and name Hb electrophoresis with HbA₂ quantification."
+    },
+    {
+      id: "q3",
+      question: "What is the inheritance pattern, and what counselling would you offer this patient?",
+      answer: "Autosomal recessive. Explain she has beta-thalassemia minor (trait) — usually asymptomatic with mild anemia. If her partner is also a carrier, there is a 25% risk of beta-thalassemia major in offspring. Partner screening is recommended.",
+      rubric: "Must mention autosomal recessive, carrier risk for offspring, and partner screening."
+    },
+    {
+      id: "q4",
+      question: "How would the Hb electrophoresis typically look in beta-thalassemia trait vs. beta-thalassemia major?",
+      answer: "Trait: HbA₂ 3.5–7%, HbF mildly elevated (<5%), mostly HbA. Major: HbF markedly elevated (30–90%), HbA₂ variable, HbA low or absent depending on mutations.",
+      rubric: "Must differentiate trait (high HbA₂) from major (high HbF)."
+    },
+    {
+      id: "q5",
+      question: "The patient's CBC also shows an elevated RBC count. Why does this happen in thalassemia trait?",
+      answer: "Compensatory erythropoiesis. Ineffective globin chain synthesis leads to smaller cells, but the bone marrow tries to maintain oxygen-carrying capacity by producing more RBCs, resulting in erythrocytosis (high RBC count with low MCV).",
+      rubric: "Must explain compensatory mechanism — more cells, each smaller."
+    }
+  ],
+  rubric: {
+    mustAsk: ["Recognise microcytic hypochromic anemia with normal iron stores", "Identify thalassemia trait as the likely diagnosis", "Order Hb electrophoresis with HbA2 quantification", "Explain inheritance and need for partner screening"],
+    bonus: ["Discuss differential of microcytic anemia (IDA, ACD, thalassemia, sideroblastic)", "Mention alpha-thalassemia if electrophoresis is normal with microcytosis"]
+  }
+};
+/* [OSCE_CASE_END] */
+</script>
+<script>
+(function () {
+  var computedBase = '../'.repeat(
+    Math.max(0, location.pathname.split('/').filter(Boolean).length - 2)
+  );
+  var candidates = location.protocol === 'file:'
+    ? ['', computedBase, '../', '../../', '../../../']
+    : [computedBase, '', '../', '../../', '../../../'];
+  var tried = {};
+  function loadNext() {
+    var base = candidates.shift();
+    if (base === undefined) return;
+    if (tried[base]) return loadNext();
+    tried[base] = true;
+    window.__OSCE_ENGINE_BASE = base;
+    var script = document.createElement('script');
+    script.src = base + 'osce-engine.js';
+    script.onerror = loadNext;
+    document.body.appendChild(script);
+  }
+  loadNext();
+})();
+</script>
+</body>
+</html>
