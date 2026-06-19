@@ -185,9 +185,9 @@ impl QuizServer {
         let root = project_root.clone();
 
         thread::spawn(move || {
-            // Regex to rewrite QUIZ, FLASHCARD, and WRITTEN engine base paths for correct depth
+            // Regex to rewrite engine base paths for correct depth
             let re_base = Regex::new(
-                r#"(?s)window\.__(QUIZ|FLASHCARD|WRITTEN)_ENGINE_BASE\s*=\s*[^;]*;"#
+                r#"(?s)window\.__(QUIZ|FLASHCARD|WRITTEN|OSCE)_ENGINE_BASE\s*=\s*[^;]*;"#
             ).unwrap();
 
             let state = Arc::new(ServerState { root, re_base });

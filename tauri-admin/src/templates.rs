@@ -286,6 +286,43 @@ static FOUC_SCRIPT_OPAQUE: &str = r##"(function(){var t=localStorage.getItem('qu
 s.textContent='html,body{background:'+(t==='light'?'#f3f0eb':'#0d1117')+';color:'+(t==='light'?'#1c1917':'#e6edf3')+';margin:0;padding:0;min-height:100%}';
 document.head.appendChild(s)})();"##;
 
+pub fn create_osce_html(config: &Value, cases: &Value) -> String {
+    let title = config.get("title").and_then(|v| v.as_str()).unwrap_or("OSCE Virtual Patients");
+    let config_json = serde_json::to_string_pretty(config).unwrap_or_default();
+    let cases_json = serde_json::to_string_pretty(cases).unwrap_or_default();
+    format!(r##"<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+{fouc}
+</script>
+<title>{title}</title>
+</head>
+<body>
+<script>
+
+/* [OSCE_CONFIG_START] */
+const OSCE_CONFIG = {config_json};
+/* [OSCE_CONFIG_END] */
+
+/* [OSCE_CASES_START] */
+const OSCE_CASES = {cases_json};
+/* [OSCE_CASES_END] */
+
+</script>
+<script>
+(function(){{
+  window.__OSCE_ENGINE_BASE='../'.repeat(Math.max(0,location.pathname.split('/').filter(Boolean).length-2));
+  document.write('<scr'+'ipt src="'+window.__OSCE_ENGINE_BASE+'osce-engine.js"><\/scr'+'ipt>');
+}})();
+</script>
+</body>
+</html>
+"##, fouc = FOUC_SCRIPT, title = title, config_json = config_json, cases_json = cases_json)
+}
+
 pub fn create_index_html(folder_rel: &str, title: &str, description: &str) -> String {
     let ctx = build_index_ctx(folder_rel, title, description);
     let prefix = &ctx.prefix;

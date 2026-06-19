@@ -561,6 +561,7 @@
     .tree-type-dot.type-index { background: var(--blue); }
     .tree-type-dot.type-flashcard { background: var(--correct); }
     .tree-type-dot.type-written { background: #d946ef; }
+    .tree-type-dot.type-osce { background: #f97316; }
     .tree-type-dot.type-html { background: var(--text-muted); }
     .tree-type-dot.type-folder { background: var(--text-muted); opacity: 0.5; }
 
@@ -1525,6 +1526,7 @@
       { key: 'bank', label: 'Bank' },
       { key: 'flashcard', label: 'Flashcard' },
       { key: 'written', label: 'Written' },
+      { key: 'osce', label: 'OSCE' },
       { key: 'index', label: 'Index' },
       { key: 'html', label: 'Other HTML' },
     ];
@@ -2175,7 +2177,8 @@
     function validateQuestionListClient(questions) {
       const isFlashcard = state.wizard?.type === 'flashcard';
       const isWritten = state.wizard?.type === 'written';
-      const skipOptions = isFlashcard || isWritten;
+      const isOsce = state.wizard?.type === 'osce';
+      const skipOptions = isFlashcard || isWritten || isOsce;
       const issues = [];
       if (!Array.isArray(questions) || !questions.length) {
         issues.push({ level: 'warning', message: 'No questions yet.', field: 'questions' });
@@ -2443,6 +2446,7 @@
         { label: 'New Bank Here', onclick: `closeContextMenu(); openNewFileWizard({ folder: '${escapeHtml(folderPath)}', type: 'bank' })` },
         { label: 'New Flashcard Deck Here', onclick: `closeContextMenu(); openNewFileWizard({ folder: '${escapeHtml(folderPath)}', type: 'flashcard' })` },
         { label: 'New Written Assessment Here', onclick: `closeContextMenu(); openNewFileWizard({ folder: '${escapeHtml(folderPath)}', type: 'written' })` },
+        { label: 'New OSCE Virtual Patient Here', onclick: `closeContextMenu(); openNewFileWizard({ folder: '${escapeHtml(folderPath)}', type: 'osce' })` },
         { label: 'New Folder Here', onclick: `closeContextMenu(); openNewFolderModal('${escapeHtml(folderPath)}')` },
         state.currentFile ? { label: 'Duplicate Active File Here', onclick: `closeContextMenu(); openDuplicateModal('${escapeHtml(folderPath)}')` } : null,
       ]);
@@ -2455,6 +2459,7 @@
         { label: 'New Bank Here', onclick: `closeContextMenu(); openNewFileWizard({ folder: '${escapeHtml(folderPath)}', type: 'bank' })` },
         { label: 'New Flashcard Deck Here', onclick: `closeContextMenu(); openNewFileWizard({ folder: '${escapeHtml(folderPath)}', type: 'flashcard' })` },
         { label: 'New Written Assessment Here', onclick: `closeContextMenu(); openNewFileWizard({ folder: '${escapeHtml(folderPath)}', type: 'written' })` },
+        { label: 'New OSCE Virtual Patient Here', onclick: `closeContextMenu(); openNewFileWizard({ folder: '${escapeHtml(folderPath)}', type: 'osce' })` },
         { label: 'New Folder Here', onclick: `closeContextMenu(); openNewFolderModal('${escapeHtml(folderPath)}')` },
         state.currentFile ? { label: 'Duplicate Active File Here', onclick: `closeContextMenu(); openDuplicateModal('${escapeHtml(folderPath)}')` } : null,
         { divider: true },
@@ -2497,6 +2502,7 @@
         (file?.type === 'quiz' || file?.type === 'bank') ? { label: 'Convert to Flashcard', onclick: `closeContextMenu(); requestLoadFile('${escapeHtml(filePath)}', { afterLoadAction: 'convertToFlashcard' })` } : null,
         file?.type === 'flashcard' ? { label: 'Convert to Quiz', onclick: `closeContextMenu(); requestLoadFile('${escapeHtml(filePath)}', { afterLoadAction: 'convertFile' })` } : null,
         file?.type === 'written' ? { label: 'Convert to Quiz', onclick: `closeContextMenu(); requestLoadFile('${escapeHtml(filePath)}', { afterLoadAction: 'convertFile' })` } : null,
+        file?.type === 'osce' ? { label: 'Convert to Quiz', onclick: `closeContextMenu(); requestLoadFile('${escapeHtml(filePath)}', { afterLoadAction: 'convertFile' })` } : null,
         { divider: true },
         { label: 'Copy Path', onclick: `closeContextMenu(); copyTextValue('${escapeHtml(filePath)}', 'Path')` },
         { label: 'Delete', danger: true, onclick: `closeContextMenu(); requestLoadFile('${escapeHtml(filePath)}', { afterLoadAction: 'openDeleteModal' })` },
@@ -2560,6 +2566,7 @@
       const quizFiles = state.files.filter(f => f.type === 'quiz').length;
       const bankFiles = state.files.filter(f => f.type === 'bank').length;
       const writtenFiles = state.files.filter(f => f.type === 'written').length;
+      const osceFiles = state.files.filter(f => f.type === 'osce').length;
       const totalQ = summary.totalQuestions || 0;
       const folders = summary.folderCount || 0;
       const isDirty = git.dirtyCount > 0;
@@ -2773,6 +2780,10 @@
               <div class="overview-kpi-label">Banks</div>
             </div>
             <div class="overview-kpi">
+              <div class="overview-kpi-val">${osceFiles}</div>
+              <div class="overview-kpi-label">OSCE</div>
+            </div>
+            <div class="overview-kpi">
               <div class="overview-kpi-val" style="color:${isDirty ? 'var(--accent)' : 'var(--correct)'}">${isDirty ? (git.dirtyCount || '?') + ' dirty' : '✓ Clean'}</div>
               <div class="overview-kpi-label">Git Status</div>
             </div>
@@ -2810,7 +2821,7 @@
               <span>🕐</span> Recent Files
             </div>
             ${recentFiles.length ? recentFiles.map(file => {
-              const typeIcon = file.type === 'quiz' ? '📝' : file.type === 'bank' ? '🗃️' : file.type === 'written' ? '✍️' : file.type === 'flashcard' ? '🃏' : file.type === 'index' ? '📑' : '📄';
+              const typeIcon = file.type === 'quiz' ? '📝' : file.type === 'bank' ? '🗃️' : file.type === 'written' ? '✍️' : file.type === 'flashcard' ? '🃏' : file.type === 'osce' ? '🩺' : file.type === 'index' ? '📑' : '📄';
               const typeLabel = file.type || 'html';
               return `<a class="recent-file-row" href="#" onclick="event.preventDefault(); requestLoadFile('${escapeHtml(file.path)}')">
                 <div class="recent-file-icon">${typeIcon}</div>
@@ -3034,8 +3045,8 @@
       }
       const meta = state.currentData.meta || {};
       const pUrl = previewUrl(encodePath(state.currentFile)) + `?v=${Date.now()}`;
-      const canStructuredEdit = ['quiz', 'bank', 'flashcard', 'written', 'index'].includes(meta.type);
-      const isExportable = ['quiz', 'bank', 'flashcard', 'written'].includes(meta.type);
+      const canStructuredEdit = ['quiz', 'bank', 'flashcard', 'written', 'osce', 'index'].includes(meta.type);
+      const isExportable = ['quiz', 'bank', 'flashcard', 'written', 'osce'].includes(meta.type);
 
       let content = '';
       if (state.currentTab === 'preview') {
@@ -3134,7 +3145,7 @@
     }
 
     function renderStructuredEditor(meta) {
-      if (meta.type === 'quiz' || meta.type === 'bank' || meta.type === 'flashcard' || meta.type === 'written') {
+      if (meta.type === 'quiz' || meta.type === 'bank' || meta.type === 'flashcard' || meta.type === 'written' || meta.type === 'osce') {
         return renderQuizBankEditor(meta);
       }
       if (meta.type === 'index') {
@@ -3159,6 +3170,7 @@
       const isBank = meta.type === 'bank' || meta.type === 'flashcard';
       const isFlashcard = meta.type === 'flashcard';
       const isWritten = meta.type === 'written';
+      const isOsce = meta.type === 'osce';
       const questions = meta.questions || [];
       const topFields = `
         <div class="editor-grid">
@@ -3177,10 +3189,10 @@
             <label>Description</label>
             <textarea class="text-area" id="cfg-description" oninput="syncQuizBankEditor()">${escapeHtml(meta.config?.description || '')}</textarea>
           </div>
-          ${(isBank || isWritten) ? `
+          ${(isBank || isWritten || isOsce) ? `
             <div class="field" style="max-width:300px;">
-              <label>${isFlashcard ? 'Icon' : (isWritten ? 'Icon' : 'Bank Icon')}</label>
-              <input class="text-input" id="cfg-icon" value="${escapeHtml(meta.config?.icon || (isFlashcard ? '🃏' : isWritten ? '✍️' : '🗃️'))}" oninput="syncQuizBankEditor()">
+              <label>Icon</label>
+              <input class="text-input" id="cfg-icon" value="${escapeHtml(meta.config?.icon || (isFlashcard ? '🃏' : isWritten ? '✍️' : isOsce ? '🩺' : '🗃️'))}" oninput="syncQuizBankEditor()">
             </div>
             ${isFlashcard ? `
             <div class="field full">
@@ -3194,12 +3206,12 @@
       return `
         ${topFields}
           <div class="panel-grid">
-            ${renderMetaCard('Questions', questions.length)}
-            ${renderMetaCard('Mode', isWritten ? 'Written Assessment' : (isFlashcard ? 'Flashcard' : (isBank ? 'Bank' : 'Quiz')))}
-            ${renderMetaCard('Engine', isWritten ? 'written-engine.js' : (isFlashcard ? 'flashcard-engine.js' : (isBank ? 'bank-engine.js' : 'quiz-engine.js')))}
+            ${renderMetaCard(isOsce ? 'Cases' : 'Questions', questions.length)}
+            ${renderMetaCard('Mode', isOsce ? 'OSCE Virtual Patients' : (isWritten ? 'Written Assessment' : (isFlashcard ? 'Flashcard' : (isBank ? 'Bank' : 'Quiz'))))}
+            ${renderMetaCard('Engine', isOsce ? 'osce-engine.js' : (isWritten ? 'written-engine.js' : (isFlashcard ? 'flashcard-engine.js' : (isBank ? 'bank-engine.js' : 'quiz-engine.js'))))}
           </div>
           <div class="editor-toolbar">
-            <div class="muted">Collapse large banks to scan and reorder them faster.</div>
+            <div class="muted">Collapse large sets to scan and reorder them faster.</div>
             <div class="editor-toolbar-actions">
               <button class="mini-btn" onclick="collapseAllQuestions()">Collapse All</button>
               <button class="mini-btn" onclick="expandAllQuestions()">Expand All</button>
@@ -3208,7 +3220,7 @@
           <div class="editor-list">
             ${questions.map((question, index) => renderQuestionCard(question, index)).join('')}
           </div>
-          <button class="btn" onclick="addQuestion()">Add Question</button>
+          <button class="btn" onclick="addQuestion()">${isOsce ? 'Add Case' : 'Add Question'}</button>
         </div>
       `;
     }
@@ -3322,9 +3334,133 @@
       `;
     }
 
+    function renderOsceCaseCard(caseItem, index) {
+      const collapsed = state.collapsedQuestions.has(index);
+      const summary = `${(caseItem.title || 'Untitled case').slice(0, 90)}${(caseItem.title || '').length > 90 ? '…' : ''}`;
+      const patient = caseItem.patient || {};
+      const hiddenProfile = caseItem.hiddenProfile || {};
+      const rubric = caseItem.rubric || {};
+      const mustAsk = Array.isArray(rubric.mustAsk) ? rubric.mustAsk : [];
+      const bonus = Array.isArray(rubric.bonus) ? rubric.bonus : [];
+      const keySymptoms = Array.isArray(hiddenProfile.keySymptoms) ? hiddenProfile.keySymptoms : [];
+      const redFlags = Array.isArray(hiddenProfile.redFlags) ? hiddenProfile.redFlags : [];
+      const pastHistory = Array.isArray(hiddenProfile.pastHistory) ? hiddenProfile.pastHistory : [];
+      return `
+        <div class="editor-card ${collapsed ? 'collapsed' : ''}" data-qidx="${index}">
+          <div class="editor-card-header">
+            <div>
+              <div class="editor-card-title">OSCE Case ${index + 1}</div>
+              <div class="editor-summary">${escapeHtml(summary)}</div>
+            </div>
+            <div class="mini-actions">
+              <button class="mini-btn" onclick="toggleQuestionCollapse(${index})">${collapsed ? 'Expand' : 'Collapse'}</button>
+              <button class="mini-btn" onclick="moveQuestion(${index}, -1)" ${index === 0 ? 'disabled' : ''}>Up</button>
+              <button class="mini-btn" onclick="moveQuestion(${index}, 1)" ${index === (state.currentData.meta.questions || []).length - 1 ? 'disabled' : ''}>Down</button>
+              <button class="mini-btn" onclick="duplicateQuestion(${index})">Duplicate</button>
+              <button class="mini-btn delete" onclick="removeQuestion(${index})">Remove</button>
+            </div>
+          </div>
+          <div class="editor-card-body">
+            <div class="field-grid">
+              <div class="field">
+                <label>Case ID</label>
+                <input class="text-input osce-id" data-index="${index}" value="${escapeHtml(caseItem.id || '')}" oninput="syncQuizBankEditor()" placeholder="case-001">
+              </div>
+              <div class="field">
+                <label>Title</label>
+                <input class="text-input osce-title" data-index="${index}" value="${escapeHtml(caseItem.title || '')}" oninput="syncQuizBankEditor()">
+              </div>
+              <div class="field">
+                <label>Specialty</label>
+                <input class="text-input osce-specialty" data-index="${index}" value="${escapeHtml(caseItem.specialty || '')}" oninput="syncQuizBankEditor()" placeholder="Cardiology">
+              </div>
+              <div class="field">
+                <label>Difficulty</label>
+                <select class="text-input osce-difficulty" data-index="${index}" onchange="syncQuizBankEditor()" style="width:auto;">
+                  <option value="Beginner" ${caseItem.difficulty==='Beginner'?'selected':''}>Beginner</option>
+                  <option value="Intermediate" ${caseItem.difficulty==='Intermediate'?'selected':''}>Intermediate</option>
+                  <option value="Advanced" ${caseItem.difficulty==='Advanced'?'selected':''}>Advanced</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="border-top:1px solid var(--border); margin:0.75rem 0; padding-top:0.75rem;">
+              <div style="font-weight:700; font-size:0.85rem; color:var(--accent); margin-bottom:0.5rem;">Patient</div>
+              <div class="field-grid">
+                <div class="field">
+                  <label>Name</label>
+                  <input class="text-input osce-patient-name" data-index="${index}" value="${escapeHtml(patient.name || '')}" oninput="syncQuizBankEditor()">
+                </div>
+                <div class="field">
+                  <label>Age</label>
+                  <input class="text-input osce-patient-age" data-index="${index}" value="${escapeHtml(patient.age !== undefined ? patient.age : '')}" oninput="syncQuizBankEditor()" type="number">
+                </div>
+                <div class="field">
+                  <label>Gender</label>
+                  <select class="text-input osce-patient-gender" data-index="${index}" onchange="syncQuizBankEditor()" style="width:auto;">
+                    <option value="male" ${patient.gender==='male'?'selected':''}>Male</option>
+                    <option value="female" ${patient.gender==='female'?'selected':''}>Female</option>
+                    <option value="other" ${patient.gender==='other'?'selected':''}>Other</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>Avatar Seed</label>
+                  <input class="text-input osce-patient-avatar" data-index="${index}" value="${escapeHtml(patient.avatarSeed || '')}" oninput="syncQuizBankEditor()" placeholder="robert-hayes">
+                </div>
+              </div>
+              <div class="field full">
+                <label>Opening Line</label>
+                <textarea class="text-area osce-patient-opening" data-index="${index}" oninput="syncQuizBankEditor()" style="min-height:60px;">${escapeHtml(patient.opening || '')}</textarea>
+              </div>
+            </div>
+
+            <div style="border-top:1px solid var(--border); margin:0.75rem 0; padding-top:0.75rem;">
+              <div style="font-weight:700; font-size:0.85rem; color:var(--accent); margin-bottom:0.5rem;">Hidden Profile <span class="muted" style="font-weight:400;">(ground truth — never shown to students)</span></div>
+              <div class="field full">
+                <label>Diagnosis</label>
+                <input class="text-input osce-hp-diagnosis" data-index="${index}" value="${escapeHtml(hiddenProfile.diagnosis || '')}" oninput="syncQuizBankEditor()">
+              </div>
+              <div class="field full">
+                <label>Key Symptoms <span class="muted">(comma-separated)</span></label>
+                <input class="text-input osce-hp-symptoms" data-index="${index}" value="${escapeHtml(keySymptoms.join(', '))}" oninput="syncQuizBankEditor()">
+              </div>
+              <div class="field full">
+                <label>Red Flags <span class="muted">(comma-separated)</span></label>
+                <input class="text-input osce-hp-redflags" data-index="${index}" value="${escapeHtml(redFlags.join(', '))}" oninput="syncQuizBankEditor()">
+              </div>
+              <div class="field full">
+                <label>Past History <span class="muted">(comma-separated)</span></label>
+                <input class="text-input osce-hp-history" data-index="${index}" value="${escapeHtml(pastHistory.join(', '))}" oninput="syncQuizBankEditor()">
+              </div>
+              <div class="field full">
+                <label>Vital Signs</label>
+                <input class="text-input osce-hp-vitals" data-index="${index}" value="${escapeHtml(hiddenProfile.vitalSigns || '')}" oninput="syncQuizBankEditor()">
+              </div>
+            </div>
+
+            <div style="border-top:1px solid var(--border); margin:0.75rem 0; padding-top:0.75rem;">
+              <div style="font-weight:700; font-size:0.85rem; color:var(--accent); margin-bottom:0.5rem;">Rubric <span class="muted" style="font-weight:400;">(examiner scoring criteria)</span></div>
+              <div class="field full">
+                <label>Must Ask Items <span class="muted">(one per line)</span></label>
+                <textarea class="text-area osce-rubric-mustask" data-index="${index}" oninput="syncQuizBankEditor()" style="min-height:80px;">${escapeHtml(mustAsk.join('\n'))}</textarea>
+              </div>
+              <div class="field full">
+                <label>Bonus Items <span class="muted">(one per line, optional)</span></label>
+                <textarea class="text-area osce-rubric-bonus" data-index="${index}" oninput="syncQuizBankEditor()" style="min-height:60px;">${escapeHtml(bonus.join('\n'))}</textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     function renderQuestionCard(question, index) {
       const isFlashcard = state.currentData?.meta?.type === 'flashcard';
       const isWritten = state.currentData?.meta?.type === 'written';
+      const isOsce = state.currentData?.meta?.type === 'osce';
+      if (isOsce) {
+        return renderOsceCaseCard(question, index);
+      }
       if (isWritten) {
         return renderWrittenQuestionCard(question, index);
       }
@@ -3538,13 +3674,51 @@
       const meta = state.currentData.meta;
       const isFlashcard = meta.type === 'flashcard';
       const isWritten = meta.type === 'written';
+      const isOsce = meta.type === 'osce';
       const uid = document.getElementById('cfg-uid')?.value || '';
       const title = document.getElementById('cfg-title')?.value || '';
       const description = document.getElementById('cfg-description')?.value || '';
-      const icon = document.getElementById('cfg-icon')?.value || (isFlashcard ? '🃏' : isWritten ? '✍️' : '🗃️');
+      const icon = document.getElementById('cfg-icon')?.value || (isFlashcard ? '🃏' : isWritten ? '✍️' : isOsce ? '🩺' : '🗃️');
       const cards = Array.from(document.querySelectorAll('.editor-card'));
       let questions;
-      if (isWritten) {
+      if (isOsce) {
+        questions = cards.map((card, index) => {
+          const id = card.querySelector('.osce-id')?.value || '';
+          const caseTitle = card.querySelector('.osce-title')?.value || '';
+          const specialty = card.querySelector('.osce-specialty')?.value || '';
+          const difficulty = card.querySelector('.osce-difficulty')?.value || 'Intermediate';
+          const pName = card.querySelector('.osce-patient-name')?.value || '';
+          const pAge = parseInt(card.querySelector('.osce-patient-age')?.value) || 0;
+          const pGender = card.querySelector('.osce-patient-gender')?.value || 'male';
+          const pAvatar = card.querySelector('.osce-patient-avatar')?.value || '';
+          const pOpening = card.querySelector('.osce-patient-opening')?.value || '';
+          const hpDiagnosis = card.querySelector('.osce-hp-diagnosis')?.value || '';
+          const hpSymptoms = (card.querySelector('.osce-hp-symptoms')?.value || '').split(',').map(s => s.trim()).filter(Boolean);
+          const hpRedFlags = (card.querySelector('.osce-hp-redflags')?.value || '').split(',').map(s => s.trim()).filter(Boolean);
+          const hpHistory = (card.querySelector('.osce-hp-history')?.value || '').split(',').map(s => s.trim()).filter(Boolean);
+          const hpVitals = card.querySelector('.osce-hp-vitals')?.value || '';
+          const rubricMustAsk = (card.querySelector('.osce-rubric-mustask')?.value || '').split('\n').map(s => s.trim()).filter(Boolean);
+          const rubricBonus = (card.querySelector('.osce-rubric-bonus')?.value || '').split('\n').map(s => s.trim()).filter(Boolean);
+          return {
+            id: id || 'case-' + String(index + 1).padStart(3, '0'),
+            title: caseTitle,
+            specialty,
+            difficulty,
+            patient: { name: pName, age: pAge, gender: pGender, avatarSeed: pAvatar, opening: pOpening },
+            hiddenProfile: {
+              diagnosis: hpDiagnosis,
+              keySymptoms: hpSymptoms,
+              redFlags: hpRedFlags,
+              pastHistory: hpHistory,
+              vitalSigns: hpVitals,
+            },
+            rubric: {
+              mustAsk: rubricMustAsk,
+              bonus: rubricBonus,
+            },
+          };
+        });
+      } else if (isWritten) {
         questions = cards.map((card) => {
           const q = card.querySelector('.wq-question')?.value || '';
           const modelAnswer = card.querySelector('.wq-model-answer')?.value || '';
@@ -3595,11 +3769,11 @@
       meta.config.uid = uid;
       meta.config.title = title;
       meta.config.description = description;
-      if (meta.type === 'bank' || meta.type === 'flashcard' || meta.type === 'written') meta.config.icon = icon;
+      if (meta.type === 'bank' || meta.type === 'flashcard' || meta.type === 'written' || meta.type === 'osce') meta.config.icon = icon;
       meta.uid = uid;
       meta.title = title;
       meta.description = description;
-      meta.icon = (meta.type === 'bank' || meta.type === 'flashcard' || meta.type === 'written') ? icon : undefined;
+      meta.icon = (meta.type === 'bank' || meta.type === 'flashcard' || meta.type === 'written' || meta.type === 'osce') ? icon : undefined;
       meta.questions = questions;
       meta.question_count = questions.length;
       // Debounce the expensive serialization + content string rebuild
@@ -3608,8 +3782,9 @@
         if (!state.currentData) return;
         const isFC = meta.type === 'flashcard';
         const isWR = meta.type === 'written';
-        const configName = isFC ? 'BANK_CONFIG' : (isWR ? 'WRITTEN_CONFIG' : (meta.type === 'bank' ? 'BANK_CONFIG' : 'QUIZ_CONFIG'));
-        const arrayName = isFC ? 'FLASHCARD_BANK' : (isWR ? 'WRITTEN_QUESTIONS' : (meta.type === 'bank' ? 'QUESTION_BANK' : 'QUESTIONS'));
+        const isOC = meta.type === 'osce';
+        const configName = isFC ? 'BANK_CONFIG' : (isWR ? 'WRITTEN_CONFIG' : (isOC ? 'OSCE_CONFIG' : (meta.type === 'bank' ? 'BANK_CONFIG' : 'QUIZ_CONFIG')));
+        const arrayName = isFC ? 'FLASHCARD_BANK' : (isWR ? 'WRITTEN_QUESTIONS' : (isOC ? 'OSCE_CASES' : (meta.type === 'bank' ? 'QUESTION_BANK' : 'QUESTIONS')));
         let updated = state.currentData.content;
         updated = replaceAssignedBlock(updated, configName, '{', '}', meta.config);
         updated = replaceAssignedBlock(updated, arrayName, '[', ']', questions);
@@ -3743,11 +3918,14 @@
       if (!list) return;
       const isFlashcard = state.currentData?.meta?.type === 'flashcard';
       const isWritten = state.currentData?.meta?.type === 'written';
+      const isOsce = state.currentData?.meta?.type === 'osce';
       list.push(isFlashcard
         ? { type: 'basic', front: '', back: '', tags: [] }
-        : isWritten
-          ? { id: 'wq-' + Date.now().toString(36) + '-' + (list.length + 1), question: '', modelAnswer: '', rubric: '', explanation: '', tags: [] }
-          : { question: '', options: ['', '', '', ''], correct: 0, explanation: '' }
+        : isOsce
+          ? { id: 'case-' + String(list.length + 1).padStart(3, '0'), title: '', specialty: '', difficulty: 'Intermediate', patient: { name: '', age: 0, gender: 'male', avatarSeed: '', opening: '' }, hiddenProfile: { diagnosis: '', keySymptoms: [], redFlags: [], pastHistory: [], vitalSigns: '' }, rubric: { mustAsk: [], bonus: [] } }
+          : isWritten
+            ? { id: 'wq-' + Date.now().toString(36) + '-' + (list.length + 1), question: '', modelAnswer: '', rubric: '', explanation: '', tags: [] }
+            : { question: '', options: ['', '', '', ''], correct: 0, explanation: '' }
       );
       renderFilePanel();
       setTab('editor');
@@ -4297,7 +4475,7 @@
         title: previous.title || '',
         description: previous.description || '',
         filename: previous.filename || '',
-        icon: previous.icon || (type === 'flashcard' ? '🃏' : type === 'written' ? '✍️' : '🗃️'),
+        icon: previous.icon || (type === 'flashcard' ? '🃏' : type === 'written' ? '✍️' : type === 'osce' ? '🩺' : '🗃️'),
         sourceMode: previous.sourceMode || 'manual',
         sourceRaw: previous.sourceRaw || '',
         clonePath: previous.clonePath || '',
@@ -4313,7 +4491,7 @@
       const isBank = wizard.type === 'bank' || wizard.type === 'flashcard';
       const isFlashcard = wizard.type === 'flashcard';
       const cloneOptions = state.files
-        .filter(file => file.type === 'quiz' || file.type === 'bank' || file.type === 'flashcard' || file.type === 'written')
+        .filter(file => file.type === 'quiz' || file.type === 'bank' || file.type === 'flashcard' || file.type === 'written' || file.type === 'osce')
         .map(file => `<option value="${escapeHtml(file.path)}" ${file.path === wizard.clonePath ? 'selected' : ''}>${escapeHtml(file.title)} (${escapeHtml(file.path)})</option>`)
         .join('');
       
@@ -4358,7 +4536,7 @@
         }).join('');
       }
 
-      const filteredFiles = state.files.filter(file => file.type === 'quiz' || file.type === 'bank' || file.type === 'flashcard' || file.type === 'written');
+      const filteredFiles = state.files.filter(file => file.type === 'quiz' || file.type === 'bank' || file.type === 'flashcard' || file.type === 'written' || file.type === 'osce');
       const combineTreeData = buildTreeFromFiles(filteredFiles);
       const combineChecklist = `<ul style="padding: 0; margin: 0; list-style-type: none; display: grid; gap: 0.4rem;">${renderCombineTreeLevel(combineTreeData) || '<div class="muted" style="padding: 0.5rem;">No quizzes found in this project.</div>'}</ul>`;
       
@@ -4378,6 +4556,7 @@
                       <option value="bank" ${wizard.type === 'bank' ? 'selected' : ''}>Question Bank</option>
                       <option value="flashcard" ${wizard.type === 'flashcard' ? 'selected' : ''}>Flashcard Deck</option>
                       <option value="written" ${wizard.type === 'written' ? 'selected' : ''}>Written Assessment</option>
+                      <option value="osce" ${wizard.type === 'osce' ? 'selected' : ''}>OSCE Virtual Patients</option>
                     </select>
                 </div>
                 <div class="field">
@@ -4396,9 +4575,9 @@
                   <label>Filename Override</label>
                   <input class="text-input" id="file-name" value="${escapeHtml(wizard.filename)}" placeholder="Auto: ${escapeHtml(slugifyClient(wizard.title || 'untitled'))}" oninput="syncWizardSummary()">
                 </div>
-                <div class="field" id="bank-icon-wrap" style="display:${isBank ? 'grid' : 'none'};">
-                  <label>${isFlashcard ? 'Icon' : 'Bank Icon'}</label>
-                  <input class="text-input" id="file-icon" value="${escapeHtml(wizard.icon || (isFlashcard ? '🃏' : '🗃️'))}" oninput="syncWizardSummary()">
+                <div class="field" id="bank-icon-wrap" style="display:${(isBank || wizard.type === 'written' || wizard.type === 'osce') ? 'grid' : 'none'};">
+                  <label>Icon</label>
+                  <input class="text-input" id="file-icon" value="${escapeHtml(wizard.icon || (isFlashcard ? '🃏' : wizard.type === 'written' ? '✍️' : wizard.type === 'osce' ? '🩺' : '🗃️'))}" oninput="syncWizardSummary()">
                 </div>
               </div>
               <div class="modal-actions">
@@ -4476,7 +4655,7 @@
         </div>
       `;
       openModal({
-        title: 'Create New Quiz, Bank, Flashcard, or Written Assessment',
+        title: 'Create New Quiz, Bank, Flashcard, Written, or OSCE Assessment',
         subtitle: 'Use import helpers and folder-aware defaults to build files faster.',
         body,
         onOpen: () => syncWizardSummary(),
@@ -4523,14 +4702,15 @@
     function onFileTypeChange() {
       const type = document.getElementById('file-type').value;
       const wrap = document.getElementById('bank-icon-wrap');
-      const isIconType = type === 'bank' || type === 'flashcard' || type === 'written';
+      const isIconType = type === 'bank' || type === 'flashcard' || type === 'written' || type === 'osce';
       if (wrap) wrap.style.display = isIconType ? 'grid' : 'none';
       const iconInput = document.getElementById('file-icon');
       if (iconInput) {
         const cur = iconInput.value;
-        if (type === 'flashcard' && (!cur || cur === '🗃️' || cur === '✍️')) iconInput.value = '🃏';
-        else if (type === 'written' && (!cur || cur === '🗃️' || cur === '🃏')) iconInput.value = '✍️';
-        else if (type !== 'flashcard' && type !== 'written' && (!cur || cur === '🃏' || cur === '✍️')) iconInput.value = '🗃️';
+        if (type === 'flashcard' && (!cur || cur === '🗃️' || cur === '✍️' || cur === '🩺')) iconInput.value = '🃏';
+        else if (type === 'written' && (!cur || cur === '🗃️' || cur === '🃏' || cur === '🩺')) iconInput.value = '✍️';
+        else if (type === 'osce' && (!cur || cur === '🗃️' || cur === '🃏' || cur === '✍️')) iconInput.value = '🩺';
+        else if (type !== 'flashcard' && type !== 'written' && type !== 'osce' && (!cur || cur === '🃏' || cur === '✍️' || cur === '🩺')) iconInput.value = '🗃️';
       }
     }
 
@@ -4538,7 +4718,29 @@
       if (!state.modalQuestions.length) return '<div class="muted" style="padding:1rem;">No questions added yet.</div>';
       const isFlashcard = state.wizard?.type === 'flashcard';
       const isWritten = state.wizard?.type === 'written';
-      return state.modalQuestions.map((q, i) => `
+      const isOsce = state.wizard?.type === 'osce';
+      return state.modalQuestions.map((q, i) => {
+        if (isOsce) {
+          const patient = q.patient || {};
+          const hp = q.hiddenProfile || {};
+          const rubric = q.rubric || {};
+          return `
+            <div class="editor-card" style="margin-bottom: 0.5rem; padding: 0.75rem; background: var(--surface2); border: 1px solid var(--border);">
+              <div class="editor-card-header" style="margin-bottom: 0.5rem;">
+                 <div class="editor-card-title">OSCE Case ${i + 1}</div>
+                 <button class="mini-btn delete" onclick="removeModalQuestion(${i})">Remove Case</button>
+              </div>
+              <div class="field-grid" style="margin-bottom:0.5rem;">
+                <div class="field"><input class="text-input mq-q" data-idx="${i}" value="${escapeHtml(q.title || '')}" placeholder="Case title" style="font-weight:600;"></div>
+                <div class="field"><input class="text-input mq-specialty" data-idx="${i}" value="${escapeHtml(q.specialty || '')}" placeholder="Specialty"></div>
+              </div>
+              <div style="border:1px solid var(--border); border-radius:6px; padding:0.5rem; background:var(--surface); margin-bottom:0.5rem;">
+                <div style="font-weight:700; font-size:0.8rem; color:var(--accent); margin-bottom:0.3rem;">Patient: <input class="text-input mq-patient-name" data-idx="${i}" value="${escapeHtml(patient.name || '')}" placeholder="Name" style="width:auto; display:inline; max-width:200px;"></div>
+                <input class="text-input mq-patient-opening" data-idx="${i}" value="${escapeHtml(patient.opening || '')}" placeholder="Opening line" style="margin-bottom:0.25rem;">
+              </div>
+            </div>`;
+        }
+        return `
         <div class="editor-card" style="margin-bottom: 0.5rem; padding: 0.75rem; background: var(--surface2); border: 1px solid var(--border);">
           <div class="editor-card-header" style="margin-bottom: 0.5rem;">
              <div class="editor-card-title">${isFlashcard ? 'C' : isWritten ? 'W' : 'Q'}${i + 1}</div>
@@ -4571,15 +4773,32 @@
           </div>
           `}
         </div>
-      `).join('');
+      `}).join('');
     }
 
     function syncModalQuestionsFromUI() {
       const isFlashcard = state.wizard?.type === 'flashcard';
       const isWritten = state.wizard?.type === 'written';
+      const isOsce = state.wizard?.type === 'osce';
       const questions = [];
       const rows = document.querySelectorAll('#modal-question-list .editor-card');
       rows.forEach((row, i) => {
+        if (isOsce) {
+          const title = row.querySelector('.mq-q')?.value || '';
+          const specialty = row.querySelector('.mq-specialty')?.value || '';
+          const pName = row.querySelector('.mq-patient-name')?.value || '';
+          const pOpening = row.querySelector('.mq-patient-opening')?.value || '';
+          questions.push({
+            id: 'case-' + String(i + 1).padStart(3, '0'),
+            title,
+            specialty,
+            difficulty: 'Intermediate',
+            patient: { name: pName, age: 0, gender: 'male', avatarSeed: '', opening: pOpening },
+            hiddenProfile: { diagnosis: '', keySymptoms: [], redFlags: [], pastHistory: [], vitalSigns: '' },
+            rubric: { mustAsk: [], bonus: [] },
+          });
+          return;
+        }
         const question = row.querySelector('.mq-q').value;
         const explanation = row.querySelector('.mq-exp')?.value || '';
         if (isWritten) {
@@ -4617,9 +4836,12 @@
       syncModalQuestionsFromUI();
       const isFlashcard = state.wizard?.type === 'flashcard';
       const isWritten = state.wizard?.type === 'written';
+      const isOsce = state.wizard?.type === 'osce';
       state.modalQuestions.push(isWritten
         ? { id: 'wq-' + Date.now().toString(36) + '-' + (state.modalQuestions.length + 1), question: '', modelAnswer: '', rubric: '', explanation: '', tags: [] }
-        : { question: '', options: isFlashcard ? [] : ['', '', '', ''], correct: 0, explanation: '' }
+        : isOsce
+          ? { id: 'case-' + String(state.modalQuestions.length + 1).padStart(3, '0'), title: '', specialty: '', difficulty: 'Intermediate', patient: { name: '', age: 0, gender: 'male', avatarSeed: '', opening: '' }, hiddenProfile: { diagnosis: '', keySymptoms: [], redFlags: [], pastHistory: [], vitalSigns: '' }, rubric: { mustAsk: [], bonus: [] } }
+          : { question: '', options: isFlashcard ? [] : ['', '', '', ''], correct: 0, explanation: '' }
       );
       renderNewFileModal();
     }
@@ -4936,12 +5158,18 @@
         return;
       }
       const payload = await fetchJson(`/admin/load-file?path=${encodeURIComponent(sourcePath)}`);
-      state.modalQuestions = clone(payload.meta?.questions || []).map(question => ({
-        question: question.question || question.front || '',
-        options: question.options || ['', '', '', ''],
-        correct: Number(question.correct || 0),
-        explanation: question.explanation || question.back || '',
-      }));
+      const srcType = payload.meta?.type;
+      if (srcType === 'osce') {
+        // Preserve OSCE case structure as-is
+        state.modalQuestions = clone(payload.meta?.questions || []);
+      } else {
+        state.modalQuestions = clone(payload.meta?.questions || []).map(question => ({
+          question: question.question || question.front || '',
+          options: question.options || ['', '', '', ''],
+          correct: Number(question.correct || 0),
+          explanation: question.explanation || question.back || '',
+        }));
+      }
       showToast(`Loaded ${state.modalQuestions.length} questions from ${sourcePath}.`, 'success');
       setModalTab('questions');
     }
@@ -5329,7 +5557,7 @@
       const icon = wizard.icon || (wizard.type === 'flashcard' ? '🃏' : wizard.type === 'written' ? '✍️' : '🗃️');
       const questions = state.modalQuestions;
 
-      // Convert quiz-format questions to flashcard or written format when creating
+      // Convert quiz-format questions to flashcard, written, or osce format when creating
       const payloadQuestions = type === 'flashcard'
         ? questions.map(q => ({
             type: 'basic',
@@ -5337,15 +5565,25 @@
             back: q.explanation || (q.options?.[q.correct] || ''),
             tags: [],
           }))
-        : type === 'written'
+        : type === 'osce'
           ? questions.map(q => ({
-              id: q.id || 'wq-' + Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 5),
-              question: q.question || '',
-              modelAnswer: q.modelAnswer || '',
-              rubric: q.rubric || '',
-              explanation: q.explanation || '',
-              tags: Array.isArray(q.tags) ? q.tags : (typeof q.tags === 'string' ? q.tags.split(',').map(t => t.trim()).filter(Boolean) : []),
+              id: q.id || 'case-' + String(questions.indexOf(q) + 1).padStart(3, '0'),
+              title: q.title || '',
+              specialty: q.specialty || '',
+              difficulty: q.difficulty || 'Intermediate',
+              patient: q.patient || { name: '', age: 0, gender: 'male', avatarSeed: '', opening: '' },
+              hiddenProfile: q.hiddenProfile || { diagnosis: '', keySymptoms: [], redFlags: [], pastHistory: [], vitalSigns: '' },
+              rubric: q.rubric || { mustAsk: [], bonus: [] },
             }))
+          : type === 'written'
+            ? questions.map(q => ({
+                id: q.id || 'wq-' + Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 5),
+                question: q.question || '',
+                modelAnswer: q.modelAnswer || '',
+                rubric: q.rubric || '',
+                explanation: q.explanation || '',
+                tags: Array.isArray(q.tags) ? q.tags : (typeof q.tags === 'string' ? q.tags.split(',').map(t => t.trim()).filter(Boolean) : []),
+              }))
           : questions;
 
       if (!title) {

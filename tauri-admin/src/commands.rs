@@ -134,8 +134,9 @@ fn build_summary(root: &Path) -> Value {
     let index_count = files.iter().filter(|f| f["type"] == "index").count();
     let flashcard_count = files.iter().filter(|f| f["type"] == "flashcard").count();
     let written_count = files.iter().filter(|f| f["type"] == "written").count();
+    let osce_count = files.iter().filter(|f| f["type"] == "osce").count();
     let total_q: u64 = files.iter()
-        .filter(|f| f["type"] == "quiz" || f["type"] == "bank" || f["type"] == "flashcard" || f["type"] == "written")
+        .filter(|f| f["type"] == "quiz" || f["type"] == "bank" || f["type"] == "flashcard" || f["type"] == "written" || f["type"] == "osce")
         .filter_map(|f| f["question_count"].as_u64()).sum();
     let folders = scan_folders(root);
     json!({
@@ -145,6 +146,7 @@ fn build_summary(root: &Path) -> Value {
         "indexCount": index_count,
         "flashcardCount": flashcard_count,
         "writtenCount": written_count,
+        "osceCount": osce_count,
         "folderCount": folders.len(),
         "totalQuestions": total_q,
     })
@@ -278,7 +280,7 @@ pub fn create_file(
 ) -> Result<Value, String> {
     let root = root(&state);
     let ft = r#type.to_lowercase();
-    if ft != "quiz" && ft != "bank" && ft != "flashcard" && ft != "written" { return Err("Type must be quiz, bank, flashcard, or written.".into()); }
+    if ft != "quiz" && ft != "bank" && ft != "flashcard" && ft != "written" && ft != "osce" { return Err("Type must be quiz, bank, flashcard, written, or osce.".into()); }
     if title.trim().is_empty() { return Err("Title is required.".into()); }
     let folder_rel = normalize(folder.as_deref().unwrap_or("."));
     let folder_path = resolve_must_exist(&root, &folder_rel)?;
@@ -301,6 +303,10 @@ pub fn create_file(
         ),
         "written" => templates::create_written_html(
             &json!({"uid": uid, "title": title, "description": desc, "icon": icon.as_deref().unwrap_or("✍️")}),
+            &q_val,
+        ),
+        "osce" => templates::create_osce_html(
+            &json!({"uid": uid, "title": title, "description": desc, "icon": icon.as_deref().unwrap_or("🩺")}),
             &q_val,
         ),
         _ => templates::create_bank_html(
@@ -356,6 +362,11 @@ pub fn duplicate_file(path: String, folder: Option<String>, filename: Option<Str
             let mut cfg = meta.config.unwrap_or_else(|| json!({}));
             cfg["uid"] = json!(new_uid);
             templates::create_written_html(&cfg, &meta.questions.unwrap_or_else(|| json!([])))
+        }
+        parser::FileType::Osce => {
+            let mut cfg = meta.config.unwrap_or_else(|| json!({}));
+            cfg["uid"] = json!(new_uid);
+            templates::create_osce_html(&cfg, &meta.questions.unwrap_or_else(|| json!([])))
         }
         _ => src_content,
     };
@@ -463,6 +474,19 @@ pub fn convert_file(path: String, state: State<ProjectRoot>) -> Result<Value, St
             let html = templates::create_quiz_html(&cfg, &json!(converted));
             std::fs::write(&p, html).map_err(|e| e.to_string())?;
             Ok(json!({ "message": "Converted written assessment to quiz while preserving UID." }))
+        }
+        parser::FileType::Osce => {
+            let cfg = json!({"uid": uid, "title": meta.title.as_deref().unwrap_or(stem), "description": meta.description.as_deref().unwrap_or("")});
+            let questions = meta.questions.unwrap_or_else(|| json!([]));
+            let converted: Vec<Value> = questions.as_array().map(|arr| {
+                arr.iter().map(|q| {
+                    let q_text = q.get("title").and_then(|v| v.as_str()).unwrap_or("");
+                    json!({"question": q_text, "options": ["", "", "", ""], "correct": 0, "explanation": ""})
+                }).collect()
+            }).unwrap_or_default();
+            let html = templates::create_quiz_html(&cfg, &json!(converted));
+            std::fs::write(&p, html).map_err(|e| e.to_string())?;
+            Ok(json!({ "message": "Converted OSCE virtual patients to quiz while preserving UID." }))
         }
         _ => Err("Unsupported file type for conversion.".into()),
     }
