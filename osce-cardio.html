@@ -39,6 +39,7 @@ const OSCE_CASE = {
   title: "Chest Pain in a 55-Year-Old Man",
   specialty: "Cardiology",
   difficulty: "Intermediate",
+  task: "Take a focused cardiovascular history from this patient presenting with chest pain. Characterise the pain and assess cardiac risk factors.",
   patient: {
     name: "Mr. Robert Hayes",
     age: 55,
@@ -62,10 +63,25 @@ const OSCE_CASE = {
 </script>
 <script>
 (function () {
-  window.__OSCE_ENGINE_BASE = '../'.repeat(
+  var computedBase = '../'.repeat(
     Math.max(0, location.pathname.split('/').filter(Boolean).length - 2)
   );
-  document.write('<scr' + 'ipt src="' + window.__OSCE_ENGINE_BASE + 'osce-engine.js"><\/scr' + 'ipt>');
+  var candidates = location.protocol === 'file:'
+    ? ['', computedBase, '../', '../../', '../../../']
+    : [computedBase, '', '../', '../../', '../../../'];
+  var tried = {};
+  function loadNext() {
+    var base = candidates.shift();
+    if (base === undefined) return;
+    if (tried[base]) return loadNext();
+    tried[base] = true;
+    window.__OSCE_ENGINE_BASE = base;
+    var script = document.createElement('script');
+    script.src = base + 'osce-engine.js';
+    script.onerror = loadNext;
+    document.body.appendChild(script);
+  }
+  loadNext();
 })();
 </script>
 </body>

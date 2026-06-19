@@ -37,6 +37,7 @@ const OSCE_CONFIG = {
      title:        "Case title",
      specialty:    "Cardiology / Respiratory / etc.",
      difficulty:   "Foundational / Intermediate / Advanced",
+     task:         "Take a focused history... (displayed in the lobby and sidebar)",
      patient: {
        name:        "Mr. Patient Name",
        age:         55,
@@ -84,12 +85,27 @@ const OSCE_CASE = {
 /* [OSCE_CASE_END] */
 </script>
 <script>
-/* Engine loader — computes correct relative path for any folder depth */
+/* Engine loader — tries depth-aware path first, then local fallbacks for file:// previews */
 (function () {
-  window.__OSCE_ENGINE_BASE = '../'.repeat(
+  var computedBase = '../'.repeat(
     Math.max(0, location.pathname.split('/').filter(Boolean).length - 2)
   );
-  document.write('<scr' + 'ipt src="' + window.__OSCE_ENGINE_BASE + 'osce-engine.js"><\/scr' + 'ipt>');
+  var candidates = location.protocol === 'file:'
+    ? ['', computedBase, '../', '../../', '../../../']
+    : [computedBase, '', '../', '../../', '../../../'];
+  var tried = {};
+  function loadNext() {
+    var base = candidates.shift();
+    if (base === undefined) return;
+    if (tried[base]) return loadNext();
+    tried[base] = true;
+    window.__OSCE_ENGINE_BASE = base;
+    var script = document.createElement('script');
+    script.src = base + 'osce-engine.js';
+    script.onerror = loadNext;
+    document.body.appendChild(script);
+  }
+  loadNext();
 })();
 </script>
 </body>

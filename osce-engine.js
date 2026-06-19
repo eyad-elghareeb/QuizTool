@@ -1,8 +1,8 @@
 /* ================================================================
-   osce-engine.js  —  Standalone OSCE Virtual Patient Simulator.
-   Consumes OSCE_CONFIG and OSCE_CASES from OSCE HTML files.
-   PLAB 2–style: station door card, 8-min timer, domain-scored
-   examiner feedback. Conversation-driven history-taking via Gemini.
+   osce-engine.js  —  OSCE Virtual Patient Simulator v2
+   Redesigned UI: immersive lobby, 3-zone chat, voice mode,
+   gamification, SVG radar debrief, achievements, confetti.
+   AI transport, prompts, avatar system unchanged.
    ================================================================ */
 (function () {
   'use strict';
@@ -10,33 +10,42 @@
   var _cs = document.currentScript;
   var ENGINE_BASE = _cs ? _cs.src.replace(/[^\/]*$/, '') : (window.__OSCE_ENGINE_BASE || '');
 
-  /* ── Storage keys (shared with other engines) ───────────────── */
+  /* ── Storage keys ─────────────────────────────────────────── */
   var STORAGE = {
-    theme: 'quiz-theme',
-    apiKey: 'gemini_api_key',
-    model: 'gemini_selected_model',
-    progress: 'quiz_progress_v1_osce_',
-    maxWait: 'gemini_max_wait',
+    theme:      'quiz-theme',
+    apiKey:     'gemini_api_key',
+    model:      'gemini_selected_model',
+    progress:   'quiz_progress_v1_osce_',
+    maxWait:    'gemini_max_wait',
     retryLevel: 'gemini_retry_level',
-    session: 'osce_session_'
+    session:    'osce_session_',
+    voiceOn:    'osce_voice_on',
+    voiceMode:  'osce_voice_mode',
+    liveModel:  'osce_live_model',
+    ttsVoice:   'osce_tts_voice',
+    ttsRate:    'osce_tts_rate'
   };
 
-  var MAX_TURNS = 30;
+  var MAX_TURNS  = 30;
   var WARN_TURNS = 25;
-  var EXAM_TIME = 480; // 8 minutes in seconds
-
+  var EXAM_TIME  = 480;
   /* ── Models ─────────────────────────────────────────────────── */
   var MODELS = [
     ['gemini-3.1-flash-lite', 'Gemini 3.1 Flash-Lite (default, fast & modern)'],
-    ['gemma-4-26b-a4b-it', 'Gemma 4 26B IT (open model, strong & free)'],
-    ['gemma-4-31b-it', 'Gemma 4 31B IT (larger open model)'],
-    ['gemini-2.5-flash-lite', 'Gemini 2.5 Flash-Lite (older, deprecating soon)'],
-    ['gemini-2.5-flash', 'Gemini 2.5 Flash (older, deprecating soon)']
+    ['gemma-4-26b-a4b-it',    'Gemma 4 26B IT (open model, strong & free)'],
+    ['gemma-4-31b-it',        'Gemma 4 31B IT (larger open model)'],
+    ['gemini-2.5-flash-lite', 'Gemini 2.5 Flash-Lite'],
+    ['gemini-2.5-flash',      'Gemini 2.5 Flash']
   ];
 
-  /* ── Obfuscation ────────────────────────────────────────────── */
-  var _OK = [0x71, 0x75, 0x69, 0x7A, 0x74, 0x6F, 0x6F, 0x6C];
+  var LIVE_MODELS = [
+    ['gemini-3.1-flash-live-preview',          'Gemini 3.1 Flash Live (recommended)'],
+    ['gemini-live-2.5-flash-native-audio',     'Gemini Live 2.5 Flash — native audio'],
+    ['gemini-live-2.5-flash-preview-native-audio-09-2025', 'Gemini 2.5 Flash Live — native audio preview']
+  ];
 
+  /* ── Obfuscation ─────────────────────────────────────────────── */
+  var _OK = [0x71, 0x75, 0x69, 0x7A, 0x74, 0x6F, 0x6F, 0x6C];
   function _obfuscate(str) {
     if (!str) return '';
     var bytes = [];
@@ -46,100 +55,76 @@
   function _deobfuscate(encoded) {
     if (!encoded) return '';
     try {
-      var bytes = atob(encoded);
-      var result = '';
+      var bytes = atob(encoded); var result = '';
       for (var i = 0; i < bytes.length; i++) result += String.fromCharCode(bytes.charCodeAt(i) ^ _OK[i % _OK.length]);
       return result;
     } catch (_) { return ''; }
   }
-  function _readKey() {
-    var raw = localStorage.getItem(STORAGE.apiKey);
-    if (!raw) return '';
-    return _deobfuscate(raw) || raw;
-  }
-  function _hasApiKey() { return !!_readKey(); }
-  function _getSavedModel() { return localStorage.getItem(STORAGE.model) || MODELS[0][0]; }
-  function _getMaxWaitMs() {
-    var v = localStorage.getItem(STORAGE.maxWait) || '15';
-    var n = parseInt(v, 10);
-    return n > 0 ? n * 1000 : 0;
-  }
-  function _getRetryLevel() { return localStorage.getItem(STORAGE.retryLevel) || 'balanced'; }
+  function _readKey()        { var r = localStorage.getItem(STORAGE.apiKey); if (!r) return ''; return _deobfuscate(r) || r; }
+  function _hasApiKey()      { return !!_readKey(); }
+  function _getSavedModel()  { return localStorage.getItem(STORAGE.model) || MODELS[0][0]; }
+  function _getMaxWaitMs()   { var v = localStorage.getItem(STORAGE.maxWait) || '15'; var n = parseInt(v, 10); return n > 0 ? n * 1000 : 0; }
+  function _getRetryLevel()  { return localStorage.getItem(STORAGE.retryLevel) || 'balanced'; }
   function modelIsAvailable(id) { return MODELS.some(function (m) { return m[0] === id; }); }
-  function _getModelLabel(id) {
-    for (var i = 0; i < MODELS.length; i++) if (MODELS[i][0] === id) return MODELS[i][1];
-    return id;
-  }
+  function _getModelLabel(id) { for (var i = 0; i < MODELS.length; i++) if (MODELS[i][0] === id) return MODELS[i][1]; return id; }
+  function _getSavedLiveModel() { return localStorage.getItem(STORAGE.liveModel) || LIVE_MODELS[0][0]; }
+  function liveModelIsAvailable(id) { return LIVE_MODELS.some(function (m) { return m[0] === id; }); }
 
-  /* ── Helpers ────────────────────────────────────────────────── */
+  /* ── Helpers ─────────────────────────────────────────────────── */
   function textOr(v, fallback) { return (v === null || v === undefined || v === '') ? fallback : String(v); }
   function pickField(obj) {
     var fields = Array.prototype.slice.call(arguments, 1);
-    for (var i = 0; i < fields.length; i++) {
-      var val = obj[fields[i]];
-      if (val !== null && val !== undefined && val !== '') return val;
-    }
+    for (var i = 0; i < fields.length; i++) { var val = obj[fields[i]]; if (val !== null && val !== undefined && val !== '') return val; }
     return undefined;
   }
   function slugify(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, ''); }
-
   function _addLink(rel, href, extra) {
-    var link = document.createElement('link');
-    link.rel = rel;
-    link.href = href;
-    if (extra) {
-      Object.keys(extra).forEach(function (key) { link[key] = extra[key]; });
-    }
+    var link = document.createElement('link'); link.rel = rel; link.href = href;
+    if (extra) Object.keys(extra).forEach(function (k) { link[k] = extra[k]; });
     document.head.appendChild(link);
   }
+  _addLink('preconnect', 'https://fonts.googleapis.com');
+  _addLink('preconnect', 'https://fonts.gstatic.com', { crossOrigin: '' });
+  _addLink('stylesheet', 'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap');
 
-  /* ── Config + case normalization ────────────────────────────── */
+  /* ── Config + case normalization ─────────────────────────────── */
   function normalizeConfig(raw) {
     raw = raw || {};
     var title = textOr(pickField(raw, 'title', 'name'), 'OSCE Virtual Patient');
     return {
-      uid: textOr(pickField(raw, 'uid', 'id'), slugify(title) || 'osce_cases'),
-      title: title,
-      description: textOr(pickField(raw, 'description', 'desc', 'subtitle'),
-        'Practice history-taking with an AI virtual patient, then get examiner feedback.'),
-      icon: textOr(pickField(raw, 'icon', 'emoji'), '🩺')
+      uid:         textOr(pickField(raw, 'uid', 'id'), slugify(title) || 'osce_cases'),
+      title:       title,
+      description: textOr(pickField(raw, 'description', 'desc', 'subtitle'), 'Practice history-taking with an AI virtual patient, then get examiner feedback.'),
+      icon:        textOr(pickField(raw, 'icon', 'emoji'), '🩺')
     };
   }
-
   function normalizeCase(raw, idx) {
-    raw = raw || {};
-    var patient = raw.patient || {};
-    var hidden = raw.hiddenProfile || raw.hidden_profile || {};
-    var rubric = raw.rubric || {};
+    raw = raw || {}; var patient = raw.patient || {}; var hidden = raw.hiddenProfile || raw.hidden_profile || {}; var rubric = raw.rubric || {};
     return {
-      id: textOr(pickField(raw, 'id'), 'case-' + (idx + 1)),
-      title: textOr(pickField(raw, 'title', 'name'), 'Case ' + (idx + 1)),
-      specialty: textOr(pickField(raw, 'specialty', 'category'), 'General'),
+      id:         textOr(pickField(raw, 'id'), 'case-' + (idx + 1)),
+      title:      textOr(pickField(raw, 'title', 'name'), 'Case ' + (idx + 1)),
+      specialty:  textOr(pickField(raw, 'specialty', 'category'), 'General'),
       difficulty: textOr(pickField(raw, 'difficulty', 'level'), 'Intermediate'),
-      task: textOr(pickField(raw, 'task', 'instructions'), 'Take a focused history from this patient.'),
-      time: Number(pickField(raw, 'time')) || EXAM_TIME,
+      task:       textOr(pickField(raw, 'task', 'instructions'), 'Take a focused history from this patient.'),
+      time:       Number(pickField(raw, 'time')) || EXAM_TIME,
       patient: {
-        name: textOr(pickField(patient, 'name', 'displayName'), 'Patient'),
-        age: Number(pickField(patient, 'age')) || 40,
-        gender: (pickField(patient, 'gender', 'sex') || 'male').toLowerCase() === 'female' ? 'female' : 'male',
+        name:       textOr(pickField(patient, 'name', 'displayName'), 'Patient'),
+        age:        Number(pickField(patient, 'age')) || 40,
+        gender:     (pickField(patient, 'gender', 'sex') || 'male').toLowerCase() === 'female' ? 'female' : 'male',
         avatarSeed: textOr(pickField(patient, 'avatarSeed', 'avatar_seed'), 'osce-' + idx),
-        opening: textOr(pickField(patient, 'opening', 'greeting'), 'Hello doctor, thank you for seeing me.')
+        opening:    textOr(pickField(patient, 'opening', 'greeting'), 'Hello doctor, thank you for seeing me.')
       },
       hiddenProfile: {
-        diagnosis: hidden.diagnosis || '',
+        diagnosis:   hidden.diagnosis || '',
         keySymptoms: hidden.keySymptoms || hidden.key_symptoms || [],
-        redFlags: hidden.redFlags || hidden.red_flags || [],
-        pastHistory: hidden.pastHistory || hidden.past_history || [],
-        vitalSigns: hidden.vitalSigns || hidden.vital_signs || ''
+        redFlags:    hidden.redFlags   || hidden.red_flags    || [],
+        pastHistory: hidden.pastHistory|| hidden.past_history || [],
+        vitalSigns:  hidden.vitalSigns || hidden.vital_signs  || ''
       },
-      rubric: {
-        mustAsk: rubric.mustAsk || rubric.must_ask || [],
-        bonus: rubric.bonus || []
-      }
+      rubric: { mustAsk: rubric.mustAsk || rubric.must_ask || [], bonus: rubric.bonus || [] }
     };
   }
 
-  /* ── Read source data from the page ─────────────────────────── */
   function readOsceData() {
     var config = null, caseObj = null;
     try { if (typeof OSCE_CONFIG !== 'undefined') config = OSCE_CONFIG; } catch (_) {}
@@ -147,14 +132,11 @@
     try { if (typeof OSCE_CASE !== 'undefined') caseObj = OSCE_CASE; } catch (_) {}
     if (!caseObj) { try { if (typeof OSCE_CASES !== 'undefined') caseObj = OSCE_CASES[0]; } catch (_) {} }
     if (!caseObj) caseObj = recoverOsceCaseFromScripts();
-    config = normalizeConfig(config);
-    caseObj = normalizeCase(caseObj, 0);
-    return { config: config, case: caseObj };
+    return { config: normalizeConfig(config), case: normalizeCase(caseObj, 0) };
   }
 
   function recoverOsceCaseFromScripts() {
-    var scripts = document.querySelectorAll('script');
-    var result = null;
+    var scripts = document.querySelectorAll('script'); var result = null;
     Array.prototype.some.call(scripts, function (script) {
       var text = script.textContent || '';
       if (!text || text.indexOf('OSCE_') === -1) return false;
@@ -172,122 +154,94 @@
   }
 
   /* ================================================================
-     AVATAR SYSTEM — procedural inline SVG, no external assets.
+     AVATAR SYSTEM — procedural inline SVG
      ================================================================ */
-
   function _mulberry32(seedStr) {
     var h = 1779033703 ^ seedStr.length;
-    for (var i = 0; i < seedStr.length; i++) {
-      h = Math.imul(h ^ seedStr.charCodeAt(i), 3432918353);
-      h = (h << 13) | (h >>> 19);
+    for (var i = 0; i < seedStr.length; i++) { h = Math.imul(h ^ seedStr.charCodeAt(i), 3432918353); h = (h << 13) | (h >>> 19); }
+    return function () { h = Math.imul(h ^ (h >>> 16), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
+  }
+  function _ageBand(age) { if (age < 13) return 'child'; if (age < 20) return 'teen'; if (age < 60) return 'adult'; return 'elder'; }
+  function _isPediatric(age) { return (age||0) < 16; }
+  function _getSpeaker(c) {
+    if (!c||!c.patient) return { name:'Patient', gender: 'female', isParent: false };
+    var p = c.patient;
+    if (_isPediatric(p.age)) {
+      var parentGender = p.parentGender || 'female';
+      var parentLabel = parentGender === 'male' ? 'Father' : 'Mother';
+      return { name: parentLabel + (p.name ? ' of ' + p.name.split('(')[0].trim() : ''), gender: parentGender, isParent: true };
     }
-    return function () {
-      h = Math.imul(h ^ (h >>> 16), 2246822507);
-      h = Math.imul(h ^ (h >>> 13), 3266489909);
-      h ^= h >>> 16;
-      return (h >>> 0) / 4294967296;
-    };
+    return { name: p.name, gender: p.gender, isParent: false };
   }
-
-  function _ageBand(age) {
-    if (age < 13) return 'child';
-    if (age < 20) return 'teen';
-    if (age < 60) return 'adult';
-    return 'elder';
-  }
-
-  var SKIN_TONES = ['#FCE4D6', '#F3C9A0', '#E0AC82', '#C68658', '#9E5F32', '#6B3F1C'];
-  var HAIR_COLORS = { dark: '#2B2118', brown: '#5A3A22', blonde: '#D9B26A', grey: '#B8B8B8', white: '#ECECEC', red: '#A14A23' };
+  var SKIN_TONES  = ['#FCE4D6','#F3C9A0','#E0AC82','#C68658','#9E5F32','#6B3F1C'];
+  var HAIR_COLORS = { dark:'#2B2118', brown:'#5A3A22', blonde:'#D9B26A', grey:'#B8B8B8', white:'#ECECEC', red:'#A14A23' };
   var HAIR_STYLES = {
-    male:   { child: ['short','buzz','curly-short'], teen: ['short','buzz','spiky'], adult: ['short','side-part','bald'], elder: ['short','bald','side-part'] },
-    female: { child: ['long','pigtails','bob'], teen: ['long','bob','ponytail'], adult: ['long','bob','bun','hijab'], elder: ['bob','bun','short'] }
+    male:   { child:['short','buzz','curly-short'], teen:['short','buzz','spiky'], adult:['short','side-part','bald'], elder:['short','bald','side-part'] },
+    female: { child:['long','pigtails','bob'], teen:['long','bob','ponytail'], adult:['long','bob','bun','hijab'], elder:['bob','bun','short'] }
   };
   var FACE_SHAPES = ['oval','round','square'];
-
-  function _faceYFor(band) { return band === 'child' ? 92 : band === 'elder' ? 88 : 90; }
-  var ACCESSORIES = { none: 0.6, glasses: 0.3, hearingAid: 0.1 };
-  var EXPRESSIONS = ['neutral','concerned','tired','mild-pain'];
-
-  function _pick(rnd, arr) { return arr[Math.floor(rnd() * arr.length)]; }
+  var ACCESSORIES = { none:0.6, glasses:0.3, hearingAid:0.1 };
+  var EXPRESSIONS  = ['neutral','concerned','tired','mild-pain'];
+  function _pick(rnd, arr)       { return arr[Math.floor(rnd() * arr.length)]; }
   function _weighted(rnd, weights) {
     var keys = Object.keys(weights), total = 0;
     keys.forEach(function (k) { total += weights[k]; });
     var r = rnd() * total, acc = 0;
-    for (var i = 0; i < keys.length; i++) { acc += weights[keys[i]]; if (r <= acc) return keys[i]; }
-    return keys[0];
+    for (var i = 0; i < keys.length; i++) { acc += weights[keys[i]]; if (r <= acc) return keys[i]; } return keys[0];
   }
-
   function buildAvatarParams(gender, age, seed) {
-    gender = (gender || 'male').toLowerCase() === 'female' ? 'female' : 'male';
-    age = Number(age) || 40;
-    var band = _ageBand(age);
-    var rnd = _mulberry32(String(seed || 'x') + ':' + gender + ':' + age);
-
+    gender = (gender||'male').toLowerCase() === 'female' ? 'female' : 'male';
+    age = Number(age)||40; var band = _ageBand(age);
+    var rnd = _mulberry32(String(seed||'x')+':'+gender+':'+age);
     var headCovering = 'none';
-    var hairStyle = _pick(rnd, HAIR_STYLES[gender][band] || HAIR_STYLES[gender].adult);
+    var hairStyle = _pick(rnd, HAIR_STYLES[gender][band]||HAIR_STYLES[gender].adult);
     if (hairStyle === 'hijab') { headCovering = 'hijab'; hairStyle = 'hidden'; }
-    if (hairStyle === 'bald') hairStyle = 'bald';
-
-    var hairColorKey = band === 'child' ? _pick(rnd, ['dark','brown','blonde','red'])
-                    : band === 'elder' ? _pick(rnd, ['grey','white','grey'])
-                    : _pick(rnd, ['dark','brown','blonde']);
+    if (hairStyle === 'bald')    hairStyle = 'bald';
+    var hairColorKey = band==='child' ? _pick(rnd,['dark','brown','blonde','red']) : band==='elder' ? _pick(rnd,['grey','white','grey']) : _pick(rnd,['dark','brown','blonde']);
     var skin = _pick(rnd, SKIN_TONES);
-
     var accWeights = Object.assign({}, ACCESSORIES);
-    if (band === 'elder') { accWeights.hearingAid = 0.25; accWeights.glasses = 0.4; accWeights.none = 0.35; }
-    var accessory = _weighted(rnd, accWeights);
-
-    var expression = band === 'elder' ? _pick(rnd, ['tired','concerned','mild-pain','neutral'])
-                                      : _pick(rnd, EXPRESSIONS);
-
+    if (band==='elder') { accWeights.hearingAid=0.25; accWeights.glasses=0.4; accWeights.none=0.35; }
     return {
-      gender: gender, age: age, ageBand: band,
-      skin: skin, hair: HAIR_COLORS[hairColorKey], hairStyle: hairStyle,
-      hairColorKey: hairColorKey, headCovering: headCovering,
-      faceShape: _pick(rnd, FACE_SHAPES), accessory: accessory,
-      expression: expression, seed: String(seed || 'x')
+      gender:gender, age:age, ageBand:band, skin:skin, hair:HAIR_COLORS[hairColorKey], hairStyle:hairStyle,
+      hairColorKey:hairColorKey, headCovering:headCovering, faceShape:_pick(rnd,FACE_SHAPES),
+      accessory:_weighted(rnd,accWeights), expression:band==='elder'?_pick(rnd,['tired','concerned','mild-pain','neutral']):_pick(rnd,EXPRESSIONS), seed:String(seed||'x')
     };
   }
-
   function renderAvatar(p) {
-    var bandLabel = p.ageBand === 'elder' ? 'Older adult' : p.ageBand === 'child' ? 'Child' : p.ageBand === 'teen' ? 'Teenager' : 'Adult';
-    var accent = p.gender === 'female' ? '#b35c8a' : '#2f7fb9';
-    var muted = p.ageBand === 'elder' ? '#d1d5db' : p.skin;
-    return '' +
-      '<svg viewBox="0 0 200 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Patient identity card">' +
-        '<rect x="18" y="18" width="164" height="174" rx="22" fill="rgba(255,255,255,.08)" stroke="rgba(255,255,255,.18)" stroke-width="2"/>' +
-        '<rect x="34" y="34" width="132" height="30" rx="15" fill="' + accent + '" opacity=".9"/>' +
-        '<circle cx="100" cy="104" r="38" fill="' + muted + '" opacity=".9"/>' +
-        '<path d="M54 170 Q60 135 100 135 Q140 135 146 170 Z" fill="' + accent + '" opacity=".75"/>' +
-        '<path d="M74 104 Q100 78 126 104" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="8" stroke-linecap="round"/>' +
-        '<circle cx="84" cy="108" r="4" fill="rgba(0,0,0,.45)"/><circle cx="116" cy="108" r="4" fill="rgba(0,0,0,.45)"/>' +
-        '<path d="M82 126 Q100 134 118 126" fill="none" stroke="rgba(0,0,0,.38)" stroke-width="4" stroke-linecap="round"/>' +
-        '<text x="100" y="55" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" font-weight="700" fill="#fff">PATIENT</text>' +
-        '<text x="100" y="185" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="700" fill="currentColor">' + bandLabel + '</text>' +
-      '</svg>';
+    var bandLabel = p.ageBand==='elder'?'Older adult':p.ageBand==='child'?'Child':p.ageBand==='teen'?'Teenager':'Adult';
+    var accent = p.gender==='female'?'#b35c8a':'#2f7fb9';
+    var muted  = p.ageBand==='elder'?'#d1d5db':p.skin;
+    return '<svg viewBox="0 0 200 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Patient avatar">' +
+      '<rect x="18" y="18" width="164" height="174" rx="22" fill="rgba(255,255,255,.08)" stroke="rgba(255,255,255,.18)" stroke-width="2"/>' +
+      '<rect x="34" y="34" width="132" height="30" rx="15" fill="'+accent+'" opacity=".9"/>' +
+      '<circle cx="100" cy="104" r="38" fill="'+muted+'" opacity=".9"/>' +
+      '<path d="M54 170 Q60 135 100 135 Q140 135 146 170 Z" fill="'+accent+'" opacity=".75"/>' +
+      '<path d="M74 104 Q100 78 126 104" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="8" stroke-linecap="round"/>' +
+      '<circle cx="84" cy="108" r="4" fill="rgba(0,0,0,.45)"/><circle cx="116" cy="108" r="4" fill="rgba(0,0,0,.45)"/>' +
+      '<path d="M82 126 Q100 134 118 126" fill="none" stroke="rgba(0,0,0,.38)" stroke-width="4" stroke-linecap="round"/>' +
+      '<text x="100" y="55" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" font-weight="700" fill="#fff">PATIENT</text>' +
+      '<text x="100" y="185" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" font-weight="700" fill="currentColor">'+bandLabel+'</text>' +
+    '</svg>';
   }
 
   /* ================================================================
      PROMPT BUILDERS
      ================================================================ */
-
   function buildPatientSysPrompt(caseObj) {
     var p = caseObj.patient, hp = caseObj.hiddenProfile;
+    var speaker = _getSpeaker(caseObj);
+    var identity = speaker.isParent
+      ? 'You are ' + speaker.name + ', speaking on behalf of your ' + _ageBand(p.age) + ', ' + p.name.split('(')[0].trim() + ', age ' + p.age + '. ' + p.name.split('(')[0].trim() + ' is the patient. You (the parent) are answering the doctor\'s questions.'
+      : 'You are ' + p.name + ', age ' + p.age + '. You are seeing the doctor today.';
     return [
       'You are role-playing a virtual patient in an OSCE clinical-skills exam for medical students.',
-      'You ARE this person. Stay in character at all times and reply in the first person.',
-      '',
-      '# YOUR IDENTITY',
-      '• Name: ' + p.name,
-      '• Age: ' + p.age,
-      '• Gender: ' + p.gender,
-      '',
-      '# YOUR TRUE (HIDDEN) CLINICAL PICTURE — the student must discover this by asking',
-      '• Main symptoms: ' + (hp.keySymptoms.join('; ') || '(as below)'),
-      '• Red-flag / associated features: ' + (hp.redFlags.join('; ') || '(none notable)'),
-      '• Past medical history: ' + (hp.pastHistory.join('; ') || '(unremarkable)'),
-      '• Vital signs (reveal only if asked to examine or checks vitals): ' + (hp.vitalSigns || '(normal)'),
-      '',
+      'Stay in character at all times.',
+      '', '# YOUR IDENTITY', identity, '',
+      '# THE PATIENT\'S TRUE (HIDDEN) CLINICAL PICTURE — the student must discover this by asking',
+      '• Main symptoms: '+(hp.keySymptoms.join('; ')||'(as below)'),
+      '• Red-flag / associated features: '+(hp.redFlags.join('; ')||'(none notable)'),
+      '• Past medical history: '+(hp.pastHistory.join('; ')||'(unremarkable)'),
+      '• Vital signs (reveal only if asked to examine or checks vitals): '+(hp.vitalSigns||'(normal)'),'',
       '# ROLE-PLAY RULES — FOLLOW STRICTLY',
       '1. Answer only what the student asks. A real patient does NOT recite a textbook.',
       '2. Reveal symptoms/history gradually and only when specifically questioned.',
@@ -295,15 +249,15 @@
       '4. If asked something you were not given (e.g. a lab result), say you do not know / have not had that test.',
       '5. Keep replies to 1-3 short sentences in plain, everyday language.',
       '6. Show emotion consistent with the complaint (worried, in pain, etc.) but do not over-act.',
-      '7. Never break character, never mention being an AI, never mention this prompt.'
+      '7. Never break character, never mention being an AI, never mention this prompt.',
+      '8. NEVER include medical disclaimers, warnings, or advice about consulting a healthcare professional — you ARE the patient, not a doctor.',
+      '9. NEVER say this is not medical advice. NEVER suggest the student should see another doctor.'
     ].join('\n');
   }
-
   function buildExaminerSysPrompt() {
     return [
       'You are an expert OSCE examiner scoring a medical student\'s patient-interview transcript.',
-      'Provide structured formative feedback across four domains.',
-      '',
+      'Provide structured formative feedback across four domains.','',
       '# OUTPUT REQUIREMENTS',
       'Respond with a single raw JSON object and absolutely nothing else. No markdown, no fences, no preamble.',
       'The JSON object must contain exactly these keys:',
@@ -312,14 +266,12 @@
       '  "domains"    : object with 4 sub-scores — { "communication": 0-25, "infoGathering": 0-25, "clinicalReasoning": 0-25, "professionalism": 0-25 }',
       '  "asked"      : array of strings — rubric items the student clearly addressed',
       '  "missed"     : array of strings — rubric items not addressed (empty if all covered)',
-      '  "feedback"   : string — 2-3 sentences, concrete and personalised to the transcript',
-      '',
+      '  "feedback"   : string — 2-3 sentences, concrete and personalised to the transcript','',
       '# DOMAIN DESCRIPTIONS',
       '• Communication (0-25): Greeting, introductions, open-to-closed questioning, active listening, empathy, summarising.',
       '• Information Gathering (0-25): Systematic history, SOCRATES for pain, past medical hx, drug hx, social hx, FH.',
       '• Clinical Reasoning (0-25): Appropriate focus, recognising red flags, differential thinking.',
-      '• Professionalism (0-25): Respect, confidentiality, not interrupting, explaining plans.',
-      '',
+      '• Professionalism (0-25): Respect, confidentiality, not interrupting, explaining plans.','',
       '# SCORING',
       '• Each mustAsk item covered ≈ a large share of the score; bonus items add a small amount.',
       '• Credit paraphrases and synonyms — do not require exact wording.',
@@ -327,455 +279,898 @@
       '• Domain scores should sum to approximately the overall score.'
     ].join('\n');
   }
-
   function buildExaminerUserPrompt(caseObj, transcript) {
-    var rubric = caseObj.rubric || {};
-    var lines = [];
-    lines.push('CASE: ' + caseObj.title);
-    lines.push('CASE TASK: ' + (caseObj.task || 'Take a focused history.'));
+    var rubric = caseObj.rubric || {}; var lines = [];
+    lines.push('CASE: '+caseObj.title);
+    lines.push('CASE TASK: '+(caseObj.task||'Take a focused history.'));
     lines.push('MUST-ASK CRITERIA:');
-    (rubric.mustAsk || []).forEach(function (m, i) { lines.push('  ' + (i + 1) + '. ' + m); });
-    if (rubric.bonus && rubric.bonus.length) {
-      lines.push('BONUS CRITERIA:');
-      rubric.bonus.forEach(function (m, i) { lines.push('  ' + (i + 1) + '. ' + m); });
-    }
+    (rubric.mustAsk||[]).forEach(function (m, i) { lines.push('  '+(i+1)+'. '+m); });
+    if (rubric.bonus&&rubric.bonus.length) { lines.push('BONUS CRITERIA:'); rubric.bonus.forEach(function (m, i) { lines.push('  '+(i+1)+'. '+m); }); }
     lines.push('');
     lines.push('INTERVIEW TRANSCRIPT (user = student, model = patient):');
-    transcript.forEach(function (t) {
-      lines.push((t.role === 'user' ? 'Student: ' : 'Patient: ') + t.text);
-    });
-    lines.push('');
-    lines.push('Score this transcript against the criteria. Return the JSON object only.');
+    transcript.forEach(function (t) { lines.push((t.role==='user'?'Student: ':'Patient: ')+t.text); });
+    lines.push(''); lines.push('Score this transcript against the criteria. Return the JSON object only.');
     return lines.join('\n');
   }
-
   function scoreRubric(raw) {
-    var obj = null;
-    try { obj = JSON.parse(raw); } catch (_) { return null; }
-    if (!obj || typeof obj !== 'object') return null;
-    var score = parseInt(obj.score, 10);
-    if (isNaN(score)) return null;
+    var obj = null; try { obj = JSON.parse(raw); } catch (_) { return null; }
+    if (!obj||typeof obj!=='object') return null;
+    var score = parseInt(obj.score, 10); if (isNaN(score)) return null;
     score = Math.max(0, Math.min(100, score));
-    function arrOf(v) { return Array.isArray(v) ? v.map(String) : []; }
-    function clamp25(v) {
-      var n = parseInt(v, 10);
-      if (isNaN(n)) return 0;
-      return Math.max(0, Math.min(25, n));
-    }
-    var domains = obj.domains || {};
+    function arrOf(v)   { return Array.isArray(v) ? v.map(String) : []; }
+    function clamp25(v) { var n=parseInt(v,10); if(isNaN(n)) return 0; return Math.max(0,Math.min(25,n)); }
+    var domains = obj.domains||{};
     return {
-      score: score,
-      passed: !!obj.passed,
-      domains: {
-        communication: clamp25(domains.communication),
-        infoGathering: clamp25(domains.infoGathering || domains.info_gathering),
-        clinicalReasoning: clamp25(domains.clinicalReasoning || domains.clinical_reasoning),
-        professionalism: clamp25(domains.professionalism)
-      },
-      asked: arrOf(obj.asked),
-      missed: arrOf(obj.missed),
-      feedback: textOr(obj.feedback, '')
+      score:score, passed:!!obj.passed,
+      domains:{ communication:clamp25(domains.communication), infoGathering:clamp25(domains.infoGathering||domains.info_gathering), clinicalReasoning:clamp25(domains.clinicalReasoning||domains.clinical_reasoning), professionalism:clamp25(domains.professionalism) },
+      asked:arrOf(obj.asked), missed:arrOf(obj.missed), feedback:textOr(obj.feedback,'')
     };
   }
 
   /* ================================================================
      GEMINI TRANSPORT
      ================================================================ */
-
   function _extractGeminiText(payload) {
-    var cand = payload && payload.candidates && payload.candidates[0];
-    var parts = cand && cand.content && cand.content.parts;
-    if (!parts || !parts.length) {
-      var reason = cand && cand.finishReason ? ' Finish reason: ' + cand.finishReason + '.' : '';
-      throw new Error('AI response did not include text.' + reason);
-    }
-    return parts.map(function (p) { return p.text || ''; }).join('\n').trim();
+    var cand = payload&&payload.candidates&&payload.candidates[0];
+    var parts = cand&&cand.content&&cand.content.parts;
+    if (!parts||!parts.length) { var reason = cand&&cand.finishReason?' Finish reason: '+cand.finishReason+'.':''; throw new Error('AI response did not include text.'+reason); }
+    return parts.map(function (p) { return p.text||''; }).join('\n').trim();
   }
-
-  function _friendlyAiError(err) {
-    return (err && err.message ? err.message : String(err || 'Unknown AI error')).replace(/\s+/g, ' ').trim();
-  }
-
+  function _friendlyAiError(err) { return (err&&err.message?err.message:String(err||'Unknown AI error')).replace(/\s+/g,' ').trim(); }
   function _buildAttempts(model) {
-    var attempts = [{ model: model }];
-    if (model !== MODELS[0][0]) attempts.push({ model: MODELS[0][0] });
+    var attempts = [{model:model}];
+    if (model!==MODELS[0][0]) attempts.push({model:MODELS[0][0]});
     var lvl = _getRetryLevel();
-    if (lvl === 'fast') return attempts.slice(0, 1);
-    if (lvl === 'thorough') return attempts;
-    return attempts.slice(0, 2);
+    if (lvl==='fast') return attempts.slice(0,1);
+    if (lvl==='thorough') return attempts;
+    return attempts.slice(0,2);
   }
-
   function _requestGemini(systemPrompt, contents, apiKey, model, cancelSignal) {
-    var maxWait = _getMaxWaitMs();
-    var controller = new AbortController();
-    var timeoutId = null, cleanup = null;
-    if (maxWait > 0) timeoutId = setTimeout(function () { controller.abort(); }, maxWait);
-    if (cancelSignal) {
-      cleanup = function () { if (timeoutId) clearTimeout(timeoutId); controller.abort(); };
-      cancelSignal.addEventListener('abort', cleanup);
-    }
-    var body = {
-      systemInstruction: { parts: [{ text: systemPrompt }] },
-      contents: contents,
-      generationConfig: { temperature: 0.4 }
-    };
-    return fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-      body: JSON.stringify(body),
-      signal: controller.signal
-    })
-      .then(function (r) { return r.text().then(function (text) {
-        var payload = null; try { payload = text ? JSON.parse(text) : null; } catch (_) {}
-        if (!r.ok) {
-          var msg = payload && payload.error && payload.error.message ? payload.error.message : text;
-          throw new Error('AI ' + model + ' returned HTTP ' + r.status + ': ' + (msg || r.statusText));
-        }
+    var maxWait = _getMaxWaitMs(); var controller = new AbortController(); var timeoutId = null, cleanup = null;
+    if (maxWait>0) timeoutId = setTimeout(function () { controller.abort(); }, maxWait);
+    if (cancelSignal) { cleanup = function () { if (timeoutId) clearTimeout(timeoutId); controller.abort(); }; cancelSignal.addEventListener('abort', cleanup); }
+    var body = { systemInstruction:{parts:[{text:systemPrompt}]}, contents:contents, generationConfig:{temperature:0.4} };
+    return fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent', {
+      method:'POST', headers:{'Content-Type':'application/json','x-goog-api-key':apiKey}, body:JSON.stringify(body), signal:controller.signal
+    }).then(function (r) { return r.text().then(function (text) {
+        var payload = null; try { payload = text?JSON.parse(text):null; } catch (_) {}
+        if (!r.ok) { var msg=payload&&payload.error&&payload.error.message?payload.error.message:text; throw new Error('AI '+model+' returned HTTP '+r.status+': '+(msg||r.statusText)); }
         return payload;
-      }); })
-      .then(_extractGeminiText)
-      .finally(function () {
-        if (timeoutId) clearTimeout(timeoutId);
-        if (cleanup && cancelSignal) cancelSignal.removeEventListener('abort', cleanup);
-      });
+    }); }).then(_extractGeminiText).finally(function () {
+      if (timeoutId) clearTimeout(timeoutId);
+      if (cleanup&&cancelSignal) cancelSignal.removeEventListener('abort', cleanup);
+    });
   }
-
   function _tryRequests(systemPrompt, contents, apiKey, attempts, cancelSignal) {
-    var lastError = null;
-    var primary = attempts.length ? attempts[0].model : null;
+    var lastError = null, primary = attempts.length?attempts[0].model:null;
     var chain = Promise.reject(new Error('AI request did not start.'));
     attempts.forEach(function (att, i) {
       chain = chain.catch(function () {
-        if (cancelSignal && cancelSignal.aborted) {
-          var err = new DOMException('Request cancelled.', 'AbortError');
-          if (i === attempts.length - 1) throw err;
-          return Promise.reject(err);
-        }
-        return _requestGemini(systemPrompt, contents, apiKey, att.model, cancelSignal)
-          .then(function (text) {
-            if (i > 0 && primary) _toast('⚠ ' + _getModelLabel(primary) + ' unavailable, using ' + _getModelLabel(att.model));
-            return text;
-          })
-          .catch(function (e) {
-            lastError = e;
-            if (i === attempts.length - 1) throw lastError;
-            return Promise.reject(e);
-          });
+        if (cancelSignal&&cancelSignal.aborted) { var err=new DOMException('Request cancelled.','AbortError'); if(i===attempts.length-1) throw err; return Promise.reject(err); }
+        return _requestGemini(systemPrompt,contents,apiKey,att.model,cancelSignal)
+          .then(function (text) { if(i>0&&primary) _toast('⚠ '+_getModelLabel(primary)+' unavailable, using '+_getModelLabel(att.model)); return text; })
+          .catch(function (e) { lastError=e; if(i===attempts.length-1) throw lastError; return Promise.reject(e); });
       });
     });
     return chain;
   }
-
   function askPatient(caseObj, transcript, cancelSignal) {
-    var apiKey = _readKey();
-    var model = _getSavedModel(); if (!modelIsAvailable(model)) model = MODELS[0][0];
-    var sys = buildPatientSysPrompt(caseObj);
-    var contents = transcript.map(function (m) {
-      return { role: m.role === 'model' ? 'model' : 'user', parts: [{ text: m.text }] };
-    });
-    return _tryRequests(sys, contents, apiKey, _buildAttempts(model), cancelSignal);
+    var apiKey=_readKey(), model=_getSavedModel(); if(!modelIsAvailable(model)) model=MODELS[0][0];
+    var contents = transcript.map(function (m) { return {role:m.role==='model'?'model':'user',parts:[{text:m.text}]}; });
+    return _tryRequests(buildPatientSysPrompt(caseObj),contents,apiKey,_buildAttempts(model),cancelSignal);
   }
-
   function scoreInterview(caseObj, transcript, cancelSignal) {
-    var apiKey = _readKey();
-    var model = _getSavedModel(); if (!modelIsAvailable(model)) model = MODELS[0][0];
-    var sys = buildExaminerSysPrompt();
-    var user = buildExaminerUserPrompt(caseObj, transcript);
-    var contents = [{ role: 'user', parts: [{ text: user }] }];
-    return _tryRequests(sys, contents, apiKey, _buildAttempts(model), cancelSignal)
-      .then(function (raw) {
-        var cleaned = String(raw).replace(/^```(?:json)?/i, '').replace(/```$/,'').trim();
-        var parsed = scoreRubric(cleaned);
-        if (!parsed) throw new Error('Examiner returned malformed feedback. Try again.');
-        return parsed;
-      });
+    var apiKey=_readKey(), model=_getSavedModel(); if(!modelIsAvailable(model)) model=MODELS[0][0];
+    var contents = [{role:'user',parts:[{text:buildExaminerUserPrompt(caseObj,transcript)}]}];
+    return _tryRequests(buildExaminerSysPrompt(),contents,apiKey,_buildAttempts(model),cancelSignal)
+      .then(function (raw) { var cleaned=String(raw).replace(/^```(?:json)?/i,'').replace(/```$/,'').trim(); var parsed=scoreRubric(cleaned); if(!parsed) throw new Error('Examiner returned malformed feedback. Try again.'); return parsed; });
   }
 
   /* ================================================================
-     UI LAYER — Premium medical OSCE design
+     UI LAYER v2
      ================================================================ */
 
+  /* ── CSS ──────────────────────────────────────────────────────── */
   var _cssInjected = false;
   function _injectCSS() {
-    if (_cssInjected) return;
-    _cssInjected = true;
+    if (_cssInjected) return; _cssInjected = true;
     var st = document.createElement('style');
-    st.textContent =
-      ':root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2330;--surface3:#101722;--border:#30363d;--text:#e6edf3;--text-muted:#8b949e;--accent:#f0a500;--accent-dim:rgba(240,165,0,.1);--correct:#2ea043;--wrong:#da3633;--flagged:#58a6ff;--medical:#38bdf8;--plab:#8b5cf6;--radius:10px;--radius-sm:8px;--shadow:0 12px 36px rgba(0,0,0,.34);--shadow-lg:0 18px 54px rgba(0,0,0,.48);--radius-btn:8px;--ease-out:cubic-bezier(0.16,1,0.3,1);--transition:0.18s cubic-bezier(0.16,1,0.3,1)}' +
-      '[data-theme="light"]{--bg:#f3f0eb;--surface:#ffffff;--surface2:#f8f6f1;--surface3:#ffffff;--border:#d0ccc5;--text:#1c1917;--text-muted:#78716c;--accent:#c27803;--accent-dim:rgba(194,120,3,.1);--correct:#16a34a;--wrong:#dc2626;--flagged:#2563eb;--medical:#0284c7;--plab:#7c3aed;--shadow:0 12px 32px rgba(28,25,23,.1);--shadow-lg:0 18px 54px rgba(28,25,23,.16)}' +
-      '#osce-root{position:fixed;inset:0;background:var(--bg);color:var(--text);font-family:Inter,Outfit,system-ui,-apple-system,sans-serif;display:flex;flex-direction:column}' +
-      '#osce-root *{box-sizing:border-box}' +
-      '@keyframes slideDown{from{opacity:0;transform:translateY(-18px)}to{opacity:1;transform:translateY(0)}}' +
-      '@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}' +
-      '@keyframes slideUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}' +
-      '@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-4px)}}' +
-      '@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}' +
-      '@keyframes timerUrgent{0%,100%{color:var(--wrong,#da3633);transform:scale(1)}50%{color:#ff4444;transform:scale(1.06)}}' +
-      '@keyframes barFill{from{width:0%}}' +
-      '@keyframes floatIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}' +
-      '@keyframes ripple{to{transform:scale(5);opacity:0}}' +
-      '.osce-icon-btn{width:36px;height:36px;border-radius:var(--radius-sm);background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:all var(--transition)}' +
-      '.osce-icon-btn:hover{color:var(--text);border-color:var(--accent);background:var(--accent-dim)}' +
-      '.osce-icon-btn:active{transform:scale(.87);transition-duration:.08s}' +
-      '.osce-primary-btn,.osce-secondary-btn{min-height:40px;padding:.65rem 1rem;border-radius:var(--radius-btn);font-weight:800;font-size:.85rem;cursor:pointer;transition:transform var(--transition),border-color var(--transition),background var(--transition);position:relative;overflow:hidden}.osce-primary-btn{border:0;background:var(--accent);color:#000}.osce-secondary-btn{border:1px solid var(--border);background:var(--surface2);color:var(--text)}.osce-primary-btn:hover,.osce-secondary-btn:hover{transform:translateY(-1px)}.osce-secondary-btn:hover{border-color:var(--accent)}' +
-      '.osce-door-shell{min-height:100%;display:grid;place-items:center;padding:1.25rem;background:var(--bg)}' +
-      '.osce-door{width:min(980px,100%);display:grid;grid-template-columns:minmax(260px,340px) minmax(0,1fr);gap:1rem;animation:fadeUp .25s var(--ease-out)}' +
-      '.osce-door-left,.osce-door-main{background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow)}' +
-      '.osce-door-left{padding:1rem;display:flex;flex-direction:column;gap:.85rem}.osce-door-main{padding:1.1rem}' +
-      '.osce-door-kicker{font-size:.68rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:.4rem}.osce-door-title{font-size:1.45rem;font-weight:900;line-height:1.14;margin:0 0 .35rem}.osce-door-sub{font-size:.86rem;color:var(--text-muted);line-height:1.5;margin:0 0 1rem}' +
-      '.osce-door-meta{display:grid;grid-template-columns:1fr 1fr;gap:.55rem;margin:.9rem 0}.osce-door-stat{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.65rem}.osce-door-stat .k{font-size:.62rem;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);font-weight:800}.osce-door-stat .v{font-size:.9rem;font-weight:850;margin-top:.2rem}' +
-      '.osce-door-task{background:var(--surface2);border:1px solid var(--border);border-left:4px solid var(--medical);border-radius:8px;padding:.85rem;font-size:.93rem;line-height:1.55;margin:0 0 1rem}.osce-flow{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin:.9rem 0}.osce-flow-step{border:1px solid var(--border);background:var(--surface2);border-radius:8px;padding:.55rem;font-size:.72rem;font-weight:800;color:var(--text-muted)}.osce-flow-step span{display:block;color:var(--text);font-size:.82rem;margin-bottom:.12rem}.osce-door-actions{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-top:1rem}' +
-      '.osce-convo{display:grid;grid-template-rows:auto auto 1fr auto;height:100%;min-height:0;position:relative}' +
-      '.osce-station-bar{display:flex;align-items:center;gap:.85rem;padding:.75rem 1.1rem;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}' +
-      '.osce-case-chip{font-size:.68rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);background:var(--accent-dim);border:1px solid rgba(240,165,0,.28);border-radius:999px;padding:.22rem .52rem;white-space:nowrap}' +
-      '.osce-station-title{min-width:0;flex:1}.osce-station-title .name{font-weight:800;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.osce-station-title .task{font-size:.74rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}' +
-      '.osce-station-actions{display:flex;gap:.4rem;align-items:center}' +
-      '.osce-timer{font-variant-numeric:tabular-nums;font-weight:800;font-size:1.15rem;letter-spacing:0;font-family:Inter,Outfit,system-ui,-apple-system,sans-serif;flex-shrink:0;min-width:60px;text-align:center;transition:color .3s ease}' +
-      '.osce-timer.ok{color:var(--correct)}' +
-      '.osce-timer.warn{color:var(--accent)}' +
-      '.osce-timer.danger{animation:timerUrgent .8s infinite;font-weight:800}' +
-      '.osce-timer-label{font-size:.58rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);text-align:center;line-height:1}' +
-      '.osce-timer-wrap{display:flex;flex-direction:column;align-items:center;gap:1px;flex-shrink:0;padding:0 .2rem}' +
-      '.osce-room{min-height:0;display:grid;grid-template-columns:minmax(230px,300px) minmax(0,1fr);gap:0;overflow:hidden}' +
-      '.osce-patient-panel{background:var(--surface2);border-right:1px solid var(--border);padding:1rem;display:flex;flex-direction:column;gap:.8rem;min-height:0}' +
-      '.osce-patient-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.8rem;box-shadow:var(--shadow)}' +
-      '.osce-patient-id{display:grid;grid-template-columns:76px minmax(0,1fr);gap:.75rem;align-items:center}.osce-patient-id .av-mini{width:76px;height:82px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--surface3)}.osce-patient-id .av-mini svg{width:100%;height:100%;display:block}.osce-patient-id .pn{font-weight:800;font-size:.95rem;line-height:1.2}.osce-patient-id .ps{font-size:.76rem;color:var(--text-muted);margin-top:.18rem;line-height:1.45}' +
-      '.osce-door-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.85rem}.osce-door-card .label,.osce-mission .label,.osce-structure .label{font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:.35rem}.osce-door-card .prompt{font-size:.88rem;line-height:1.5;color:var(--text)}' +
-      '.osce-mission{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.85rem}.osce-mission-row{display:flex;align-items:center;justify-content:space-between;font-size:.78rem;color:var(--text-muted);margin:.34rem 0}.osce-mission-row strong{color:var(--text);font-variant-numeric:tabular-nums}.osce-xp{height:7px;background:var(--border);border-radius:999px;overflow:hidden;margin-top:.55rem}.osce-xp-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--medical),var(--accent));transition:width .28s var(--ease-out)}' +
-      '.osce-structure{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.85rem}.osce-structure-list{display:grid;gap:.34rem}.osce-structure-item{display:flex;align-items:center;gap:.45rem;font-size:.75rem;color:var(--text-muted)}.osce-structure-item:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--border);flex:0 0 auto}.osce-structure-item.active{color:var(--text);font-weight:750}.osce-structure-item.active:before{background:var(--accent)}' +
-      '.osce-coach{display:flex;flex-wrap:wrap;gap:.38rem}.osce-chip{border:1px solid var(--border);background:var(--surface);color:var(--text-muted);border-radius:999px;padding:.28rem .5rem;font-size:.72rem;font-weight:650;cursor:pointer;transition:all var(--transition)}.osce-chip:hover{border-color:var(--accent);color:var(--text);background:var(--accent-dim)}' +
-      '.osce-chat-zone{min-height:0;display:grid;grid-template-rows:1fr auto auto;background:linear-gradient(180deg,var(--bg),var(--surface3))}' +
-      '.osce-transcript{overflow-y:auto;padding:1rem 1.15rem;display:flex;flex-direction:column;gap:.65rem;max-width:880px;margin:0 auto;width:100%}' +
-      '.osce-msg{max-width:min(78%,660px);padding:.62rem .82rem;font-size:.9rem;line-height:1.55;animation:fadeUp .22s var(--ease-out);unicode-bidi:plaintext;position:relative;border-radius:8px}' +
-      '.osce-msg .lbl{font-size:.62rem;font-weight:800;opacity:.75;margin-bottom:4px;letter-spacing:.05em;text-transform:uppercase}' +
-      '.osce-msg.patient{align-self:flex-start;background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--medical);box-shadow:0 2px 10px rgba(0,0,0,.12)}' +
-      '.osce-msg.patient .lbl{color:var(--medical)}' +
-      '.osce-msg.student{align-self:flex-end;background:var(--accent-dim);border:1px solid rgba(240,165,0,.28);box-shadow:0 2px 8px rgba(0,0,0,.08)}' +
-      '.osce-msg.student .lbl{color:var(--accent)}' +
-      '.osce-thinking{align-self:flex-start;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.65rem .9rem;animation:fadeUp .2s var(--ease-out)}' +
-      '.osce-thinking .dots{display:inline-flex;gap:4px}' +
-      '.osce-thinking .dots span{width:6px;height:6px;border-radius:50%;background:var(--text-muted);animation:bounce 1.3s infinite}' +
-      '.osce-thinking .dots span:nth-child(2){animation-delay:.22s}.osce-thinking .dots span:nth-child(3){animation-delay:.44s}' +
-      '.osce-error{margin:0 auto .5rem;background:rgba(218,54,51,.12);color:var(--wrong);border-radius:var(--radius-sm);padding:.5rem .8rem;font-size:.8rem;max-width:820px;width:calc(100% - 2rem);display:none;animation:fadeUp .2s var(--ease-out)}' +
-      '.osce-error.show{display:block}' +
-      '.osce-input-wrap{display:flex;gap:.5rem;padding:.75rem 1.1rem;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0}' +
-      '.osce-input-wrap textarea{flex:1;resize:none;min-height:40px;max-height:100px;padding:.55rem .85rem;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-family:Outfit,system-ui,-apple-system,sans-serif;font-size:.85rem;outline:none;transition:border-color var(--transition)}' +
-      '.osce-input-wrap textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}' +
-      '.osce-input-wrap textarea::placeholder{color:var(--text-muted)}' +
-      '.osce-send{min-height:40px;padding:.55rem 1.1rem;border-radius:var(--radius-btn);border:none;background:var(--accent);color:#000;font-weight:700;font-size:.82rem;cursor:pointer;position:relative;overflow:hidden;transition:transform var(--transition),opacity var(--transition),box-shadow var(--transition)}' +
-      '.osce-send:hover{opacity:.92;transform:translateY(-1px);box-shadow:0 4px 14px rgba(240,165,0,.25)}' +
-      '.osce-send:active{transform:scale(.97) translateY(0);transition-duration:.09s}' +
-      '.ripple-wave{position:absolute;border-radius:50%;background:rgba(255,255,255,.25);transform:scale(0);animation:ripple .55s var(--ease-out);pointer-events:none}' +
-      '.osce-send:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}' +
-      '.osce-submit-link{min-height:40px;padding:.55rem .9rem;border-radius:var(--radius-btn);border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-weight:600;cursor:pointer;font-size:.8rem;white-space:nowrap;position:relative;overflow:hidden;transition:border-color var(--transition),color var(--transition)}' +
-      '.osce-submit-link:hover{border-color:var(--medical);color:var(--medical)}' +
-      '.osce-debrief{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9000;display:none;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(4px)}' +
-      '.osce-debrief.open{display:flex}' +
-      '.osce-debrief-card{background:var(--surface3);border:1px solid var(--border);border-radius:12px;width:min(760px,96vw);max-height:92vh;overflow-y:auto;padding:1.35rem;backdrop-filter:blur(14px);box-shadow:var(--shadow-lg);animation:slideUp .25s ease}' +
-      '.osce-debrief-card h3{margin:0 0 .3rem;font-size:1.25rem}' +
-      '.osce-debrief-card .sub{font-size:.78rem;color:var(--text-muted);margin-bottom:.75rem}' +
-      '.osce-debrief-score{display:flex;align-items:center;gap:1.4rem;margin:.5rem 0 1rem;padding:1rem 1.2rem;background:var(--surface2);border-radius:8px;border:1px solid var(--border)}' +
-      '.osce-score-ring{width:110px;height:110px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;border:4px solid var(--accent);flex-shrink:0;background:var(--accent-dim)}' +
-      '.osce-score-ring .num{font-size:1.6rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}' +
-      '.osce-score-ring .unit{font-size:.58rem;color:var(--text-muted);letter-spacing:.03em}' +
-      '.osce-score-ring.pass{border-color:var(--correct)}.osce-score-ring.pass .num{color:var(--correct)}' +
-      '.osce-score-ring.fail{border-color:var(--wrong)}.osce-score-ring.fail .num{color:var(--wrong)}' +
-      '.osce-verdict-text{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em}' +
-      '.osce-verdict-text.pass{color:var(--correct)}.osce-verdict-text.fail{color:var(--wrong)}' +
-      '.osce-domain-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin:.75rem 0}' +
-      '.osce-domain-item{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.55rem .75rem}' +
-      '.osce-domain-item .dl{font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:2px}' +
-      '.osce-domain-item .dv{font-size:1rem;font-weight:700;font-variant-numeric:tabular-nums}' +
-      '.osce-domain-item .dv.out-of{font-size:.6rem;font-weight:400;color:var(--text-muted)}' +
-      '.osce-domain-bar{height:4px;border-radius:2px;background:var(--border);margin-top:4px;overflow:hidden}' +
-      '.osce-domain-bar .fill{height:100%;border-radius:2px;background:var(--accent);animation:barFill .8s var(--ease-out) both}' +
-      '.osce-domain-item.good .fill{background:var(--correct)}' +
-      '.osce-domain-item.avg .fill{background:var(--accent)}' +
-      '.osce-domain-item.low .fill{background:var(--wrong)}' +
-      '.osce-debrief-card .feedback-text{margin:.3rem 0 0;font-size:.85rem;line-height:1.6;color:var(--text);padding:.7rem .9rem;background:var(--surface2);border-radius:10px;border:1px solid var(--border)}' +
-      '.osce-debrief-card .dx{background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);border-radius:var(--radius-sm);padding:.6rem .85rem;font-size:.85rem;margin:.65rem 0}' +
-      '.osce-debrief-card .dx strong{color:var(--medical)}' +
-      '.osce-debrief-card h4{margin:.9rem 0 .3rem;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted)}' +
-      '.osce-debrief-card ul{margin:0;padding-left:1.2rem;font-size:.82rem;line-height:1.65;color:var(--text)}' +
-      '.osce-debrief-card ul li{animation:floatIn .3s var(--ease-out) both}' +
-      '.osce-debrief-card .actions{display:flex;gap:.6rem;margin-top:1.2rem}' +
-      '.osce-debrief-card .actions button{flex:1;padding:.6rem .8rem;border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-weight:600;font-size:.82rem;position:relative;overflow:hidden;transition:border-color var(--transition),background var(--transition)}' +
-      '.osce-debrief-card .actions button:hover{border-color:var(--accent)}' +
-      '.osce-debrief-card .actions .primary{background:var(--accent);color:#000;border:none;position:relative;overflow:hidden}' +
-      '.osce-debrief-card .actions .primary:hover{opacity:.9}' +
-      '#osce-settings-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10001;display:flex;align-items:center;justify-content:center}' +
-      '#osce-settings-overlay:not(.open){display:none}' +
-      '#osce-settings-modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:min(400px,92vw);padding:1.25rem;box-shadow:0 12px 36px rgba(0,0,0,0.5)}' +
-      '#osce-settings-modal h3{margin:0 0 1rem;font-size:1rem}' +
-      '#osce-settings-modal .field-label{display:block;font-size:.82rem;font-weight:600;margin-bottom:4px;color:var(--text)}' +
-      '#osce-settings-modal input[type=password],#osce-settings-modal select{width:100%;padding:.5rem .7rem;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:inherit;font-size:.85rem;outline:none}' +
-      '#osce-settings-modal input:focus,#osce-settings-modal select:focus{border-color:var(--accent)}' +
-      '#osce-settings-modal .field-box{margin-bottom:1rem}' +
-      '#osce-settings-modal .api-row{display:flex;gap:.5rem}' +
-      '#osce-settings-modal .api-row input{flex:1}' +
-      '#osce-settings-modal .field-note{font-size:.75rem;color:var(--text-muted);margin-top:4px}' +
-      '#osce-settings-modal .btn-row{display:flex;gap:.5rem;margin-top:.5rem}' +
-      '#osce-settings-modal .btn-row button{padding:.5rem .9rem;border-radius:6px;border:none;font-size:.82rem;font-weight:600;cursor:pointer}' +
-      '#osce-settings-modal .btn-primary{background:var(--accent);color:#000}' +
-      '#osce-settings-modal .btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}' +
-      '#osce-settings-modal #osce-settings-status{font-size:.8rem;margin-top:6px}' +
-      '#osce-settings-modal .field-row{display:flex;gap:.5rem;align-items:center}' +
-      '#osce-settings-modal .field-row select{flex:1}' +
-      '.osce-toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.65rem 1.2rem;border-radius:10px;font-size:.88rem;font-weight:500;z-index:9999;box-shadow:var(--shadow-lg);opacity:0;transition:opacity .3s ease,transform .3s ease;pointer-events:none;backdrop-filter:blur(12px)}' +
-      '.osce-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}' +
-      '.osce-time-up{background:var(--wrong);color:#fff;font-weight:700;font-size:.82rem;text-align:center;padding:.35rem;animation:pulse 1s infinite;flex-shrink:0}' +
-      '.osce-timer-bar{height:3px;background:var(--border);flex-shrink:0;position:relative}' +
-      '.osce-timer-bar .fill{height:100%;transition:width 1s linear,background .5s ease}' +
-      '.osce-timer-bar .fill.ok{background:var(--correct)}' +
-      '.osce-timer-bar .fill.warn{background:var(--accent)}' +
-      '.osce-timer-bar .fill.danger{background:var(--wrong)}' +
-      '@media(max-width:760px){.osce-door-shell{padding:.75rem;place-items:stretch}.osce-door{grid-template-columns:1fr}.osce-door-left{display:none}.osce-door-title{font-size:1.2rem}.osce-door-meta{grid-template-columns:1fr 1fr}.osce-flow{grid-template-columns:1fr 1fr}.osce-station-bar{padding:.65rem .75rem;gap:.55rem}.osce-case-chip{display:none}.osce-room{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}.osce-patient-panel{border-right:0;border-bottom:1px solid var(--border);padding:.6rem;display:grid;grid-template-columns:1fr;gap:.5rem}.osce-patient-card,.osce-structure{display:none}.osce-door-card{padding:.65rem}.osce-door-card .prompt{font-size:.8rem}.osce-mission{padding:.6rem}.osce-coach{display:none}.osce-msg{max-width:92%;font-size:.88rem}.osce-input-wrap{padding:.65rem}.osce-submit-link{padding:.55rem .65rem}.osce-domain-grid{grid-template-columns:1fr}}';
+    st.textContent = _buildCSS();
     document.head.appendChild(st);
   }
 
-  function _addRipple(btn) {
-    btn.style.position = 'relative';
-    btn.style.overflow = 'hidden';
-    btn.addEventListener('click', function (e) {
-      var rect = btn.getBoundingClientRect();
-      var size = Math.max(rect.width, rect.height);
-      var x = e.clientX - rect.left - size / 2;
-      var y = e.clientY - rect.top - size / 2;
-      var wave = document.createElement('span');
-      wave.className = 'ripple-wave';
-      wave.style.cssText = 'width:' + size + 'px;height:' + size + 'px;left:' + x + 'px;top:' + y + 'px';
-      btn.appendChild(wave);
-      setTimeout(function () { if (wave.parentNode) wave.parentNode.removeChild(wave); }, 600);
-    });
+  function _buildCSS() {
+    return ':root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2330;--surface3:#101722;--border:#30363d;--text:#e6edf3;--text-muted:#8b949e;--text-dim:#6e7681;--accent:#f0a500;--accent-dim:rgba(240,165,0,.12);--accent-glow:rgba(240,165,0,.28);--correct:#2ea043;--correct-dim:rgba(46,160,67,.14);--wrong:#da3633;--wrong-dim:rgba(218,54,51,.14);--medical:#38bdf8;--medical-dim:rgba(56,189,248,.12);--purple:#8b5cf6;--purple-dim:rgba(139,92,246,.12);--r:12px;--rsm:8px;--rxs:6px;--rfull:999px;--shadow:0 8px 32px rgba(0,0,0,.32);--shadow-lg:0 20px 60px rgba(0,0,0,.48);--ease:cubic-bezier(.16,1,.3,1);--t:.18s cubic-bezier(.16,1,.3,1)}' +
+    '[data-theme=light]{--bg:#f3f0eb;--surface:#fff;--surface2:#f8f6f1;--surface3:#fff;--border:#d0ccc5;--text:#1c1917;--text-muted:#78716c;--text-dim:#a8a29e;--accent:#c27803;--accent-dim:rgba(194,120,3,.10);--accent-glow:rgba(194,120,3,.22);--correct:#16a34a;--correct-dim:rgba(22,163,74,.12);--wrong:#dc2626;--wrong-dim:rgba(220,38,38,.12);--medical:#0284c7;--medical-dim:rgba(2,132,199,.1);--purple:#7c3aed;--purple-dim:rgba(124,58,237,.1);--shadow:0 8px 28px rgba(28,25,23,.10);--shadow-lg:0 20px 60px rgba(28,25,23,.16)}' +
+    /* BASE */
+    '#osce-root{position:fixed;inset:0;background:var(--bg);color:var(--text);font-family:Outfit,sans-serif;display:flex;flex-direction:column;overflow:hidden}' +
+    '#osce-root *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}' +
+    '#osce-root h1,#osce-root h2,#osce-root h3{font-family:"Playfair Display",Georgia,serif}' +
+    '#osce-root button{font-family:inherit;cursor:pointer}' +
+    /* KEYFRAMES */
+    '@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}' +
+    '@keyframes fadeIn{from{opacity:0}to{opacity:1}}' +
+    '@keyframes slideUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}' +
+    '@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.028)}}' +
+    '@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}' +
+    '@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}' +
+    '@keyframes ripple{to{transform:scale(6);opacity:0}}' +
+    '@keyframes barGrow{from{width:0}}' +
+    '@keyframes floatIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}' +
+    '@keyframes scoreReveal{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}' +
+    '@keyframes badgePop{from{opacity:0;transform:scale(.4) rotate(-10deg)}to{opacity:1;transform:scale(1) rotate(0)}}' +
+    '@keyframes timerDanger{0%,100%{color:var(--wrong)}50%{color:#ff5555;transform:scale(1.06)}}' +
+    '@keyframes micPulse{0%{box-shadow:0 0 0 0 rgba(218,54,51,.65)}70%{box-shadow:0 0 0 16px rgba(218,54,51,0)}100%{box-shadow:0 0 0 0 rgba(218,54,51,0)}}' +
+    '@keyframes speakPulse{0%{box-shadow:0 0 0 0 rgba(56,189,248,.65)}70%{box-shadow:0 0 0 16px rgba(56,189,248,0)}100%{box-shadow:0 0 0 0 rgba(56,189,248,0)}}' +
+    '@keyframes w1{0%,100%{height:4px}50%{height:18px}}@keyframes w2{0%,100%{height:9px}50%{height:26px}}@keyframes w3{0%,100%{height:6px}50%{height:22px}}' +
+    /* LOBBY */
+    '.osce-lobby{flex:1;display:flex;align-items:center;justify-content:center;padding:1.25rem;overflow-y:auto;background:var(--bg)}' +
+    '.osce-lobby-card{width:min(800px,100%);background:var(--surface);border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow-lg);animation:fadeUp .32s var(--ease) both}' +
+    '.osce-lobby-top{display:flex;align-items:center;justify-content:space-between;padding:.9rem 1.25rem;border-bottom:1px solid var(--border)}' +
+    '.osce-lobby-kicker{font-size:.65rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:.4rem}' +
+    '.osce-lobby-hero{display:grid;grid-template-columns:auto 1fr;gap:1.5rem;align-items:center;padding:1.35rem 1.25rem 1rem}' +
+    '.osce-lobby-av-wrap{position:relative;flex-shrink:0}' +
+    '.osce-lobby-av{width:128px;height:140px;border-radius:14px;overflow:hidden;border:2px solid var(--border);background:var(--surface2);animation:breathe 4s ease-in-out infinite;box-shadow:0 0 0 6px var(--medical-dim)}' +
+    '.osce-lobby-av svg{width:100%;height:100%;display:block}' +
+    '.osce-pt-name{font-size:1.55rem;font-weight:700;line-height:1.15;font-family:"Playfair Display",Georgia,serif;margin-bottom:.45rem}' +
+    '.osce-pt-chips{display:flex;flex-wrap:wrap;gap:.38rem;margin-bottom:.7rem}' +
+    '.osce-chip-meta{display:inline-flex;align-items:center;gap:.22rem;font-size:.68rem;font-weight:700;padding:.22rem .55rem;border-radius:var(--rfull);border:1px solid var(--border);background:var(--surface2);color:var(--text-muted)}' +
+    '.osce-chip-meta.sp{border-color:rgba(56,189,248,.3);color:var(--medical);background:var(--medical-dim)}' +
+    '.osce-chip-meta.df-e{border-color:rgba(46,160,67,.3);color:var(--correct);background:var(--correct-dim)}' +
+    '.osce-chip-meta.df-m{border-color:rgba(240,165,0,.3);color:var(--accent);background:var(--accent-dim)}' +
+    '.osce-chip-meta.df-h{border-color:rgba(218,54,51,.3);color:var(--wrong);background:var(--wrong-dim)}' +
+    '.osce-lobby-body{padding:0 1.25rem 1rem}' +
+    '.osce-task-label{font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:.35rem}' +
+    '.osce-task-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rsm);padding:.85rem 1rem;font-size:.92rem;line-height:1.6;margin-bottom:1rem}' +
+    '.osce-lobby-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.45rem;margin-bottom:.9rem}' +
+    '.osce-stat-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rsm);padding:.6rem .7rem;text-align:center}' +
+    '.osce-stat-val{font-size:1.05rem;font-weight:800;line-height:1;margin-bottom:.16rem;font-variant-numeric:tabular-nums}' +
+    '.osce-stat-lbl{font-size:.58rem;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);font-weight:700}' +
+    '.osce-lobby-flow{display:grid;grid-template-columns:repeat(5,1fr);gap:.38rem;margin-bottom:1.1rem}' +
+    '.osce-flow-pill{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rsm);padding:.5rem .4rem;text-align:center}' +
+    '.osce-flow-pill .n{display:block;font-size:.62rem;font-weight:800;color:var(--accent);margin-bottom:.1rem}' +
+    '.osce-flow-pill .t{display:block;font-size:.72rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+    '.osce-flow-pill .s{display:block;font-size:.6rem;color:var(--text-muted);margin-top:.08rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+    '.osce-lobby-actions{padding:.9rem 1.25rem;border-top:1px solid var(--border);display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}' +
+    /* ROOM */
+    '.osce-room{flex:1;display:grid;grid-template-rows:auto 3px auto 1fr auto;min-height:0;overflow:hidden}' +
+    '.osce-hdr{display:flex;align-items:center;gap:.6rem;padding:.6rem .9rem;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}' +
+    '.osce-hdr-title{flex:1;min-width:0}' +
+    '.osce-hdr-title .c{font-size:.8rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+    '.osce-hdr-title .t{font-size:.64rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}' +
+    '.osce-hdr-right{display:flex;align-items:center;gap:.35rem;flex-shrink:0}' +
+    '.osce-timer-wrap{display:flex;flex-direction:column;align-items:center;gap:1px;padding:0 .55rem;border-left:1px solid var(--border);margin-left:.1rem;flex-shrink:0}' +
+    '.osce-timer{font-variant-numeric:tabular-nums;font-weight:800;font-size:1.08rem;font-family:Outfit,system-ui,sans-serif;line-height:1}' +
+    '.osce-timer.ok{color:var(--correct)}.osce-timer.warn{color:var(--accent)}.osce-timer.danger{animation:timerDanger .75s ease-in-out infinite}' +
+    '.osce-timer-lbl{font-size:.54rem;text-transform:uppercase;letter-spacing:.07em;color:var(--text-dim)}' +
+    '.osce-tbar{height:3px;background:var(--surface2);flex-shrink:0;overflow:hidden}' +
+    '.osce-tbar-fill{height:100%;transition:width 1s linear,background .5s ease}' +
+    '.osce-tbar-fill.ok{background:var(--correct)}.osce-tbar-fill.warn{background:var(--accent)}.osce-tbar-fill.danger{background:var(--wrong)}' +
+    '.osce-timeup{display:none;background:linear-gradient(135deg,#7f1d1d,#991b1b);color:#fecaca;font-weight:700;font-size:.8rem;text-align:center;padding:.38rem;flex-shrink:0;animation:pulse 1.5s ease-in-out infinite}' +
+    '.osce-timeup.show{display:block}' +
+    '.osce-body{min-height:0;display:grid;grid-template-columns:260px 1fr;overflow:hidden}' +
+    /* SIDEBAR */
+    '.osce-sidebar{background:var(--surface2);border-right:1px solid var(--border);display:flex;flex-direction:column;gap:.6rem;padding:.8rem;overflow-y:auto;min-height:0}' +
+    '.osce-sidebar::-webkit-scrollbar{width:4px}.osce-sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}' +
+    '.osce-sb-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rsm);padding:.7rem}' +
+    '.osce-pt-id{display:grid;grid-template-columns:60px 1fr;gap:.6rem;align-items:center}' +
+    '.osce-av-mini{width:60px;height:65px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--surface2)}' +
+    '.osce-av-mini svg{width:100%;height:100%;display:block}' +
+    '.osce-pt-nm{font-weight:800;font-size:.88rem;line-height:1.2}' +
+    '.osce-pt-sb{font-size:.7rem;color:var(--text-muted);margin-top:.14rem;line-height:1.4}' +
+    '.osce-sb-lbl{font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:.38rem}' +
+    '.osce-instr-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rsm);padding:.65rem .8rem}' +
+    '.osce-instr-txt{font-size:.78rem;line-height:1.5;color:var(--text)}' +
+    '.osce-pw-row{display:flex;justify-content:space-between;align-items:center;font-size:.73rem;color:var(--text-muted);margin-bottom:.32rem}' +
+    '.osce-pw-row strong{color:var(--text);font-variant-numeric:tabular-nums}' +
+    '.osce-xp-track{height:5px;background:var(--border);border-radius:var(--rfull);overflow:hidden;margin-top:.4rem}' +
+    '.osce-xp-fill{height:100%;background:linear-gradient(90deg,var(--medical),var(--accent));border-radius:var(--rfull);transition:width .35s var(--ease)}' +
+    '.osce-map-steps{display:flex;flex-direction:column;gap:.26rem}' +
+    '.osce-map-step{display:flex;align-items:center;gap:.45rem;font-size:.74rem;color:var(--text-muted);padding:.26rem .35rem;border-radius:var(--rxs);transition:all var(--t)}' +
+    '.osce-map-step::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--border);flex:0 0 auto;transition:background var(--t)}' +
+    '.osce-map-step.active{color:var(--text);font-weight:700;background:var(--accent-dim)}.osce-map-step.active::before{background:var(--accent)}' +
+    '.osce-map-step.done::before{background:var(--correct)}' +
+      '.osce-chips-wrap{display:flex;flex-wrap:wrap;gap:.32rem}' +
+      '.osce-qchip{border:1px solid var(--border);background:var(--surface);color:var(--text-muted);border-radius:var(--rfull);padding:.24rem .52rem;font-size:.68rem;font-weight:650;cursor:pointer;transition:all var(--t);text-align:left}' +
+      '.osce-qchip:hover{border-color:var(--accent);color:var(--text);background:var(--accent-dim)}.osce-qchip:active{transform:scale(.94)}' +
+      '@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}' +
+    /* CHAT */
+    '.osce-chat-zone{min-height:0;display:grid;grid-template-rows:1fr auto auto;background:linear-gradient(180deg,var(--bg),var(--surface3))}' +
+    '.osce-transcript{overflow-y:auto;padding:1rem 1.15rem;display:flex;flex-direction:column;gap:.7rem}' +
+    '.osce-transcript::-webkit-scrollbar{width:6px}.osce-transcript::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}' +
+    '.osce-msg{display:flex;flex-direction:column;max-width:min(82%,650px);animation:fadeUp .22s var(--ease) both}' +
+    '.osce-msg.patient{align-self:flex-start}.osce-msg.student{align-self:flex-end;align-items:flex-end}' +
+    '.osce-msg-lbl{font-size:.58rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.28rem;display:flex;align-items:center;gap:.3rem}' +
+    '.osce-msg.patient .osce-msg-lbl{color:var(--medical)}.osce-msg.student .osce-msg-lbl{color:var(--accent)}' +
+    '.osce-bubble{padding:.65rem .9rem;border-radius:var(--r);font-size:.9rem;line-height:1.6;position:relative}' +
+    '.osce-msg.patient .osce-bubble{background:var(--surface);border:1px solid var(--border);box-shadow:0 2px 12px rgba(0,0,0,.09)}' +
+    '.osce-msg.student .osce-bubble{background:linear-gradient(135deg,rgba(240,165,0,.13),rgba(240,165,0,.06));border:1px solid rgba(240,165,0,.26);box-shadow:0 2px 10px rgba(0,0,0,.07)}' +
+    '.osce-msg.interim .osce-interim{opacity:.7;font-style:italic;min-width:60px}' +
+    '.osce-interim-cursor{animation:osceBlink .6s step-end infinite;display:inline-block;margin-left:2px;color:var(--accent)}' +
+    '@keyframes osceBlink{50%{opacity:0}}' +
+    '.osce-thinking{align-self:flex-start;animation:fadeUp .18s var(--ease) both}' +
+    '.osce-thinking-lbl{font-size:.58rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--medical);margin-bottom:.28rem}' +
+    '.osce-thinking-bub{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.6rem .88rem;display:inline-flex;align-items:center;gap:.5rem}' +
+    '.osce-thinking-txt{font-size:.8rem;color:var(--text-muted);font-style:italic}' +
+    '.osce-dots{display:inline-flex;gap:4px}.osce-dots span{width:6px;height:6px;border-radius:50%;background:var(--medical);animation:bounce 1.4s ease-in-out infinite}' +
+    '.osce-dots span:nth-child(2){animation-delay:.22s}.osce-dots span:nth-child(3){animation-delay:.44s}' +
+    '.osce-error-bar{background:rgba(218,54,51,.12);border:1px solid rgba(218,54,51,.28);border-radius:var(--rsm);color:var(--wrong);font-size:.79rem;padding:.48rem .85rem;margin:.15rem 1.15rem;display:none;animation:fadeIn .2s ease}' +
+    '.osce-error-bar.show{display:block}' +
+    /* INPUT */
+    '.osce-input-area{background:var(--surface);border-top:1px solid var(--border);flex-shrink:0}' +
+    '.osce-voice-bar{display:flex;align-items:center;justify-content:center;gap:.55rem;padding:.38rem 1rem;border-bottom:1px solid var(--border);min-height:34px;background:var(--surface2)}' +
+    '.osce-voice-status{font-size:.7rem;font-weight:600;color:var(--text-muted);display:flex;align-items:center;gap:.38rem;transition:color var(--t)}' +
+    '.osce-voice-status.listening{color:var(--wrong)}.osce-voice-status.speaking{color:var(--medical)}' +
+    '.osce-vstatus-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}' +
+    '.osce-voice-status.listening .osce-vstatus-dot,.osce-voice-status.speaking .osce-vstatus-dot{animation:pulse .8s infinite}' +
+    '.osce-waveform{display:none;align-items:flex-end;gap:2px;height:20px}' +
+    '.osce-waveform.active{display:flex}' +
+    '.osce-wbar{width:3px;border-radius:2px;background:var(--wrong)}' +
+    '.osce-wbar:nth-child(1){animation:w1 .7s ease-in-out infinite}' +
+    '.osce-wbar:nth-child(2){animation:w2 .7s ease-in-out .1s infinite}' +
+    '.osce-wbar:nth-child(3){animation:w3 .7s ease-in-out .2s infinite}' +
+    '.osce-wbar:nth-child(4){animation:w2 .7s ease-in-out .3s infinite}' +
+    '.osce-wbar:nth-child(5){animation:w1 .7s ease-in-out .4s infinite}' +
+    '.osce-input-row{display:flex;align-items:flex-end;gap:.48rem;padding:.65rem .9rem}' +
+    '.osce-textarea{flex:1;resize:none;min-height:42px;max-height:120px;padding:.58rem .82rem;border-radius:var(--rsm);border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-family:Outfit,system-ui,sans-serif;font-size:.88rem;outline:none;transition:border-color var(--t),box-shadow var(--t);line-height:1.5}' +
+    '.osce-textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}' +
+    '.osce-textarea::placeholder{color:var(--text-dim)}' +
+    '.osce-mic-btn{width:44px;height:44px;border-radius:50%;border:2px solid var(--border);background:var(--surface2);color:var(--text-muted);font-size:1.05rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all var(--t);position:relative}' +
+    '.osce-mic-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}' +
+    '.osce-mic-btn.active{background:var(--wrong);border-color:var(--wrong);color:#fff;animation:micPulse 1.3s ease-in-out infinite}' +
+    '.osce-mic-btn.speaking{background:var(--medical);border-color:var(--medical);color:#fff;animation:speakPulse 1.3s ease-in-out infinite}' +
+    '.osce-mic-btn:disabled{opacity:.35;cursor:not-allowed;animation:none}' +
+    '.osce-send-btn{min-height:44px;padding:.6rem 1.05rem;border-radius:var(--rsm);border:none;background:var(--accent);color:#000;font-weight:800;font-size:.84rem;cursor:pointer;position:relative;overflow:hidden;flex-shrink:0;transition:opacity var(--t),transform var(--t),box-shadow var(--t)}' +
+    '.osce-send-btn:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 4px 16px var(--accent-glow)}' +
+    '.osce-send-btn:active{transform:scale(.95) translateY(0)}.osce-send-btn:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none}' +
+    '.osce-submit-row{display:flex;align-items:center;gap:.5rem;padding:.3rem .9rem .6rem}' +
+    '.osce-submit-btn{flex:1;min-height:36px;padding:.5rem;border-radius:var(--rsm);border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-weight:600;font-size:.78rem;cursor:pointer;transition:all var(--t)}' +
+    '.osce-submit-btn:hover{border-color:var(--medical);color:var(--medical)}' +
+    '.osce-reset-btn{min-height:36px;padding:.5rem .7rem;border-radius:var(--rsm);border:1.5px solid var(--border);background:var(--surface2);color:var(--text-muted);font-weight:500;font-size:.78rem;cursor:pointer;transition:all var(--t)}' +
+    '.osce-reset-btn:hover{border-color:var(--wrong);color:var(--wrong)}' +
+    '.osce-turn-badge{font-size:.68rem;font-weight:800;padding:.2rem .5rem;border-radius:var(--rfull);background:var(--surface2);border:1px solid var(--border);white-space:nowrap;font-variant-numeric:tabular-nums;transition:all var(--t)}' +
+    '.osce-turn-badge.warn{border-color:rgba(240,165,0,.4);color:var(--accent);background:var(--accent-dim)}' +
+    '.osce-turn-badge.danger{border-color:rgba(218,54,51,.4);color:var(--wrong);background:var(--wrong-dim)}' +
+    /* COMMON BUTTONS */
+    '.osce-icon-btn{width:34px;height:34px;border-radius:var(--rsm);background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);font-size:.88rem;display:flex;align-items:center;justify-content:center;transition:all var(--t);flex-shrink:0}' +
+    '.osce-icon-btn:hover{color:var(--text);border-color:var(--accent);background:var(--accent-dim)}.osce-icon-btn:active{transform:scale(.87)}' +
+    '.osce-primary-btn{min-height:42px;padding:.65rem 1.3rem;border-radius:var(--rsm);border:none;background:var(--accent);color:#000;font-weight:800;font-size:.9rem;cursor:pointer;position:relative;overflow:hidden;transition:opacity var(--t),transform var(--t),box-shadow var(--t)}' +
+    '.osce-primary-btn:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 4px 16px var(--accent-glow)}.osce-primary-btn:active{transform:scale(.95) translateY(0)}' +
+    '.osce-secondary-btn{min-height:42px;padding:.65rem 1.1rem;border-radius:var(--rsm);border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-weight:600;font-size:.88rem;cursor:pointer;transition:border-color var(--t),background var(--t)}' +
+    '.osce-secondary-btn:hover{border-color:var(--accent)}' +
+    '.osce-ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.22);transform:scale(0);animation:ripple .55s var(--ease);pointer-events:none}' +
+    /* DEBRIEF — exact match with quiz-engine result screen */
+    '.osce-debrief-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9000;display:none;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(6px)}' +
+    '.osce-debrief-overlay.open{display:flex}' +
+    '.osce-debrief-modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:min(840px,97vw);max-height:93vh;overflow-y:auto;animation:slideUp .3s var(--ease) both;box-shadow:var(--shadow-lg)}' +
+    '.osce-debrief-modal::-webkit-scrollbar{width:5px}.osce-debrief-modal::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}' +
+    '.osce-db-body{padding:1.5rem;display:flex;flex-direction:column;gap:1.5rem}' +
+    /* Score banner — identical to quiz-engine */
+    '.score-banner{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.75rem 2rem;display:flex;align-items:center;gap:2rem;flex-wrap:wrap;box-shadow:var(--shadow)}' +
+    '.score-circle{width:110px;height:110px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;border:4px solid var(--accent);flex-shrink:0;position:relative;background:var(--accent-dim)}' +
+    '.score-circle .pct{font-size:1.8rem;font-weight:700;color:var(--accent);line-height:1}' +
+    '.score-circle .lbl{font-size:0.65rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em}' +
+    '.score-details{flex:1;min-width:180px}' +
+    '.score-details h3{font-family:"Playfair Display",Georgia,serif;font-size:1.4rem;margin:0 0 0.75rem}' +
+    '.score-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:0.65rem}' +
+    '.score-stat{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:0.65rem 0.85rem;transition:border-color 0.22s cubic-bezier(0.16,1,0.3,1)}' +
+    '.score-stat:hover{border-color:var(--accent)}' +
+    '.score-stat .n{font-size:1.2rem;font-weight:700}' +
+    '.score-stat .t{font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.03em}' +
+    '.n.green{color:var(--correct)}.n.red{color:var(--wrong)}.n.blue{color:var(--flagged)}' +
+    /* Domain scores grid */
+    '.osce-db-section{border:1px solid var(--border);border-radius:16px;padding:1.25rem 1.5rem;background:var(--surface);box-shadow:var(--shadow)}' +
+    '.osce-db-sec-title{font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:.75rem;display:flex;align-items:center;gap:.38rem}' +
+    '.osce-domain-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}' +
+    '.osce-domain-item{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:.6rem .75rem}' +
+    '.osce-domain-name{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:.16rem}' +
+    '.osce-domain-score{font-size:1rem;font-weight:800;font-variant-numeric:tabular-nums}' +
+    '.osce-domain-score .of{font-size:.62rem;font-weight:400;color:var(--text-muted)}' +
+    '.osce-dbar-track{height:4px;background:var(--border);border-radius:999px;overflow:hidden;margin-top:.38rem}' +
+    '.osce-dbar-fill{height:100%;border-radius:999px;animation:barGrow .8s var(--ease) .4s both}' +
+    '.osce-domain-item.good .osce-dbar-fill{background:var(--correct)}.osce-domain-item.avg .osce-dbar-fill{background:var(--accent)}.osce-domain-item.low .osce-dbar-fill{background:var(--wrong)}' +
+    '.osce-domain-item.good .osce-domain-score{color:var(--correct)}.osce-domain-item.avg .osce-domain-score{color:var(--accent)}.osce-domain-item.low .osce-domain-score{color:var(--wrong)}' +
+    /* Radar */
+    '.osce-radar-wrap{display:flex;align-items:center;gap:1.5rem}' +
+    '.osce-radar-svg-el{width:160px;height:160px;flex-shrink:0}' +
+    '.osce-radar-legend{flex:1;display:flex;flex-direction:column;gap:.45rem}' +
+    '.osce-radar-legend-row{display:flex;align-items:center;gap:.45rem;font-size:.74rem}' +
+    '.osce-radar-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}' +
+    /* Feedback */
+    '.osce-feedback-box{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;font-size:.88rem;line-height:1.65}' +
+    '.osce-dx-box{background:var(--medical-dim);border:1px solid rgba(56,189,248,.25);border-radius:10px;padding:.62rem .88rem;font-size:.85rem;margin:.6rem 0;display:flex;align-items:center;gap:.55rem}' +
+    '.osce-dx-box strong{color:var(--medical)}' +
+    /* Criteria */
+    '.osce-criteria-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}' +
+    '.osce-criteria-sec h4{font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:.45rem;display:flex;align-items:center;gap:.3rem}' +
+    '.osce-criteria-sec ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.3rem}' +
+    '.osce-criteria-sec ul li{font-size:.79rem;line-height:1.45;padding:.28rem .48rem;border-radius:6px;animation:floatIn .3s var(--ease) both}' +
+    '.osce-asked-item{background:var(--correct-dim);color:var(--correct);border-left:3px solid var(--correct)}' +
+    '.osce-missed-item{background:var(--wrong-dim);color:var(--wrong);border-left:3px solid var(--wrong)}' +
+    /* Badges */
+    '.osce-badges{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.5rem}' +
+    '.osce-badge{display:flex;align-items:center;gap:.38rem;padding:.32rem .65rem;border-radius:999px;font-size:.7rem;font-weight:700;animation:badgePop .4s var(--ease) both;border:1px solid var(--border);background:var(--surface2)}' +
+    '.osce-badge.gold{border-color:rgba(240,165,0,.4);background:var(--accent-dim);color:var(--accent)}' +
+    '.osce-badge.green{border-color:rgba(46,160,67,.4);background:var(--correct-dim);color:var(--correct)}' +
+    '.osce-badge.blue{border-color:rgba(56,189,248,.4);background:var(--medical-dim);color:var(--medical)}' +
+    '.osce-badge.purple{border-color:rgba(139,92,246,.4);background:var(--purple-dim);color:var(--purple)}' +
+    '.osce-badge-icon{font-size:.95rem}' +
+    /* Actions — identical to quiz-engine result-actions */
+    '.result-actions{display:flex;gap:1rem;flex-wrap:wrap}' +
+    '.btn-restart{display:flex;align-items:center;gap:0.5rem;padding:0.85rem 1.75rem;border-radius:10px;background:var(--accent);color:#000;font-weight:700;font-size:0.95rem;border:1.5px solid var(--accent);transition:all 0.22s cubic-bezier(0.16,1,0.3,1);cursor:pointer;text-decoration:none}' +
+    '.btn-restart:hover{opacity:0.85;transform:translateY(-1px)}' +
+    '.btn-secondary{background:var(--surface2);color:var(--text);border-color:var(--border)}' +
+    '.btn-secondary:hover{border-color:var(--accent);color:var(--accent);opacity:1}' +
+    /* SETTINGS */
+    '#osce-sov{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10001;display:none;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(4px)}' +
+    '#osce-sov.open{display:flex}' +
+    '.osce-reset-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10002;display:none;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(6px)}' +
+    '.osce-reset-overlay.open{display:flex}' +
+    '.osce-reset-modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.8rem;max-width:380px;width:100%;text-align:center;animation:slideUp .32s var(--ease) both}' +
+    '.osce-reset-modal h3{margin:0 0 .4rem 0;font-size:1.15rem;font-family:"Playfair Display",Georgia,serif}' +
+    '.osce-reset-modal p{margin:0 0 1.2rem 0;font-size:.85rem;color:var(--text-muted);line-height:1.5}' +
+    '.osce-reset-actions{display:flex;gap:.6rem;justify-content:center}' +
+    '.osce-reset-actions button{min-height:38px;padding:.5rem 1.2rem;border-radius:var(--rsm);border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-weight:600;font-size:.82rem;cursor:pointer;transition:all var(--t)}' +
+    '.osce-reset-actions button.osce-reset-danger{border-color:var(--wrong);color:var(--wrong)}' +
+    '.osce-reset-actions button.osce-reset-danger:hover{background:var(--wrong);color:#fff}' +
+    '.osce-reset-actions button.osce-reset-cancel:hover{border-color:var(--accent);color:var(--accent)}' +
+    '#osce-smodal{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);width:min(460px,96vw);max-height:92vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:slideUp .25s var(--ease)}' +
+    '#osce-smodal::-webkit-scrollbar{width:4px}#osce-smodal::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}' +
+    '.osce-sh{display:flex;align-items:center;justify-content:space-between;padding:.9rem 1.1rem;border-bottom:1px solid var(--border)}' +
+    '.osce-sh h3{margin:0;font-size:1rem;font-family:"Playfair Display",Georgia,serif}' +
+    '.osce-sbody{padding:.85rem 1.1rem;display:flex;flex-direction:column;gap:.8rem}' +
+    '.osce-fbox label{display:block;font-size:.79rem;font-weight:600;margin-bottom:.32rem;color:var(--text)}' +
+    '.osce-fbox .note{font-size:.71rem;color:var(--text-muted);margin-top:.26rem}.osce-fbox .note a{color:var(--accent);text-decoration:none}' +
+    '.osce-fbox input[type=password],.osce-fbox select{width:100%;padding:.5rem .7rem;border-radius:var(--rsm);border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-family:inherit;font-size:.84rem;outline:none;transition:border-color var(--t)}' +
+    '.osce-fbox input:focus,.osce-fbox select:focus{border-color:var(--accent)}' +
+    '.osce-api-row{display:flex;gap:.42rem}.osce-api-row input{flex:1}' +
+    '.osce-btn-row{display:flex;gap:.42rem;margin-top:.42rem}' +
+    '.osce-btn-row button{padding:.48rem .88rem;border-radius:var(--rsm);border:1.5px solid var(--border);font-size:.79rem;font-weight:600;cursor:pointer;background:var(--surface2);color:var(--text);transition:all var(--t)}' +
+    '.osce-btn-row button:hover{border-color:var(--accent)}' +
+    '.osce-btn-row .bp{background:var(--accent);color:#000;border-color:var(--accent)}' +
+    '.osce-btn-row .bp:hover{opacity:.9}' +
+    '#osce-sstatus{font-size:.76rem;margin-top:.28rem;min-height:1.2em}' +
+    '.osce-stitle{font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);padding:.3rem 0;border-bottom:1px solid var(--border);margin-bottom:.1rem}' +
+    '.osce-toggle-row{display:flex;align-items:center;justify-content:space-between;gap:.75rem}' +
+    '.osce-toggle-row label{font-size:.81rem;font-weight:600;flex:1}' +
+    '.osce-toggle{position:relative;width:38px;height:22px;flex-shrink:0}' +
+    '.osce-toggle input{opacity:0;width:0;height:0;position:absolute}' +
+    '.osce-toggle-tk{position:absolute;inset:0;border-radius:11px;background:var(--border);cursor:pointer;transition:background var(--t)}' +
+    '.osce-toggle-tk::before{content:"";position:absolute;width:16px;height:16px;left:3px;top:3px;border-radius:50%;background:#fff;transition:transform var(--t)}' +
+    '.osce-toggle input:checked + .osce-toggle-tk{background:var(--accent)}' +
+    '.osce-toggle input:checked + .osce-toggle-tk::before{transform:translateX(16px)}' +
+    '.osce-sf{padding:.75rem 1.1rem;border-top:1px solid var(--border)}' +
+    /* TOAST */
+    '.osce-toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.58rem 1.05rem;border-radius:var(--rsm);font-size:.84rem;font-weight:500;z-index:9999;box-shadow:var(--shadow-lg);opacity:0;transition:opacity .25s ease,transform .25s ease;pointer-events:none;backdrop-filter:blur(12px);max-width:90vw;text-align:center;white-space:pre-line}' +
+    '.osce-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}' +
+    /* DRAWER */
+    '.osce-drawer-overlay{position:fixed;inset:0;z-index:500;pointer-events:none}' +
+    '.osce-drawer-overlay.open{pointer-events:all}' +
+    '.osce-drawer-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.52);opacity:0;transition:opacity .25s ease}' +
+    '.osce-drawer-overlay.open .osce-drawer-backdrop{opacity:1}' +
+    '.osce-drawer-panel{position:absolute;top:0;left:0;bottom:0;width:280px;background:var(--surface2);border-right:1px solid var(--border);display:flex;flex-direction:column;gap:.6rem;padding:.8rem;overflow-y:auto;transform:translateX(-100%);transition:transform .28s var(--ease)}' +
+    '.osce-drawer-overlay.open .osce-drawer-panel{transform:translateX(0)}' +
+    '.osce-drawer-panel::-webkit-scrollbar{width:4px}.osce-drawer-panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}' +
+    /* MOBILE */
+    '@media(max-width:768px){' +
+      '.osce-body{grid-template-columns:1fr}.osce-sidebar{display:none}' +
+      '.osce-lobby-hero{grid-template-columns:1fr;text-align:center}' +
+      '.osce-lobby-av{margin:0 auto}.osce-pt-chips{justify-content:center}' +
+      '.osce-lobby-stats{grid-template-columns:repeat(2,1fr)}' +
+      '.osce-lobby-flow{grid-template-columns:repeat(3,1fr)}' +
+      '.osce-lobby-actions{justify-content:center}' +
+      '.osce-msg{max-width:91%}' +
+      '.osce-criteria-grid{grid-template-columns:1fr}' +
+      '.score-banner{flex-direction:column;align-items:flex-start;gap:1rem}' +
+      '.osce-radar-wrap{flex-direction:column;align-items:center}' +
+      '.osce-hdr-title .t{display:none}' +
+    '}' +
+    '@media(max-width:480px){' +
+      '.osce-lobby-stats{grid-template-columns:1fr 1fr}' +
+      '.osce-lobby-flow{grid-template-columns:repeat(2,1fr)}' +
+      '.osce-domain-grid{grid-template-columns:1fr}' +
+      '.result-actions{flex-direction:column}' +
+    '}';
   }
 
-  function _toast(msg) {
-    var t = document.createElement('div');
-    t.className = 'osce-toast';
-    t.textContent = msg;
-    document.body.appendChild(t);
-    requestAnimationFrame(function () { t.classList.add('show'); });
-    setTimeout(function () { t.classList.remove('show'); }, 2200);
-    setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 2600);
-  }
-
+  /* ── Helpers ─────────────────────────────────────────────────── */
+  function _esc(s) { return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function _md(text) {
     if (!text) return '';
     var h = String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    h = h.replace(/`([^`]+)`/g, '<code>$1</code>');
-    h = h.replace(/\n/g, '<br>');
+    h = h.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\n/g,'<br>');
     return h;
   }
+  function _toast(msg) {
+    var t = document.createElement('div'); t.className = 'osce-toast'; t.textContent = msg;
+    document.body.appendChild(t);
+    requestAnimationFrame(function () { t.classList.add('show'); });
+    setTimeout(function () { t.classList.remove('show'); }, 2400);
+    setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 2800);
+  }
+  function _addRipple(btn) {
+    if (!btn) return;
+    btn.addEventListener('click', function (e) {
+      var rect = btn.getBoundingClientRect();
+      var size = Math.max(rect.width, rect.height);
+      var x = e.clientX - rect.left - size/2, y = e.clientY - rect.top - size/2;
+      var w = document.createElement('span'); w.className = 'osce-ripple';
+      w.style.cssText = 'width:'+size+'px;height:'+size+'px;left:'+x+'px;top:'+y+'px';
+      btn.appendChild(w); setTimeout(function () { if (w.parentNode) w.parentNode.removeChild(w); }, 600);
+    });
+  }
 
-  /* ── State ─────────────────────────────────────────────────── */
-  var _data = null;
-  var _activeCase = null;
-  var _activeCaseIdx = -1;
-  var _transcript = [];
-  var _abort = null;
-  var _lastFailedText = '';
-  var _timerRemaining = EXAM_TIME;
-  var _timerInterval = null;
-  var _timerStarted = false;
+  /* ── State ─────────────────────────────────────────────────────── */
+  var _data = null, _activeCase = null, _activeCaseIdx = -1;
+  var _transcript = [], _abort = null, _lastFailedText = '';
+  var _timerRemaining = EXAM_TIME, _timerInterval = null, _timerStarted = false;
+  var _drawerOpen = false;
 
-  /* ── Session persistence ────────────────────────────────────── */
-  function _sessionKey() { return STORAGE.session + (_data ? _data.config.uid : 'osce'); }
-
+  /* ── Session ────────────────────────────────────────────────────── */
+  function _sessionKey()  { return STORAGE.session + (_data?_data.config.uid:'osce'); }
   function _saveSession() {
-    if (!_activeCase || !_transcript.length) return;
-    try {
-      var data = JSON.stringify({
-        transcript: _transcript,
-        timerRemaining: _timerRemaining,
-        timerStarted: _timerStarted
-      });
-      localStorage.setItem(_sessionKey(), data);
-    } catch (_) {}
+    if (!_activeCase||!_transcript.length) return;
+    try { localStorage.setItem(_sessionKey(), JSON.stringify({transcript:_transcript,timerRemaining:_timerRemaining,timerStarted:_timerStarted})); } catch (_) {}
   }
+  function _loadSession() { try { var r=localStorage.getItem(_sessionKey()); return r?JSON.parse(r):null; } catch (_) { return null; } }
+  function _clearSession(){ try { localStorage.removeItem(_sessionKey()); } catch (_) {} }
 
-  function _loadSession() {
-    try {
-      var raw = localStorage.getItem(_sessionKey());
-      if (!raw) return null;
-      return JSON.parse(raw);
-    } catch (_) { return null; }
-  }
-
-  function _clearSession() {
-    try { localStorage.removeItem(_sessionKey()); } catch (_) {}
-  }
-
-  /* ── Timer ──────────────────────────────────────────────────── */
+  /* ── Timer ──────────────────────────────────────────────────────── */
   function _startTimer() {
-    if (_timerStarted) return;
-    _timerStarted = true;
+    if (_timerStarted) return; _timerStarted = true;
     _timerInterval = setInterval(function () {
       _timerRemaining = Math.max(0, _timerRemaining - 1);
-      _updateTimerDisplay();
-      _updateTimerBar();
-      if (_timerRemaining <= 0) { _onTimeUp(); }
+      _updateTimerUI(); if (_timerRemaining <= 0) _onTimeUp();
     }, 1000);
   }
-
-  function _stopTimer() {
-    if (_timerInterval) { clearInterval(_timerInterval); _timerInterval = null; }
-  }
-
-  function _formatTime(secs) {
-    var m = Math.floor(secs / 60);
-    var s = secs % 60;
-    return m + ':' + (s < 10 ? '0' : '') + s;
-  }
-
-  function _timerState(secs) {
-    if (secs > 120) return 'ok';
-    if (secs > 30) return 'warn';
-    return 'danger';
-  }
-
-  function _stationDuration() {
-    return (_activeCase && _activeCase.time) || EXAM_TIME;
-  }
-
-  function _updateTimerDisplay() {
+  function _stopTimer() { if (_timerInterval) { clearInterval(_timerInterval); _timerInterval = null; } }
+  function _formatTime(s) { var m=Math.floor(s/60), sc=s%60; return m+':'+(sc<10?'0':'')+sc; }
+  function _timerState(s) { return s>120?'ok':s>30?'warn':'danger'; }
+  function _stationDuration() { return (_activeCase&&_activeCase.time)||EXAM_TIME; }
+  function _updateTimerUI() {
     var el = document.getElementById('osce-timer-num');
-    if (!el) return;
-    el.textContent = _formatTime(_timerRemaining);
-    var state = _timerState(_timerRemaining);
-    el.className = 'osce-timer ' + state;
+    if (el) { el.textContent = _formatTime(_timerRemaining); el.className = 'osce-timer '+_timerState(_timerRemaining); }
+    var f = document.getElementById('osce-tbar-fill');
+    if (f) { var pct = (_timerRemaining/_stationDuration())*100; f.style.width = pct+'%'; f.className = 'osce-tbar-fill '+_timerState(_timerRemaining); }
     _updateStationStats();
   }
-
-  function _updateTimerBar() {
-    var el = document.getElementById('osce-timer-bar-fill');
-    if (!el) return;
-    var pct = (_timerRemaining / _stationDuration()) * 100;
-    el.style.width = pct + '%';
-    el.className = 'fill ' + _timerState(_timerRemaining);
-  }
-
   function _onTimeUp() {
-    _stopTimer();
-    _toast('⏱ Time is up! Click "Submit ✓" for examiner feedback.');
-    var bar = document.getElementById('osce-time-up-bar');
-    if (bar) bar.className = 'osce-time-up';
+    _stopTimer(); _toast('⏱ Time is up! Submit for examiner feedback.');
+    var bar = document.getElementById('osce-timeup'); if (bar) bar.className = 'osce-timeup show';
   }
 
-  /* ── Boot ───────────────────────────────────────────────────── */
+  /* ── Gamified progress ──────────────────────────────────────────── */
+  function _userTurnCount() { var c=0; for(var i=0;i<_transcript.length;i++) if(_transcript[i].role==='user') c++; return c; }
+  function _gamifiedProgress() {
+    var turns = _userTurnCount();
+    var turnPct = Math.min(100, Math.round((turns/Math.max(1,WARN_TURNS))*100));
+    var timePct = Math.min(100, Math.round(((_stationDuration()-_timerRemaining)/_stationDuration())*100));
+    return { turns:turns, turnPct:turnPct, timePct:timePct, momentum:Math.min(100,Math.round(turnPct*.7+Math.min(timePct,90)*.3)) };
+  }
+  function _updateStationStats() {
+    var p = _gamifiedProgress();
+    var qc = document.getElementById('osce-q-count'); if (qc) qc.textContent = p.turns+' / '+MAX_TURNS;
+    var xf = document.getElementById('osce-xp-fill'); if (xf) xf.style.width = p.momentum+'%';
+    var tu = document.getElementById('osce-time-used'); if (tu) tu.textContent = p.timePct+'%';
+    var tb = document.getElementById('osce-turn-badge');
+    if (tb) { tb.textContent = 'Q '+p.turns+'/'+MAX_TURNS; tb.className = 'osce-turn-badge'+(p.turns>=WARN_TURNS?' danger':p.turns>=Math.floor(WARN_TURNS*.7)?' warn':''); }
+    _updateMap();
+  }
+
+  /* ── Consultation map ───────────────────────────────────────────── */
+  function _mapStep() {
+    var t = _userTurnCount();
+    if (t<2) return 0; if (t<7) return 1; if (t<12) return 2; if (t<17) return 3; return 4;
+  }
+  var _MAP_STEPS = [['Opening','Intro & consent'],['History','Chief complaint'],['Background','PMH, meds, social'],['ICE','Concerns & expectations'],['Closing','Summarise & safety']];
+  function _mapHTML() {
+    var active = _mapStep();
+    return _MAP_STEPS.map(function (s, i) {
+      var cls = i<active?'done':i===active?'active':'';
+      return '<div class="osce-map-step '+cls+'"><span>'+s[0]+' — <em style="font-weight:400">'+s[1]+'</em></span></div>';
+    }).join('');
+  }
+  function _updateMap() { var el=document.getElementById('osce-map-steps'); if(el) el.innerHTML=_mapHTML(); }
+
+  /* ── Voice Engine (Gemini Live only) ─────────────────────────────── */
+  var _Voice = (function () {
+    var ttsSupported = 'speechSynthesis' in window;
+    var phase = 'idle'; // idle | listening | speaking
+    var voiceOn = false;
+    var _ttsVoices = [];
+    var liveSession = null; // Gemini Live WebSocket
+    var liveAudioCtx = null;
+    var liveMicStream = null;
+    var liveMicProcessor = null;
+    var livePlayCtx = null;
+    var _livePlayScheduleTime = 0;
+    var _liveInterimText = '';
+    var _liveModelAccumText = '';
+
+    function _loadVoices() {
+      if (!ttsSupported) return;
+      _ttsVoices = window.speechSynthesis.getVoices();
+      if (!_ttsVoices.length) window.speechSynthesis.onvoiceschanged = function () { _ttsVoices = window.speechSynthesis.getVoices(); };
+    }
+
+    function _updateUI() {
+      var micBtn = document.getElementById('osce-mic-btn');
+      var vsEl   = document.getElementById('osce-vstatus');
+      var wavEl  = document.getElementById('osce-waveform');
+      if (!micBtn) return;
+      micBtn.className = 'osce-mic-btn' + (phase==='speaking'?' speaking':voiceOn?' active':'');
+      micBtn.title = phase==='speaking'?'Patient speaking':voiceOn?'Mic active — speak now':'Toggle voice mode';
+      if (vsEl) {
+        vsEl.className = 'osce-voice-status' + (phase==='speaking'?' speaking':voiceOn?' listening':'');
+        var dot = vsEl.querySelector('.osce-vstatus-dot');
+        var txt = vsEl.querySelector('.osce-vstatus-txt');
+        if (txt) txt.textContent = phase==='speaking'?'Patient speaking…':voiceOn?'Listening — your turn':'Voice off';
+      }
+      if (wavEl) { wavEl.className = 'osce-waveform'+(voiceOn&&phase!=='speaking'?' active':''); }
+    }
+
+    function _setPhase(p) { phase = p; _updateUI(); }
+
+    function _finalizeModelText(text) {
+      if (!text) return;
+      // Dedup against last model entry
+      var last = _transcript.length && _transcript[_transcript.length - 1];
+      if (last && last.role === 'model' && last.text === text) return;
+      console.log('[GeminiLive] MODEL:', text.slice(0, 120));
+      _transcript.push({ role: 'model', text: _sanitizeModelText(text) });
+      _liveModelAccumText = '';
+      _renderTranscript(); _updateStationStats(); _saveSession();
+    }
+
+    function _updateInterimDisplay() {
+      var box = document.getElementById('osce-transcript');
+      if (!box) return;
+      var p = _activeCase && _activeCase.patient;
+      var userName = p ? _esc(p.name) : 'Patient';
+
+      // User interim
+      var uel = document.getElementById('osce-interim-user');
+      if (_liveInterimText) {
+        if (!uel) {
+          uel = document.createElement('div'); uel.id = 'osce-interim-user';
+          uel.className = 'osce-msg student interim';
+          uel.innerHTML = '<div class="osce-msg-lbl">🎤 You</div><div class="osce-bubble osce-interim"><span class="osce-interim-text"></span><span class="osce-interim-cursor">▊</span></div>';
+          box.appendChild(uel);
+        }
+        uel.querySelector('.osce-interim-text').textContent = _liveInterimText;
+      } else if (uel) { uel.remove(); }
+
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function _getGenderVoice() {
+      var sp = _getSpeaker(_activeCase);
+      return sp.gender === 'female' ? 'Aoede' : 'Charon';
+    }
+
+    function speak(text) {
+      if (!ttsSupported || !voiceOn) return;
+      window.speechSynthesis.cancel();
+      var utt = new SpeechSynthesisUtterance(text);
+      var savedVoice = localStorage.getItem(STORAGE.ttsVoice);
+      if (savedVoice) {
+        var v = _ttsVoices.find(function (v) { return v.name === savedVoice; });
+        if (v) utt.voice = v;
+      } else {
+        var preferred = _ttsVoices.find(function (v) { return /en.gb/i.test(v.lang) || /english/i.test(v.name) || /daniel|samantha|karen|moira/i.test(v.name); });
+        if (preferred) utt.voice = preferred;
+      }
+      utt.rate = parseFloat(localStorage.getItem(STORAGE.ttsRate) || '0.95');
+      utt.pitch = 1;
+      _setPhase('speaking');
+      utt.onend = function () { _setPhase('idle'); };
+      utt.onerror = function () { _setPhase('idle'); };
+      window.speechSynthesis.speak(utt);
+    }
+
+    function stopSpeaking() { if (ttsSupported) window.speechSynthesis.cancel(); _setPhase('idle'); }
+
+    /* Gemini Live WebSocket implementation */
+    function _startGeminiLive() {
+      console.log('[GeminiLive] _startGeminiLive called');
+      if (liveSession) { console.log('[GeminiLive] already has session, stopping'); _stopGeminiLive(); return; }
+      if (!_hasApiKey()) { console.log('[GeminiLive] no API key'); _toast('API key required for Gemini Live mode.'); return; }
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { console.log('[GeminiLive] no getUserMedia'); _toast('Microphone not accessible.'); return; }
+
+      _setPhase('listening');
+      var modelName = _getSavedLiveModel();
+      var apiKey = _readKey();
+      console.log('[GeminiLive] model:', modelName, 'apiKey length:', apiKey ? apiKey.length : 0);
+      var wsUrl = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=' + apiKey;
+      console.log('[GeminiLive] connecting to WebSocket...');
+      liveSession = new WebSocket(wsUrl);
+
+      liveSession.onopen = function () {
+        console.log('[GeminiLive] WebSocket OPENED successfully');
+        var setup = {
+          setup: {
+            model: 'models/' + modelName,
+            generationConfig: {
+              responseModalities: ['AUDIO'],
+              speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: _getGenderVoice() } } },
+              temperature: 1.0
+            },
+            systemInstruction: { parts: [{ text: buildPatientSysPrompt(_activeCase) }] }
+          }
+        };
+        console.log('[GeminiLive] sending setup message:', JSON.stringify(setup).slice(0, 500));
+        liveSession.send(JSON.stringify(setup));
+        // Wait for setupComplete before sending any other messages
+      };
+
+      liveSession.onmessage = function (e) {
+        var raw = e.data;
+        if (raw instanceof Blob) {
+          var reader = new FileReader();
+          reader.onload = function () { _handleLiveMessage(reader.result); };
+          reader.readAsText(raw);
+          return;
+        }
+        if (raw instanceof ArrayBuffer) {
+          _handleLiveMessage(new TextDecoder().decode(raw));
+          return;
+        }
+        _handleLiveMessage(raw);
+      };
+
+      function _handleLiveMessage(jsonStr) {
+        try {
+          var data = JSON.parse(jsonStr);
+          if (data.setupComplete) {
+            console.log('[GeminiLive] SETUP COMPLETE');
+            // Send conversation history if any must start with a 'user' role
+            if (_transcript.length) {
+              // Find the first 'model' turn and split there — history must start with user
+              var firstUserIdx = -1;
+              for (var ti = 0; ti < _transcript.length; ti++) { if (_transcript[ti].role !== 'model') { firstUserIdx = ti; break; } }
+              if (firstUserIdx >= 0) {
+                var histTurns = _transcript.slice(firstUserIdx).map(function (m) { return { role: m.role === 'model' ? 'model' : 'user', parts: [{ text: m.text }] }; });
+                console.log('[GeminiLive] sending conversation history (from idx', firstUserIdx, '), entries:', histTurns.length);
+                liveSession.send(JSON.stringify({ clientContent: { turns: histTurns, turnComplete: false } }));
+              } else {
+                console.log('[GeminiLive] all transcript entries are model role, skipping history');
+              }
+            }
+            // Small delay before starting mic
+            console.log('[GeminiLive] starting live mic...');
+            setTimeout(function () { _startLiveMic(); }, 300);
+            return;
+          }
+          if (data.error) { console.error('[GeminiLive] SERVER ERROR:', JSON.stringify(data.error)); return; }
+          var sc = data.serverContent;
+          if (!sc) { console.log('[GeminiLive] unknown message:', Object.keys(data)); return; }
+
+          // Capture input transcription (user speech)
+          if (sc.inputTranscription && sc.inputTranscription.text) {
+            var userText = sc.inputTranscription.text.trim();
+            if (phase !== 'listening') _setPhase('listening');
+            if (!userText) { _liveInterimText = ''; _updateInterimDisplay(); }
+            else if (sc.inputTranscription.finished) {
+              // Dedup against last user entry
+              var last = _transcript.length && _transcript[_transcript.length - 1];
+              if (!(last && last.role === 'user' && last.text === userText)) {
+                console.log('[GeminiLive] USER SAID:', userText);
+                _transcript.push({ role: 'user', text: userText });
+              }
+              _liveInterimText = '';
+              _renderTranscript();
+            } else {
+              _liveInterimText = userText;
+              _updateInterimDisplay();
+            }
+          }
+
+          // Capture output transcription (model speech)
+          if (sc.outputTranscription && sc.outputTranscription.text) {
+            var modelText = sc.outputTranscription.text.trim();
+            if (modelText && sc.outputTranscription.finished) {
+              _finalizeModelText(modelText);
+            } else if (modelText) {
+              if (phase !== 'speaking') _setPhase('speaking');
+              // API may send full accumulated text OR incremental diffs — handle both
+              if (modelText.length > _liveModelAccumText.length && modelText.startsWith(_liveModelAccumText)) {
+                _liveModelAccumText = modelText; // full accumulated, replace
+              } else {
+                _liveModelAccumText += (_liveModelAccumText ? ' ' : '') + modelText; // diff, append
+              }
+            }
+          }
+
+          // Fallback: modelTurn without outputTranscription — finalize user speech
+          if (sc.modelTurn && sc.modelTurn.parts && sc.modelTurn.parts.length) {
+            if (phase !== 'speaking') _setPhase('speaking');
+            if (_liveInterimText) {
+              var last = _transcript.length && _transcript[_transcript.length - 1];
+              if (!(last && last.role === 'user' && last.text === _liveInterimText)) {
+                _transcript.push({ role: 'user', text: _liveInterimText });
+              }
+              _liveInterimText = '';
+              // Don't re-render here — modelTurn audio/text will trigger it
+            }
+            sc.modelTurn.parts.forEach(function (part) {
+              if (part.inlineData && part.inlineData.mimeType && part.inlineData.mimeType.indexOf('audio') !== -1) {
+                _playLiveAudio(part.inlineData.data, part.inlineData.mimeType);
+              }
+            });
+          }
+
+          // Handle interruption
+          if (sc.interrupted) {
+            console.log('[GeminiLive] INTERRUPTED');
+            _livePlayScheduleTime = 0;
+            _liveModelAccumText = '';
+            if (phase !== 'listening') _setPhase('listening');
+          }
+
+          // Handle turn completion — finalize model text if still pending
+          if (sc.turnComplete) {
+            console.log('[GeminiLive] TURN COMPLETE — finalizing model text');
+            if (_liveModelAccumText) {
+              _finalizeModelText(_liveModelAccumText);
+            }
+            _setPhase('idle');
+          }
+        } catch (e) { console.error('[GeminiLive] onmessage parse error:', e, 'data:', jsonStr.slice(0, 200)); }
+      }
+
+      liveSession.onerror = function (evt) { console.error('[GeminiLive] WEBSOCKET ERROR event:', evt.type); _stopGeminiLive(); _toast('Gemini Live connection failed. Falling back to text mode.'); };
+      liveSession.onclose = function (evt) {
+        console.log('[GeminiLive] WebSocket CLOSED code:', evt.code, 'reason:', evt.reason, 'wasClean:', evt.wasClean);
+        liveSession = null;
+        if (phase === 'listening') _setPhase('idle');
+        _stopLiveMic();
+      };
+    }
+
+    function _stopGeminiLive() {
+      _stopLiveMic();
+      _livePlayScheduleTime = 0;
+      _liveInterimText = '';
+      _liveModelAccumText = '';
+      if (liveSession) { try { liveSession.close(); } catch (_) {} liveSession = null; }
+      if (livePlayCtx) { try { livePlayCtx.close(); } catch (_) {} livePlayCtx = null; }
+      if (liveAudioCtx) { try { liveAudioCtx.close(); } catch (_) {} liveAudioCtx = null; }
+      _setPhase('idle');
+    }
+
+    function _startLiveMic() {
+      console.log('[GeminiLive] _startLiveMic: requesting microphone...');
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+        console.log('[GeminiLive] microphone ACCESS GRANTED');
+        liveMicStream = stream;
+        liveAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+        console.log('[GeminiLive] AudioContext created, sampleRate:', liveAudioCtx.sampleRate, 'state:', liveAudioCtx.state);
+        var source = liveAudioCtx.createMediaStreamSource(stream);
+        var processorCode = 'class MicProcessor extends AudioWorkletProcessor{process(inputs){this.port.postMessage(inputs[0][0]);return true;}}registerProcessor("mic-processor",MicProcessor);';
+        var blob = new Blob([processorCode], { type: 'application/javascript' });
+        var url = URL.createObjectURL(blob);
+        liveAudioCtx.audioWorklet.addModule(url).then(function () {
+          console.log('[GeminiLive] AudioWorklet MODULE LOADED');
+          var node = new AudioWorkletNode(liveAudioCtx, 'mic-processor');
+          node.port.onmessage = function (e) {
+            if (!liveSession || liveSession.readyState !== WebSocket.OPEN) { return; }
+            var input = e.data;
+            var pcm = new Int16Array(input.length);
+            for (var i = 0; i < input.length; i++) pcm[i] = Math.max(-32768, Math.min(32767, Math.round(input[i] * 32767)));
+            var bytes = new Uint8Array(pcm.buffer);
+            var b64 = btoa(String.fromCharCode.apply(null, bytes));
+            var msg = JSON.stringify({ realtimeInput: { audio: { data: b64, mimeType: 'audio/pcm' } } });
+            liveSession.send(msg);
+          };
+          source.connect(node);
+          liveMicProcessor = node;
+          URL.revokeObjectURL(url);
+          console.log('[GeminiLive] AudioWorklet mic started');
+        }).catch(function (err) {
+          console.log('[GeminiLive] AudioWorklet failed, falling back:', err.message);
+          _startLiveMicFallback(stream);
+        });
+      }).catch(function (err) { console.error('[GeminiLive] getUserMedia DENIED:', err.message); _stopGeminiLive(); _toast('Microphone access denied: ' + err.message); });
+    }
+
+    function _startLiveMicFallback(stream) {
+      console.log('[GeminiLive] _startLiveMicFallback (ScriptProcessorNode)');
+      try {
+        liveMicProcessor = liveAudioCtx.createScriptProcessor(4096, 1, 1);
+        liveMicProcessor.onaudioprocess = function (e) {
+          if (!liveSession || liveSession.readyState !== WebSocket.OPEN) return;
+          var input = e.inputBuffer.getChannelData(0);
+          var pcm = new Int16Array(input.length);
+          for (var i = 0; i < input.length; i++) pcm[i] = Math.max(-32768, Math.min(32767, Math.round(input[i] * 32767)));
+          var bytes = new Uint8Array(pcm.buffer);
+          var b64 = btoa(String.fromCharCode.apply(null, bytes));
+          liveSession.send(JSON.stringify({ realtimeInput: { audio: { data: b64, mimeType: 'audio/pcm' } } }));
+        };
+        var source = liveAudioCtx.createMediaStreamSource(stream);
+        source.connect(liveMicProcessor);
+        console.log('[GeminiLive] ScriptProcessorNode mic started (fallback)');
+      } catch (e) { console.error('[GeminiLive] Fallback mic init failed:', e.message); _stopGeminiLive(); _toast('Microphone init failed: ' + e.message); }
+    }
+
+    function _stopLiveMic() {
+      if (liveMicProcessor) { try { liveMicProcessor.disconnect(); } catch (_) {} liveMicProcessor = null; }
+      if (liveMicStream) { liveMicStream.getTracks().forEach(function (t) { t.stop(); }); liveMicStream = null; }
+    }
+
+    function _playLiveAudio(b64data, mimeType) {
+      try {
+        var sampleRate = 24000;
+        var match = mimeType && mimeType.match(/rate=(\d+)/);
+        if (match) sampleRate = parseInt(match[1], 10);
+        console.log('[GeminiLive] _playLiveAudio mimeType:', mimeType, 'sampleRate:', sampleRate, 'b64 length:', b64data.length);
+        if (!livePlayCtx) {
+          livePlayCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: sampleRate });
+          _livePlayScheduleTime = 0;
+          console.log('[GeminiLive] livePlayCtx created, state:', livePlayCtx.state);
+        }
+        if (livePlayCtx.state === 'suspended') { livePlayCtx.resume(); }
+        var raw = atob(b64data);
+        var bytes = new Uint8Array(raw.length);
+        for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+        var int16 = new Int16Array(bytes.buffer);
+        var float32 = new Float32Array(int16.length);
+        for (var j = 0; j < int16.length; j++) float32[j] = int16[j] / 32768;
+        var buf = livePlayCtx.createBuffer(1, float32.length, sampleRate);
+        buf.getChannelData(0).set(float32);
+        var when = _livePlayScheduleTime > livePlayCtx.currentTime ? _livePlayScheduleTime : livePlayCtx.currentTime + 0.01;
+        var src = livePlayCtx.createBufferSource();
+        src.buffer = buf; src.connect(livePlayCtx.destination); src.start(when);
+        _livePlayScheduleTime = when + buf.duration;
+        _setPhase('speaking');
+        console.log('[GeminiLive] audio scheduled at', when.toFixed(3), 'duration', buf.duration.toFixed(3), 'samples:', float32.length);
+      } catch (e) { console.error('[GeminiLive] _playLiveAudio error:', e); }
+    }
+
+    function sendLiveText(text) {
+      if (liveSession && liveSession.readyState === WebSocket.OPEN) {
+        liveSession.send(JSON.stringify({ clientContent: { turns: [{ role: 'user', parts: [{ text: text }] }], turnComplete: true } }));
+      }
+    }
+
+    function toggle() {
+      voiceOn = !voiceOn;
+      if (voiceOn && !_hasApiKey()) {
+        voiceOn = false; _updateUI();
+        _toast('Set a Gemini API key in ⚙ Settings first.');
+        return;
+      }
+      localStorage.setItem(STORAGE.voiceOn, voiceOn);
+      _updateUI();
+      if (!voiceOn) { stopSpeaking(); _stopGeminiLive(); _toast('🔇 Voice off'); return; }
+      _startGeminiLive();
+    }
+
+    function isOn() { return voiceOn; }
+    function getInterimText() { return _liveInterimText; }
+    function _getModelAccumText() { return _liveModelAccumText; }
+
+    function init() {
+      voiceOn = localStorage.getItem(STORAGE.voiceOn) === 'true';
+      _loadVoices();
+    }
+
+    function getVoices() { return _ttsVoices; }
+    function isTTSSupported() { return ttsSupported; }
+
+    return { init:init, toggle:toggle, stopSpeaking:stopSpeaking, speak:speak, isOn:isOn, getInterimText:getInterimText, updateInterimDisplay:_updateInterimDisplay, sendLiveText:sendLiveText, getVoices:getVoices, isTTSSupported:isTTSSupported };
+  })();
+
+  /* ── Boot / root / theme ────────────────────────────────────────── */
   function boot() {
     _data = readOsceData();
     _injectCSS();
-    _addLink('preconnect', 'https://fonts.googleapis.com');
-    _addLink('preconnect', 'https://fonts.gstatic.com', { crossOrigin: '' });
-    _addLink('stylesheet', 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700&display=swap');
-    _ensureRoot();
-    _applyTheme();
-    _activeCase = _data.case;
-    _activeCaseIdx = 0;
+    _ensureRoot(); _applyTheme();
+    _activeCase = _data.case; _activeCaseIdx = 0;
     _timerRemaining = _data.case.time || EXAM_TIME;
+    _Voice.init();
+    if (_Voice.isOn()) { _Voice.toggle(); } /* start with voice off */
     var saved = _loadSession();
-    if (saved && saved.transcript && saved.transcript.length && saved.transcript[0]) {
+    if (saved && saved.transcript && saved.transcript.length) {
       _transcript = saved.transcript;
       _timerRemaining = saved.timerRemaining || _timerRemaining;
       _timerStarted = false;
@@ -791,348 +1186,371 @@
     if (!root) { root = document.createElement('div'); root.id = 'osce-root'; document.body.appendChild(root); }
     return root;
   }
-
-  function _applyTheme() {
-    var t = localStorage.getItem(STORAGE.theme) || 'dark';
-    document.documentElement.setAttribute('data-theme', t);
-  }
-
-  /* ── Theme toggle ────────────────────────────────────────────── */
+  function _applyTheme() { document.documentElement.setAttribute('data-theme', localStorage.getItem(STORAGE.theme)||'dark'); }
   function _toggleTheme() {
-    var t = localStorage.getItem(STORAGE.theme) || 'dark';
-    t = t === 'dark' ? 'light' : 'dark';
-    localStorage.setItem(STORAGE.theme, t);
-    document.documentElement.setAttribute('data-theme', t);
-    var el = document.getElementById('osce-theme-btn');
-    if (el) el.textContent = t === 'dark' ? '☀️' : '🌙';
-    var doorEl = document.getElementById('osce-door-theme');
-    if (doorEl) doorEl.textContent = t === 'dark' ? '☀️' : '🌙';
+    var t = localStorage.getItem(STORAGE.theme)||'dark';
+    t = t==='dark'?'light':'dark';
+    localStorage.setItem(STORAGE.theme, t); _applyTheme();
+    var el = document.getElementById('osce-theme-btn'); if (el) el.textContent = t==='dark'?'☀️':'🌙';
+    var el2 = document.getElementById('osce-lobby-theme'); if (el2) el2.textContent = t==='dark'?'☀️':'🌙';
   }
 
-  function _gamifiedProgress() {
-    var turns = _userTurnCount();
-    var turnPct = Math.min(100, Math.round((turns / Math.max(1, WARN_TURNS)) * 100));
-    var timeUsed = _stationDuration() - _timerRemaining;
-    var timePct = Math.min(100, Math.max(0, Math.round((timeUsed / _stationDuration()) * 100)));
-    var momentum = Math.min(100, Math.round((turnPct * 0.7) + (Math.min(timePct, 90) * 0.3)));
-    return { turns: turns, turnPct: turnPct, timePct: timePct, momentum: momentum };
-  }
+  /* ── Difficulty chip class ────────────────────────────────────── */
+  function _diffClass(d) { var l = (d||'').toLowerCase(); return l.indexOf('found')!==-1||l==='easy'?'df-e':l.indexOf('adv')!==-1||l==='hard'?'df-h':'df-m'; }
 
-  function _updateStationStats() {
-    var p = _gamifiedProgress();
-    var q = document.getElementById('osce-q-count');
-    var xp = document.getElementById('osce-xp-fill');
-    var used = document.getElementById('osce-time-used');
-    if (q) q.textContent = p.turns + ' / ' + MAX_TURNS;
-    if (xp) xp.style.width = p.momentum + '%';
-    if (used) used.textContent = p.timePct + '%';
-    _updateStructure();
-  }
-
-  function _insertPrompt(text) {
-    var input = document.getElementById('osce-input');
-    if (!input) return;
-    input.value = text;
-    input.focus();
-    input.style.height = 'auto';
-    input.style.height = Math.min(100, input.scrollHeight) + 'px';
-  }
-
-  function _structureStep() {
-    var turns = _userTurnCount();
-    if (turns < 2) return 'opening';
-    if (turns < 7) return 'history';
-    if (turns < 12) return 'background';
-    if (turns < 17) return 'ice';
-    return 'summary';
-  }
-
-  function _structureHTML() {
-    var active = _structureStep();
-    var steps = [
-      ['opening', 'Opening', 'Introductions, consent'],
-      ['history', 'HPC', 'Explore the main problem'],
-      ['background', 'Background', 'PMH, drugs, family, social'],
-      ['ice', 'ICE', 'Ideas, concerns, expectations'],
-      ['summary', 'Close', 'Summarise and safety-net']
-    ];
-    return steps.map(function (s) {
-      return '<div class="osce-structure-item ' + (active === s[0] ? 'active' : '') + '"><span>' + s[1] + ' - ' + s[2] + '</span></div>';
-    }).join('');
-  }
-
-  function _updateStructure() {
-    var el = document.getElementById('osce-structure-list');
-    if (el) el.innerHTML = _structureHTML();
-  }
-
+  /* ── Door Card (Lobby Screen) ─────────────────────────────────── */
   function _showDoorCard() {
     var p = _activeCase.patient;
-    var avatar = renderAvatar(buildAvatarParams(p.gender, p.age, p.avatarSeed));
+    var av = renderAvatar(buildAvatarParams(p.gender, p.age, p.avatarSeed));
+    var themeIcon = (localStorage.getItem(STORAGE.theme)||'dark')==='dark'?'☀️':'🌙';
+    var dur = Math.floor(_stationDuration()/60);
     var root = _ensureRoot();
-    var durationMin = Math.floor(_stationDuration() / 60);
-    var themeIcon = (localStorage.getItem(STORAGE.theme) || 'dark') === 'dark' ? '☀️' : '🌙';
     root.innerHTML =
-      '<div class="osce-door-shell">' +
-        '<div class="osce-door">' +
-          '<aside class="osce-door-left">' +
-            '<div class="osce-patient-card"><div class="osce-patient-id">' +
-              '<div class="av-mini">' + avatar + '</div>' +
-              '<div><div class="pn">' + _esc(p.name) + '</div><div class="ps">' + p.age + ' years • ' + _esc(p.gender) + '<br>' + _esc(_activeCase.specialty) + '</div></div>' +
-            '</div></div>' +
-            '<div class="osce-mission">' +
-              '<div class="label">Station Rules</div>' +
-              '<div class="osce-mission-row"><span>Time</span><strong>' + durationMin + ' minutes</strong></div>' +
-              '<div class="osce-mission-row"><span>Mode</span><strong>History taking</strong></div>' +
-              '<div class="osce-mission-row"><span>Feedback</span><strong>Examiner scorecard</strong></div>' +
+      '<div class="osce-lobby">' +
+        '<div class="osce-lobby-card">' +
+          '<div class="osce-lobby-top">' +
+            '<div class="osce-lobby-kicker">🩺 OSCE Virtual Patient</div>' +
+            '<div style="display:flex;gap:.4rem">' +
+              '<button class="osce-icon-btn" id="osce-lobby-settings" title="AI Settings">⚙</button>' +
+              '<button class="osce-icon-btn" id="osce-lobby-theme" title="Toggle theme">'+themeIcon+'</button>' +
             '</div>' +
-          '</aside>' +
-          '<main class="osce-door-main">' +
-            '<div style="display:flex;justify-content:space-between;gap:1rem;align-items:flex-start">' +
-              '<div><div class="osce-door-kicker">PLAB 2 OSCE Simulator</div><h1 class="osce-door-title">' + _esc(_activeCase.title) + '</h1></div>' +
-              '<button class="osce-icon-btn" id="osce-door-theme" title="Toggle theme">' + themeIcon + '</button>' +
+          '</div>' +
+          '<div class="osce-lobby-hero">' +
+            '<div class="osce-lobby-av-wrap"><div class="osce-lobby-av">'+av+'</div></div>' +
+            '<div>' +
+              '<div class="osce-pt-name">'+_esc(p.name)+'</div>' +
+              '<div class="osce-pt-chips">' +
+                '<span class="osce-chip-meta">'+p.age+' yrs</span>' +
+                '<span class="osce-chip-meta">'+_esc(p.gender)+'</span>' +
+                '<span class="osce-chip-meta sp">'+_esc(_activeCase.specialty)+'</span>' +
+                '<span class="osce-chip-meta '+_diffClass(_activeCase.difficulty)+'">'+_esc(_activeCase.difficulty)+'</span>' +
+              '</div>' +
+              '<div style="font-size:.88rem;color:var(--text-muted);line-height:1.4">'+_esc(_activeCase.title)+'</div>' +
             '</div>' +
-            '<p class="osce-door-sub">Read the candidate instructions. The timer starts only when you enter the room.</p>' +
-            '<div class="osce-door-task">' + _esc(_activeCase.task) + '</div>' +
-            '<div class="osce-door-meta">' +
-              '<div class="osce-door-stat"><div class="k">Patient</div><div class="v">' + _esc(p.name) + '</div></div>' +
-              '<div class="osce-door-stat"><div class="k">Difficulty</div><div class="v">' + _esc(_activeCase.difficulty) + '</div></div>' +
-              '<div class="osce-door-stat"><div class="k">Station</div><div class="v">' + _esc(_activeCase.specialty) + '</div></div>' +
-              '<div class="osce-door-stat"><div class="k">Questions</div><div class="v">Up to ' + MAX_TURNS + '</div></div>' +
+          '</div>' +
+          '<div class="osce-lobby-body">' +
+            '<div class="osce-task-label">Your Task</div>' +
+            '<div class="osce-task-box">'+_esc(_activeCase.task)+'</div>' +
+            '<div class="osce-lobby-stats">' +
+              '<div class="osce-stat-card"><div class="osce-stat-val">'+dur+'m</div><div class="osce-stat-lbl">Time</div></div>' +
+              '<div class="osce-stat-card"><div class="osce-stat-val">'+MAX_TURNS+'</div><div class="osce-stat-lbl">Questions</div></div>' +
+              '<div class="osce-stat-card"><div class="osce-stat-val">4</div><div class="osce-stat-lbl">Domains</div></div>' +
+              '<div class="osce-stat-card"><div class="osce-stat-val">AI</div><div class="osce-stat-lbl">Examiner</div></div>' +
             '</div>' +
-            '<div class="osce-flow">' +
-              '<div class="osce-flow-step"><span>1. Open</span>Introduce, confirm identity</div>' +
-              '<div class="osce-flow-step"><span>2. Explore</span>Focused history</div>' +
-              '<div class="osce-flow-step"><span>3. Context</span>PMH, meds, social</div>' +
-              '<div class="osce-flow-step"><span>4. ICE</span>Concerns and expectations</div>' +
-              '<div class="osce-flow-step"><span>5. Close</span>Summarise clearly</div>' +
-              '<div class="osce-flow-step"><span>6. Debrief</span>Submit for marking</div>' +
+            '<div class="osce-lobby-flow">' +
+              '<div class="osce-flow-pill"><span class="n">1</span><span class="t">Open</span><span class="s">Intro & ID</span></div>' +
+              '<div class="osce-flow-pill"><span class="n">2</span><span class="t">History</span><span class="s">Chief complaint</span></div>' +
+              '<div class="osce-flow-pill"><span class="n">3</span><span class="t">Background</span><span class="s">PMH & meds</span></div>' +
+              '<div class="osce-flow-pill"><span class="n">4</span><span class="t">ICE</span><span class="s">Concerns</span></div>' +
+              '<div class="osce-flow-pill"><span class="n">5</span><span class="t">Close</span><span class="s">Summarise</span></div>' +
             '</div>' +
-            '<div class="osce-door-actions">' +
-              '<button class="osce-primary-btn" id="osce-start-station">Enter room</button>' +
-              '<button class="osce-secondary-btn" id="osce-door-settings">AI settings</button>' +
-            '</div>' +
-          '</main>' +
+          '</div>' +
+          '<div class="osce-lobby-actions">' +
+            '<button class="osce-primary-btn" id="osce-start-btn">Enter Room →</button>' +
+            '<button class="osce-secondary-btn" id="osce-lobby-settings2">AI Settings</button>' +
+          '</div>' +
         '</div>' +
       '</div>';
-    _addRipple(document.getElementById('osce-start-station'));
-    _addRipple(document.getElementById('osce-door-settings'));
-    document.getElementById('osce-start-station').addEventListener('click', function () {
-      _transcript = [];
-      _timerRemaining = _activeCase.time || EXAM_TIME;
-      _timerStarted = false;
-      _openConversation();
+    _addRipple(document.getElementById('osce-start-btn'));
+    document.getElementById('osce-start-btn').addEventListener('click', function () {
+      _transcript = []; _timerRemaining = _activeCase.time||EXAM_TIME; _timerStarted = false; _openConversation();
     });
-    document.getElementById('osce-door-settings').addEventListener('click', _openSettings);
-    document.getElementById('osce-door-theme').addEventListener('click', _toggleTheme);
+    document.getElementById('osce-lobby-theme').addEventListener('click', _toggleTheme);
+    document.getElementById('osce-lobby-settings').addEventListener('click', _openSettings);
+    document.getElementById('osce-lobby-settings2').addEventListener('click', _openSettings);
   }
 
-  /* ── Conversation (starts immediately) ──────────────────────── */
+  /* ── Conversation Screen ─────────────────────────────────────── */
   function _openConversation() {
     var p = _activeCase.patient;
-    var avatar = renderAvatar(buildAvatarParams(p.gender, p.age, p.avatarSeed));
+    var av = renderAvatar(buildAvatarParams(p.gender, p.age, p.avatarSeed));
+    var themeIcon = (localStorage.getItem(STORAGE.theme)||'dark')==='dark'?'☀️':'🌙';
+    var dur = Math.floor(_stationDuration()/60);
+    var prog = _gamifiedProgress();
+    var voiceIcon = _Voice.isOn() ? '🎤' : '🎤';
     var root = _ensureRoot();
-    var themeIcon = (localStorage.getItem(STORAGE.theme) || 'dark') === 'dark' ? '☀️' : '🌙';
-    var durationMin = Math.floor(_stationDuration() / 60);
+
     root.innerHTML =
-      '<div class="osce-convo">' +
-        '<div class="osce-station-bar">' +
-          '<div class="osce-case-chip">PLAB 2 Station</div>' +
-          '<div class="osce-station-title">' +
-            '<div class="name">' + _esc(_activeCase.title) + '</div>' +
-            '<div class="task">' + _esc(_activeCase.task) + '</div>' +
+      '<div class="osce-room">' +
+        /* HEADER */
+        '<div class="osce-hdr">' +
+          '<button class="osce-icon-btn" id="osce-back-btn" title="Back to door card" style="flex-shrink:0">←</button>' +
+          '<button class="osce-icon-btn" id="osce-drawer-btn" title="Patient info" style="display:none;flex-shrink:0">☰</button>' +
+          '<div class="osce-hdr-title">' +
+            '<div class="c">'+_esc(_activeCase.title)+'</div>' +
+            '<div class="t">'+_esc(_activeCase.task)+'</div>' +
           '</div>' +
-          '<div class="osce-timer-wrap">' +
-            '<div class="osce-timer ' + _timerState(_timerRemaining) + '" id="osce-timer-num">' + _formatTime(_timerRemaining) + '</div>' +
-            '<div class="osce-timer-label">' + durationMin + ' min</div>' +
-          '</div>' +
-          '<div class="osce-station-actions">' +
-            '<button class="osce-icon-btn" id="osce-theme-btn" title="Toggle theme" style="width:30px;height:30px;font-size:.75rem">' + themeIcon + '</button>' +
-            '<button class="osce-icon-btn" id="osce-settings-btn" title="AI Settings" style="width:30px;height:30px;font-size:.75rem">⚙</button>' +
+          '<div class="osce-hdr-right">' +
+            '<div class="osce-timer-wrap">' +
+              '<div class="osce-timer '+_timerState(_timerRemaining)+'" id="osce-timer-num">'+_formatTime(_timerRemaining)+'</div>' +
+              '<div class="osce-timer-lbl">'+dur+' min</div>' +
+            '</div>' +
+            '<button class="osce-icon-btn" id="osce-theme-btn" title="Toggle theme">'+themeIcon+'</button>' +
+            '<button class="osce-icon-btn" id="osce-settings-btn" title="AI Settings">⚙</button>' +
           '</div>' +
         '</div>' +
-        '<div class="osce-timer-bar" id="osce-timer-bar"><div class="fill ' + _timerState(_timerRemaining) + '" id="osce-timer-bar-fill" style="width:' + (_timerRemaining / _stationDuration() * 100) + '%"></div></div>' +
-        '<div class="osce-time-up" id="osce-time-up-bar" style="display:none">⏱ Time expired — submit your consultation for feedback</div>' +
-        '<div class="osce-room">' +
-          '<aside class="osce-patient-panel">' +
-            '<div class="osce-patient-card"><div class="osce-patient-id">' +
-              '<div class="av-mini">' + avatar + '</div>' +
-              '<div><div class="pn">' + _esc(p.name) + '</div><div class="ps">' + p.age + ' years • ' + _esc(p.gender) + '<br>' + _esc(_activeCase.specialty) + ' • ' + _esc(_activeCase.difficulty) + '</div></div>' +
-            '</div></div>' +
-            '<div class="osce-door-card"><div class="label">Candidate Instructions</div><div class="prompt">' + _esc(_activeCase.task) + '</div></div>' +
-            '<div class="osce-mission">' +
-              '<div class="label">Station Run</div>' +
-              '<div class="osce-mission-row"><span>Questions</span><strong id="osce-q-count">0 / ' + MAX_TURNS + '</strong></div>' +
-              '<div class="osce-mission-row"><span>Time used</span><strong id="osce-time-used">0%</strong></div>' +
-              '<div class="osce-xp" title="Consultation momentum"><div class="osce-xp-fill" id="osce-xp-fill"></div></div>' +
+        /* TIMER BAR */
+        '<div class="osce-tbar"><div class="osce-tbar-fill '+_timerState(_timerRemaining)+'" id="osce-tbar-fill" style="width:'+(_timerRemaining/_stationDuration()*100)+'%"></div></div>' +
+        /* TIME UP */
+        '<div class="osce-timeup" id="osce-timeup">⏱ Time expired — submit for examiner feedback</div>' +
+        /* BODY: sidebar + chat */
+        '<div class="osce-body">' +
+          /* SIDEBAR */
+          '<aside class="osce-sidebar">' +
+            '<div class="osce-sb-card">' +
+              '<div class="osce-pt-id">' +
+                '<div class="osce-av-mini">'+av+'</div>' +
+                '<div><div class="osce-pt-nm">'+_esc(p.name)+'</div><div class="osce-pt-sb">'+p.age+' yrs • '+_esc(p.gender)+'<br>'+_esc(_activeCase.specialty)+' • '+_esc(_activeCase.difficulty)+'</div></div>' +
+              '</div>' +
             '</div>' +
-            '<div class="osce-structure">' +
-              '<div class="label">Consultation Map</div>' +
-              '<div class="osce-structure-list" id="osce-structure-list">' + _structureHTML() + '</div>' +
+            '<div class="osce-sb-card">' +
+              '<div class="osce-sb-lbl">Candidate Instructions</div>' +
+              '<div class="osce-instr-box"><div class="osce-instr-txt">'+_esc(_activeCase.task)+'</div></div>' +
             '</div>' +
-            '<div class="osce-coach" aria-label="Quick question prompts">' +
-              '<button class="osce-chip" data-prompt="Can you tell me more about what brought you in today?">Open</button>' +
-              '<button class="osce-chip" data-prompt="When did this start, and what were you doing at the time?">Timing</button>' +
-              '<button class="osce-chip" data-prompt="Does anything make it better or worse?">Triggers</button>' +
-              '<button class="osce-chip" data-prompt="Do you have any medical conditions or take any regular medicines?">PMH/Meds</button>' +
-              '<button class="osce-chip" data-prompt="Is there anything you are particularly worried this might be?">ICE</button>' +
+            '<div class="osce-sb-card">' +
+              '<div class="osce-sb-lbl">Station Run</div>' +
+              '<div class="osce-pw-row"><span>Questions</span><strong id="osce-q-count">'+prog.turns+' / '+MAX_TURNS+'</strong></div>' +
+              '<div class="osce-pw-row"><span>Time used</span><strong id="osce-time-used">'+prog.timePct+'%</strong></div>' +
+              '<div class="osce-xp-track" title="Consultation momentum"><div class="osce-xp-fill" id="osce-xp-fill" style="width:'+prog.momentum+'%"></div></div>' +
+            '</div>' +
+            '<div class="osce-sb-card">' +
+              '<div class="osce-sb-lbl">Consultation Map</div>' +
+              '<div class="osce-map-steps" id="osce-map-steps">'+_mapHTML()+'</div>' +
+            '</div>' +
+            '<div class="osce-sb-card">' +
+              '<div class="osce-sb-lbl" style="margin-bottom:.4rem">Quick Prompts</div>' +
+              '<div class="osce-chips-wrap">' +
+                '<button class="osce-qchip" data-p="Can you tell me more about what brought you in today?">Open</button>' +
+                '<button class="osce-qchip" data-p="When did this start, and what were you doing at the time?">Timing</button>' +
+                '<button class="osce-qchip" data-p="On a scale of 1-10, how bad is it?">Severity</button>' +
+                '<button class="osce-qchip" data-p="Does anything make it better or worse?">Triggers</button>' +
+                '<button class="osce-qchip" data-p="Do you have any medical conditions or take any regular medicines?">PMH/Meds</button>' +
+                '<button class="osce-qchip" data-p="Is there anything you are particularly worried this might be?">ICE</button>' +
+                '<button class="osce-qchip" data-p="Does this run in your family?">Family Hx</button>' +
+              '</div>' +
             '</div>' +
           '</aside>' +
+          /* CHAT */
           '<main class="osce-chat-zone">' +
             '<div class="osce-transcript" id="osce-transcript"></div>' +
-            '<div class="osce-error" id="osce-error"></div>' +
+            '<div class="osce-error-bar" id="osce-error-bar"></div>' +
           '</main>' +
         '</div>' +
-        '<div class="osce-input-wrap">' +
-          '<textarea id="osce-input" placeholder="Ask the patient a question…" rows="1"></textarea>' +
-          '<button class="osce-send" id="osce-send">Send</button>' +
-          '<button class="osce-submit-link" id="osce-submit" title="Get examiner feedback">Submit</button>' +
+        /* INPUT */
+        '<div class="osce-input-area">' +
+          '<div class="osce-voice-bar">' +
+            '<div class="osce-voice-status" id="osce-vstatus">' +
+              '<span class="osce-vstatus-dot"></span>' +
+              '<span class="osce-vstatus-txt">'+(_Voice.isOn()?'Voice mode on — tap mic':'Voice mode off')+'</span>' +
+            '</div>' +
+            '<div class="osce-waveform" id="osce-waveform"><div class="osce-wbar"></div><div class="osce-wbar"></div><div class="osce-wbar"></div><div class="osce-wbar"></div><div class="osce-wbar"></div></div>' +
+          '</div>' +
+          '<div class="osce-input-row">' +
+            '<button class="osce-mic-btn" id="osce-mic-btn" title="Toggle voice mode">🎤</button>' +
+            '<textarea class="osce-textarea" id="osce-input" placeholder="Ask the patient a question…" rows="1"></textarea>' +
+            '<button class="osce-send-btn" id="osce-send-btn">Send →</button>' +
+          '</div>' +
+          '<div class="osce-submit-row">' +
+            '<span class="osce-turn-badge" id="osce-turn-badge">Q 0/'+MAX_TURNS+'</span>' +
+            '<button class="osce-submit-btn" id="osce-submit-btn">Submit for Examiner Feedback ✓</button>' +
+            '<button class="osce-reset-btn" id="osce-reset-btn">↺ Reset</button>' +
+          '</div>' +
         '</div>' +
       '</div>';
+
+    /* MOBILE: show drawer button, hide sidebar */
+    if (window.innerWidth <= 768) {
+      var drawerBtn = document.getElementById('osce-drawer-btn');
+      if (drawerBtn) drawerBtn.style.display = 'flex';
+      drawerBtn && drawerBtn.addEventListener('click', _openDrawer);
+    }
+
+    /* Event listeners */
+    document.getElementById('osce-back-btn').addEventListener('click', function () {
+      _stopTimer(); _cancelPending(); _Voice.stopSpeaking(); _showDoorCard();
+    });
     document.getElementById('osce-theme-btn').addEventListener('click', _toggleTheme);
     document.getElementById('osce-settings-btn').addEventListener('click', _openSettings);
-    _addRipple(document.getElementById('osce-send'));
-    _addRipple(document.getElementById('osce-submit'));
-    document.getElementById('osce-send').addEventListener('click', _onSend);
-    document.getElementById('osce-submit').addEventListener('click', _onSubmit);
-    Array.prototype.forEach.call(document.querySelectorAll('.osce-chip'), function (btn) {
-      btn.addEventListener('click', function () { _insertPrompt(btn.getAttribute('data-prompt') || ''); });
+    document.getElementById('osce-mic-btn').addEventListener('click', function () { _Voice.toggle(); });
+
+    _addRipple(document.getElementById('osce-send-btn'));
+    _addRipple(document.getElementById('osce-submit-btn'));
+    document.getElementById('osce-send-btn').addEventListener('click', _onSend);
+    document.getElementById('osce-submit-btn').addEventListener('click', _onSubmit);
+    document.getElementById('osce-reset-btn').addEventListener('click', _openResetModal);
+
+    Array.prototype.forEach.call(document.querySelectorAll('.osce-qchip'), function (btn) {
+      btn.addEventListener('click', function () { _insertPrompt(btn.getAttribute('data-p')||''); });
     });
+
     var input = document.getElementById('osce-input');
-    input.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); _onSend(); }
-    });
-    input.addEventListener('input', function () { this.style.height = 'auto'; this.style.height = Math.min(100, this.scrollHeight) + 'px'; });
-    _renderTranscript();
-    if (!_transcript.length) {
-      _transcript.push({ role: 'model', text: p.opening });
-      _renderTranscript();
-    }
-    _updateStationStats();
-    input.focus();
-    _startTimer();
-    _saveSession();
+    input.addEventListener('keydown', function (e) { if (e.key==='Enter'&&!e.shiftKey) { e.preventDefault(); _onSend(); } });
+    input.addEventListener('input', function () { this.style.height='auto'; this.style.height=Math.min(120,this.scrollHeight)+'px'; });
+
     document.addEventListener('keydown', _onKeyDown);
+
+    /* Init transcript */
+    if (!_transcript.length) { _transcript.push({role:'model',text:p.opening}); }
+    _renderTranscript(); _updateStationStats(); input.focus();
+    _startTimer(); _saveSession();
   }
 
-  function _onKeyDown(e) {
-    if (e.key === 'Escape') {
-      var d = document.getElementById('osce-debrief');
-      if (d && d.className.indexOf('open') !== -1) { _hideDebrief(); e.preventDefault(); return; }
-      var overlay = document.getElementById('osce-settings-overlay');
-      if (overlay && overlay.className.indexOf('open') !== -1) { overlay.className = ''; e.preventDefault(); return; }
-    }
+  /* ── Sidebar drawer (mobile) ─────────────────────────────────── */
+  function _openDrawer() {
+    if (_drawerOpen) return; _drawerOpen = true;
+    var p = _activeCase.patient;
+    var av = renderAvatar(buildAvatarParams(p.gender, p.age, p.avatarSeed));
+    var prog = _gamifiedProgress();
+    var overlay = document.createElement('div'); overlay.className = 'osce-drawer-overlay'; overlay.id = 'osce-drawer';
+    overlay.innerHTML =
+      '<div class="osce-drawer-backdrop" id="osce-drawer-backdrop"></div>' +
+      '<div class="osce-drawer-panel">' +
+        '<div style="display:flex;justify-content:flex-end;margin-bottom:.2rem"><button class="osce-icon-btn" id="osce-drawer-close">✕</button></div>' +
+        '<div class="osce-sb-card"><div class="osce-pt-id"><div class="osce-av-mini">'+av+'</div><div><div class="osce-pt-nm">'+_esc(p.name)+'</div><div class="osce-pt-sb">'+p.age+' yrs • '+_esc(p.gender)+'</div></div></div></div>' +
+        '<div class="osce-sb-card"><div class="osce-sb-lbl">Instructions</div><div class="osce-instr-box"><div class="osce-instr-txt">'+_esc(_activeCase.task)+'</div></div></div>' +
+        '<div class="osce-sb-card"><div class="osce-sb-lbl">Consultation Map</div><div class="osce-map-steps">'+_mapHTML()+'</div></div>' +
+        '<div class="osce-sb-card"><div class="osce-sb-lbl">Quick Prompts</div><div class="osce-chips-wrap">'+
+          '<button class="osce-qchip" data-p="Can you tell me more about what brought you in today?">Open</button>'+
+          '<button class="osce-qchip" data-p="When did this start?">Timing</button>'+
+          '<button class="osce-qchip" data-p="Does anything make it better or worse?">Triggers</button>'+
+          '<button class="osce-qchip" data-p="Do you have any medical conditions or take any regular medicines?">PMH/Meds</button>'+
+          '<button class="osce-qchip" data-p="Is there anything you are particularly worried this might be?">ICE</button>'+
+        '</div></div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    requestAnimationFrame(function () { overlay.classList.add('open'); });
+    function closeDrawer() { overlay.classList.remove('open'); _drawerOpen = false; setTimeout(function () { if(overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 300); }
+    document.getElementById('osce-drawer-close').addEventListener('click', closeDrawer);
+    document.getElementById('osce-drawer-backdrop').addEventListener('click', closeDrawer);
+    Array.prototype.forEach.call(overlay.querySelectorAll('.osce-qchip'), function (btn) {
+      btn.addEventListener('click', function () { _insertPrompt(btn.getAttribute('data-p')||''); closeDrawer(); });
+    });
   }
 
+  /* ── Transcript rendering ────────────────────────────────────── */
   function _renderTranscript() {
-    var box = document.getElementById('osce-transcript');
-    if (!box) return;
-    box.innerHTML = _transcript.map(function (m) {
+    var box = document.getElementById('osce-transcript'); if (!box) return;
+    var sp = _getSpeaker(_activeCase);
+    box.innerHTML = _transcript.map(function (m, idx) {
       var isPatient = m.role === 'model';
-      return '<div class="osce-msg ' + (isPatient ? 'patient' : 'student') + '">' +
-        '<div class="lbl">' + (isPatient ? '🧑‍⚕️ Patient' : 'You') + '</div>' +
-        '<div>' + _md(m.text) + '</div>' +
+      return '<div class="osce-msg '+(isPatient?'patient':'student')+'" style="animation-delay:'+(idx*.04)+'s">' +
+        '<div class="osce-msg-lbl">'+(isPatient?'🧑‍⚕️ '+_esc(sp.name):'🩺 You')+'</div>' +
+        '<div class="osce-bubble">'+_md(m.text)+'</div>' +
       '</div>';
     }).join('');
     box.scrollTop = box.scrollHeight;
+    _Voice.updateInterimDisplay();
   }
 
   function _showThinking(show) {
-    var box = document.getElementById('osce-transcript');
-    if (!box) return;
-    var ex = document.getElementById('osce-thinking');
+    var box = document.getElementById('osce-transcript'); if (!box) return;
+    var ex = document.getElementById('osce-thinking-el');
     if (show && !ex) {
-      var d = document.createElement('div');
-      d.className = 'osce-thinking'; d.id = 'osce-thinking';
-      d.innerHTML = '<span class="dots"><span></span><span></span><span></span></span>';
+      var sp = _getSpeaker(_activeCase);
+      var d = document.createElement('div'); d.id = 'osce-thinking-el'; d.className = 'osce-thinking';
+      d.innerHTML = '<div class="osce-thinking-lbl">🧑‍⚕️ '+_esc(sp.name)+'</div><div class="osce-thinking-bub"><span class="osce-dots"><span></span><span></span><span></span></span><span class="osce-thinking-txt">typing…</span></div>';
       box.appendChild(d); box.scrollTop = box.scrollHeight;
     } else if (!show && ex) { ex.remove(); }
   }
 
-  function _onRetry() {
-    var input = document.getElementById('osce-input');
-    if (input && _lastFailedText) { input.value = _lastFailedText; input.focus(); }
-  }
-
   function _setError(msg, showRetry) {
-    var e = document.getElementById('osce-error');
-    if (!e) return;
+    var e = document.getElementById('osce-error-bar'); if (!e) return;
     if (msg) {
-      e.className = 'osce-error show';
-      e.innerHTML = '⚠ ' + _esc(msg) + (showRetry && _lastFailedText
-        ? ' <button id="osce-retry-btn" style="margin-left:.5rem;padding:.15rem .5rem;border-radius:4px;border:1px solid var(--wrong);background:transparent;color:var(--wrong);cursor:pointer;font-size:.8rem">↻ Retry</button>'
-        : '');
-      if (showRetry) {
-        var btn = document.getElementById('osce-retry-btn');
-        if (btn) btn.addEventListener('click', _onRetry);
-      }
-    } else { e.className = 'osce-error'; }
+      e.className = 'osce-error-bar show';
+      e.innerHTML = '⚠ '+_esc(msg)+(showRetry&&_lastFailedText?
+        ' <button id="osce-retry-btn" style="margin-left:.5rem;padding:.14rem .48rem;border-radius:4px;border:1px solid var(--wrong);background:transparent;color:var(--wrong);cursor:pointer;font-size:.78rem">↻ Retry</button>':'');
+      if (showRetry) { var btn=document.getElementById('osce-retry-btn'); if(btn) btn.addEventListener('click',_onRetry); }
+    } else { e.className = 'osce-error-bar'; }
   }
 
-  function _userTurnCount() {
-    var count = 0;
-    for (var i = 0; i < _transcript.length; i++) { if (_transcript[i].role === 'user') count++; }
-    return count;
+  function _insertPrompt(text) {
+    var input = document.getElementById('osce-input'); if (!input) return;
+    input.value = text; input.focus(); input.style.height = 'auto'; input.style.height = Math.min(120,input.scrollHeight)+'px';
   }
 
+  function _onRetry() { var input=document.getElementById('osce-input'); if(input&&_lastFailedText){input.value=_lastFailedText;input.focus();} }
+
+  function _onKeyDown(e) {
+    if (e.key === 'Escape') {
+      var d=document.getElementById('osce-debrief'); if(d&&d.classList.contains('open')){_hideDebrief();e.preventDefault();return;}
+      var s=document.getElementById('osce-sov'); if(s&&s.classList.contains('open')){s.className='';e.preventDefault();return;}
+      var r=document.getElementById('osce-reset-overlay'); if(r&&r.classList.contains('open')){_closeResetModal();e.preventDefault();return;}
+    }
+  }
+
+  /* ── Helpers ─────────────────────────────────────────────────────── */
+  function _sanitizeModelText(text) {
+    // Strip common medical disclaimer that some Gemini variants inject
+    return text.replace(/This response is not intended to be medical advice[^.]*(?:consult|professional|treatment)[^.]*\./gi, '').trim();
+  }
+
+  /* ── Send / Submit ───────────────────────────────────────────── */
   function _onSend() {
     var input = document.getElementById('osce-input');
-    var text = (input.value || '').trim();
-    if (!text) return;
+    var text = (input.value||'').trim(); if (!text) return;
     if (!_hasApiKey()) { _toast('Configure your Gemini API key in ⚙ Settings first'); _openSettings(); return; }
     var turns = _userTurnCount();
-    if (turns >= MAX_TURNS) {
-      _toast('Maximum ' + MAX_TURNS + ' questions reached. Click "Submit ✓" for examiner feedback.');
-      return;
-    }
-    if (turns >= WARN_TURNS) {
-      _toast('⚠ ' + (MAX_TURNS - turns) + ' of ' + MAX_TURNS + ' questions remaining. Consider submitting for feedback.');
-    }
-    _lastFailedText = text;
-    input.value = ''; input.style.height = 'auto';
-    _transcript.push({ role: 'user', text: text });
-    _renderTranscript();
-    _updateStationStats();
-    document.getElementById('osce-send').disabled = true;
-    _setError('');
-    _showThinking(true);
+    if (turns >= MAX_TURNS) { _toast('Maximum '+MAX_TURNS+' questions reached. Click Submit for feedback.'); return; }
+    if (turns >= WARN_TURNS) _toast('⚠ '+(MAX_TURNS-turns)+' questions remaining — consider submitting.');
+    _lastFailedText = text; input.value = ''; input.style.height = 'auto';
+    _transcript.push({role:'user',text:text}); _renderTranscript(); _updateStationStats();
+    var sendBtn = document.getElementById('osce-send-btn'); if (sendBtn) sendBtn.disabled = true;
+    _setError(''); _showThinking(true);
     _abort = new AbortController();
     askPatient(_activeCase, _transcript, _abort.signal)
       .then(function (reply) {
         _showThinking(false);
-        _transcript.push({ role: 'model', text: reply });
-        _renderTranscript();
-        _updateQCount();
-        _saveSession();
+        _transcript.push({role:'model',text:_sanitizeModelText(reply)}); _renderTranscript(); _updateStationStats(); _saveSession();
+        if (_Voice.isOn()) { _Voice.speak(reply); }
       })
       .catch(function (err) {
-        _showThinking(false);
-        _setError(_friendlyAiError(err), true);
-        if (_transcript.length && _transcript[_transcript.length - 1].role === 'user') _transcript.pop();
+        _showThinking(false); _setError(_friendlyAiError(err), true);
+        if (_transcript.length&&_transcript[_transcript.length-1].role==='user') _transcript.pop();
         _renderTranscript();
       })
-      .finally(function () {
-        document.getElementById('osce-send').disabled = false;
-        var inp = document.getElementById('osce-input'); if (inp) inp.focus();
-      });
-  }
-
-  function _updateQCount() {
-    _updateStationStats();
+      .finally(function () { var sb=document.getElementById('osce-send-btn'); if(sb)sb.disabled=false; var inp=document.getElementById('osce-input'); if(inp)inp.focus(); });
   }
 
   function _onSubmit() {
     if (!_hasApiKey()) { _toast('Configure your Gemini API key in ⚙ Settings first'); _openSettings(); return; }
-    if (_transcript.filter(function (m) { return m.role === 'user'; }).length === 0) {
-      _toast('Ask the patient at least one question first.'); return;
-    }
-    _stopTimer();
-    _cancelPending();
-    _showDebriefLoading();
+    if (!_transcript.filter(function(m){return m.role==='user';}).length) { _toast('Ask the patient at least one question first.'); return; }
+    _stopTimer(); _cancelPending(); _Voice.stopSpeaking(); _showDebriefLoading();
     _abort = new AbortController();
     scoreInterview(_activeCase, _transcript, _abort.signal)
       .then(function (result) { _clearSession(); _showDebrief(result); })
-      .catch(function (err) { _hideDebrief(); _setError('Examiner feedback failed: ' + _friendlyAiError(err)); });
+      .catch(function (err) { _hideDebrief(); _setError('Examiner feedback failed: '+_friendlyAiError(err)); });
+  }
+
+  function _openResetModal() {
+    var overlay = document.getElementById('osce-reset-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div'); overlay.id = 'osce-reset-overlay'; overlay.className = 'osce-reset-overlay';
+      overlay.innerHTML =
+        '<div class="osce-reset-modal">' +
+          '<h3>Reset Consultation?</h3>' +
+          '<p>This will clear the entire conversation, timer, and progress. This cannot be undone.</p>' +
+          '<div class="osce-reset-actions">' +
+            '<button class="osce-reset-cancel" id="osce-reset-cancel-btn">Go Back</button>' +
+            '<button class="osce-reset-danger" id="osce-reset-confirm-btn">Reset Now</button>' +
+          '</div>' +
+        '</div>';
+      document.body.appendChild(overlay);
+      document.getElementById('osce-reset-cancel-btn').addEventListener('click', _closeResetModal);
+      document.getElementById('osce-reset-confirm-btn').addEventListener('click', _confirmResetAction);
+      overlay.addEventListener('click', function (e) { if (e.target === overlay) _closeResetModal(); });
+    }
+    overlay.classList.add('open');
+  }
+
+  function _closeResetModal() { var o = document.getElementById('osce-reset-overlay'); if (o) o.classList.remove('open'); }
+
+  function _confirmResetAction() {
+    _closeResetModal();
+    if (_Voice.isOn()) { _Voice.toggle(); }
+    _stopTimer(); _cancelPending(); _clearSession();
+    _transcript = []; _timerRemaining = _activeCase.time || EXAM_TIME; _timerStarted = false;
+    _showDoorCard();
+    _toast('🔄 Consultation reset — start fresh.');
   }
 
   function _cancelPending() {
@@ -1140,250 +1558,308 @@
     _showThinking(false);
   }
 
-  function _esc(s) {
-    return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
+  /* ── Debrief Loading ─────────────────────────────────────────── */
   function _showDebriefLoading() {
-    _ensureRoot();
     var d = document.getElementById('osce-debrief');
-    if (!d) {
-      d = document.createElement('div'); d.id = 'osce-debrief'; d.className = 'osce-debrief open';
-      document.body.appendChild(d);
-    } else { d.className = 'osce-debrief open'; }
-    d.innerHTML = '<div class="osce-debrief-card"><div class="osce-thinking"><span class="dots"><span></span><span></span><span></span></span> &nbsp;Examiner is reviewing your interview…</div></div>';
+    if (!d) { d = document.createElement('div'); d.id = 'osce-debrief'; d.className = 'osce-debrief-overlay'; document.body.appendChild(d); }
+    d.className = 'osce-debrief-overlay open';
+    d.innerHTML = '<div class="osce-debrief-modal" style="padding:2rem;text-align:center">' +
+      '<div class="osce-thinking-bub" style="display:inline-flex;margin-bottom:1rem"><span class="osce-dots"><span></span><span></span><span></span></span></div>' +
+      '<div style="font-size:.95rem;color:var(--text-muted)">Examiner is reviewing your consultation…</div>' +
+      '</div>';
   }
 
-  function _hideDebrief() {
-    var d = document.getElementById('osce-debrief'); if (d) d.className = 'osce-debrief';
-  }
+  function _hideDebrief() { var d=document.getElementById('osce-debrief'); if(d){d.className='osce-debrief-overlay';} }
 
+  /* ── Debrief ─────────────────────────────────────────────────── */
   function _showDebrief(result) {
     var d = document.getElementById('osce-debrief');
-    var c = _activeCase;
-    var hp = c.hiddenProfile;
-    var cls = result.passed ? 'pass' : 'fail';
-    var band = result.score >= 80 ? 'Excellent station' : result.score >= 65 ? 'Strong pass' : result.score >= 50 ? 'Borderline pass' : result.score >= 35 ? 'Needs another run' : 'Restart recommended';
-    var xp = Math.max(0, Math.min(100, result.score));
+    var c = _activeCase, hp = c.hiddenProfile;
+    var band = result.score>=85?'Outstanding':result.score>=70?'Strong pass':result.score>=55?'Clear pass':result.score>=50?'Borderline pass':result.score>=35?'Needs improvement':'Restart recommended';
+    var timeUsedPct = Math.round((_stationDuration()-_timerRemaining)/_stationDuration()*100);
+    var turnCount = _userTurnCount();
 
-    var domainHTML = '';
-    var doms = result.domains || {};
-    var domainNames = [
-      { key: 'communication', label: 'Communication', max: 25 },
-      { key: 'infoGathering', label: 'Information Gathering', max: 25 },
-      { key: 'clinicalReasoning', label: 'Clinical Reasoning', max: 25 },
-      { key: 'professionalism', label: 'Professionalism', max: 25 }
-    ];
-    domainNames.forEach(function (dinfo) {
-      var val = doms[dinfo.key] || 0;
-      var pct = (val / dinfo.max) * 100;
-      var barCls = pct >= 70 ? 'good' : pct >= 40 ? 'avg' : 'low';
-      domainHTML +=
-        '<div class="osce-domain-item ' + barCls + '">' +
-          '<div class="dl">' + dinfo.label + '</div>' +
-          '<div class="dv">' + val + ' <span class="out-of">/ ' + dinfo.max + '</span></div>' +
-          '<div class="osce-domain-bar"><div class="fill" style="width:' + pct + '%"></div></div>' +
-        '</div>';
-    });
+    /* Domain grid */
+    var domains = result.domains||{};
+    var domainDefs = [{k:'communication',l:'Communication'},{k:'infoGathering',l:'Info Gathering'},{k:'clinicalReasoning',l:'Clinical Reasoning'},{k:'professionalism',l:'Professionalism'}];
+    var domColors = ['#38bdf8','#f0a500','#8b5cf6','#2ea043'];
+    var domainHTML = domainDefs.map(function(dd,i){
+      var v=domains[dd.k]||0, pct=(v/25)*100;
+      var q = pct>=70?'good':pct>=40?'avg':'low';
+      return '<div class="osce-domain-item '+q+'"><div class="osce-domain-name">'+dd.l+'</div>' +
+        '<div class="osce-domain-score">'+v+' <span class="of">/ 25</span></div>' +
+        '<div class="osce-dbar-track"><div class="osce-dbar-fill" style="width:'+pct+'%"></div></div></div>';
+    }).join('');
 
-    var asked = (result.asked.length ? result.asked : ['(none matched)']).map(function (x, i) {
-      return '<li style="--i:' + i + '">' + _esc(x) + '</li>';
+    /* Radar SVG + legend */
+    var radarSVG = _buildRadarSVG(domains);
+    var radarLegend = domainDefs.map(function(dd,i){
+      return '<div class="osce-radar-legend-row"><div class="osce-radar-dot" style="background:'+domColors[i]+'"></div><span>'+dd.l+'</span><span style="margin-left:auto;font-weight:700;font-variant-numeric:tabular-nums">'+(domains[dd.k]||0)+'/25</span></div>';
     }).join('');
-    var missed = (result.missed.length ? result.missed : ['(nothing missed — excellent)']).map(function (x, i) {
-      return '<li style="--i:' + i + '">' + _esc(x) + '</li>';
-    }).join('');
+
+    /* Criteria */
+    var askedHTML = (result.asked.length?result.asked:['(none matched)']).map(function(x,i){return '<li class="osce-asked-item" style="animation-delay:'+(i*.05)+'s">✓ '+_esc(x)+'</li>';}).join('');
+    var missedHTML = (result.missed.length?result.missed:['(nothing missed — excellent coverage)']).map(function(x,i){return '<li class="osce-missed-item" style="animation-delay:'+(i*.05)+'s">✗ '+_esc(x)+'</li>';}).join('');
+
+    /* Achievements */
+    var badges = _buildAchievements(result, timeUsedPct, turnCount);
+    var badgesHTML = badges.map(function(b,i){return '<div class="osce-badge '+b[3]+'" style="animation-delay:'+(i*.08)+'s"><span class="osce-badge-icon">'+b[0]+'</span><span>'+b[1]+'</span></div>';}).join('');
 
     d.innerHTML =
-      '<div class="osce-debrief-card">' +
-        '<h3>PLAB 2 Examiner Scorecard</h3>' +
-        '<div class="sub">' + _esc(c.title) + ' • ' + _esc(c.patient.name) + '</div>' +
-        '<div class="osce-debrief-score">' +
-          '<div class="osce-score-ring ' + cls + '"><div class="num">' + result.score + '</div><div class="unit">/ 100</div></div>' +
-          '<div><div class="osce-verdict-text ' + cls + '">' + (result.passed ? '✓ Passed' : '✗ Below pass mark') + '</div>' +
-          '<div style="font-size:.9rem;font-weight:800;margin-top:.18rem">' + _esc(band) + '</div>' +
-          '<div style="font-size:.75rem;color:var(--text-muted);margin-top:.25rem">Station XP</div>' +
-          '<div class="osce-xp" style="width:220px;max-width:48vw"><div class="osce-xp-fill" style="width:' + xp + '%"></div></div></div>' +
-        '</div>' +
-        '<div class="osce-domain-grid">' + domainHTML + '</div>' +
-        '<div class="feedback-text">' + _md(result.feedback) + '</div>' +
-        '<div class="dx"><strong>🩺 Hidden diagnosis:</strong> ' + _esc(hp.diagnosis || '(not specified)') + '</div>' +
-        '<h4>✓ You covered</h4><ul>' + asked + '</ul>' +
-        '<h4>✗ Areas to improve</h4><ul>' + missed + '</ul>' +
-        '<div class="actions">' +
-          '<button id="osce-debrief-close">Back to consultation</button>' +
-          '<button class="primary" id="osce-debrief-new">New case</button>' +
+      '<div class="osce-debrief-modal">' +
+        '<div class="osce-db-body">' +
+          /* ── Score banner (identical to quiz-engine) ── */
+          '<div class="score-banner">' +
+            '<div class="score-circle">' +
+              '<div class="pct" id="osce-db-pct">'+result.score+'%</div>' +
+              '<div class="lbl">Score</div>' +
+            '</div>' +
+            '<div class="score-details">' +
+              '<h3 id="osce-db-grade">'+_esc(band)+'</h3>' +
+              '<div class="score-grid">' +
+                '<div class="score-stat"><div class="n green">'+timeUsedPct+'%</div><div class="t">Time Used</div></div>' +
+                '<div class="score-stat"><div class="n blue">'+turnCount+'</div><div class="t">Turns</div></div>' +
+                '<div class="score-stat"><div class="n green">'+result.asked.length+'</div><div class="t">Covered</div></div>' +
+                '<div class="score-stat"><div class="n red">'+result.missed.length+'</div><div class="t">Missed</div></div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          /* ── Domain Scores ── */
+          '<div class="osce-db-section"><div class="osce-db-sec-title">📊 Domain Scores</div><div class="osce-domain-grid">'+domainHTML+'</div></div>' +
+          /* ── Performance Radar ── */
+          '<div class="osce-db-section"><div class="osce-db-sec-title">🕸 Performance Radar</div>' +
+            '<div class="osce-radar-wrap"><svg class="osce-radar-svg-el" viewBox="0 0 160 160">'+radarSVG+'</svg>' +
+            '<div class="osce-radar-legend">'+radarLegend+'</div></div>' +
+          '</div>' +
+          /* ── Examiner Feedback ── */
+          '<div class="osce-db-section"><div class="osce-db-sec-title">💬 Examiner Feedback</div><div class="osce-feedback-box">'+_md(result.feedback)+'</div>' +
+            '<div class="osce-dx-box"><span>🩺</span><div><strong>Hidden diagnosis:</strong> '+_esc(hp.diagnosis||'(not specified)')+'</div></div>' +
+          '</div>' +
+          /* ── Criteria Review ── */
+          '<div class="osce-db-section"><div class="osce-db-sec-title">📋 Criteria Review</div>' +
+            '<div class="osce-criteria-grid">' +
+              '<div class="osce-criteria-sec"><h4>✓ Covered ('+result.asked.length+')</h4><ul>'+askedHTML+'</ul></div>' +
+              '<div class="osce-criteria-sec"><h4>✗ Missed ('+result.missed.length+')</h4><ul>'+missedHTML+'</ul></div>' +
+            '</div>' +
+          '</div>' +
+          /* ── Achievements ── */
+          (badges.length?'<div class="osce-db-section"><div class="osce-db-sec-title">🏆 Achievements</div><div class="osce-badges">'+badgesHTML+'</div></div>':'') +
+          /* ── Actions (identical to quiz-engine result-actions) ── */
+          '<div class="result-actions">' +
+            '<button class="btn-restart btn-secondary" id="osce-db-back">← Back to Consultation</button>' +
+            '<button class="btn-restart" id="osce-db-new">↻ Try Again</button>' +
+            '<button class="btn-restart btn-secondary" id="osce-db-hub">🏠 Back to Hub</button>' +
+          '</div>' +
         '</div>' +
       '</div>';
-    _addRipple(document.getElementById('osce-debrief-close'));
-    _addRipple(document.getElementById('osce-debrief-new'));
-    document.getElementById('osce-debrief-close').addEventListener('click', _hideDebrief);
-    document.getElementById('osce-debrief-new').addEventListener('click', function () {
-      _stopTimer(); _hideDebrief(); _clearSession();
-      _transcript = [];
-      _timerRemaining = _activeCase.time || EXAM_TIME;
-      _timerStarted = false;
-      _showDoorCard();
+
+    _addRipple(document.getElementById('osce-db-back'));
+    _addRipple(document.getElementById('osce-db-new'));
+    _addRipple(document.getElementById('osce-db-hub'));
+    document.getElementById('osce-db-back').addEventListener('click', _hideDebrief);
+    document.getElementById('osce-db-new').addEventListener('click', function () {
+      _stopTimer(); _hideDebrief(); _clearSession(); _transcript = [];
+      _timerRemaining = _activeCase.time||EXAM_TIME; _timerStarted = false; _showDoorCard();
     });
+    document.getElementById('osce-db-hub').addEventListener('click', function () {
+      window.location.href = (ENGINE_BASE||'') + 'index.html';
+    });
+
+    /* Confetti on excellent pass */
+    if (result.score >= 80) setTimeout(function () { _confetti(); }, 400);
   }
 
-  /* ── Settings (matches ai-assistant modal structure) ─────────── */
+  /* ── Radar Chart ────────────────────────────────────────────── */
+  function _buildRadarSVG(domains) {
+    var cx = 80, cy = 80, maxR = 60;
+    var vals = [
+      (domains.communication||0)/25,
+      (domains.infoGathering||0)/25,
+      (domains.clinicalReasoning||0)/25,
+      (domains.professionalism||0)/25
+    ];
+    var colors = ['#38bdf8','#f0a500','#8b5cf6','#2ea043'];
+    // 4 axes at 45deg offsets (top, right, bottom, left)
+    var angles = [-90, 0, 90, 180];
+    function pt(angle, r) {
+      var rad = angle*Math.PI/180;
+      return {x:cx+r*Math.cos(rad), y:cy+r*Math.sin(rad)};
+    }
+    // Background grid circles
+    var gridHTML = [0.25,0.5,0.75,1].map(function(f){
+      var r=f*maxR;
+      var pts=angles.map(function(a){return pt(a,r);});
+      var d=pts.map(function(p,i){return (i===0?'M':'L')+p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ')+'Z';
+      return '<path d="'+d+'" fill="none" stroke="var(--border)" stroke-width="1" opacity="0.7"/>';
+    }).join('');
+    // Axis lines
+    var axisHTML = angles.map(function(a){
+      var p=pt(a,maxR); return '<line x1="'+cx+'" y1="'+cy+'" x2="'+p.x.toFixed(1)+'" y2="'+p.y.toFixed(1)+'" stroke="var(--border)" stroke-width="1" opacity="0.5"/>';
+    }).join('');
+    // Score polygon
+    var scorePts = vals.map(function(v,i){return pt(angles[i],v*maxR);});
+    var scoreD = scorePts.map(function(p,i){return (i===0?'M':'L')+p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ')+'Z';
+    var scoreHTML = '<path d="'+scoreD+'" fill="rgba(240,165,0,.18)" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>';
+    // Dots
+    var dotsHTML = scorePts.map(function(p,i){return '<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="4" fill="'+colors[i]+'" stroke="var(--surface)" stroke-width="1.5"/>';}).join('');
+    return gridHTML+axisHTML+scoreHTML+dotsHTML;
+  }
+
+  /* ── Achievements ────────────────────────────────────────────── */
+  function _buildAchievements(result, timeUsedPct, turnCount) {
+    var b = [];
+    if (result.score >= 80) b.push(['🌟','Outstanding','Score ≥ 80','gold']);
+    else if (result.score >= 50) b.push(['✅','Passed','Station passed','green']);
+    if (result.missed.length === 0 && result.asked.length > 0) b.push(['🎯','Full Coverage','All criteria covered','green']);
+    if (result.domains.communication >= 22) b.push(['💬','Communicator','Communication ≥ 22/25','blue']);
+    if (result.domains.professionalism >= 22) b.push(['🎖','Professional','Professionalism ≥ 22/25','blue']);
+    if (result.domains.clinicalReasoning >= 22) b.push(['🧠','Clinician','Clinical reasoning ≥ 22/25','purple']);
+    if (result.domains.infoGathering >= 22) b.push(['🔍','Thorough','Info gathering ≥ 22/25','purple']);
+    if (typeof timeUsedPct === 'number' && timeUsedPct < 65 && result.score >= 50) b.push(['⚡','Efficient','Completed quickly','gold']);
+    if (typeof turnCount === 'number' && turnCount >= 15 && result.score >= 50) b.push(['💪','Persistent','15+ questions asked','blue']);
+    return b;
+  }
+
+  /* ── Confetti ────────────────────────────────────────────────── */
+  function _confetti() {
+    var canvas = document.createElement('canvas');
+    canvas.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:9999;width:100%;height:100%';
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    document.body.appendChild(canvas);
+    var ctx = canvas.getContext('2d');
+    var colors = ['#f0a500','#38bdf8','#2ea043','#8b5cf6','#da3633','#fff'];
+    var particles = Array.from({length:120}, function() {
+      return {
+        x: Math.random()*canvas.width, y: Math.random()*-canvas.height*.5,
+        w: 6+Math.random()*8, h: 3+Math.random()*5,
+        color: colors[Math.floor(Math.random()*colors.length)],
+        vx: (Math.random()-.5)*4, vy: 2+Math.random()*5,
+        rot: Math.random()*360, vrot: (Math.random()-.5)*8, alpha: 1
+      };
+    });
+    var start = null;
+    function frame(ts) {
+      if (!start) start = ts;
+      var elapsed = ts - start;
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      particles.forEach(function(p) {
+        p.y += p.vy; p.x += p.vx; p.rot += p.vrot;
+        if (elapsed > 2200) p.alpha = Math.max(0, p.alpha - .03);
+        ctx.save(); ctx.globalAlpha = p.alpha; ctx.translate(p.x,p.y); ctx.rotate(p.rot*Math.PI/180);
+        ctx.fillStyle = p.color; ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h); ctx.restore();
+      });
+      if (elapsed < 3500) requestAnimationFrame(frame);
+      else { if (canvas.parentNode) canvas.parentNode.removeChild(canvas); }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  /* ── Settings Modal ──────────────────────────────────────────── */
   function _renderSettingsHTML() {
-    var ex = document.getElementById('osce-settings-overlay');
-    if (ex) { ex.className = 'open'; _syncSettingsValues(); return; }
-    var div = document.createElement('div');
-    div.id = 'osce-settings-overlay';
-    div.className = 'open';
+    var ex = document.getElementById('osce-sov'); if (ex) { ex.className = 'open'; _syncSettings(); return; }
+    var div = document.createElement('div'); div.id = 'osce-sov'; div.className = 'open';
+    var voiceOn = _Voice.isOn();
+    var liveModel = _getSavedLiveModel();
     div.innerHTML =
-      '<div id="osce-settings-modal">' +
-        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">' +
-          '<h3 style="margin:0">⚙ AI Settings</h3>' +
-          '<button class="osce-icon-btn" id="osce-settings-close" title="Close">✕</button>' +
-        '</div>' +
-        '<div class="field-box">' +
-          '<label class="field-label" for="osce-key-input">Gemini API Key</label>' +
-          '<div class="api-row">' +
-            '<input id="osce-key-input" type="password" autocomplete="off" placeholder="Enter your Gemini API key">' +
+      '<div id="osce-smodal">' +
+        '<div class="osce-sh"><h3>⚙ AI & Voice Settings</h3><button class="osce-icon-btn" id="osce-s-close">✕</button></div>' +
+        '<div class="osce-sbody">' +
+          '<div class="osce-stitle">Gemini API</div>' +
+          '<div class="osce-fbox">' +
+            '<label for="osce-key-input">API Key</label>' +
+            '<div class="osce-api-row"><input id="osce-key-input" type="password" autocomplete="off" placeholder="Enter your Gemini API key"></div>' +
+            '<div class="note">Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank">AI Studio</a>. Shared with all QuizTool engines.</div>' +
+            '<div class="osce-btn-row"><button class="bp" id="osce-key-save">Save</button><button id="osce-key-clear">Clear</button><button id="osce-key-test">Test</button></div>' +
+            '<div id="osce-sstatus"></div>' +
           '</div>' +
-          '<div class="field-note">Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank">AI Studio</a>. Shared with all QuizTool engines.</div>' +
-          '<div class="btn-row">' +
-            '<button class="btn-primary" id="osce-key-save">Save</button>' +
-            '<button class="btn-secondary" id="osce-key-clear">Clear</button>' +
-            '<button class="btn-secondary" id="osce-key-test">Test Connection</button>' +
+          '<div class="osce-stitle">AI Model</div>' +
+           '<div class="osce-fbox"><label for="osce-model-sel">Model</label><select id="osce-model-sel"></select></div>' +
+           '<div class="osce-fbox"><label for="osce-max-wait">Max Wait</label><select id="osce-max-wait"><option value="15">15 seconds</option><option value="30">30 seconds</option><option value="60">60 seconds</option><option value="0">No limit</option></select></div>' +
+           '<div class="osce-fbox"><label for="osce-retry">Retry on Failure</label><select id="osce-retry"><option value="fast">Fast (1 attempt)</option><option value="balanced">Balanced (2 attempts)</option><option value="thorough">Thorough (3 attempts)</option></select></div>' +
+            '<div class="osce-stitle">Live Model (Gemini Live voice)</div>' +
+            '<div class="osce-fbox"><label for="osce-live-model-sel">Live Model</label><select id="osce-live-model-sel"></select></div>' +
           '</div>' +
-          '<div id="osce-settings-status" style="font-size:.8rem;margin-top:6px"></div>' +
-        '</div>' +
-        '<div class="field-box">' +
-          '<label class="field-label" for="osce-model-select">AI Model</label>' +
-          '<select id="osce-model-select" style="width:100%;padding:.5rem .7rem;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:inherit;font-size:.85rem"></select>' +
-        '</div>' +
-        '<div class="field-box">' +
-          '<label class="field-label">Max Wait</label>' +
-          '<div class="field-row">' +
-            '<select id="osce-max-wait" style="flex:1;padding:.5rem .7rem;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:inherit;font-size:.85rem">' +
-              '<option value="15">15 seconds</option>' +
-              '<option value="30">30 seconds</option>' +
-              '<option value="60">60 seconds</option>' +
-              '<option value="0">No limit</option>' +
-            '</select>' +
-          '</div>' +
-        '</div>' +
-        '<div class="field-box">' +
-          '<label class="field-label">Retry on Failure</label>' +
-          '<div class="field-row">' +
-            '<select id="osce-retry-level" style="flex:1;padding:.5rem .7rem;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:inherit;font-size:.85rem">' +
-              '<option value="fast">Fast (1 attempt)</option>' +
-              '<option value="balanced">Balanced (2 attempts)</option>' +
-              '<option value="thorough">Thorough (3 attempts)</option>' +
-            '</select>' +
-          '</div>' +
-        '</div>' +
+        '<div class="osce-sf"><div class="osce-btn-row"><button class="bp" id="osce-s-done">Done</button></div></div>' +
       '</div>';
     document.body.appendChild(div);
 
-    var modelSelect = document.getElementById('osce-model-select');
-    MODELS.forEach(function (m) {
-      var opt = document.createElement('option');
-      opt.value = m[0];
-      opt.textContent = m[1];
-      modelSelect.appendChild(opt);
-    });
+    /* Populate model selects */
+    var ms = document.getElementById('osce-model-sel');
+    MODELS.forEach(function(m){var o=document.createElement('option');o.value=m[0];o.textContent=m[1];ms.appendChild(o);});
+    var lms = document.getElementById('osce-live-model-sel');
+    LIVE_MODELS.forEach(function(m){var o=document.createElement('option');o.value=m[0];o.textContent=m[1];lms.appendChild(o);});
 
-    _syncSettingsValues();
+    _syncSettings();
 
-    document.getElementById('osce-settings-close').addEventListener('click', _closeSettings);
+    document.getElementById('osce-s-close').addEventListener('click', _closeSettings);
+    document.getElementById('osce-s-done').addEventListener('click', function(){_saveSettings();_closeSettings();});
     document.getElementById('osce-key-save').addEventListener('click', _saveKey);
     document.getElementById('osce-key-clear').addEventListener('click', _clearKey);
     document.getElementById('osce-key-test').addEventListener('click', _testKey);
-    document.getElementById('osce-model-select').addEventListener('change', function () {
-      localStorage.setItem(STORAGE.model, this.value);
-    });
-    document.getElementById('osce-max-wait').addEventListener('change', function () {
-      localStorage.setItem(STORAGE.maxWait, this.value);
-    });
-    document.getElementById('osce-retry-level').addEventListener('change', function () {
-      localStorage.setItem(STORAGE.retryLevel, this.value);
-    });
-    div.addEventListener('click', function (e) { if (e.target === div) _closeSettings(); });
+    document.getElementById('osce-model-sel').addEventListener('change', function(){localStorage.setItem(STORAGE.model,this.value);});
+    document.getElementById('osce-live-model-sel').addEventListener('change', function(){localStorage.setItem(STORAGE.liveModel,this.value);});
+    document.getElementById('osce-max-wait').addEventListener('change', function(){localStorage.setItem(STORAGE.maxWait,this.value);});
+    document.getElementById('osce-retry').addEventListener('change', function(){localStorage.setItem(STORAGE.retryLevel,this.value);});
+    div.addEventListener('click', function(e){if(e.target===div)_closeSettings();});
+    setTimeout(function(){var k=document.getElementById('osce-key-input');if(k)k.focus();},100);
   }
 
-  function _syncSettingsValues() {
-    var key = document.getElementById('osce-key-input');
-    if (key) key.value = _readKey();
-    var ms = document.getElementById('osce-model-select');
-    if (ms) { var sm = _getSavedModel(); if (modelIsAvailable(sm)) ms.value = sm; }
-    var mw = document.getElementById('osce-max-wait');
-    if (mw) mw.value = localStorage.getItem(STORAGE.maxWait) || '15';
-    var rl = document.getElementById('osce-retry-level');
-    if (rl) rl.value = _getRetryLevel();
+  function _syncSettings() {
+    var ki=document.getElementById('osce-key-input'); if(ki)ki.value=_readKey();
+    var ms=document.getElementById('osce-model-sel'); if(ms){var sm=_getSavedModel();if(modelIsAvailable(sm))ms.value=sm;}
+    var lms=document.getElementById('osce-live-model-sel'); if(lms){var lm=_getSavedLiveModel();if(liveModelIsAvailable(lm))lms.value=lm;}
+    var mw=document.getElementById('osce-max-wait'); if(mw)mw.value=localStorage.getItem(STORAGE.maxWait)||'15';
+    var rl=document.getElementById('osce-retry'); if(rl)rl.value=_getRetryLevel();
   }
-
-  function _openSettings() {
-    _renderSettingsHTML();
-    setTimeout(function () {
-      var k = document.getElementById('osce-key-input');
-      if (k) k.focus();
-    }, 100);
+  function _saveSettings() {
   }
-
-  function _closeSettings() {
-    var overlay = document.getElementById('osce-settings-overlay');
-    if (overlay) overlay.className = '';
-  }
+  function _openSettings()  { _renderSettingsHTML(); }
+  function _closeSettings() { var s=document.getElementById('osce-sov'); if(s)s.className=''; }
 
   function _saveKey() {
-    var v = document.getElementById('osce-key-input').value.trim();
-    localStorage.setItem(STORAGE.apiKey, v ? _obfuscate(v) : '');
-    var status = document.getElementById('osce-settings-status');
-    if (status) status.textContent = v ? '✓ Settings saved.' : '✗ API key cleared.';
+    var v=document.getElementById('osce-key-input').value.trim();
+    localStorage.setItem(STORAGE.apiKey,v?_obfuscate(v):'');
+    var st=document.getElementById('osce-sstatus'); if(st)st.textContent=v?'✓ API key saved.':'✗ API key cleared.';
     _closeSettings();
   }
-
   function _clearKey() {
     localStorage.removeItem(STORAGE.apiKey);
-    var key = document.getElementById('osce-key-input');
-    if (key) key.value = '';
-    var status = document.getElementById('osce-settings-status');
-    if (status) status.textContent = '✗ API key cleared.';
+    var ki=document.getElementById('osce-key-input'); if(ki)ki.value='';
+    var st=document.getElementById('osce-sstatus'); if(st)st.textContent='✗ API key cleared.';
   }
-
   function _testKey() {
-    var v = document.getElementById('osce-key-input').value.trim();
-    var st = document.getElementById('osce-settings-status');
-    if (!v) { st.textContent = '✗ No key entered.'; return; }
-    st.textContent = 'Testing…';
-    fetch('https://generativelanguage.googleapis.com/v1beta/models', { headers: { 'x-goog-api-key': v } })
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        st.textContent = (data && data.models && data.models.length) ? '✓ Key is valid (' + data.models.length + ' models available).' : '✗ Unexpected response. Check the key.';
+    var v=document.getElementById('osce-key-input').value.trim();
+    var st=document.getElementById('osce-sstatus'); if(!v){st.textContent='✗ No key entered.';return;}
+    st.textContent='Testing…';
+    fetch('https://generativelanguage.googleapis.com/v1beta/models',{headers:{'x-goog-api-key':v}})
+      .then(function(r){return r.text().then(function(t){return{status:r.status,body:t};});})
+      .then(function(resp){
+        var data; try{data=JSON.parse(resp.body);}catch(e){st.textContent='✗ Parse error';return;}
+        if(resp.status===200&&data&&data.models&&data.models.length){
+          st.textContent='✓ Key valid ('+data.models.length+' models available).';
+        } else {
+          var msg=(data&&data.error&&data.error.message)||'Unexpected response';
+          st.textContent='✗ '+msg;
+        }
       })
-      .catch(function () { st.textContent = '✗ Connection failed. Check key or network.'; });
+      .catch(function(){st.textContent='✗ Connection failed. Check key or network.';});
   }
 
-  /* ── Public API ─────────────────────────────────────────────── */
-  window.OsceSimulator = {
-    boot: boot,
-    openSettings: _openSettings,
-    hasApiKey: _hasApiKey
-  };
+  /* ── Public API ──────────────────────────────────────────────── */
+  window.OsceSimulator = { boot:boot, openSettings:_openSettings, hasApiKey:_hasApiKey };
 
-  if (_cs) {
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', boot);
-    } else {
-      boot();
-    }
-  }
+  /* Auto-boot — works reliably whether loaded via <script src>, document.write,
+     or bundled modules. Falls back silently so test environments are not affected. */
+  try {
+    if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', function(){try{boot()}catch(_){}});
+    else boot();
+  } catch (_) {}
 
   window.__OSCE_TEST_HOOKS = {
-    normalizeConfig: normalizeConfig,
-    normalizeCase: normalizeCase,
-    slugify: slugify,
-    buildAvatarParams: buildAvatarParams,
-    renderAvatar: renderAvatar,
-    buildPatientSysPrompt: buildPatientSysPrompt,
-    buildExaminerSysPrompt: buildExaminerSysPrompt,
-    buildExaminerUserPrompt: buildExaminerUserPrompt,
-    scoreRubric: scoreRubric
+    normalizeConfig:normalizeConfig, normalizeCase:normalizeCase, slugify:slugify,
+    buildAvatarParams:buildAvatarParams, renderAvatar:renderAvatar,
+    buildPatientSysPrompt:buildPatientSysPrompt, buildExaminerSysPrompt:buildExaminerSysPrompt,
+    buildExaminerUserPrompt:buildExaminerUserPrompt, scoreRubric:scoreRubric
   };
 
 })();

@@ -39,6 +39,7 @@ const OSCE_CASE = {
   title: "Wheezy 6-Year-Old Girl",
   specialty: "Pediatrics",
   difficulty: "Foundational",
+  task: "Take a focused paediatric respiratory history from the mother of this 6-year-old girl with wheeze and cough. Assess triggers, atopic history, and red flags.",
   patient: {
     name: "Emma (with her mother)",
     age: 6,
@@ -62,10 +63,25 @@ const OSCE_CASE = {
 </script>
 <script>
 (function () {
-  window.__OSCE_ENGINE_BASE = '../'.repeat(
+  var computedBase = '../'.repeat(
     Math.max(0, location.pathname.split('/').filter(Boolean).length - 2)
   );
-  document.write('<scr' + 'ipt src="' + window.__OSCE_ENGINE_BASE + 'osce-engine.js"><\/scr' + 'ipt>');
+  var candidates = location.protocol === 'file:'
+    ? ['', computedBase, '../', '../../', '../../../']
+    : [computedBase, '', '../', '../../', '../../../'];
+  var tried = {};
+  function loadNext() {
+    var base = candidates.shift();
+    if (base === undefined) return;
+    if (tried[base]) return loadNext();
+    tried[base] = true;
+    window.__OSCE_ENGINE_BASE = base;
+    var script = document.createElement('script');
+    script.src = base + 'osce-engine.js';
+    script.onerror = loadNext;
+    document.body.appendChild(script);
+  }
+  loadNext();
 })();
 </script>
 </body>
