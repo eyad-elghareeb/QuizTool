@@ -111,6 +111,7 @@
       time:       Number(pickField(raw, 'time')) || EXAM_TIME,
       examiner:   raw.examiner || { name: 'Examiner', title: 'Consultant' },
       dataPresented: raw.dataPresented || null,
+      // Image extension: dataPresented.images = [{title, caption, src, alt}]
       questions:  Array.isArray(raw.questions) ? raw.questions : [],
       patient: {
         name:       textOr(pickField(patient, 'name', 'displayName'), 'Patient'),
@@ -362,6 +363,20 @@
       });
       lines.push('');
     }
+    var images = dp.images || [];
+    if (images.length) {
+      lines.push('# CLINICAL IMAGES PROVIDED TO THE STUDENT');
+      lines.push('The student has been shown ' + images.length + ' clinical image(s) as part of this case:');
+      images.forEach(function(im, i) {
+        var parts = [];
+        if (im.title) parts.push(im.title);
+        if (im.caption) parts.push(im.caption);
+        if (im.alt) parts.push(im.alt);
+        lines.push((i+1) + '. ' + (parts.join(' — ') || 'Clinical image'));
+      });
+      lines.push('The image(s) show the actual clinical finding. Refer to them when relevant.');
+      lines.push('');
+    }
     var questions = caseObj.questions || [];
     if (questions.length) {
       lines.push('# EXAMINATION QUESTIONS (ask these in order, adapt naturally)');
@@ -422,6 +437,15 @@
     var dp = caseObj.dataPresented || {};
     var lines = ['CASE: ' + caseObj.title, 'SPECIALTY: ' + caseObj.specialty, ''];
     if (dp.scenario) lines.push('SCENARIO: ' + dp.scenario);
+    if (dp.images && dp.images.length) {
+      lines.push('IMAGES SHOWN TO STUDENT:');
+      dp.images.forEach(function(im, i) {
+        var parts = [];
+        if (im.title) parts.push(im.title);
+        if (im.caption) parts.push(im.caption);
+        lines.push('  ' + (i+1) + '. ' + (parts.join(' — ') || 'Clinical image'));
+      });
+    }
     if (caseObj.questions && caseObj.questions.length) {
       lines.push('', 'QUESTIONS (these were the intended questions):');
       caseObj.questions.forEach(function(q, i) { lines.push((i + 1) + '. ' + q.question + (q.answer ? ' [' + q.answer + ']' : '')); });
@@ -747,6 +771,16 @@
     '.osce-data-table td:last-child{font-family:ui-monospace,monospace;font-weight:600;color:var(--text)}' +
     '.osce-data-title{font-size:.68rem;font-weight:700;color:var(--accent);margin-bottom:.25rem;text-transform:uppercase;letter-spacing:.05em}' +
     '.osce-scenario-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.55rem .65rem;font-size:.76rem;line-height:1.5;margin-bottom:.5rem}' +
+    /* CASE IMAGES (data-interp mode, radiology/visual diagnosis) */
+    '.osce-image-block{margin-bottom:.6rem;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden}' +
+    '.osce-image-block img{display:block;width:100%;height:auto;max-height:340px;object-fit:contain;background:#000;border-bottom:1px solid var(--border)}' +
+    '.osce-image-caption{padding:.4rem .55rem;font-size:.68rem;color:var(--text-muted);line-height:1.4}' +
+    '.osce-image-title{font-size:.65rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;padding:.4rem .55rem .15rem;border-bottom:1px solid var(--border);background:var(--surface)}' +
+    '.osce-images-wrap{margin-bottom:.6rem}' +
+    '.osce-collapse-btn.osce-img-toggle{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:.4rem .6rem;border-radius:var(--radius-sm);font-size:.7rem;font-weight:600;cursor:pointer;width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem}' +
+    '.osce-collapse-btn.osce-img-toggle:hover{border-color:var(--accent)}' +
+    '.osce-collapse-content.osce-images-content{max-height:0;overflow:hidden;transition:max-height .3s ease}' +
+    '.osce-collapse-content.osce-images-content.open{max-height:5000px;overflow:auto}' +
     '.osce-domain-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}' +
     '.osce-domain-item{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:.6rem .75rem}' +
     '.osce-domain-name{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:.16rem}' +
@@ -1452,6 +1486,7 @@
               : ''
             ) +
             (isDataInterp ? _renderDataTables(_activeCase.dataPresented && _activeCase.dataPresented.tables, true) : '') +
+            (isDataInterp ? _renderCaseImages(_activeCase.dataPresented && _activeCase.dataPresented.images, true) : '') +
             '<div class="osce-lobby-stats">' +
               '<div class="osce-stat-card"><div class="osce-stat-val">'+dur+'m</div><div class="osce-stat-lbl">Time</div></div>' +
               '<div class="osce-stat-card"><div class="osce-stat-val">'+MAX_TURNS+'</div><div class="osce-stat-lbl">Questions</div></div>' +
@@ -1504,6 +1539,26 @@
         '<div class="osce-collapse-content" id="osce-lobby-tables">'+content+'</div></div>';
     }
     return content;
+  }
+
+  /* ── Case Images Renderer (data-interp mode) ────────────────── */
+  function _renderCaseImages(images, collapsed) {
+    if (!images || !images.length) return '';
+    var content = images.map(function(im) {
+      var title = im.title ? '<div class="osce-image-title">'+_esc(im.title)+'</div>' : '';
+      var caption = im.caption ? '<div class="osce-image-caption">'+_esc(im.caption)+'</div>' : '';
+      var alt = im.alt || im.caption || im.title || 'Clinical image';
+      var src = im.src || im.url || im.data || '';
+      if (!src) return '';
+      return '<div class="osce-image-block">'+title+'<img src="'+src+'" alt="'+_esc(alt)+'" loading="lazy">'+caption+'</div>';
+    }).join('');
+    if (!content) return '';
+    if (collapsed) {
+      return '<div class="osce-images-wrap">' +
+        '<button class="osce-collapse-btn osce-img-toggle" data-collapse="osce-lobby-images">🖼️ Clinical Images ('+images.length+') <span class="chev">▼</span></button>' +
+        '<div class="osce-collapse-content osce-images-content" id="osce-lobby-images">'+content+'</div></div>';
+    }
+    return '<div class="osce-images-wrap">'+content+'</div>';
   }
 
   /* ── Sidebar drag handle ──────────────────────────────────────── */
@@ -1601,7 +1656,7 @@
                 '<div class="osce-sb-lbl">Clinical Scenario</div>' +
                 '<div class="osce-scenario-box">'+_esc((_activeCase.dataPresented||{}).scenario||'')+'</div>' +
               '</div>' +
-              (_renderDataTables(_activeCase.dataPresented&&_activeCase.dataPresented.tables)||'') +
+              (_renderDataTables(_activeCase.dataPresented&&_activeCase.dataPresented.tables)||'') + (_renderCaseImages(_activeCase.dataPresented&&_activeCase.dataPresented.images)||'') +
               '<div class="osce-sb-card">' +
                 '<div class="osce-sb-lbl">Station Run</div>' +
                 '<div class="osce-pw-row"><span>Questions</span><strong id="osce-q-count">'+prog.turns+' / '+MAX_TURNS+'</strong></div>' +
@@ -1750,7 +1805,7 @@
         (isDataInterp
           ? '<div class="osce-sb-card"><div class="osce-pt-id" style="grid-template-columns:1fr"><div><div class="osce-pt-nm">🧑‍🏫 '+_esc((_activeCase.examiner||{}).name||'Examiner')+'</div><div class="osce-pt-sb">'+_esc((_activeCase.examiner||{}).title||'Consultant')+'</div></div></div></div>' +
             '<div class="osce-sb-card"><div class="osce-sb-lbl">Instructions</div><div class="osce-instr-box"><div class="osce-instr-txt">'+_esc(_activeCase.task)+'</div></div></div>' +
-            (_renderDataTables(_activeCase.dataPresented&&_activeCase.dataPresented.tables)||'')
+            (_renderDataTables(_activeCase.dataPresented&&_activeCase.dataPresented.tables)||'') + (_renderCaseImages(_activeCase.dataPresented&&_activeCase.dataPresented.images)||'')
           : '<div class="osce-sb-card"><div class="osce-pt-id"><div class="osce-av-mini">'+av+'</div><div><div class="osce-pt-nm">'+_esc(p.name)+'</div><div class="osce-pt-sb">'+p.age+' yrs • '+_esc(p.gender)+'</div></div></div></div>' +
             '<div class="osce-sb-card"><div class="osce-sb-lbl">Instructions</div><div class="osce-instr-box"><div class="osce-instr-txt">'+_esc(_activeCase.task)+'</div></div></div>' +
             '<div class="osce-sb-card"><div class="osce-sb-lbl">Consultation Map</div><div class="osce-map-steps">'+_mapHTML()+'</div></div>' +
