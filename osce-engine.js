@@ -1173,7 +1173,7 @@
           }
           if (data.error) { console.error('[GeminiLive] SERVER ERROR:', JSON.stringify(data.error)); return; }
           var sc = data.serverContent;
-          if (!sc) { console.log('[GeminiLive] unknown message:', Object.keys(data)); return; }
+          if (!sc) { return; }
 
           // Capture input transcription (user speech)
           if (sc.inputTranscription && sc.inputTranscription.text) {
