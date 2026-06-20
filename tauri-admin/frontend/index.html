@@ -915,6 +915,44 @@
       background: var(--surface2);
     }
 
+    .osce-images-grid {
+      display: grid;
+      gap: 0.6rem;
+      margin-top: 0.4rem;
+    }
+
+    .osce-image-thumb {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.5rem;
+    }
+
+    .osce-image-thumb img {
+      width: 90px;
+      height: 68px;
+      object-fit: cover;
+      border-radius: 5px;
+      border: 1px solid var(--border);
+      background: #000;
+      flex-shrink: 0;
+    }
+
+    .osce-img-fields {
+      display: grid;
+      gap: 0.3rem;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .osce-img-fields .text-input {
+      font-size: 0.7rem;
+      padding: 0.25rem 0.4rem;
+    }
+
     .option-row {
       display: grid;
       grid-template-columns: auto minmax(0, 1fr);
@@ -3449,6 +3487,27 @@
                 <textarea class="text-area osce-rubric-bonus" data-index="${index}" oninput="syncQuizBankEditor()" style="min-height:60px;">${escapeHtml(bonus.join('\n'))}</textarea>
               </div>
             </div>
+
+            <div style="border-top:1px solid var(--border); margin:0.75rem 0; padding-top:0.75rem;">
+              <div style="font-weight:700; font-size:0.85rem; color:var(--accent); margin-bottom:0.5rem;">Clinical Images <span class="muted" style="font-weight:400;">(shown to student — supports base64, URLs, or data URIs)</span></div>
+              <div class="osce-images-grid" data-index="${index}">
+                ${(caseItem.dataPresented?.images || []).map((img, i) => `
+                  <div class="osce-image-thumb" data-idx="${i}">
+                    <img src="${escapeHtml(img.src)}" alt="${escapeHtml(img.alt || img.caption || img.title || 'Clinical image')}" loading="lazy">
+                    <input type="hidden" class="osce-img-src" data-index="${index}" data-imgidx="${i}" value="${escapeHtml(img.src)}">
+                    <div class="osce-img-fields">
+                      <input class="text-input osce-img-title" data-index="${index}" data-imgidx="${i}" value="${escapeHtml(img.title || '')}" oninput="syncQuizBankEditor()" placeholder="Image title">
+                      <input class="text-input osce-img-caption" data-index="${index}" data-imgidx="${i}" value="${escapeHtml(img.caption || '')}" oninput="syncQuizBankEditor()" placeholder="Caption / description">
+                    </div>
+                    <button class="mini-btn delete" onclick="_osceRemoveImage(${index}, ${i})" title="Remove image">✕</button>
+                  </div>
+                `).join('')}
+              </div>
+              <div style="margin-top:0.5rem;">
+                <button class="mini-btn" onclick="_osceAddImage(${index})">+ Add Image</button>
+              </div>
+              <input type="file" accept="image/*" class="osce-file-input" id="osce-file-${index}" style="display:none">
+            </div>
           </div>
         </div>
       `;
@@ -3658,6 +3717,53 @@
       scheduleValidation();
     }
 
+    function _osceAddImage(index) {
+      const input = document.getElementById('osce-file-' + index);
+      if (!input) return;
+      input.value = '';
+      input.onchange = function () {
+        const files = Array.from(input.files);
+        if (!files.length) return;
+        const questions = state.currentData?.meta?.questions;
+        if (!questions || !questions[index]) return;
+        const caseItem = questions[index];
+        if (!caseItem.dataPresented) caseItem.dataPresented = { images: [] };
+        if (!Array.isArray(caseItem.dataPresented.images)) caseItem.dataPresented.images = [];
+        let loaded = 0;
+        files.forEach(file => {
+          const reader = new FileReader();
+          reader.onload = function (e) {
+            caseItem.dataPresented.images.push({
+              src: e.target.result,
+              title: file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '),
+              caption: '',
+              alt: file.name,
+            });
+            loaded++;
+            if (loaded === files.length) {
+              renderFilePanel();
+              setTab('editor');
+              syncQuizBankEditor();
+            }
+          };
+          reader.readAsDataURL(file);
+        });
+      };
+      input.click();
+    }
+
+    function _osceRemoveImage(caseIdx, imgIdx) {
+      const questions = state.currentData?.meta?.questions;
+      if (!questions || !questions[caseIdx]) return;
+      const caseItem = questions[caseIdx];
+      if (caseItem.dataPresented && Array.isArray(caseItem.dataPresented.images)) {
+        caseItem.dataPresented.images.splice(imgIdx, 1);
+        renderFilePanel();
+        setTab('editor');
+        syncQuizBankEditor();
+      }
+    }
+
     function scheduleValidation() {
       window.clearTimeout(state.validationTimer);
       state.validationTimer = window.setTimeout(() => {
@@ -3699,7 +3805,14 @@
           const hpVitals = card.querySelector('.osce-hp-vitals')?.value || '';
           const rubricMustAsk = (card.querySelector('.osce-rubric-mustask')?.value || '').split('\n').map(s => s.trim()).filter(Boolean);
           const rubricBonus = (card.querySelector('.osce-rubric-bonus')?.value || '').split('\n').map(s => s.trim()).filter(Boolean);
-          return {
+          const imgThumbs = Array.from(card.querySelectorAll('.osce-image-thumb'));
+          const images = imgThumbs.map((thumb) => {
+            const src = thumb.querySelector('.osce-img-src')?.value || '';
+            const title = thumb.querySelector('.osce-img-title')?.value || '';
+            const caption = thumb.querySelector('.osce-img-caption')?.value || '';
+            return { src, title, caption, alt: caption || title || 'Clinical image' };
+          }).filter(img => img.src);
+          const result = {
             id: id || 'case-' + String(index + 1).padStart(3, '0'),
             title: caseTitle,
             specialty,
@@ -3717,6 +3830,10 @@
               bonus: rubricBonus,
             },
           };
+          if (images.length) {
+            result.dataPresented = { images };
+          }
+          return result;
         });
       } else if (isWritten) {
         questions = cards.map((card) => {
@@ -3922,7 +4039,7 @@
       list.push(isFlashcard
         ? { type: 'basic', front: '', back: '', tags: [] }
         : isOsce
-          ? { id: 'case-' + String(list.length + 1).padStart(3, '0'), title: '', specialty: '', difficulty: 'Intermediate', patient: { name: '', age: 0, gender: 'male', avatarSeed: '', opening: '' }, hiddenProfile: { diagnosis: '', keySymptoms: [], redFlags: [], pastHistory: [], vitalSigns: '' }, rubric: { mustAsk: [], bonus: [] } }
+          ? { id: 'case-' + String(list.length + 1).padStart(3, '0'), title: '', specialty: '', difficulty: 'Intermediate', patient: { name: '', age: 0, gender: 'male', avatarSeed: '', opening: '' }, hiddenProfile: { diagnosis: '', keySymptoms: [], redFlags: [], pastHistory: [], vitalSigns: '' }, rubric: { mustAsk: [], bonus: [] }, dataPresented: { images: [] } }
           : isWritten
             ? { id: 'wq-' + Date.now().toString(36) + '-' + (list.length + 1), question: '', modelAnswer: '', rubric: '', explanation: '', tags: [] }
             : { question: '', options: ['', '', '', ''], correct: 0, explanation: '' }
