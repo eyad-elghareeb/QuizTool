@@ -14,8 +14,6 @@
     maxWait:'gemini_max_wait',
     retry:  'gemini_retry_level'
   };
-  var _OK = [0x71,0x75,0x69,0x7A,0x74,0x6F,0x6F,0x6C]; // "quiztool"
-
   /* ── Models ──────────────────────────────────────────────────── */
   var MODELS = [
     ['gemini-3.1-flash-lite', 'Gemini 3.1 Flash-Lite (default, fast & modern)'],
@@ -26,253 +24,35 @@
     ['gemini-2.5-flash',      'Gemini 2.5 Flash (older fallback)']
   ];
 
-  /* ── Obfuscation ──────────────────────────────────────────────── */
-  function _obfuscate(str) {
-    if (!str) return '';
-    var bytes = [];
-    for (var i = 0; i < str.length; i++) {
-      bytes.push(str.charCodeAt(i) ^ _OK[i % _OK.length]);
-    }
-    return btoa(String.fromCharCode.apply(null, bytes));
-  }
+  /* ── API key access (thin wrappers over EngineShared) ────────── */
+  function _readKey()        { return EngineShared.airReadGeminiKey(); }
+  function _writeKey(plain)  { EngineShared.airWriteGeminiKey(plain); }
+  function _hasApiKey()      { return EngineShared.airHasGeminiKey(); }
 
-  function _deobfuscate(encoded) {
-    if (!encoded) return '';
-    try {
-      var bytes = atob(encoded);
-      var result = '';
-      for (var i = 0; i < bytes.length; i++) {
-        result += String.fromCharCode(bytes.charCodeAt(i) ^ _OK[i % _OK.length]);
-      }
-      return result;
-    } catch (_) { return ''; }
-  }
-
-  function _readKey() {
-    var raw = localStorage.getItem(_SK.apiKey);
-    if (!raw) return '';
-    var plain = _deobfuscate(raw);
-    return plain || raw;
-  }
-
-  function _writeKey(plain) {
-    if (plain) {
-      localStorage.setItem(_SK.apiKey, _obfuscate(plain));
-    } else {
-      localStorage.removeItem(_SK.apiKey);
-    }
-  }
-
-  function _getSavedModel() {
-    return localStorage.getItem(_SK.model) || MODELS[0][0];
-  }
-
+  function _getSavedModel()  { return localStorage.getItem(_SK.model) || MODELS[0][0]; }
   function _getModelLabel(id) {
-    for (var i = 0; i < MODELS.length; i++) {
-      if (MODELS[i][0] === id) return MODELS[i][1];
-    }
+    for (var i = 0; i < MODELS.length; i++) { if (MODELS[i][0] === id) return MODELS[i][1]; }
     return id;
   }
+  function _getMaxWaitMs()   { var v = localStorage.getItem(_SK.maxWait) || '15'; var n = parseInt(v, 10); return n > 0 ? n * 1000 : 0; }
+  function _getRetryLevel()  { return localStorage.getItem(_SK.retry) || 'balanced'; }
+  function modelIsAvailable(modelId) { return MODELS.some(function (m) { return m[0] === modelId; }); }
 
-  function _getMaxWaitMs() {
-    var v = localStorage.getItem(_SK.maxWait) || '15';
-    var n = parseInt(v, 10);
-    return n > 0 ? n * 1000 : 0;
-  }
-
-  function _getRetryLevel() {
-    return localStorage.getItem(_SK.retry) || 'balanced';
-  }
-
-  function modelIsAvailable(modelId) {
-    return MODELS.some(function (m) { return m[0] === modelId; });
-  }
-
-  function _hasApiKey() { return !!_readKey(); }
-
-  /* ── Gemini request (simplified, no context caching) ────────── */
-  function extractGeminiText(payload) {
-    var candidate = payload && payload.candidates && payload.candidates[0];
-    var parts = candidate && candidate.content && candidate.content.parts;
-    if (!parts || !parts.length) {
-      var reason = candidate && candidate.finishReason ? ' Finish reason: ' + candidate.finishReason + '.' : '';
-      throw new Error('AI response did not include text.' + reason);
-    }
-    return parts.map(function (p) { return p.text || ''; }).join('\n').trim();
-  }
-
-  function friendlyAiError(error) {
-    return (error && error.message ? error.message : String(error || 'Unknown AI error')).replace(/\s+/g, ' ').trim();
-  }
-
-  function buildGeminiAttempts(model) {
-    var attempts = [{ model: model }];
-    if (model !== MODELS[0][0]) {
-      attempts.push({ model: MODELS[0][0] });
-    }
-    var retryLevel = _getRetryLevel();
-    if (retryLevel === 'fast') return attempts.slice(0, 1);
-    if (retryLevel === 'thorough') return attempts;
-    return attempts.slice(0, 2);
-  }
-
-  function requestGemini(systemPrompt, userPrompt, apiKey, model, cancelSignal) {
-    var maxWaitMs = _getMaxWaitMs();
-    var controller = new AbortController();
-    var timeoutId = null;
-    var cancelCleanup = null;
-
-    if (maxWaitMs > 0) {
-      timeoutId = setTimeout(function () { controller.abort(); }, maxWaitMs);
-    }
-    if (cancelSignal) {
-      cancelCleanup = function () {
-        if (timeoutId) clearTimeout(timeoutId);
-        controller.abort();
-      };
-      cancelSignal.addEventListener('abort', cancelCleanup);
-    }
-
-    var body = {
-      systemInstruction: { parts: [{ text: systemPrompt }] },
-      contents: [{ parts: [{ text: userPrompt }] }],
-      generationConfig: { temperature: 0.3 }
-    };
-
-    return fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-      body: JSON.stringify(body),
-      signal: controller.signal
-    })
-    .then(function (response) {
-      return response.text().then(function (text) {
-        var payload = null;
-        try { payload = text ? JSON.parse(text) : null; } catch (_) {}
-        if (!response.ok) {
-          var msg = payload && payload.error && payload.error.message ? payload.error.message : text;
-          throw new Error('AI ' + model + ' returned HTTP ' + response.status + ': ' + (msg || response.statusText));
-        }
-        return payload;
-      });
-    })
-    .then(function (payload) {
-      return extractGeminiText(payload);
-    })
-    .finally(function () {
-      if (timeoutId) clearTimeout(timeoutId);
-      if (cancelCleanup && cancelSignal) {
-        cancelSignal.removeEventListener('abort', cancelCleanup);
-      }
-    });
-  }
-
+  /* ── Gemini transport (thin wrappers over EngineShared) ──────── */
+  function extractGeminiText(payload)  { return EngineShared.airExtractGeminiText(payload); }
+  function friendlyAiError(error)      { return EngineShared.airFriendlyError(error); }
+  function buildGeminiAttempts(model)  { return EngineShared.airBuildAttempts(model, MODELS, _getRetryLevel()); }
   function tryGeminiRequests(systemPrompt, userPrompt, apiKey, attempts, cancelSignal) {
-    var lastError = null;
-    var primaryModel = attempts.length > 0 ? attempts[0].model : null;
-    var chain = Promise.reject(new Error('AI request did not start.'));
-    attempts.forEach(function (attempt, index) {
-      chain = chain.catch(function () {
-        if (cancelSignal && cancelSignal.aborted) {
-          var err = new DOMException('Request cancelled.', 'AbortError');
-          if (index === attempts.length - 1) throw err;
-          return Promise.reject(err);
-        }
-        return requestGemini(systemPrompt, userPrompt, apiKey, attempt.model, cancelSignal)
-          .then(function (text) {
-            if (index > 0 && primaryModel) {
-              showToast('⚠ ' + _getModelLabel(primaryModel) + ' unavailable, using ' + _getModelLabel(attempt.model) + ' instead');
-            }
-            return text;
-          })
-          .catch(function (error) {
-            lastError = error;
-            if (index === attempts.length - 1) throw lastError;
-            return Promise.reject(error);
-          });
-      });
-    });
-    return chain;
+    return EngineShared.airTryRequests(systemPrompt, [{parts:[{text:userPrompt}]}], apiKey, attempts, cancelSignal, 0.3, _getMaxWaitMs());
   }
-
-  /* ── Multi-turn chat request ──────────────────────────────────── */
   function requestGeminiChat(systemPrompt, contents, apiKey, model, cancelSignal) {
-    var maxWaitMs = _getMaxWaitMs();
-    var controller = new AbortController();
-    var timeoutId = null;
-    var cancelCleanup = null;
-    if (maxWaitMs > 0) {
-      timeoutId = setTimeout(function () { controller.abort(); }, maxWaitMs);
-    }
-    if (cancelSignal) {
-      cancelCleanup = function () {
-        if (timeoutId) clearTimeout(timeoutId);
-        controller.abort();
-      };
-      cancelSignal.addEventListener('abort', cancelCleanup);
-    }
-    var body = {
-      systemInstruction: { parts: [{ text: systemPrompt }] },
-      contents: contents,
-      generationConfig: { temperature: 0.3 }
-    };
-    return fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-      body: JSON.stringify(body),
-      signal: controller.signal
-    })
-    .then(function (response) {
-      return response.text().then(function (text) {
-        var payload = null;
-        try { payload = text ? JSON.parse(text) : null; } catch (_) {}
-        if (!response.ok) {
-          var msg = payload && payload.error && payload.error.message ? payload.error.message : text;
-          throw new Error('AI ' + model + ' returned HTTP ' + response.status + ': ' + (msg || response.statusText));
-        }
-        return payload;
-      });
-    })
-    .then(function (payload) {
-      return extractGeminiText(payload);
-    })
-    .finally(function () {
-      if (timeoutId) clearTimeout(timeoutId);
-      if (cancelCleanup && cancelSignal) {
-        cancelSignal.removeEventListener('abort', cancelCleanup);
-      }
-    });
+    return EngineShared.airRequestGemini(systemPrompt, contents, apiKey, model, cancelSignal, 0.3, _getMaxWaitMs());
   }
-
   function tryGeminiChatRequests(systemPrompt, contents, apiKey, attempts, cancelSignal) {
-    var lastError = null;
-    var primaryModel = attempts.length > 0 ? attempts[0].model : null;
-    var chain = Promise.reject(new Error('AI request did not start.'));
-    attempts.forEach(function (attempt, index) {
-      chain = chain.catch(function () {
-        if (cancelSignal && cancelSignal.aborted) {
-          var err = new DOMException('Request cancelled.', 'AbortError');
-          if (index === attempts.length - 1) throw err;
-          return Promise.reject(err);
-        }
-        return requestGeminiChat(systemPrompt, contents, apiKey, attempt.model, cancelSignal)
-          .then(function (text) {
-            if (index > 0 && primaryModel) {
-              showToast('⚠ ' + _getModelLabel(primaryModel) + ' unavailable, using ' + _getModelLabel(attempt.model) + ' instead');
-            }
-            return text;
-          })
-          .catch(function (error) {
-            lastError = error;
-            if (index === attempts.length - 1) throw lastError;
-            return Promise.reject(error);
-          });
-      });
-    });
-    return chain;
+    return EngineShared.airTryRequests(systemPrompt, contents, apiKey, attempts, cancelSignal, 0.3, _getMaxWaitMs());
   }
 
-  /* ── Markdown renderer (lightweight) ──────────────────────────── */
+  /* ── Markdown renderer (lightweight) 
   function _renderMarkdown(text) {
     if (!text) return '';
     text = String(text);

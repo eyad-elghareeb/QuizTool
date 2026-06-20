@@ -96,7 +96,7 @@
       if (window.SyncEngine) window.SyncEngine.ui.openModal();
     };
     s.onerror = function() {
-      showToast('Error loading sync engine');
+      EngineShared.showToast('Error loading sync engine');
     };
     document.body.appendChild(s);
   };
@@ -159,7 +159,7 @@
     if (window.__searchEngineClose) window.__searchEngineClose();
   };
 
-  // Keyboard shortcut for /
+  // Keyboard shortcut for / key (search) — handled separately from shared shortcuts
   if (_hasQUIZZES) {
     document.addEventListener('keydown', function (e) {
       if ((e.key === '/' || e.key === 'Slash') && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
@@ -169,27 +169,21 @@
           openSearch();
         }
       }
-      if (e.key === 'Escape' && window.__searchEngineState && window.__searchEngineState.open) {
-        window.closeSearch();
-      }
     });
   }
 
-  /* ── Toast Function ───────────────────────────────────────── */
-  var toastTimer;
-  window.showToast = function(msg) {
-    var t = document.getElementById('toast');
-    if (!t) return;
-    clearTimeout(toastTimer);
-    t.innerHTML = '';
-    var msgSpan = document.createElement('span');
-    msgSpan.textContent = msg;
-    t.appendChild(msgSpan);
-    t.classList.add('show');
-    toastTimer = setTimeout(function() {
-      t.classList.remove('show');
-    }, 2200);
-  };
+  // Shared keyboard shortcuts (Escape handling)
+  EngineShared.setupShortcuts({
+    onEscape: function() {
+      if (document.getElementById('clear-tracker-modal').classList.contains('open')) {
+        closeClearTrackerModal();
+      } else if (window.__searchEngineState && window.__searchEngineState.open) {
+        window.closeSearch();
+      }
+    }
+  });
+
+  // showToast is provided by EngineShared
 
   /* ── Inject Animation System v2 ────────────────────────────── */
   var _animStyle = document.createElement('style');
@@ -201,20 +195,17 @@
   document.documentElement.setAttribute('data-theme', savedTheme);
 
   window.toggleTheme = function () {
-    var html = document.documentElement;
-    var isDark = html.getAttribute('data-theme') === 'dark';
-    var newTheme = isDark ? 'light' : 'dark';
-    html.setAttribute('data-theme', newTheme);
-    localStorage.setItem('quiz-theme', newTheme);
-    
-    // Keep the browser chrome (address bar / status bar) in sync.
-    var themeMeta = document.querySelector('meta[name="theme-color"]');
-    if (themeMeta) themeMeta.content = newTheme === 'light' ? '#f3f0eb' : '#0d1117';
-    
-    window.__updateThemeIcon && window.__updateThemeIcon();
+    EngineShared.toggleTheme();
+    // Backward compat: update legacy #theme-toggle element
+    var el = document.getElementById('theme-toggle');
+    if (el) {
+      var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      el.textContent = isDark ? '\u2600' : '\u263E';
+    }
   };
 
   window.__updateThemeIcon = function () {
+    EngineShared.updateThemeIcon();
     var el = document.getElementById('theme-toggle');
     if (!el) return;
     var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -223,8 +214,7 @@
   window.__updateThemeIcon();
 
   /* ── Render quizzes ────────────────────────────────────────── */
-  function escHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-  window.escHtml = escHtml;
+  window.escHtml = EngineShared.escHtml;
 
   window.renderQuizzes = function () {
     var grid = document.getElementById('quiz-grid');
@@ -698,7 +688,7 @@
   window.switchDashScope = function (scope, path) {
     // Prevent tab switching while in review setup — it would destroy the pending review session
     if (_inReviewSetup) {
-      showToast('Finish or cancel the review setup first');
+      EngineShared.showToast('Finish or cancel the review setup first');
       return;
     }
     currentScope = scope;
@@ -1058,7 +1048,7 @@
       
       renderDashboard();
       updateBadge();
-      showToast('🗑 Questions cleared for this section!');
+      EngineShared.showToast('🗑 Questions cleared for this section!');
     } catch (e) {}
   };
   
@@ -1121,7 +1111,7 @@
     });
 
     if (!data || !data.length) {
-      showToast('No questions selected. Please check at least one folder.');
+      EngineShared.showToast('No questions selected. Please check at least one folder.');
       return;
     }
     
@@ -1390,7 +1380,7 @@
       return _selectedQuizzes[d.uid] !== false;
     });
 
-    if (!data.length) { showToast('No tracked questions to export.'); return; }
+    if (!data.length) { EngineShared.showToast('No tracked questions to export.'); return; }
 
     var totalWrong = 0, totalFlagged = 0;
     data.forEach(function (d) { totalWrong += (d.wrong || []).length; totalFlagged += (d.flagged || []).length; });
@@ -1500,7 +1490,7 @@
       var s = document.createElement('script');
       s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
       s.onload = runExport;
-      s.onerror = function () { showToast('Failed to load PDF library'); };
+      s.onerror = function () { EngineShared.showToast('Failed to load PDF library'); };
       document.head.appendChild(s);
     }
   };

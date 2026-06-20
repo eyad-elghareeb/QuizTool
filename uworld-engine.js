@@ -1,45 +1,18 @@
 (function() {
   'use strict';
 
-  // Determine path base
-  var _cs  = document.currentScript;
-  var ENGINE_BASE = _cs ? _cs.src.replace(/[^\/]*$/, '') : (window.__QUIZ_ENGINE_BASE || '');
+  var ENGINE_BASE = EngineShared.ENGINE_BASE || (window.__QUIZ_ENGINE_BASE || '');
 
-  function _addLink(rel, href, extra) {
-    var el = document.createElement('link');
-    el.rel = rel; el.href = href;
-    if (extra) Object.assign(el, extra);
-    document.head.appendChild(el);
-  }
-  function _addMeta(name, content) {
-    var m = document.createElement('meta');
-    m.name = name; m.content = content;
-    document.head.appendChild(m);
-  }
-
-  // Pre-load typography (Inter, Outfit, and JetBrains Mono)
-  _addMeta('theme-color', '#0b0f19');
-  _addLink('preconnect', 'https://fonts.googleapis.com');
-  _addLink('preconnect', 'https://fonts.gstatic.com', {crossOrigin: ''});
-  _addLink('stylesheet', 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-  _addLink('manifest',   ENGINE_BASE + 'manifest.webmanifest');
-  _addLink('icon',       ENGINE_BASE + 'favicon.svg', {type: 'image/svg+xml'});
-  _addLink('apple-touch-icon', ENGINE_BASE + 'favicon.svg');
-
-  // Set background immediately to prevent flash of white
-  var savedTheme = localStorage.getItem('quiz-theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', savedTheme);
-  document.body.style.background = savedTheme === 'light' ? '#f5f7fa' : '#0b0f19';
-  document.body.style.color = savedTheme === 'light' ? '#1a2332' : '#f1f5f9';
-  document.body.style.transition = 'background 0.2s ease, color 0.2s ease';
-  document.body.style.overflow = 'hidden';
+  window.toggleTheme = EngineShared.toggleTheme;
+  window.navigateToIndex = EngineShared.navigateToIndex;
+  window.updateThemeIcon = EngineShared.updateThemeIcon;
 
   /* ═══════════════════════════════════════════
-     STYLESHEET INJECTION (UWorld Skin)
+     STYLESHEET INJECTION (UWorld Skin — overrides)
      ═══════════════════════════════════════════ */
   var _style = document.createElement('style');
   _style.textContent = `
-/* ── Theme variables ────────────────────────────────────────── */
+/* ── UWorld Theme variables (override engine-shared defaults) ── */
 :root {
   --bg: #0b0f19;
   --bg-pane: #0d1117;
@@ -95,29 +68,6 @@
   --wrong-bg: rgba(217, 53, 53, 0.10);
   --flagged: #d97706;
   --flagged-bg: rgba(217, 119, 6, 0.10);
-}
-
-/* ── Global Styles ──────────────────────────────────────────── */
-html, body {
-  margin: 0; padding: 0;
-  height: 100vh; width: 100vw;
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-sans);
-  overflow: hidden;
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-.screen {
-  display: none;
-  width: 100%; height: 100%;
-  position: absolute; top: 0; left: 0;
-  box-sizing: border-box;
-}
-.screen.active {
-  display: flex;
-  flex-direction: column;
 }
 
 /* ── START SCREEN CUSTOM STYLING ───────────────────────────────── */
@@ -846,18 +796,6 @@ html, body {
   opacity: 0.9;
 }
 
-/* Shortcuts styles */
-.shortcut-row {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 0; border-bottom: 1px solid var(--border-dim);
-  font-size: 0.9rem; color: var(--text);
-}
-.shortcut-key {
-  background: var(--surface); border: 1.5px solid var(--border);
-  border-radius: 6px; padding: 2px 8px; font-family: monospace;
-  font-weight: 600; font-size: 0.85rem; color: var(--accent);
-}
-
 /* ── UWORLD LEFT SIDEBAR & HIGH-FIDELITY LAYOUT ────────────────── */
 .cbt-main-layout {
   display: flex;
@@ -980,22 +918,6 @@ html, body {
 .cbt-nav-btn.flagged .marked-triangle {
   display: inline-block !important;
 }
-
-/* ── HIGHLIGHTER STYLING ─────────────────────────────────────── */
-.q-highlight {
-  border-radius: 2px;
-  padding: 1px 0;
-  transition: background 0.15s ease;
-  color: var(--text);
-}
-.q-highlight.hl-color-1 { background: rgba(255,213,79,0.35); }
-.q-highlight.hl-color-2 { background: rgba(129,199,132,0.35); }
-.q-highlight.hl-color-3 { background: rgba(244,143,177,0.35); }
-.q-highlight.hl-color-4 { background: rgba(100,181,246,0.35); }
-[data-theme="light"] .q-highlight.hl-color-1 { background: rgba(255,213,79,0.55); }
-[data-theme="light"] .q-highlight.hl-color-2 { background: rgba(129,199,132,0.5); }
-[data-theme="light"] .q-highlight.hl-color-3 { background: rgba(244,143,177,0.5); }
-[data-theme="light"] .q-highlight.hl-color-4 { background: rgba(100,181,246,0.5); }
 
 /* ── LIGHT MODE OVERRIDES: Drawers ────────────────────────────────── */
 [data-theme="light"] .cbt-drawer { box-shadow: -10px 0 30px rgba(0,0,0,0.08); }
@@ -1332,78 +1254,10 @@ html, body {
 .btn-restart.btn-secondary:hover {
   background: var(--surface2); border-color: var(--accent);
 }
-
-/* Modals */
-.modal-overlay {
-  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-  background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
-  z-index: 10000; display: none; align-items: center; justify-content: center;
-  opacity: 0; transition: opacity 0.2s ease;
-}
-.modal-overlay.open {
-  display: flex; opacity: 1;
-}
-.modal {
-  background: var(--bg-explanation); border: 1.5px solid var(--border);
-  border-radius: 16px; padding: 28px; max-width: 420px; width: 90%;
-  box-sizing: border-box; text-align: center;
-  transform: translateY(20px); transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-.modal-overlay.open .modal {
-  transform: translateY(0);
-}
-.modal h3 {
-  font-family: var(--font-display); font-size: 1.35rem; margin: 0 0 12px;
-  color: var(--text);
-}
-.modal p {
-  color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; margin: 0 0 24px;
-}
-.modal-actions {
-  display: flex; gap: 12px;
-}
-.btn-cancel, .btn-confirm {
-  flex-grow: 1; border: none; border-radius: 8px; padding: 10px;
-  font-weight: 700; cursor: pointer; font-size: 0.95rem;
-  transition: all var(--transition);
-}
-.btn-cancel {
-  background: var(--surface); color: var(--text); border: 1.5px solid var(--border);
-}
-.btn-cancel:hover {
-  background: var(--surface2);
-}
-.btn-confirm {
-  background: var(--accent); color: #ffffff;
-}
-.btn-confirm:hover {
-  opacity: 0.9;
-}
-.btn-confirm.danger {
-  background: var(--wrong); color: #ffffff;
-}
-
-/* Toast */
-.toast {
-  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
-  background: var(--surface); border: 1.5px solid var(--border); color: var(--text);
-  border-radius: 10px; padding: 12px 20px; display: flex; align-items: center;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 20000; font-size: 0.9rem;
-  font-weight: 500; min-width: 280px; opacity: 0; pointer-events: none;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-[data-theme="light"] .toast {
-  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-}
-.toast.show {
-  transform: translateX(-50%) translateY(0); opacity: 1; pointer-events: auto;
-}
-
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
 }
-/* fadeUp defined in animation system below */
 `;
   document.head.appendChild(_style);
 
@@ -2390,7 +2244,7 @@ html, body {
         return;
       }
       
-      showToast("📂 Restore previous block progress?", [
+      EngineShared.showToast("📂 Restore previous block progress?", [
         {
           label: "Restore",
           primary: true,
@@ -2550,7 +2404,7 @@ html, body {
       const hlBtn = document.getElementById('highlighter-toggle');
       if (hlBtn) hlBtn.classList.add('active');
       if (!state.submitted) renderQuestion(state.current);
-      showToast('🖍 Highlighter ON');
+      EngineShared.showToast('🖍 Highlighter ON');
     } else {
       _togglePicker();
     }
@@ -2564,7 +2418,7 @@ html, body {
     if (hlBtn) hlBtn.classList.remove('active');
     _closeAllPickers();
     if (!state.submitted) renderQuestion(state.current);
-    showToast('Highlighter OFF');
+    EngineShared.showToast('Highlighter OFF');
   };
 
   function _togglePicker() {
@@ -2746,7 +2600,7 @@ html, body {
     delete _hlCache[gIdx];
     renderQuestion(state.current);
     saveProgress();
-    showToast('Highlights cleared');
+    EngineShared.showToast('Highlights cleared');
   };
 
   // toggleStrikethrough: uses global index directly (called from _hlInit)
@@ -2885,7 +2739,7 @@ html, body {
     closeBankResetModal();
     localStorage.removeItem(BANK_PROGRESS_KEY);
     updateStartScreenStats();
-    showToast('🔄 Coverage history reset!');
+    EngineShared.showToast('🔄 Coverage history reset!');
   };
 
   function updateStartScreenStats() {
@@ -2938,7 +2792,7 @@ html, body {
       progress.shownIndices = [];
       unshown = [...allIndices];
       saveBankProgress(progress);
-      showToast('🎉 Full cycle complete! Starting fresh — cycle ' + (progress.cycleCount + 1));
+      EngineShared.showToast('🎉 Full cycle complete! Starting fresh — cycle ' + (progress.cycleCount + 1));
       picked = order === 'sequential'
         ? unshown.sort((a, b) => a - b).slice(0, n)
         : shuffle(unshown).slice(0, n);
@@ -3019,7 +2873,7 @@ html, body {
 
   /* ─── QUOTA ERROR HELPER ───────────────────────────────────────── */
   function handleQuotaError(contextMsg) {
-    showToast(contextMsg, [
+    EngineShared.showToast(contextMsg, [
       { label: 'Go to Menu', primary: true, onClick: navigateToIndex }
     ]);
   }
@@ -3101,7 +2955,7 @@ html, body {
           if (state.timerSecs <= 0) {
             state.timerSecs = 0;
             stopTimer();
-            showToast("⏰ Time expired! Submitting...");
+            EngineShared.showToast("⏰ Time expired! Submitting...");
             submitTimeout = setTimeout(confirmSubmit, 1500);
           }
         }
@@ -3132,7 +2986,7 @@ html, body {
       btn.textContent = 'Resume';
       btn.style.background = 'var(--correct-bg)';
       stopTimer();
-      showToast('⏸ Simulated exam paused');
+      EngineShared.showToast('⏸ Simulated exam paused');
     }
   };
 
@@ -3306,7 +3160,7 @@ html, body {
     if (state.strikethrough[gIdx] && state.strikethrough[gIdx][optIdx]) return;
 
     state.answers[qIdx] = optIdx;
-    debounceSaveProgress();
+    EngineShared.debounceSave(saveProgress);
 
     updateNavGrid(qIdx);
     updateNavStats();
@@ -3341,15 +3195,9 @@ html, body {
       delete state.answers[qIdx];
     }
 
-    debounceSaveProgress();
+    EngineShared.debounceSave(saveProgress);
     renderQuestion(qIdx);
   };
-
-  let saveProgressTimeout = null;
-  function debounceSaveProgress() {
-    if (saveProgressTimeout) clearTimeout(saveProgressTimeout);
-    saveProgressTimeout = setTimeout(saveProgress, 500);
-  }
 
   /* ─── NAVIGATION UTILITIES ───────────────────────────────────── */
   window.goToPrev = function() {
@@ -3374,9 +3222,9 @@ html, body {
 
     updateNavGrid(idx);
     updateNavStats();
-    debounceSaveProgress();
+    EngineShared.debounceSave(saveProgress);
     
-    showToast(state.flagged[idx] ? '⚑ Item bookmarked' : 'Item bookmark removed');
+    EngineShared.showToast(state.flagged[idx] ? '⚑ Item bookmarked' : 'Item bookmark removed');
   };
 
   /* ─── ZOOM SCALE SYSTEM ───────────────────────────────────────── */
@@ -3400,7 +3248,7 @@ html, body {
       if (zoomCtrls[2]) zoomCtrls[2].classList.add('active');
     }
 
-    debounceSaveProgress();
+    EngineShared.debounceSave(saveProgress);
     setTimeout(updateLineNumbers, 50);
   };
 
@@ -3495,7 +3343,7 @@ html, body {
     const text = document.getElementById('notepad-text').value;
     state.notepadText = text;
     localStorage.setItem(`uworld_notepad_${BANK_CONFIG.uid}`, text);
-    showToast('💾 Scratchpad note cached successfully');
+    EngineShared.showToast('💾 Scratchpad note cached successfully');
   };
 
   /* ─── SIDEBAR QUESTION NAVIGATION GRID ────────────────────────── */
@@ -3558,7 +3406,16 @@ html, body {
     
     closeModal();
     stopTimer();
-    saveTrackerData();
+    EngineTracker.saveTrackerData({
+      config: window.BANK_CONFIG || window.QUIZ_CONFIG,
+      questions: window.SESSION_QUESTIONS || window.QUESTION_BANK,
+      state: state,
+      keys: KEYS,
+      sessionIndices: typeof SESSION_QUESTION_INDICES !== 'undefined' ? SESSION_QUESTION_INDICES : null,
+      questionBank: typeof QUESTION_BANK !== 'undefined' ? QUESTION_BANK : null,
+      onNavigate: EngineShared.navigateToIndex,
+      onToast: EngineShared.showToast
+    });
     clearProgress();
 
     buildResults();
@@ -3701,77 +3558,6 @@ html, body {
     showScreen('start-screen');
   };
 
-  /* ─── DYNAMIC THEME SYSTEM (REVERSE COLOR) ───────────────────── */
-  window.toggleTheme = function() {
-    const html = document.documentElement;
-    const newTheme = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-    html.setAttribute('data-theme', newTheme);
-    localStorage.setItem('quiz-theme', newTheme);
-    
-    // Keep the browser chrome (address bar / status bar) in sync.
-    const themeMeta = document.querySelector('meta[name="theme-color"]');
-    if (themeMeta) themeMeta.content = newTheme === 'light' ? '#f3f0eb' : '#0d1117';
-    
-    updateThemeIcon();
-  };
-  
-  function updateThemeIcon() {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    document.querySelectorAll('.theme-toggle-btn').forEach(b => {
-      b.textContent = isDark ? '☀' : '☾';
-    });
-  }
-
-  window.navigateToIndex = function(event) {
-    if (event) event.preventDefault();
-    window.location.href = 'index.html';
-  };
-
-  /* ─── NOTIFICATION TOAST WIDGET ──────────────────────────────── */
-  let toastTimer;
-  window.showToast = function(msg, actions = []) {
-    const t = document.getElementById('toast');
-    t.innerHTML = '';
-
-    const msgSpan = document.createElement('span');
-    msgSpan.textContent = msg;
-    msgSpan.style.flex = '1';
-    t.appendChild(msgSpan);
-
-    if (actions.length > 0) {
-      const container = document.createElement('div');
-      container.style.display = 'flex';
-      container.style.gap = '0.5rem';
-      container.style.marginLeft = '0.75rem';
-      actions.forEach(act => {
-        const btn = document.createElement('button');
-        btn.textContent = act.label;
-        btn.style.cssText = `
-          padding: 0.35rem 0.75rem;
-          border-radius: 6px;
-          border: 1px solid var(--border);
-          background: ${act.primary ? 'var(--accent)' : 'var(--surface)'};
-          color: ${act.primary ? '#ffffff' : 'var(--text)'};
-          font-size: 0.75rem;
-          font-weight: 700;
-          cursor: pointer;
-        `;
-        btn.onclick = () => {
-          act.onClick();
-          t.classList.remove('show');
-        };
-        container.appendChild(btn);
-      });
-      t.appendChild(container);
-    }
-
-    t.classList.add('show');
-    clearTimeout(toastTimer);
-    if (actions.length === 0) {
-      toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
-    }
-  };
-
   /* ─── PDF EXPORTS ────────────────────────────────────────────── */
   window.onExportFilterChange = function(checkbox) {
     const allCb = document.querySelector('input[name="export-all"]');
@@ -3810,7 +3596,7 @@ html, body {
       else if (wrongCb.checked && flaggedCb.checked) filter = 'wrong+flagged';
     }
 
-    showToast('Compiling high-quality PDF report...');
+    EngineShared.showToast('Compiling high-quality PDF report...');
 
     const title = BANK_CONFIG.title;
     const pct = document.getElementById('res-pct').textContent;
@@ -3893,7 +3679,7 @@ html, body {
 
     function runExport() {
       if (typeof html2pdf === 'undefined') {
-        showToast('PDF library loading failed. Try reloading.');
+        EngineShared.showToast('PDF library loading failed. Try reloading.');
         return;
       }
       html2pdf().set(opt).from(container.children[0]).save();
@@ -3909,327 +3695,49 @@ html, body {
     }
   };
 
-  /* ─── TRACKER HISTORY SAVER ──────────────────────────────────── */
-  /* ── Path-based group resolution ── */
-  var _rootName = '';
-  try {
-    _rootName = new URL(ENGINE_BASE || '', location.href).pathname
-      .replace(/\/$/, '').replace(/^\//, '');
-  } catch (e) {}
-
-  /* Normalize a stored d.path by stripping the project root prefix */
-  function _normStoredPath(p) {
-    if (!p) return '';
-    var s = p.replace(/^\//, '');
-    if (_rootName && s.indexOf(_rootName + '/') === 0) {
-      s = s.substring(_rootName.length + 1);
-    } else if (_rootName && s === _rootName) {
-      s = '';
-    }
-    return s;
-  }
-
-  /* Get folder segments RELATIVE to ENGINE_BASE (project root) */
-  function getFolderSegments(path) {
-    var cleaned = _normStoredPath(path.replace(/\/[^/]*$/, ''));
-    var parts = cleaned.split('/').filter(Boolean);
-    var segments = [];
-    for (var i = 0; i < parts.length; i++) {
-      segments.push(parts.slice(0, i + 1).join('/'));
-    }
-    return segments;
-  }
-
-  var _folderTitleCache = {};
-  var _eagerFolderTitle = null;
-
-  function fetchAndCacheFolderTitle(folderPath) {
-    if (!folderPath || _folderTitleCache[folderPath]) {
-      return Promise.resolve(_folderTitleCache[folderPath] || null);
-    }
-    var rootAbs = '';
-    try { rootAbs = new URL(ENGINE_BASE || '', location.href).href; } catch(e) { rootAbs = ''; }
-    var indexUrl = rootAbs + folderPath + 'index.html';
-    return fetch(indexUrl)
-      .then(function(resp) { return resp.ok ? resp.text() : null; })
-      .then(function(html) {
-        if (!html) return null;
-        var match = html.match(/<title>([^<]+)<\/title>/i);
-        if (match) {
-          var rawTitle = match[1].trim();
-          var cleaned = rawTitle.replace(/^(?:QuizTool|MU61\s+Quiz|Mansoura\s+MCQ)\s*[-–—]\s*/i, '').trim();
-          if (cleaned) {
-            _folderTitleCache[folderPath] = cleaned;
-            _eagerFolderTitle = rawTitle;
-          }
-          return rawTitle;
-        }
-        return null;
-      })
-      .catch(function() { return null; });
-  }
-
-  // Eagerly fetch folder title at page load so it is available offline at submit time
-  (function() {
-    try {
-      var fp = computeFolderPath();
-      if (fp) fetchAndCacheFolderTitle(fp).then(function(t) { if (t) _eagerFolderTitle = t; });
-    } catch(e) {}
-  })();
-
-  window.saveTrackerData = function() {
-    try {
-      var cfg = getConfig();
-      var qs = SESSION_QUESTIONS;
-      if (!qs.length) return;
-
-      var wrongQs = [], flaggedQs = [];
-      var currentSessionIndices = {};
-      
-      qs.forEach(function(q, i) {
-        var ans = state.answers[i];
-        var isWrong = ans !== undefined && ans !== q.correct;
-        var isFlagged = !!state.flagged[i];
-        var qIdx = SESSION_QUESTION_INDICES[i];
-        
-        currentSessionIndices[qIdx] = true;
-
-        var qData = {
-          idx: qIdx,
-          text: q.question,
-          yourAnswer: ans !== undefined ? KEYS[ans] + '. ' + q.options[ans] : 'Not answered',
-          correctAnswer: KEYS[q.correct] + '. ' + q.options[q.correct],
-          explanation: q.explanation || ''
-        };
-        if (isWrong) wrongQs.push(qData);
-        if (isFlagged) flaggedQs.push(qData);
-      });
-
-      var storageKey = getStorageKey(cfg.uid || location.pathname);
-      var existingRaw = localStorage.getItem(storageKey);
-      var existingData = null;
-      if (existingRaw) {
-        try { existingData = JSON.parse(existingRaw); } catch (e) {}
+  /* ─── KEYBOARD SHORTCUTS ─────────────────────────────────────── */
+  EngineShared.setupShortcuts({
+    isActive: function() { return document.getElementById('quiz-screen')?.classList.contains('active') && !state.submitted; },
+    onPrev: function() { if (state.current > 0) goToPrev(); },
+    onNext: function() { if (state.current < SESSION_QUESTIONS.length - 1) goToNext(); },
+    onFlag: function() { toggleFlagCurrent(); },
+    onSelect: function(n) { if (!state.isHighlighterMode) selectOptionCard(state.current, n - 1); },
+    onSubmit: function() { attemptSubmit(); },
+    onEscape: function() { closeModal(); closeResetModal(); closeBankResetModal(); },
+    onHelp: function() { toggleKbHelp ? toggleKbHelp() : null; },
+    onToggleHighlighter: function() { toggleHighlighterMode(); },
+    onStrikethrough: function() {
+      if (_hoveredOption >= 0) {
+        toggleCardStrikethrough(state.current, _hoveredOption);
       }
-
-      if (existingData) {
-        var oldWrong = (existingData.wrong || []).filter(wq => !currentSessionIndices[wq.idx]);
-        var oldFlagged = (existingData.flagged || []).filter(fq => !currentSessionIndices[fq.idx]);
-        wrongQs = oldWrong.concat(wrongQs);
-        flaggedQs = oldFlagged.concat(flaggedQs);
-      }
-
-      if (!wrongQs.length && !flaggedQs.length) {
-        localStorage.removeItem(storageKey);
-        var keys = getSafeTrackerKeys();
-        localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(keys.filter(k => k !== (cfg.uid || location.pathname))));
-        updateDashboardBadge();
-        return;
-      }
-
-      var folderPath = computeFolderPath();
-
-      var data = {
-        uid: cfg.uid || location.pathname,
-        title: cfg.title || document.title,
-        timestamp: Date.now(),
-        totalQs: QUESTION_BANK.length,
-        wrongCount: wrongQs.length,
-        flaggedCount: flaggedQs.length,
-        wrong: wrongQs,
-        flagged: flaggedQs,
-        path: location.pathname,
-        folderPath: folderPath
-      };
-
-      // Use eagerly-pre-fetched title (available even offline) with fetch fallback
-      var cachedTitle = _eagerFolderTitle || _folderTitleCache[folderPath] || null;
-      function _persistTracker(folderTitle) {
-        if (folderTitle) data.folderTitle = folderTitle;
-        try {
-          localStorage.setItem(getStorageKey(data.uid), JSON.stringify(data));
-          var keys = getSafeTrackerKeys();
-          if (keys.indexOf(data.uid) === -1) { keys.push(data.uid); }
-          localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(keys));
-          updateDashboardBadge();
-        } catch (e) {
-          if (e.name === 'QuotaExceededError' || e.code === 22) {
-            handleQuotaError('Storage full! Clear tracker data to continue tracking mistakes.');
-          }
-        }
-      }
-      if (cachedTitle) {
-        _persistTracker(cachedTitle);
-      } else {
-        fetchAndCacheFolderTitle(folderPath).then(_persistTracker).catch(function() { _persistTracker(null); });
-      }
-    } catch(e) {
-      console.error('Tracker data save error:', e);
     }
-  };
+  });
 
-  /* ── READ — fetch tracker entries ── */
-  function getAllTrackerData() {
-    try {
-      var keys = getSafeTrackerKeys();
-      var results = [];
-      keys.forEach(function(uid) {
-        var raw = localStorage.getItem(getStorageKey(uid));
-        if (raw) try { results.push(JSON.parse(raw)); } catch(e) {}
-      });
-      return results;
-    } catch(e) { return []; }
-  }
-
-  function getTrackerDataForScope(scope, scopePath) {
-    var all = getAllTrackerData();
-    var cfg = getConfig();
-
-    if (scope === 'quiz') {
-      return all.filter(function(d) { return d.uid === cfg.uid; });
-    }
-
-    if (scope === 'folder' && scopePath) {
-      var target = scopePath.replace(/^\/|\/$/g, '');
-      return all.filter(function(d) {
-        var fp = (d.folderPath || '').replace(/^\/|\/$/g, '');
-        var dp = _normStoredPath(d.path);
-        var dpFolder = '';
-        if (dp) {
-          var dpParts = dp.split('/');
-          if (dpParts.length > 1) {
-            dpFolder = dpParts.slice(0, -1).join('/').replace(/^\/|\/$/g, '');
-          }
-        }
-        return (fp && (fp === target || fp.indexOf(target + '/') === 0))
-            || (dpFolder && (dpFolder === target || dpFolder.indexOf(target + '/') === 0));
-      });
-    }
-
-    return all;
-  }
-
-  /* ── REMOVE / CLEAR ── */
-  window.removeTrackerItem = function(uid, qIdx) {
-    try {
-      var raw = localStorage.getItem(getStorageKey(uid));
-      if (!raw) return;
-      var data = JSON.parse(raw);
-      data.wrong   = (data.wrong   || []).filter(function(q) { return q.idx !== qIdx; });
-      data.flagged = (data.flagged || []).filter(function(q) { return q.idx !== qIdx; });
-      data.wrongCount   = data.wrong.length;
-      data.flaggedCount = data.flagged.length;
-
-      if (!data.wrong.length && !data.flagged.length) {
-        localStorage.removeItem(getStorageKey(uid));
-        var keys = getSafeTrackerKeys();
-        localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(keys.filter(function(k) { return k !== uid; })));
-      } else {
-        localStorage.setItem(getStorageKey(uid), JSON.stringify(data));
-      }
-      updateDashboardBadge();
-    } catch(e) { console.error('Remove tracker item error:', e); }
-  };
-
-  window.clearAllTrackerData = function() {
-    if (!confirm('Clear all tracked questions? This cannot be undone.')) return;
-    try {
-      var keys = getSafeTrackerKeys();
-      keys.forEach(function(uid) { localStorage.removeItem(getStorageKey(uid)); });
-      localStorage.removeItem(KEYS_LIST_KEY);
-      updateDashboardBadge();
-    } catch(e) { console.error('Clear tracker error:', e); }
-  };
-
-  function getConfig() {
-    return (typeof BANK_CONFIG !== 'undefined' && BANK_CONFIG) || { uid: location.pathname, title: document.title };
-  }
-  function getSafeTrackerKeys() {
-    try {
-      var raw = localStorage.getItem(KEYS_LIST_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch(e) {
-      console.warn('Recovered corrupted tracker keys list');
-      return [];
-    }
-  }
-  function getStorageKey(uid) {
-    return STORAGE_PREFIX + TRACKER_VERSION + '_' + uid;
-  }
-  function computeFolderPath() {
-    try {
-      var rootUrl = ENGINE_BASE || '';
-      var rootAbs = new URL(rootUrl, location.href).href;
-      var pageAbs = location.href;
-      var relative = pageAbs.substring(rootAbs.length);
-      var folderPath = relative.replace(/[^/]*$/, '');
-      return folderPath || '';
-    } catch(e) { return ''; }
-  }
-  function updateDashboardBadge() {
-    // Standard index-engine dashboard updater placeholder
-  }
-
-  /* ─── DRAG AND KEYBOARD LISTENER SYSTEMS ────────────────────── */
+  // Highlighter color keys (1-4) and calculator toggle (C)
   document.addEventListener('keydown', function(e) {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-    const quizActive = document.getElementById('quiz-screen').classList.contains('active');
+    var quizActive = document.getElementById('quiz-screen')?.classList.contains('active');
     if (!quizActive || state.submitted) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
 
-    // H or h: Toggle highlighter mode
-    if ((e.key === 'h' || e.key === 'H') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    if (state.isHighlighterMode && e.key >= '1' && e.key <= '4') {
       e.preventDefault();
-      toggleHighlighterMode();
+      _hlLastColor = parseInt(e.key);
+      _syncPickerUI();
+      var sel = window.getSelection();
+      if (sel && !sel.isCollapsed) hlApplyColor(_hlLastColor);
       return;
     }
-
-    // Highlighter mode active key handlers
-    if (state.isHighlighterMode && !e.ctrlKey && !e.metaKey && !e.altKey) {
-      // 1-4: Highlight color picker
-      if (e.key >= '1' && e.key <= '4') {
-        e.preventDefault();
-        var colorNum = parseInt(e.key);
-        _hlLastColor = colorNum;
-        _syncPickerUI();
-        var sel = window.getSelection();
-        if (sel && !sel.isCollapsed) {
-          hlApplyColor(colorNum);
-        }
-        return;
-      }
-      // S or s: Option Card Strikethrough
-      if (e.key === 's' || e.key === 'S') {
-        e.preventDefault();
-        if (_hoveredOption >= 0) {
-          toggleCardStrikethrough(state.current, _hoveredOption);
-        }
-        return;
-      }
-    } else {
-      // Normal mode: 1-8 option selection
-      if (e.key >= '1' && e.key <= '8' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        e.preventDefault();
-        const index = parseInt(e.key) - 1;
-        const card = document.querySelector(`.option-card[data-opt-idx="${index}"]`);
-        if (card) {
-          selectOptionCard(state.current, index);
-        }
-        return;
-      }
-    }
-
-    // F or f: Bookmark current question
-    if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    if (!state.isHighlighterMode && e.key >= '5' && e.key <= '8') {
       e.preventDefault();
-      toggleFlagCurrent();
+      var idx = parseInt(e.key) - 1;
+      var card = document.querySelector('.option-card[data-opt-idx="' + idx + '"]');
+      if (card) selectOptionCard(state.current, idx);
       return;
     }
-
-    // C or c: Toggle calculator
     if ((e.key === 'c' || e.key === 'C') && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault();
       toggleCalculator();
-      return;
     }
   });
 
@@ -4257,7 +3765,7 @@ html, body {
     updateStartScreenStats();
 
     // Theme icon sync (theme init already done at IIFE top to prevent FOUC)
-    updateThemeIcon();
+    window.updateThemeIcon();
 
     // Wire up mode & order radio buttons to apply visual selection classes
     function applyModeSelection(name, selectedClass) {

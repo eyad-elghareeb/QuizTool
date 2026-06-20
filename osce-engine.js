@@ -44,24 +44,9 @@
     ['gemini-live-2.5-flash-preview-native-audio-09-2025', 'Gemini 2.5 Flash Live — native audio preview']
   ];
 
-  /* ── Obfuscation ─────────────────────────────────────────────── */
-  var _OK = [0x71, 0x75, 0x69, 0x7A, 0x74, 0x6F, 0x6F, 0x6C];
-  function _obfuscate(str) {
-    if (!str) return '';
-    var bytes = [];
-    for (var i = 0; i < str.length; i++) bytes.push(str.charCodeAt(i) ^ _OK[i % _OK.length]);
-    return btoa(String.fromCharCode.apply(null, bytes));
-  }
-  function _deobfuscate(encoded) {
-    if (!encoded) return '';
-    try {
-      var bytes = atob(encoded); var result = '';
-      for (var i = 0; i < bytes.length; i++) result += String.fromCharCode(bytes.charCodeAt(i) ^ _OK[i % _OK.length]);
-      return result;
-    } catch (_) { return ''; }
-  }
-  function _readKey()        { var r = localStorage.getItem(STORAGE.apiKey); if (!r) return ''; return _deobfuscate(r) || r; }
-  function _hasApiKey()      { return !!_readKey(); }
+  /* ── API key access (thin wrappers over EngineShared) ────────── */
+  function _readKey()        { return EngineShared.airReadGeminiKey(); }
+  function _hasApiKey()      { return EngineShared.airHasGeminiKey(); }
   function _getSavedModel()  { return localStorage.getItem(STORAGE.model) || MODELS[0][0]; }
   function _getMaxWaitMs()   { var v = localStorage.getItem(STORAGE.maxWait) || '15'; var n = parseInt(v, 10); return n > 0 ? n * 1000 : 0; }
   function _getRetryLevel()  { return localStorage.getItem(STORAGE.retryLevel) || 'balanced'; }
@@ -479,51 +464,13 @@
   }
 
   /* ================================================================
-     GEMINI TRANSPORT
+     GEMINI TRANSPORT (thin wrappers over EngineShared)
      ================================================================ */
-  function _extractGeminiText(payload) {
-    var cand = payload&&payload.candidates&&payload.candidates[0];
-    var parts = cand&&cand.content&&cand.content.parts;
-    if (!parts||!parts.length) { var reason = cand&&cand.finishReason?' Finish reason: '+cand.finishReason+'.':''; throw new Error('AI response did not include text.'+reason); }
-    return parts.map(function (p) { return p.text||''; }).join('\n').trim();
-  }
-  function _friendlyAiError(err) { return (err&&err.message?err.message:String(err||'Unknown AI error')).replace(/\s+/g,' ').trim(); }
   function _buildAttempts(model) {
-    var attempts = [{model:model}];
-    if (model!==MODELS[0][0]) attempts.push({model:MODELS[0][0]});
-    var lvl = _getRetryLevel();
-    if (lvl==='fast') return attempts.slice(0,1);
-    if (lvl==='thorough') return attempts;
-    return attempts.slice(0,2);
-  }
-  function _requestGemini(systemPrompt, contents, apiKey, model, cancelSignal) {
-    var maxWait = _getMaxWaitMs(); var controller = new AbortController(); var timeoutId = null, cleanup = null;
-    if (maxWait>0) timeoutId = setTimeout(function () { controller.abort(); }, maxWait);
-    if (cancelSignal) { cleanup = function () { if (timeoutId) clearTimeout(timeoutId); controller.abort(); }; cancelSignal.addEventListener('abort', cleanup); }
-    var body = { systemInstruction:{parts:[{text:systemPrompt}]}, contents:contents, generationConfig:{temperature:0.4} };
-    return fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent', {
-      method:'POST', headers:{'Content-Type':'application/json','x-goog-api-key':apiKey}, body:JSON.stringify(body), signal:controller.signal
-    }).then(function (r) { return r.text().then(function (text) {
-        var payload = null; try { payload = text?JSON.parse(text):null; } catch (_) {}
-        if (!r.ok) { var msg=payload&&payload.error&&payload.error.message?payload.error.message:text; throw new Error('AI '+model+' returned HTTP '+r.status+': '+(msg||r.statusText)); }
-        return payload;
-    }); }).then(_extractGeminiText).finally(function () {
-      if (timeoutId) clearTimeout(timeoutId);
-      if (cleanup&&cancelSignal) cancelSignal.removeEventListener('abort', cleanup);
-    });
+    return EngineShared.airBuildAttempts(model, MODELS, _getRetryLevel());
   }
   function _tryRequests(systemPrompt, contents, apiKey, attempts, cancelSignal) {
-    var lastError = null, primary = attempts.length?attempts[0].model:null;
-    var chain = Promise.reject(new Error('AI request did not start.'));
-    attempts.forEach(function (att, i) {
-      chain = chain.catch(function () {
-        if (cancelSignal&&cancelSignal.aborted) { var err=new DOMException('Request cancelled.','AbortError'); if(i===attempts.length-1) throw err; return Promise.reject(err); }
-        return _requestGemini(systemPrompt,contents,apiKey,att.model,cancelSignal)
-          .then(function (text) { if(i>0&&primary) showToast('⚠ '+_getModelLabel(primary)+' unavailable, using '+_getModelLabel(att.model)); return text; })
-          .catch(function (e) { lastError=e; if(i===attempts.length-1) throw lastError; return Promise.reject(e); });
-      });
-    });
-    return chain;
+    return EngineShared.airTryRequests(systemPrompt, contents, apiKey, attempts, cancelSignal, 0.4, _getMaxWaitMs());
   }
   function askPatient(caseObj, transcript, cancelSignal) {
     var apiKey=_readKey(), model=_getSavedModel(); if(!modelIsAvailable(model)) model=MODELS[0][0];
@@ -2265,12 +2212,12 @@
 
   function _saveKey() {
     var v=document.getElementById('osce-key-input').value.trim();
-    localStorage.setItem(STORAGE.apiKey,v?_obfuscate(v):'');
+    EngineShared.airWriteGeminiKey(v);
     var st=document.getElementById('settings-status'); if(st)st.textContent=v?'✓ API key saved.':'✗ API key cleared.';
     _closeSettings();
   }
   function _clearKey() {
-    localStorage.removeItem(STORAGE.apiKey);
+    EngineShared.airWriteGeminiKey('');
     var ki=document.getElementById('osce-key-input'); if(ki)ki.value='';
     var st=document.getElementById('settings-status'); if(st)st.textContent='✗ API key cleared.';
   }
