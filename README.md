@@ -104,13 +104,10 @@ cd tauri && cargo tauri build
 # Or run in dev mode: cargo tauri dev
 ```
 
-**Using the Python generator (deprecated):**
+**Using the recommended Tauri generator:**
 ```bash
-python generate_project.py
-# Opens http://localhost:5500
+cd tauri && cargo tauri dev
 ```
-
-Both produce deployable ZIPs with engines, SW, PWA manifest, CI/CD workflows, and provider configs.
 
 ### Running the Tauri Admin Dashboard
 
@@ -140,8 +137,6 @@ QuizTool/
 │   ├── ensure_pdf_deps.py
 │   ├── download_pdf_fonts.py
 │   └── fonts/                 ← 9 TTF font files
-├── generate_project.py        ← [Deprecated] Python generator
-├── extract.py                 ← Bridge: admin-dashboard.py → Tauri frontend
 ├── sw.js / manifest.webmanifest / favicon.svg  ← PWA assets
 ├── AGENTS.md                  ← Full LLM reference
 └── .github/workflows/         ← CI/CD

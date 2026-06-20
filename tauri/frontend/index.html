@@ -497,7 +497,6 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--wrong)!importan
         <a class="success-url" id="live-url" href="#" target="_blank" rel="noopener"></a>
         <p style="color:var(--text-muted);font-size:0.8rem;margin-top:0.25rem"><span id="provider-url-label">Provider</span>: <a id="repo-url" href="#" target="_blank" rel="noopener" style="color:var(--accent)"></a></p>
         <div class="success-actions">
-          <button class="btn btn-primary" onclick="launchAdmin()">🛠️ Open Admin Dashboard</button>
           <button class="btn btn-secondary" onclick="copyLiveUrl()">📋 Copy Live URL</button>
         </div>
       </div>
@@ -510,7 +509,6 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--wrong)!importan
         <h2 style="border:none;padding:0;margin-bottom:0.5rem">Project Downloaded!</h2>
         <p style="color:var(--text-muted);margin-bottom:1rem">Extract the ZIP and open it to start adding content.</p>
         <div class="success-actions">
-          <button class="btn btn-primary" onclick="launchAdminFromLocal()">🛠️ Open Admin Dashboard</button>
           <button class="btn btn-secondary" onclick="downloadZip()">📥 Download Again</button>
         </div>
       </div>
@@ -1290,29 +1288,6 @@ async function downloadZip() {
   } catch (err) {
     showToast('❌ ' + err.message, 'error');
   }
-}
-
-/* ═══════════════════════════════════════════
-   Launch Admin Dashboard (Tauri invoke)
-   ═══════════════════════════════════════════ */
-async function launchAdmin() {
-  if (!lastProjectDir) { showToast('❌ No project directory found. Download or publish first.', 'error'); return; }
-  try {
-    const data = await tauriInvoke('launch_admin', { project_dir: lastProjectDir });
-    if (data.ok) {
-      showToast('✅ Admin Dashboard launching...', 'success');
-      setTimeout(() => window.open(data.admin_url, '_blank'), 1000);
-    } else {
-      showToast('❌ ' + (data.error || 'Failed to launch'), 'error');
-    }
-  } catch (err) {
-    showToast('❌ Failed to launch admin: ' + err.message, 'error');
-  }
-}
-
-async function launchAdminFromLocal() {
-  if (!lastProjectDir) { showToast('❌ No project directory found', 'error'); return; }
-  await launchAdmin();
 }
 
 function copyLiveUrl() {

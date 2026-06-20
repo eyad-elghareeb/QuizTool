@@ -100,8 +100,7 @@ jobs:
         run: cargo tauri build
         working-directory: ./tauri-admin
 
-      - name: Prepare dependency for Generator
-        # Mac generator expects .dmg in the path for include_bytes!
+      - name: Prepare admin binary for Generator bundling
         run: cp tauri-admin/target/release/bundle/dmg/*.dmg tauri-admin/target/release/quiztool-admin.dmg
 
       - name: Build Project Generator (Bundled)
@@ -171,8 +170,7 @@ jobs:
         run: cargo tauri build --bundles appimage
         working-directory: ./tauri-admin
 
-      - name: Prepare dependency for Generator
-        # Linux generator expects .AppImage in the path for include_bytes!
+      - name: Prepare admin binary for Generator bundling
         run: cp tauri-admin/target/release/bundle/appimage/*.AppImage tauri-admin/target/release/quiztool-admin.AppImage
 
       - name: Build Project Generator (Bundled)

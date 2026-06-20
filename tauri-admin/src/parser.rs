@@ -62,11 +62,7 @@ pub fn extract_assigned_literal(content: &str, const_name: &str, open_char: char
         }
     }
 
-    if let Some(end) = end_idx {
-        Some(content[start_idx..end].to_string())
-    } else {
-        None
-    }
+    end_idx.map(|end| content[start_idx..end].to_string())
 }
 
 /// Lightweight count of top-level items in a JS const array (`const NAME = [...]`).

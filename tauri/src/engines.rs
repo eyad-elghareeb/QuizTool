@@ -25,7 +25,7 @@ pub const FAVICON_SVG: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBo
 
 pub const FOOTER_NOTE: &str = "Made By: <a href=\"https://github.com/eyad-elghareeb/QuizTool\" target=\"_blank\" rel=\"noopener noreferrer\">QuizTool</a>";
 
-pub const GITIGNORE_CONTENT: &str = "# Compiled and build artifacts\n*.pyc\n__pycache__/\n*.o\n*.obj\n*.class\n*.exe\n*.dll\n*.so\n*.a\n*.out\n\nnode_modules/\nvenv/\n.venv/\n.env\n.env.local\n.env.*\n\n*.log\n*.tmp\n*.swp\n*.swo\n\n.vscode/\n.idea/\n\n.DS_Store\nThumbs.db\n\ncoverage/\nhtmlcov/\n.coverage\n\ndist/\nbuild/\ntarget/\n.gradle/\n\n.mypy_cache/\n.pytest_cache/\n\n*.zip\n*.gz\n*.tar\n*.tgz\n*.bz2\n*.xz\n*.7z\n*.rar\n\nadmin-dashboard.bat\nQuizTool-Admin.exe\nQuizTool-Admin.dmg\nQuizTool-Admin.AppImage\nQuizTool-Admin\n.quiztool/\n.qwen/\n";
+pub const GITIGNORE_CONTENT: &str = "# Compiled and build artifacts\n*.pyc\n__pycache__/\n*.o\n*.obj\n*.class\n*.exe\n*.dll\n*.so\n*.a\n*.out\n\nnode_modules/\nvenv/\n.venv/\n.env\n.env.local\n.env.*\n\n*.log\n*.tmp\n*.swp\n*.swo\n\n.vscode/\n.idea/\n\n.DS_Store\nThumbs.db\n\ncoverage/\nhtmlcov/\n.coverage\n\ndist/\nbuild/\ntarget/\n.gradle/\n\n.mypy_cache/\n.pytest_cache/\n\n*.zip\n*.gz\n*.tar\n*.tgz\n*.bz2\n*.xz\n*.7z\n*.rar\n\n.quiztool/\n.qwen/\n";
 
 pub const NETLIFY_TOML: &str = "[build]\n  publish = \".\"\n  command = \"\"\n\n[[headers]]\n  for = \"/sw.js\"\n  [headers.values]\n    Cache-Control = \"no-cache\"\n\n[[headers]]\n  for = \"/manifest.webmanifest\"\n  [headers.values]\n    Content-Type = \"application/manifest+json\"\n";
 
@@ -147,7 +147,9 @@ jobs:
 
 pub const SYNC_SCRIPT: &str = include_str!("../../scripts/sync_quiz_assets.py");
 pub const STANDARDIZE_SCRIPT: &str = include_str!("../../scripts/standardize_quiz_files.py");
-pub const ADMIN_DASHBOARD_SCRIPT: &str = include_str!("../../scripts/admin-dashboard.py");
+
+// Platform-specific Tauri admin binary bundled into generated project ZIPs
+// so users can launch the native admin dashboard from their project folder.
 #[cfg(target_os = "windows")]
 pub const QUIZTOOL_ADMIN_BINARY: &[u8] = include_bytes!("../../tauri-admin/target/release/quiztool-admin.exe");
 

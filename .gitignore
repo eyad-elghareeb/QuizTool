@@ -188,7 +188,7 @@ serve.py
 .terraform/
 .virtualenvs/
 .vim/
-start.bat
+
 uworld-cardio-test.html
 
 # Downloaded PDF premium fonts (download via scripts/download_pdf_fonts.py)

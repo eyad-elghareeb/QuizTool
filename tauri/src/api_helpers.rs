@@ -161,8 +161,8 @@ pub fn github_verify(token: &str) -> GithubUserInfo {
     // Validate that the token has 'repo' and 'workflow' scopes
     let scopes_str = resp.header("X-OAuth-Scopes").unwrap_or("");
     let scopes: Vec<&str> = scopes_str.split(',').map(|s| s.trim()).collect();
-    let has_repo = scopes.iter().any(|s| *s == "repo");
-    let has_workflow = scopes.iter().any(|s| *s == "workflow");
+    let has_repo = scopes.contains(&"repo");
+    let has_workflow = scopes.contains(&"workflow");
     if !has_repo || !has_workflow {
         let missing: Vec<&str> = vec![
             if !has_repo { "repo" } else { "" },
@@ -605,7 +605,7 @@ pub fn vercel_publish(token: &str, config_json: &Value) -> Result<Value, String>
     let zip_bytes = crate::generator::build_project_zip(&config)?;
 
     // Save to project dir
-    let temp_dir = std::env::temp_dir().join(&format!("vercel-{}", project_name));
+    let temp_dir = std::env::temp_dir().join(format!("vercel-{}", project_name));
     let _ = std::fs::remove_dir_all(&temp_dir);
     std::fs::create_dir_all(&temp_dir).ok();
     let cursor = std::io::Cursor::new(&zip_bytes);
@@ -659,7 +659,7 @@ pub fn vercel_publish(token: &str, config_json: &Value) -> Result<Value, String>
 
     let (deploy_status, deploy_data) = make_json_request(
         "POST",
-        &format!("https://api.vercel.com/v13/deployments?forceNew=1&skipAutoDetectionConfirmation=1"),
+        &"https://api.vercel.com/v13/deployments?forceNew=1&skipAutoDetectionConfirmation=1".to_string(),
         Some(token),
         Some(&deploy_body),
     )?;

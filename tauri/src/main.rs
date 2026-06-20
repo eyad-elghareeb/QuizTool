@@ -75,7 +75,7 @@ fn vercel_publish(token: String, config: Value) -> Result<Value, String> {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-//  LOCAL DOWNLOAD / ADMIN DASHBOARD
+//  LOCAL DOWNLOAD
 // ══════════════════════════════════════════════════════════════════════════════
 
 #[tauri::command]
@@ -136,38 +136,6 @@ fn get_last_project_dir(state: tauri::State<AppState>) -> Option<String> {
     state.last_project_dir.lock().unwrap().clone()
 }
 
-#[tauri::command]
-fn launch_admin(project_dir: String) -> Result<Value, String> {
-    // The admin dashboard is a Python Flask app.
-    // Try to launch it, or return the path for manual launch.
-    let admin_script = std::path::Path::new(&project_dir).join("scripts/admin-dashboard.py");
-    if admin_script.exists() {
-        // Try python3 first, then python
-        for python in &["python", "python3"] {
-            if let Ok(output) = std::process::Command::new(python)
-                .arg(&admin_script)
-                .arg("--port").arg("5501")
-                .current_dir(&project_dir)
-                .spawn()
-            {
-                return Ok(serde_json::json!({
-                    "ok": true,
-                    "admin_url": "http://localhost:5501/admin/",
-                    "project_dir": project_dir,
-                    "pid": output.id()
-                }));
-            }
-        }
-        return Ok(serde_json::json!({
-            "ok": true,
-            "admin_url": "http://localhost:5501/admin/",
-            "project_dir": project_dir,
-            "note": "Python not found. Run manually: python scripts/admin-dashboard.py"
-        }));
-    }
-    Err("Admin dashboard script not found in project".to_string())
-}
-
 // ══════════════════════════════════════════════════════════════════════════════
 //  MAIN
 // ══════════════════════════════════════════════════════════════════════════════
@@ -202,7 +170,6 @@ fn main() {
             vercel_publish,
             download_local,
             get_last_project_dir,
-            launch_admin,
         ])
         .run(tauri::generate_context!())
         .expect("Failed to run QuizTool application");

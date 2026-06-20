@@ -56,9 +56,7 @@ fn get_project_root() -> PathBuf {
                 let s = curr.to_string_lossy().replace('\\', "/");
                 if s.ends_with("/target/debug") || s.ends_with("/target/release") || s.contains("/target/x86_64") {
                     // continue walking
-                } else if curr.ends_with("scripts") || curr.ends_with("bin") {
-                    // continue walking
-                } else if curr.join("Cargo.toml").exists() && !curr.join("index-engine.js").exists() {
+                } else if curr.ends_with("scripts") || curr.ends_with("bin") || (curr.join("Cargo.toml").exists() && !curr.join("index-engine.js").exists()) {
                     // We are in the tauri-admin source folder, root is parent
                     return curr.parent().unwrap_or(&curr).to_path_buf();
                 }

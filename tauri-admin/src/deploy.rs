@@ -193,7 +193,7 @@ pub fn verify_provider_token(provider: &str, token: &str) -> Result<(), String> 
 fn build_project_zip(project_root: &Path) -> Result<Vec<u8>, String> {
     use std::io::Write;
     let skip_dirs = ["node_modules", "target", "__pycache__", ".git"];
-    let skip_files = ["admin-dashboard.bat"];
+    let skip_files: &[&str] = &[];
 
     let buf = std::io::Cursor::new(Vec::new());
     let mut zip = zip::ZipWriter::new(buf);
@@ -229,7 +229,7 @@ fn build_project_zip(project_root: &Path) -> Result<Vec<u8>, String> {
         Ok(())
     }
 
-    walk(&mut zip, opts, project_root, project_root, &skip_dirs, &skip_files)?;
+    walk(&mut zip, opts, project_root, project_root, &skip_dirs, skip_files)?;
     let result = zip.finish().map_err(|e| e.to_string())?;
     Ok(result.into_inner())
 }

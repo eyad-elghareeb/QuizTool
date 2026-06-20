@@ -8,6 +8,7 @@
 
   var _cs = document.currentScript;
   var ENGINE_BASE = _cs ? _cs.src.replace(/[^\/]*$/, '') : '';
+  var ROOT_BASE = ENGINE_BASE.replace(/[^\/]+\/$/, '');
 
   /* ── Inject tracker dashboard extra styles ─────────────────── */
   var _trackerStyle = document.createElement('style');
@@ -1253,7 +1254,7 @@
     // But the iframe is srcdoc, so it executes in the context of the sub-folder hub page.
     // However, we want it to act as if it's at the project root for Service Worker and asset resolution.
     // By setting the base tag to the root, we ensure it loads the correct assets.
-    var rootAbs = new URL(ENGINE_BASE || '', window.location.href).href;
+    var rootAbs = new URL(ROOT_BASE || '', window.location.href).href;
     
     var blobHTML = '<!DOCTYPE html>\n<html lang="en" data-theme="' + currentTheme + '">\n<head>\n' +
       '<meta charset="UTF-8">\n' +
@@ -1275,7 +1276,7 @@
       '  const QUESTION_BANK = QUESTIONS;\n' +
       '</script>\n' +
       '</head>\n<body>\n' +
-      '<script src="' + (ENGINE_BASE || '') + engineScript + '"></script>\n' +
+      '<script src="' + engineScript + '"></script>\n' +
       '<script>\n' +
       '  (function(){\n' +
       '    window.navigateToIndex = function(e){\n' +

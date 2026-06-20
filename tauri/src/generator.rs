@@ -482,13 +482,13 @@ pub fn build_project_zip(config: &ProjectConfig) -> Result<Vec<u8>, String> {
 
     // ── Write root-level files ──
     let add_str = |zip: &mut ZipWriter<Cursor<Vec<u8>>>, name: &str, content: &str| {
-        zip.start_file(name, opts.clone()).map_err(|e| e.to_string())?;
+        zip.start_file(name, opts).map_err(|e| e.to_string())?;
         zip.write_all(content.as_bytes()).map_err(|e| e.to_string())?;
         Ok::<_, String>(())
     };
 
     let add_bytes = |zip: &mut ZipWriter<Cursor<Vec<u8>>>, name: &str, data: &[u8]| {
-        zip.start_file(name, opts.clone()).map_err(|e| e.to_string())?;
+        zip.start_file(name, opts).map_err(|e| e.to_string())?;
         zip.write_all(data).map_err(|e| e.to_string())?;
         Ok::<_, String>(())
     };
@@ -518,18 +518,17 @@ pub fn build_project_zip(config: &ProjectConfig) -> Result<Vec<u8>, String> {
     add_str(&mut zip, ".gitignore", engines::GITIGNORE_CONTENT)?;
 
     // GitHub workflows
-    let _ = zip.add_directory(".github/", opts.clone());
-    let _ = zip.add_directory(".github/workflows/", opts.clone());
+    let _ = zip.add_directory(".github/", opts);
+    let _ = zip.add_directory(".github/workflows/", opts);
     add_str(&mut zip, ".github/workflows/sync-quiz-assets.yml", engines::SYNC_WORKFLOW_YML)?;
     add_str(&mut zip, ".github/workflows/jekyll-gh-pages.yml", engines::DEPLOY_WORKFLOW_YML)?;
 
     // Scripts directory
-    let _ = zip.add_directory("scripts/", opts.clone());
+    let _ = zip.add_directory("scripts/", opts);
     add_str(&mut zip, "scripts/sync_quiz_assets.py", engines::SYNC_SCRIPT)?;
     add_str(&mut zip, "scripts/standardize_quiz_files.py", engines::STANDARDIZE_SCRIPT)?;
-    add_str(&mut zip, "scripts/admin-dashboard.py", engines::ADMIN_DASHBOARD_SCRIPT)?;
 
-    // Native Admin App
+    // Native Admin App — bundled so users can launch tauri-admin from their project
     let admin_filename = if cfg!(target_os = "windows") {
         "QuizTool-Admin.exe"
     } else if cfg!(target_os = "macos") {
@@ -564,7 +563,7 @@ pub fn build_project_zip(config: &ProjectConfig) -> Result<Vec<u8>, String> {
     for size in &[48u32, 72, 96, 144, 192, 512] {
         if let Some(data) = icon_png_data(*size) {
             let fname = format!("icon-{}.png", size);
-            add_bytes(&mut zip, &fname, &data)?;
+            add_bytes(&mut zip, &fname, data)?;
         }
     }
 
@@ -668,7 +667,7 @@ pub fn build_project_zip(config: &ProjectConfig) -> Result<Vec<u8>, String> {
                 if folder_parent_path.is_empty() { None } else { Some(&folder_parent_path) },
             );
 
-            zip.start_file(&format!("{}/index.html", folder_path), opts.clone()).map_err(|e| e.to_string())?;
+            zip.start_file(format!("{}/index.html", folder_path), *opts).map_err(|e| e.to_string())?;
             zip.write_all(folder_html.as_bytes()).map_err(|e| e.to_string())?;
 
             // Recursively process subfolders
@@ -682,6 +681,7 @@ pub fn build_project_zip(config: &ProjectConfig) -> Result<Vec<u8>, String> {
     create_folder_indexes(&mut zip, &opts, &config.folders, "", topbar_title, config)?;
 
     // ── Include dropped quiz/bank files ──
+    let title_re = regex::Regex::new(r"<title>.*?</title>").unwrap();
     for (filename, file_content) in &config.dropped_files {
         let mut placed = false;
         // Check if this file belongs to any folder
@@ -689,9 +689,7 @@ pub fn build_project_zip(config: &ProjectConfig) -> Result<Vec<u8>, String> {
             for quiz in &fpi.folder.quizzes {
                 if quiz.url == *filename {
                     let full_path = format!("{}/{}", fpi.path, filename);
-                    // Simple title replacement
-                    let re = regex::Regex::new(r"<title>.*?</title>").unwrap();
-                    let modified = re.replace(file_content, |_: &regex::Captures| {
+                    let modified = title_re.replace(file_content, |_: &regex::Captures| {
                         format!("<title>{} - {}</title>", topbar_title, quiz.title)
                     });
                     add_str(&mut zip, &full_path, &modified)?;
@@ -705,14 +703,6 @@ pub fn build_project_zip(config: &ProjectConfig) -> Result<Vec<u8>, String> {
             add_str(&mut zip, filename, file_content)?;
         }
     }
-
-    // ── Admin dashboard launcher ──
-    let admin_bat = format!(r#"@echo off
-REM Launch the local admin dashboard for the {} project.
-cd /d "%~dp0"
-python "scripts\admin-dashboard.py"
-"#, project_name);
-    add_str(&mut zip, "admin-dashboard.bat", &admin_bat)?;
 
     // Finish
     let buf = zip.finish().map_err(|e| e.to_string())?;

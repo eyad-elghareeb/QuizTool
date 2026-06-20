@@ -49,7 +49,7 @@ pub fn derive_uid(folder: &str, stem: &str) -> String {
 
 pub fn title_from_segment(segment: &str) -> String {
     segment
-        .replace('.', " ").replace('-', " ").replace('_', " ")
+        .replace(['.', '-', '_'], " ")
         .split_whitespace()
         .map(|w| {
             let mut c = w.chars();

@@ -6,19 +6,13 @@ Get your quiz site live in 3 steps — no coding required.
 
 ## Step 1: Launch the Generator
 
-### Option A: Double-click `start.bat` (Windows)
-Automatically checks for Python, installs Flask if needed, and starts the generator.
+### Option A: Use the Tauri generator
+```bash
+cd tauri && cargo tauri dev
+```
 
 ### Option B: Use the standalone EXE
 Download `QuizTool-Generator.exe` from releases and double-click it. No Python needed.
-
-### Option C: Manual launch
-```bash
-pip install flask
-python generate_project.py
-```
-
-Then open **http://localhost:5500** in your browser.
 
 ---
 

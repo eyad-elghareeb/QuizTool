@@ -25,7 +25,7 @@ var PRECACHE_REL_PATHS = [
   'tracker-map.json',
   'index.html',
   'bank-maker.html',
-  'generator_templates/index.html',
+
   'index-editor.html',
   'index-template.html',
   'js-question-bank.html',
@@ -45,7 +45,7 @@ var PRECACHE_REL_PATHS = [
   'icon-144.png',
   'icon-192.png',
   'icon-512.png',
-  'index-engine.css',
+  'engines/index-engine.css',
   'manifest.webmanifest',
   'tracker-map.json'
 ];
@@ -234,10 +234,10 @@ function handleAsset(event, request) {
       if (url.origin === self.location.origin && url.href.indexOf(scope) === 0) {
         var filename = url.pathname.split('/').pop();
         var SHARED = [
-          'quiz-engine.js',
-          'bank-engine.js',
-          'index-engine.js',
-          'written-engine.js',
+          'engines/quiz-engine.js',
+          'engines/bank-engine.js',
+          'engines/index-engine.js',
+          'engines/written-engine.js',
   'engines/index-engine.css',
           'manifest.webmanifest',
           'favicon.svg',

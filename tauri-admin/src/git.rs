@@ -46,7 +46,7 @@ pub fn get_git_status(project_root: &Path) -> Value {
     let (ahead, behind) = if up_code == 0 && !upstream.trim().is_empty() {
         let rev_arg = format!("{}...{}", branch, upstream.trim());
         let (_, counts, _) = run_git(&["rev-list", "--left-right", "--count", &rev_arg], project_root);
-        let parts: Vec<i64> = counts.trim().split_whitespace()
+        let parts: Vec<i64> = counts.split_whitespace()
             .filter_map(|s| s.parse().ok()).collect();
         if parts.len() == 2 { (parts[0], parts[1]) } else { (0, 0) }
     } else { (0, 0) };
