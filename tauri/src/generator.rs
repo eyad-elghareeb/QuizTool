@@ -497,6 +497,9 @@ pub fn build_project_zip(config: &ProjectConfig) -> Result<Vec<u8>, String> {
     add_str(&mut zip, "index-engine.js", engines::INDEX_ENGINE_JS)?;
     add_str(&mut zip, "index-engine.css", engines::INDEX_ENGINE_CSS)?;
     add_str(&mut zip, "search-engine.js", engines::SEARCH_ENGINE_JS)?;
+    add_str(&mut zip, "engine-shared.js", engines::ENGINE_SHARED_JS)?;
+    add_str(&mut zip, "engine-shared.css", engines::ENGINE_SHARED_CSS)?;
+    add_str(&mut zip, "engine-tracker.js", engines::ENGINE_TRACKER_JS)?;
     add_str(&mut zip, "quiz-engine.js", engines::QUIZ_ENGINE_JS)?;
     add_str(&mut zip, "bank-engine.js", engines::BANK_ENGINE_JS)?;
     add_str(&mut zip, "sync-engine.js", engines::SYNC_ENGINE_JS)?;

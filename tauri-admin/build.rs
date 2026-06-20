@@ -26,6 +26,9 @@ fn main() {
         "sw.js",
         "manifest.webmanifest",
         "osce-engine.js",
+        "engine-shared.js",
+        "engine-shared.css",
+        "engine-tracker.js",
         "pdf-exporter.html",
     ];
 

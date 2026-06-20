@@ -12,6 +12,9 @@ pub const FLASHCARD_ENGINE_JS: &str = include_str!("../../flashcard-engine.js");
 pub const WRITTEN_ENGINE_JS: &str = include_str!("../../written-engine.js");
 pub const OSCE_ENGINE_JS: &str = include_str!("../../osce-engine.js");
 pub const AI_ASSISTANT_ENGINE_JS: &str = include_str!("../../ai-assistant-engine.js");
+pub const ENGINE_SHARED_JS: &str = include_str!("../../engine-shared.js");
+pub const ENGINE_SHARED_CSS: &str = include_str!("../../engine-shared.css");
+pub const ENGINE_TRACKER_JS: &str = include_str!("../../engine-tracker.js");
 
 pub const FAVICON_SVG: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <rect width="100" height="100" rx="22" fill="#0d1117"/>

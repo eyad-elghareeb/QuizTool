@@ -5,140 +5,17 @@
 (function () {
   'use strict';
 
-  var _cs  = document.currentScript;
-  var ENGINE_BASE = _cs ? _cs.src.replace(/[^\/]*$/, '') : (window.__QUIZ_ENGINE_BASE || '');
+  /* ── Compute base path from our own script URL ──────────────── */
+  var ENGINE_BASE = EngineShared.ENGINE_BASE || (window.__QUIZ_ENGINE_BASE || '');
 
-  function _addLink(rel, href, extra) {
-    var el = document.createElement('link');
-    el.rel = rel; el.href = href;
-    if (extra) Object.assign(el, extra);
-    document.head.appendChild(el);
-  }
-  function _addMeta(name, content) {
-    var m = document.createElement('meta'); m.name = name; m.content = content;
-    document.head.appendChild(m);
-  }
+  // Bridge EngineShared functions to global scope for onclick="" attributes in template
+  window.toggleTheme = EngineShared.toggleTheme;
+  window.navigateToIndex = EngineShared.navigateToIndex;
+  window.updateThemeIcon = EngineShared.updateThemeIcon;
 
-  _addMeta('theme-color', '#0d1117');
-  _addLink('preconnect', 'https://fonts.googleapis.com');
-  _addLink('preconnect', 'https://fonts.gstatic.com', {crossOrigin: ''});
-  _addLink('stylesheet', 'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap');
-  _addLink('manifest',   ENGINE_BASE + 'manifest.webmanifest');
-  _addLink('icon',       ENGINE_BASE + 'favicon.svg', {type: 'image/svg+xml'});
-  _addLink('apple-touch-icon', ENGINE_BASE + 'favicon.svg');
-
-  // Set background immediately to prevent flash of white
-  var savedTheme = localStorage.getItem('quiz-theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', savedTheme);
-  document.body.style.background = savedTheme === 'light' ? '#f3f0eb' : '#0d1117';
-  document.body.style.color = savedTheme === 'light' ? '#1c1917' : '#e6edf3';
-  document.body.style.transition = 'background 0.2s ease, color 0.2s ease';
-  document.body.style.overflow = 'hidden';
-
+  /* ── Inject CSS (bank-specific overrides) ────────────────────── */
   var _style = document.createElement('style');
-  _style.textContent = `/* ═══════════════════════════════════════════
-   CSS VARIABLES & THEME
-═══════════════════════════════════════════ */
-:root {
-  --bg:         #0d1117;
-  --surface:    #161b22;
-  --surface2:   #1c2330;
-  --border:     #30363d;
-  --text:       #e6edf3;
-  --text-muted: #8b949e;
-  --accent:     #f0a500;
-  --accent-dim: rgba(240,165,0,0.12);
-  --correct:    #2ea043;
-  --correct-bg: rgba(46,160,67,0.12);
-  --wrong:      #da3633;
-  --wrong-bg:   rgba(218,54,51,0.12);
-  --flagged:    #58a6ff;
-  --flagged-bg: rgba(88,166,255,0.12);
-  --skip:       #6e7681;
-  --radius:     12px;
-  --shadow:     0 4px 24px rgba(0,0,0,0.4);
-  --transition: 0.2s ease-out;
-  --transition-fast: 0.12s ease-out;
-  --transition-slow: 0.35s ease-out;
-  --nav-size:   280px;
-}
-[data-theme="light"] {
-  --bg:         #f3f0eb;
-  --surface:    #ffffff;
-  --surface2:   #f8f6f1;
-  --border:     #d0ccc5;
-  --text:       #1c1917;
-  --text-muted: #78716c;
-  --accent:     #c27803;
-  --accent-dim: rgba(194,120,3,0.10);
-  --correct:    #16a34a;
-  --correct-bg: rgba(22,163,74,0.10);
-  --wrong:      #dc2626;
-  --wrong-bg:   rgba(220,38,38,0.10);
-  --flagged:    #2563eb;
-  --flagged-bg: rgba(37,99,235,0.10);
-  --shadow:     0 4px 24px rgba(0,0,0,0.10);
-}
-
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; }
-body {
-  font-family: 'Outfit', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  line-height: 1.6;
-  transition: background var(--transition-slow), color var(--transition-slow);
-  overflow: hidden;
-}
-button { cursor: pointer; font-family: inherit; border: none; outline: none; }
-input[type=radio] { display: none; }
-
-/* ═══════════════════════════════════════════
-   SCREENS & PAGE TRANSITIONS
-═══════════════════════════════════════════ */
-.screen {
-  display: none;
-  width: 100%;
-  height: 100%;
-  position: relative;
-}
-.screen.active {
-  display: flex;
-  animation: screenFadeIn 0.3s ease-out;
-}
-@keyframes screenFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* ═══════════════════════════════════════════
-   START SCREEN
-═══════════════════════════════════════════ */
-#start-screen {
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 1.5rem;
-  gap: 1rem;
-  overflow-y: auto;
-}
-.hub-back-btn {
-  position: absolute;
-  top: 1.5rem;
-  left: 1.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--text-muted);
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 0.95rem;
-  transition: color var(--transition);
-  z-index: 10;
-}
-.hub-back-btn:hover { color: var(--text); }
-.hub-back-btn svg { transition: transform var(--transition); }
-.hub-back-btn:hover svg { transform: translateX(-3px); }
+  _style.textContent = `
 .theme-btn-fixed {
   position: fixed;
   top: 1.1rem;
@@ -155,45 +32,11 @@ input[type=radio] { display: none; }
 }
 .theme-btn-fixed:hover { color: var(--text); border-color: var(--accent); }
 
-.start-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 2rem 2rem 1.75rem;
-  max-width: 520px;
-  width: 100%;
-  box-shadow: var(--shadow);
-  position: relative;
-  transition: box-shadow var(--transition-slow);
-}
-.start-card:hover {
-  box-shadow: 0 6px 28px rgba(0,0,0,0.45);
-}
-.start-icon {
-  width: 60px; height: 60px;
-  background: var(--accent-dim);
-  border-radius: 14px;
-  display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 1.25rem;
-  font-size: 1.7rem;
-  transition: transform var(--transition-slow);
-}
-.start-card h1 {
-  font-family: 'Playfair Display', serif;
-  font-size: clamp(1.5rem, 4vw, 2.1rem);
-  color: var(--text);
-  margin-bottom: 0.35rem;
-  line-height: 1.2;
-  text-align: center;
-}
-.start-card .subtitle {
-  color: var(--text-muted);
-  font-size: 0.88rem;
-  margin-bottom: 1.25rem;
-  text-align: center;
-}
+#start-screen { padding: 1.5rem; gap: 1rem; }
+.start-card h1 { text-align: center; }
+.start-card .subtitle { text-align: center; }
+.start-icon { width: 60px; height: 60px; font-size: 1.7rem; }
 
-/* Bank coverage stats */
 .bank-stats-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -208,108 +51,19 @@ input[type=radio] { display: none; }
   text-align: center;
   transition: border-color var(--transition);
 }
-.bank-stat-box:hover {
-  border-color: var(--accent);
-}
-.bank-stat-box .bsv {
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: var(--accent);
-  display: block;
-  line-height: 1;
-  margin-bottom: 0.2rem;
-}
-.bank-stat-box .bsl {
-  font-size: 0.68rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
+.bank-stat-box:hover { border-color: var(--accent); }
+.bank-stat-box .bsv { font-size: 1.35rem; font-weight: 700; color: var(--accent); display: block; line-height: 1; margin-bottom: 0.2rem; }
+.bank-stat-box .bsl { font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
 
-.coverage-wrap {
-  margin-bottom: 1.25rem;
-}
-.coverage-label {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  margin-bottom: 0.4rem;
-}
-.coverage-bar {
-  height: 6px;
-  background: var(--surface2);
-  border-radius: 3px;
-  overflow: hidden;
-  border: 1px solid var(--border);
-}
-.coverage-fill {
-  height: 100%;
-  background: var(--accent);
-  border-radius: 3px;
-  transition: width 0.35s ease-out;
-}
+.coverage-wrap { margin-bottom: 1.25rem; }
+.coverage-label { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.4rem; }
+.coverage-bar { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; border: 1px solid var(--border); }
+.coverage-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.35s ease-out; }
 
-/* Section heading */
-.section-label {
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-bottom: 0.6rem;
-}
+.order-section { margin-bottom: 1.25rem; }
 
-/* Question count selector */
-.q-count-section { margin-bottom: 1.1rem; }
-
-/* Time selector */
-.time-section { margin-bottom: 1.1rem; }
-.time-controls {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-.time-adj-btn {
-  width: 36px; height: 36px;
-  border-radius: 8px;
-  background: var(--surface2);
-  border: 1.5px solid var(--border);
-  color: var(--text);
-  font-size: 1rem;
-  font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
-  transition: all var(--transition);
-  flex-shrink: 0;
-}
-.time-adj-btn:hover { border-color: var(--accent); color: var(--accent); }
-.time-input {
-  flex: 1;
-  padding: 0.5rem;
-  border-radius: 8px;
-  border: 1.5px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  font-family: inherit;
-  font-size: 1rem;
-  font-weight: 600;
-  text-align: center;
-  transition: border-color var(--transition);
-}
-.time-input:focus { outline: none; border-color: var(--accent); }
-.time-hint {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  margin-top: 0.35rem;
-}
-
-/* Mode selection */
 .mode-section { margin-bottom: 1rem; }
-.mode-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
-}
+.mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
 .mode-label { cursor: pointer; }
 .mode-option {
   padding: 0.5rem;
@@ -319,40 +73,14 @@ input[type=radio] { display: none; }
   transition: border-color var(--transition), background var(--transition);
   text-align: center;
 }
-.mode-option:hover {
-  border-color: var(--accent);
-}
+.mode-option:hover { border-color: var(--accent); }
 .mode-option .mo-title { font-weight: 600; font-size: 0.8rem; }
-.mode-option .mo-sub  { display: none; }
+.mode-option .mo-sub { display: none; }
 .mode-selected {
   border-color: var(--accent) !important;
   background: var(--accent-dim) !important;
 }
 
-.btn-start {
-  width: 100%;
-  padding: 0.9rem 2rem;
-  border-radius: var(--radius);
-  background: var(--accent);
-  color: #000;
-  font-weight: 700;
-  font-size: 1rem;
-  letter-spacing: 0.02em;
-  transition: opacity var(--transition), transform var(--transition), box-shadow var(--transition);
-}
-.btn-start:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(240,165,0,0.25);
-}
-.btn-start:active {
-  transform: translateY(0);
-}
-
-/* Order selection */
-.order-section { margin-bottom: 1.25rem; }
-
-/* Reset bank button */
 .reset-bank-btn {
   width: 100%;
   margin-top: 0.65rem;
@@ -366,553 +94,12 @@ input[type=radio] { display: none; }
   transition: all var(--transition);
 }
 .reset-bank-btn:hover { border-color: var(--wrong); color: var(--wrong); }
-
-/* ═══════════════════════════════════════════
-   QUIZ SCREEN (same as quiz-template.html)
-═══════════════════════════════════════════ */
-#quiz-screen { flex-direction: column; height: 100%; overflow: hidden; }
-.topbar {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.75rem 1.25rem;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  z-index: 10;
-}
-.topbar-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.05rem;
-  font-weight: 700;
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.timer-wrap {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.4rem 0.85rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-  min-width: 90px;
-  justify-content: center;
-}
-.timer-wrap.warn { border-color: var(--wrong); color: var(--wrong); animation: pulse 1s infinite; }
-@keyframes pulse { 0%,100%{ opacity:1 } 50%{ opacity:0.6 } }
-
-.topbar-actions { display: flex; gap: 0.5rem; align-items: center; }
-.icon-btn {
-  width: 36px; height: 36px;
-  border-radius: 8px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: center;
-  color: var(--text-muted);
-  transition: all var(--transition);
-  font-size: 1rem;
-  text-decoration: none;
-}
-.icon-btn:hover {
-  color: var(--text);
-  border-color: var(--accent);
-}
-.icon-btn:active {
-  transform: scale(0.95);
-}
-.icon-btn.danger:hover {
-  border-color: var(--wrong);
-  color: var(--wrong);
-}
-
-.quiz-body { display: flex; flex: 1; overflow: hidden; position: relative; }
-.question-area {
-  flex: 1; overflow-y: auto;
-  padding: 1.5rem;
-  display: flex; flex-direction: column; gap: 1.25rem;
-  contain: layout style;
-}
-.question-area::-webkit-scrollbar { width: 6px; }
-.question-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-
-.q-header { display: flex; align-items: flex-start; gap: 0.75rem; }
-.q-number-badge {
-  background: var(--accent-dim);
-  color: var(--accent);
-  border: 1px solid var(--accent);
-  border-radius: 8px;
-  padding: 0.2rem 0.65rem;
-  font-size: 0.8rem;
-  font-weight: 700;
-  white-space: nowrap;
-  margin-top: 0.25rem;
-  flex-shrink: 0;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-.q-actions { margin-left: auto; display: flex; gap: 0.5rem; }
-.flag-btn {
-  padding: 0.3rem 0.75rem;
-  border-radius: 7px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  font-size: 0.8rem;
-  font-weight: 500;
-  display: flex; align-items: center; gap: 0.35rem;
-  transition: all var(--transition);
-}
-.flag-btn:hover, .flag-btn.active { background: var(--flagged-bg); border-color: var(--flagged); color: var(--flagged); }
-
-.q-text { font-size: clamp(1rem, 2.5vw, 1.2rem); font-weight: 500; color: var(--text); line-height: 1.7; flex: 1; }
-
-.options-list { display: flex; flex-direction: column; gap: 0.65rem; }
-.option-label {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.85rem;
-  padding: 0.95rem 1.15rem;
-  border-radius: var(--radius);
-  border: 1.5px solid var(--border);
-  background: var(--surface);
-  cursor: pointer;
-  transition: border-color var(--transition), background var(--transition), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  position: relative;
-  overflow: hidden;
-}
-.option-label::before {
-  content: '';
-  position: absolute; inset: 0;
-  background: var(--accent-dim);
-  opacity: 0;
-  transition: opacity var(--transition);
-}
-.option-label:hover { border-color: var(--accent); }
-.option-label:hover::before { opacity: 1; }
-input[type=radio]:checked + .option-label { border-color: var(--accent); background: var(--accent-dim); }
-.option-key {
-  width: 28px; height: 28px;
-  border-radius: 7px;
-  background: var(--surface2);
-  border: 1.5px solid var(--border);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
-  transition: background var(--transition), border-color var(--transition), color var(--transition);
-  z-index: 1; text-transform: uppercase;
-}
-input[type=radio]:checked + .option-label .option-key { background: var(--accent); border-color: var(--accent); color: #000; }
-.option-text { font-size: 0.95rem; line-height: 1.5; z-index: 1; padding-top: 0.05rem; }
-
-.q-nav-btns { display: flex; gap: 0.75rem; padding-top: 0.5rem; flex-wrap: wrap; }
-.btn-nav {
-  display: flex; align-items: center; gap: 0.4rem;
-  padding: 0.75rem 1.25rem;
-  border-radius: var(--radius);
-  font-size: 0.9rem; font-weight: 600;
-  transition: all var(--transition);
-  border: 1.5px solid var(--border);
-  background: var(--surface); color: var(--text);
-}
-.btn-nav:hover { border-color: var(--accent); color: var(--accent); }
-.btn-nav.primary { background: var(--accent); color: #000; border-color: var(--accent); margin-left: auto; }
-.btn-nav.primary:hover { opacity: 0.85; }
-.btn-nav.submit-btn { background: var(--correct); border-color: var(--correct); color: #fff; margin-left: auto; }
-.btn-nav.submit-btn:hover { opacity: 0.85; }
-
-/* Nav pane */
-.nav-pane {
-  width: var(--nav-size);
-  background: var(--surface);
-  border-left: 1px solid var(--border);
-  display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden;
-}
-.nav-pane-header { padding: 1rem 1.1rem 0.75rem; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-.nav-pane-header h3 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 0.65rem; font-weight: 600; }
-.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 0.75rem; }
-.legend-item { display: flex; align-items: center; gap: 0.3rem; font-size: 0.72rem; color: var(--text-muted); }
-.dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
-.dot.answered  { background: var(--correct); }
-.dot.wrong     { background: var(--wrong); }
-.dot.flagged   { background: var(--flagged); }
-.dot.current   { background: var(--accent); }
-.dot.unanswered{ background: var(--surface2); border: 1.5px solid var(--border); }
-
-.nav-grid-wrap { flex: 1; overflow-y: auto; padding: 0.85rem; }
-.nav-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 6px; }
-.nav-btn {
-  aspect-ratio: 1;
-  border-radius: 8px;
-  border: 1.5px solid var(--border);
-  background: var(--surface2);
-  color: var(--text-muted);
-  font-size: 0.78rem; font-weight: 600;
-  display: flex; align-items: center; justify-content: center;
-  transition: all var(--transition);
-  position: relative;
-}
-.nav-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-.nav-btn.answered {
-  background: var(--correct-bg);
-  border-color: var(--correct);
-  color: var(--correct);
-}
-.nav-btn.wrong {
-  background: var(--wrong-bg);
-  border-color: var(--wrong);
-  color: var(--wrong);
-}
-.nav-btn.flagged {
-  background: var(--flagged-bg);
-  border-color: var(--flagged);
-  color: var(--flagged);
-}
-.nav-btn.current {
-  background: var(--accent-dim);
-  border-color: var(--accent);
-  color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-dim);
-}
-.nav-btn .flag-dot {
-  position: absolute; top: 2px; right: 2px;
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--flagged);
-}
-
-.nav-stats { padding: 0.75rem 1rem; border-top: 1px solid var(--border); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; flex-shrink: 0; }
-.stat-item { text-align: center; }
-.stat-item .sv { font-size: 1rem; font-weight: 700; }
-.stat-item .sl { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
-.sv.green { color: var(--correct); }
-.sv.blue  { color: var(--flagged); }
-.sv.muted { color: var(--text-muted); }
-
-/* Portrait layout */
-@media (orientation: portrait) {
-  .quiz-body { flex-direction: column; }
-  .nav-pane { width: 100%; height: auto; border-left: none; border-top: 1px solid var(--border); max-height: 200px; }
-  .nav-pane-header { padding: 0.6rem 1rem 0.5rem; }
-  .nav-grid-wrap { padding: 0.5rem 0.85rem; overflow-x: auto; overflow-y: hidden; }
-  .nav-grid { grid-template-columns: repeat(var(--q-count, 20), 38px); grid-template-rows: 38px; grid-auto-flow: column; gap: 5px; }
-  .nav-btn { width: 38px; height: 38px; aspect-ratio: unset; }
-  .nav-stats { padding: 0.5rem 1rem; }
-  .stat-item .sv { font-size: 0.9rem; }
-}
-
-/* Progress bar */
-.progress-bar-wrap {
-  height: 3px;
-  background: var(--surface2);
-  position: relative;
-  flex-shrink: 0;
-}
-.progress-bar-fill {
-  height: 100%;
-  background: var(--accent);
-  transition: width 0.35s ease-out;
-  border-radius: 0 2px 2px 0;
-}
-
-/* ═══════════════════════════════════════════
-   RESULTS SCREEN
-═══════════════════════════════════════════ */
-#result-screen { flex-direction: column; height: 100%; overflow: hidden; }
-.result-topbar {
-  display: flex; align-items: center; gap: 1rem;
-  padding: 0.75rem 1.25rem;
-  background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0;
-}
-.result-topbar h2 { font-family: 'Playfair Display', serif; font-size: 1.1rem; }
-.result-topbar .topbar-actions { margin-left: auto; }
-
-.result-body {
-  flex: 1; overflow-y: auto;
-  padding: 1.5rem;
-  display: flex; flex-direction: column; gap: 1.5rem;
-  max-width: 820px; margin: 0 auto; width: 100%;
-}
-.result-body::-webkit-scrollbar { width: 6px; }
-.result-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-
-.score-banner {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
-  padding: 1.75rem 2rem; display: flex; align-items: center; gap: 2rem; flex-wrap: wrap; box-shadow: var(--shadow);
-}
-.score-circle {
-  width: 110px; height: 110px; border-radius: 50%;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  border: 4px solid var(--accent); flex-shrink: 0; background: var(--accent-dim);
-}
-.score-circle .pct { font-size: 1.8rem; font-weight: 700; color: var(--accent); line-height: 1; }
-.score-circle .lbl { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
-
-.score-details { flex: 1; min-width: 180px; }
-.score-details h3 { font-family: 'Playfair Display', serif; font-size: 1.4rem; margin-bottom: 0.75rem; }
-.score-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.65rem; }
-.score-stat { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 0.65rem 0.85rem; }
-.score-stat .n { font-size: 1.2rem; font-weight: 700; }
-.score-stat .t { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
-.n.green { color: var(--correct); }
-.n.red   { color: var(--wrong); }
-.n.blue  { color: var(--flagged); }
-
-.result-tabs { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-.tab-btn {
-  padding: 0.45rem 1rem; border-radius: 8px;
-  background: var(--surface); border: 1.5px solid var(--border);
-  color: var(--text-muted); font-size: 0.85rem; font-weight: 500;
-  transition: all var(--transition);
-}
-.tab-btn:hover { border-color: var(--accent); color: var(--accent); }
-.tab-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
-
-.result-list { display: flex; flex-direction: column; gap: 1rem; }
-.result-item { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-.result-item.correct { border-color: var(--correct); }
-.result-item.wrong   { border-color: var(--wrong); }
-.result-item.skipped { border-color: var(--skip); }
-
-.result-item-header { display: flex; align-items: flex-start; gap: 0.75rem; padding: 1rem 1.25rem; cursor: pointer; }
-.result-status-icon { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.9rem; font-weight: 700; margin-top: 0.15rem; }
-.result-item.correct .result-status-icon { background: var(--correct-bg); color: var(--correct); }
-.result-item.wrong   .result-status-icon { background: var(--wrong-bg);   color: var(--wrong); }
-.result-item.skipped .result-status-icon { background: var(--surface2);   color: var(--skip); }
-
-.result-q-meta { flex: 1; }
-.result-q-num  { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem; font-weight: 600; }
-.result-q-text { font-size: 0.95rem; font-weight: 500; line-height: 1.5; }
-.expand-arrow  { color: var(--text-muted); font-size: 0.8rem; margin-top: 0.2rem; transition: transform 0.2s; }
-.result-item-header.open .expand-arrow { transform: rotate(180deg); }
-
-.result-item-body { display: none; padding: 0 1.25rem 1.1rem; border-top: 1px solid var(--border); }
-.result-item-body.open { display: block; }
-
-.answer-row {
-  display: flex; align-items: flex-start; gap: 0.65rem;
-  padding: 0.6rem 0.75rem; border-radius: 8px; margin-top: 0.5rem; font-size: 0.88rem;
-}
-.answer-row.your-answer { background: var(--wrong-bg); }
-.answer-row.correct-answer { background: var(--correct-bg); }
-.answer-row.your-answer.is-correct { background: var(--correct-bg); }
-.answer-row .ar-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; white-space: nowrap; margin-top: 0.1rem; opacity: 0.7; }
-.explanation-box {
-  margin-top: 0.75rem; padding: 0.75rem 1rem;
-  background: var(--surface2); border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0;
-  font-size: 0.875rem; line-height: 1.6; color: var(--text-muted);
-}
-.explanation-box strong { color: var(--text); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 0.25rem; }
-
-.result-actions { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
-.btn-restart {
-  display: flex; align-items: center; gap: 0.5rem;
-  padding: 0.85rem 1.75rem;
-  border-radius: var(--radius);
-  background: var(--accent); color: #000;
-  font-weight: 700; font-size: 0.95rem;
-  border: 1.5px solid var(--accent);
-  transition: all var(--transition);
-  text-decoration: none;
-}
-.btn-restart:hover { opacity: 0.85; transform: translateY(-1px); }
-.btn-secondary { background: var(--surface2); color: var(--text); border-color: var(--border); }
-.btn-secondary:hover { border-color: var(--accent); color: var(--accent); opacity: 1; }
-
-/* Toast */
-.toast {
-  position: fixed;
-  bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(80px);
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 10px; padding: 0.65rem 1.2rem;
-  font-size: 0.88rem; font-weight: 500; box-shadow: var(--shadow);
-  z-index: 9999; transition: transform 0.3s ease, opacity 0.3s ease;
-  white-space: nowrap; display: flex; align-items: center; gap: 0.5rem; max-width: 90%;
-}
-.toast.show { transform: translateX(-50%) translateY(0); }
-
-/* Modal */
-.modal-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.7);
-  z-index: 1000; display: none; align-items: center; justify-content: center; padding: 1rem;
-}
-.modal-overlay.open { display: flex; }
-.modal {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
-  padding: 2rem; max-width: 420px; width: 100%; box-shadow: var(--shadow);
-  animation: slideUp 0.25s ease;
-}
-@keyframes slideUp { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform: translateY(0); } }
-.modal h3 { font-family: 'Playfair Display', serif; font-size: 1.3rem; margin-bottom: 0.75rem; }
-.modal p  { color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; margin-bottom: 1.25rem; }
-.modal-unanswered { font-weight: 600; color: var(--wrong); }
-.modal-actions { display: flex; gap: 0.75rem; }
-.modal-actions .btn-cancel {
-  flex: 1; padding: 0.75rem; border-radius: 10px;
-  background: var(--surface2); border: 1.5px solid var(--border);
-  color: var(--text); font-weight: 600; font-size: 0.9rem; transition: all var(--transition);
-}
-.modal-actions .btn-cancel:hover { border-color: var(--accent); }
-.modal-actions .btn-confirm {
-  flex: 1; padding: 0.75rem; border-radius: 10px;
-  background: var(--correct); border: none;
-  color: #fff; font-weight: 700; font-size: 0.9rem; transition: all var(--transition);
-}
-.modal-actions .btn-confirm:hover { opacity: 0.85; }
-
-/* PDF Export Section */
-.pdf-export-section {
-  margin-top: 1.5rem; margin-bottom: 1rem; padding: 1rem;
-  border-radius: var(--radius); background: var(--surface); border: 1.5px solid var(--border);
-}
-.export-options { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-bottom: 0.85rem; }
-.export-option {
-  display: flex; align-items: center; gap: 0.5rem; padding: 0.45rem 0.65rem;
-  border-radius: 6px; background: var(--surface2); border: 1.5px solid var(--border);
-  cursor: pointer; transition: all var(--transition); flex: 1; min-width: 120px;
-}
-.export-option:hover { border-color: var(--accent); background: var(--accent-dim); }
-.export-option input[type="checkbox"] { display: none; }
-.export-option input[type="checkbox"]:checked + .export-checkbox-visual { border-color: var(--accent); background: var(--accent); }
-.export-option input[type="checkbox"]:checked + .export-checkbox-visual svg { display: block; }
-.export-checkbox-visual {
-  width: 16px; height: 16px; border-radius: 4px; border: 2px solid var(--border);
-  background: var(--surface); transition: all var(--transition); flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-}
-.export-checkbox-visual svg { display: none; width: 10px; height: 10px; stroke: #000; stroke-width: 3; fill: none; }
-.export-label { font-size: 0.82rem; font-weight: 500; color: var(--text); flex: 1; }
-.export-badge { font-size: 0.65rem; padding: 0.1rem 0.4rem; border-radius: 3px; background: var(--accent-dim); color: var(--accent); font-weight: 600; }
-.btn-export-pdf {
-  display: flex; align-items: center; gap: 0.5rem; padding: 0.85rem 1.75rem;
-  border-radius: var(--radius); background: var(--surface2); color: var(--text);
-  border: 1.5px solid var(--border); font-weight: 700; font-size: 0.95rem;
-  transition: all var(--transition); text-decoration: none; width: 100%; justify-content: center;
-}
-.btn-export-pdf:hover { border-color: var(--accent); color: var(--accent); opacity: 1; }
-
-/* ═══════════════════════════════════════════
-   HIGHLIGHT & STRIKETHROUGH
-═══════════════════════════════════════════ */
-.q-highlight { border-radius: 2px; padding: 1px 0; transition: background 0.15s ease; color: var(--text); }
-.q-highlight.hl-color-1 { background: rgba(255,213,79,0.35); }
-.q-highlight.hl-color-2 { background: rgba(129,199,132,0.35); }
-.q-highlight.hl-color-3 { background: rgba(100,181,246,0.35); }
-.q-highlight.hl-color-4 { background: rgba(239,154,154,0.35); }
-[data-theme="light"] .q-highlight.hl-color-1 { background: rgba(255,213,79,0.55); }
-[data-theme="light"] .q-highlight.hl-color-2 { background: rgba(129,199,132,0.5); }
-[data-theme="light"] .q-highlight.hl-color-3 { background: rgba(100,181,246,0.5); }
-[data-theme="light"] .q-highlight.hl-color-4 { background: rgba(239,154,154,0.5); }
-
-.strikethrough .option-text { text-decoration: line-through; opacity: 0.45; }
-.st-toggle-btn {
-  width: 24px; height: 24px; border-radius: 5px;
-  background: var(--surface2); border: 1px solid var(--border);
-  display: none; align-items: center; justify-content: center;
-  color: var(--text-muted); font-size: 0.7rem; cursor: pointer;
-  transition: all 0.15s ease; flex-shrink: 0; margin-left: auto;
-  position: relative; z-index: 2;
-}
-.st-toggle-btn:hover { border-color: var(--wrong); color: var(--wrong); background: var(--wrong-bg); }
-.st-toggle-btn.active { background: var(--wrong-bg); border-color: var(--wrong); color: var(--wrong); }
-.highlighter-active .st-toggle-btn { display: flex; }
-
-/* Color button styles (used by topbar color picker) */
-.hl-color-btn {
-  width: 22px; height: 22px; border-radius: 5px; border: 2px solid transparent;
-  cursor: pointer; transition: all 0.12s ease;
-}
-.hl-color-btn:hover { transform: scale(1.15); }
-.hl-color-btn.cb-1 { background: rgba(255,213,79,0.7); }
-.hl-color-btn.cb-2 { background: rgba(129,199,132,0.7); }
-.hl-color-btn.cb-3 { background: rgba(100,181,246,0.7); }
-.hl-color-btn.cb-4 { background: rgba(239,154,154,0.7); }
-.hl-erase-btn {
-  width: 22px; height: 22px; border-radius: 5px; border: 1px solid var(--border);
-  background: var(--surface2); cursor: pointer; display: flex; align-items: center;
-  justify-content: center; font-size: 0.65rem; color: var(--text-muted); transition: all 0.12s ease;
-}
-.hl-erase-btn:hover { border-color: var(--wrong); color: var(--wrong); }
-
-.hl-mode-btn {
-  width: 36px; height: 36px; border-radius: 8px;
-  background: var(--surface2); border: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: center;
-  color: var(--text-muted); font-size: 0.95rem; transition: all 0.15s ease;
-  cursor: pointer; position: relative;
-}
-.hl-mode-btn:hover { border-color: var(--accent); color: var(--accent); }
-.hl-mode-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
-.highlighter-active .q-text, .highlighter-active .option-text, .highlighter-active .explanation-box {
-  cursor: text; user-select: text; -webkit-user-select: text;
-  touch-action: manipulation;
-}
-/* In highlighter mode, allow text selection on option labels for highlighting */
-.highlighter-active .option-label {
-  touch-action: manipulation !important;
-}
-.highlighter-active .option-text {
-  user-select: text; -webkit-user-select: text;
-}
-/* Color picker dropdown next to highlighter button */
-.hl-color-picker {
-  position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
-  margin-top: 6px; z-index: 9001;
-  display: none; align-items: center; gap: 4px;
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 8px; padding: 5px 7px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
-  animation: hlMenuIn 0.15s ease;
-}
-.hl-color-picker.visible { display: flex; }
-.hl-color-picker .hl-color-btn { width: 24px; height: 24px; }
-.hl-color-picker .hl-color-btn.selected { border: 2px solid var(--text); box-shadow: 0 0 0 1px var(--accent); }
-.hl-color-picker .hl-erase-btn { width: 24px; height: 24px; }
-.hl-color-picker .hl-close-btn { width: 24px; height: 24px; background: rgba(255,255,255,0.08); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text-muted); margin-left: 2px; }
-.hl-color-picker .hl-close-btn:hover { background: rgba(239,68,68,0.2); color: #ef4444; }
-/* Last-color indicator dot on the mode button */
-.hl-mode-btn .hl-last-dot {
-  position: absolute; bottom: 2px; right: 2px;
-  width: 8px; height: 8px; border-radius: 50%;
-  border: 1px solid rgba(255,255,255,0.3);
-  pointer-events: none;
-}
-.hidden { display: none !important; }
-
-@media (max-width: 640px) {
-  .question-area .q-header {
-    flex-wrap: wrap !important;
-  }
-  .question-area .q-number-badge {
-    order: 1 !important;
-    flex-shrink: 0 !important;
-  }
-  .question-area .q-actions {
-    order: 2 !important;
-    margin-left: auto !important;
-  }
-  .question-area .q-text {
-    order: 3 !important;
-    flex: 0 0 100% !important;
-    width: 100% !important;
-    margin-top: 0.5rem !important;
-    margin-bottom: 0 !important;
-    font-size: 1.15rem !important;
-    line-height: 1.8 !important;
-  }
-}
 `;
   document.head.appendChild(_style);
 
   /* ── Inject Animation System v2 ────────────────────────────── */
   var _animStyle = document.createElement('style');
-  _animStyle.textContent = '/* ════════════════════════════════════════════════════════════════\n   SMOOTH ANIMATION SYSTEM  v2\n   Easing · Entrance · Hover · Press · Modal · Ripple\n════════════════════════════════════════════════════════════════ */\n\n/* ── Easing tokens ──────────────────────────────────────────── */\n:root {\n  --ease-out    : cubic-bezier(0.16, 1, 0.3, 1);\n  --ease-spring : cubic-bezier(0.34, 1.56, 0.64, 1);\n  --ease-in-out : cubic-bezier(0.65, 0, 0.35, 1);\n  --transition  : 0.22s cubic-bezier(0.16, 1, 0.3, 1);\n}\n\n/* ── Screen transitions ────────────────────────────────────── */\n@keyframes screenFadeIn {\n  from { opacity: 0; }\n  to   { opacity: 1; }\n}\n\n/* ── Start screen entrance ─────────────────────────────────── */\n@keyframes slideDown {\n  from { opacity: 0; transform: translateY(-18px); }\n  to   { opacity: 1; transform: translateY(0); }\n}\n@keyframes fadeUp {\n  from { opacity: 0; transform: translateY(24px); }\n  to   { opacity: 1; transform: translateY(0); }\n}\n@keyframes iconPop {\n  0%   { transform: scale(0.7) rotate(-8deg); opacity: 0; }\n  60%  { transform: scale(1.15) rotate(4deg); }\n  100% { transform: scale(1)    rotate(0deg); opacity: 1; }\n}\n\n.topbar { animation: slideDown 0.45s var(--ease-out) both; }\n#start-screen .start-card { animation: fadeUp 0.55s 0.1s var(--ease-out) both; }\n#start-screen .start-icon { animation: iconPop 0.5s 0.2s var(--ease-spring) both; }\n\n/* ── Card hover effects ────────────────────────────────────── */\n.start-card {\n  transition:\n    transform      0.32s var(--ease-out),\n    box-shadow     0.32s var(--ease-out),\n    border-color   0.28s var(--ease-out) !important;\n}\n.start-card:hover {\n  transform   : translateY(-5px) scale(1.008);\n  box-shadow  : 0 16px 40px rgba(0,0,0,0.45);\n}\n\n.start-icon {\n  transition: transform 0.35s var(--ease-spring) !important;\n}\n.start-card:hover .start-icon {\n  transform : scale(1.08) rotate(-4deg);\n}\n\n/* ── Button effects ────────────────────────────────────────── */\n.btn-start, .btn-nav, .btn-restart {\n  position  : relative;\n  overflow  : hidden;\n  transition:\n    opacity    0.22s var(--ease-out),\n    transform  0.22s var(--ease-out),\n    box-shadow 0.22s var(--ease-out) !important;\n}\n.btn-start:hover, .btn-nav.primary:hover, .btn-restart:hover {\n  opacity   : 0.92 !important;\n  transform : translateY(-2px) !important;\n  box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 40%, transparent);\n}\n.btn-start:active, .btn-nav:active, .btn-restart:active {\n  transform : scale(0.97) translateY(0px) !important;\n  transition-duration: 0.09s !important;\n}\n\n/* ── Ripple wave ─────────────────────────────────────────────── */\n@keyframes ripple {\n  to { transform: scale(5); opacity: 0; }\n}\n.ripple-wave {\n  position      : absolute;\n  border-radius : 50%;\n  width         : 60px;\n  height        : 60px;\n  margin-top    : -30px;\n  margin-left   : -30px;\n  background    : rgba(255, 255, 255, 0.22);\n  transform     : scale(0);\n  animation     : ripple 0.55s var(--ease-out) forwards;\n  pointer-events: none;\n}\n\n/* ── Icon buttons ───────────────────────────────────────────── */\n.icon-btn, .hub-back-btn, .theme-btn-fixed {\n  transition: all 0.22s var(--ease-out) !important;\n}\n.hub-back-btn:hover, .theme-btn-fixed:hover {\n  transform: translateY(-1px);\n  color: var(--text) !important;\n  border-color: var(--accent) !important;\n}\n.icon-btn:active, .hub-back-btn:active, .theme-btn-fixed:active {\n  transform      : scale(0.87) !important;\n  transition-duration: 0.08s !important;\n}\n\n/* ── Theme toggle spin ──────────────────────────────────────── */\n@keyframes spinPop {\n  0%   { transform: rotate(0deg)   scale(1);    }\n  40%  { transform: rotate(200deg) scale(0.85); }\n  70%  { transform: rotate(320deg) scale(1.1);  }\n  100% { transform: rotate(360deg) scale(1);    }\n}\n.theme-spinning {\n  animation: spinPop 0.5s var(--ease-spring) forwards !important;\n}\n\n/* ── Option hover effects ──────────────────────────────────── */\n.option-label {\n  transition:\n    transform    0.2s var(--ease-out),\n    border-color 0.2s var(--ease-out),\n    background   0.2s var(--ease-out) !important;\n}\n.option-label:hover {\n  transform   : translateX(4px);\n  border-color: var(--accent) !important;\n}\n\n/* ── Nav button effects ────────────────────────────────────── */\n.nav-btn {\n  transition:\n    transform    0.15s var(--ease-out),\n    border-color 0.2s var(--ease-out),\n    background   0.2s var(--ease-out) !important;\n}\n.nav-btn:hover {\n  transform   : scale(1.08);\n  border-color: var(--accent) !important;\n}\n.nav-btn:active {\n  transform      : scale(0.95) !important;\n  transition-duration: 0.08s !important;\n}\n\n/* ── Flag button pulse ─────────────────────────────────────── */\n@keyframes badgePulse {\n  0%   { transform: scale(1);    }\n  50%  { transform: scale(1.15); }\n  100% { transform: scale(1);    }\n}\n.flag-btn.active svg {\n  animation: badgePulse 0.4s var(--ease-spring);\n}\n\n/* ── Modal effects ─────────────────────────────────────────── */\n.modal-overlay {\n  transition: opacity 0.25s var(--ease-out) !important;\n}\n.modal {\n  animation: modalIn 0.38s var(--ease-spring) both !important;\n}\n@keyframes modalIn {\n  from { opacity: 0; transform: translateY(28px) scale(0.93); }\n  to   { opacity: 1; transform: translateY(0)    scale(1);    }\n}\n\n/* ── Result item animations ────────────────────────────────── */\n.result-item {\n  animation: fadeUp 0.4s var(--ease-out) both;\n}\n.result-item:nth-child(1) { animation-delay: 0.05s; }\n.result-item:nth-child(2) { animation-delay: 0.1s; }\n.result-item:nth-child(3) { animation-delay: 0.15s; }\n.result-item:nth-child(4) { animation-delay: 0.2s; }\n.result-item:nth-child(5) { animation-delay: 0.25s; }\n.result-item:nth-child(n+6) { animation-delay: 0.3s; }\n\n/* ── Stat box hover ────────────────────────────────────────── */\n.bank-stat-box, .meta-item {\n  transition:\n    transform    0.2s var(--ease-out),\n    border-color 0.2s var(--ease-out) !important;\n}\n.bank-stat-box:hover, .meta-item:hover {\n  transform   : translateY(-2px);\n  border-color: var(--accent) !important;\n}\n\n/* ── Timer warning pulse ───────────────────────────────────── */\n@keyframes pulse {\n  0%, 100% { opacity: 1; }\n  50%      { opacity: 0.6; }\n}\n\n/* ── Respect prefers-reduced-motion ─────────────────────────── */\n@media (prefers-reduced-motion: reduce) {\n  *, *::before, *::after {\n    animation-duration  : 0.01ms !important;\n    animation-delay     : 0ms    !important;\n    transition-duration : 0.01ms !important;\n  }\n}';
+  _animStyle.textContent = '/* ════════════════════════════════════════════════════════════════\n   SMOOTH ANIMATION SYSTEM  v2\n   Easing · Entrance · Hover · Press · Modal · Ripple\n════════════════════════════════════════════════════════════════ */\n\n/* ── Easing tokens ──────────────────────────────────────────── */\n:root {\n  --ease-out    : cubic-bezier(0.16, 1, 0.3, 1);\n  --ease-spring : cubic-bezier(0.34, 1.56, 0.64, 1);\n  --ease-in-out : cubic-bezier(0.65, 0, 0.35, 1);\n  --transition  : 0.22s cubic-bezier(0.16, 1, 0.3, 1);\n}\n\n/* ── Screen transitions ────────────────────────────────────── */\n@keyframes screenFadeIn {\n  from { opacity: 0; }\n  to   { opacity: 1; }\n}\n\n/* ── Start screen entrance ─────────────────────────────────── */\n@keyframes slideDown {\n  from { opacity: 0; transform: translateY(-18px); }\n  to   { opacity: 1; transform: translateY(0); }\n}\n@keyframes fadeUp {\n  from { opacity: 0; transform: translateY(24px); }\n  to   { opacity: 1; transform: translateY(0); }\n}\n@keyframes iconPop {\n  0%   { transform: scale(0.7) rotate(-8deg); opacity: 0; }\n  60%  { transform: scale(1.15) rotate(4deg); }\n  100% { transform: scale(1)    rotate(0deg); opacity: 1; }\n}\n\n.topbar { animation: slideDown 0.45s var(--ease-out) both; }\n#start-screen .start-card { animation: fadeUp 0.55s 0.1s var(--ease-out) both; }\n#start-screen .start-icon { animation: iconPop 0.5s 0.2s var(--ease-spring) both; }\n\n/* ── Card hover effects ────────────────────────────────────── */\n.start-card {\n  transition:\n    transform      0.32s var(--ease-out),\n    box-shadow     0.32s var(--ease-out),\n    border-color   0.28s var(--ease-out) !important;\n}\n.start-card:hover {\n  transform   : translateY(-5px) scale(1.008);\n  box-shadow  : 0 16px 40px rgba(0,0,0,0.45);\n}\n\n.start-icon {\n  transition: transform 0.35s var(--ease-spring) !important;\n}\n.start-card:hover .start-icon {\n  transform : scale(1.08) rotate(-4deg);\n}\n\n/* ── Button effects ─────────────────────────────────────────── */\n.btn-start, .btn-nav, .btn-restart {\n  position  : relative;\n  overflow  : hidden;\n  transition:\n    opacity    0.22s var(--ease-out),\n    transform  0.22s var(--ease-out),\n    box-shadow 0.22s var(--ease-out) !important;\n}\n.btn-start:hover, .btn-nav.primary:hover, .btn-restart:hover {\n  opacity   : 0.92 !important;\n  transform : translateY(-2px) !important;\n  box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 40%, transparent);\n}\n.btn-start:active, .btn-nav:active, .btn-restart:active {\n  transform : scale(0.97) translateY(0px) !important;\n  transition-duration: 0.09s !important;\n}\n\n/* ── Ripple wave ────────────────────────────────────────────── */\n@keyframes ripple {\n  to { transform: scale(5); opacity: 0; }\n}\n.ripple-wave {\n  position      : absolute;\n  border-radius : 50%;\n  width         : 60px;\n  height        : 60px;\n  margin-top    : -30px;\n  margin-left   : -30px;\n  background    : rgba(255, 255, 255, 0.22);\n  transform     : scale(0);\n  animation     : ripple 0.55s var(--ease-out) forwards;\n  pointer-events: none;\n}\n\n/* ── Icon buttons ───────────────────────────────────────────── */\n.icon-btn, .hub-back-btn, .theme-btn-fixed {\n  transition: all 0.22s var(--ease-out) !important;\n}\n.hub-back-btn:hover, .theme-btn-fixed:hover {\n  transform: translateY(-1px);\n  color: var(--text) !important;\n  border-color: var(--accent) !important;\n}\n.icon-btn:active, .hub-back-btn:active, .theme-btn-fixed:active {\n  transform      : scale(0.87) !important;\n  transition-duration: 0.08s !important;\n}\n\n/* ── Theme toggle spin ──────────────────────────────────────── */\n@keyframes spinPop {\n  0%   { transform: rotate(0deg)   scale(1);    }\n  40%  { transform: rotate(200deg) scale(0.85); }\n  70%  { transform: rotate(320deg) scale(1.1);  }\n  100% { transform: rotate(360deg) scale(1);    }\n}\n.theme-spinning {\n  animation: spinPop 0.5s var(--ease-spring) forwards !important;\n}\n\n/* ── Option hover effects ───────────────────────────────────── */\n.option-label {\n  transition:\n    transform    0.2s var(--ease-out),\n    border-color 0.2s var(--ease-out),\n    background   0.2s var(--ease-out) !important;\n}\n.option-label:hover {\n  transform   : translateX(4px);\n  border-color: var(--accent) !important;\n}\n\n/* ── Nav button effects ─────────────────────────────────────── */\n.nav-btn {\n  transition:\n    transform    0.15s var(--ease-out),\n    border-color 0.2s var(--ease-out),\n    background   0.2s var(--ease-out) !important;\n}\n.nav-btn:hover {\n  transform   : scale(1.08);\n  border-color: var(--accent) !important;\n}\n.nav-btn:active {\n  transform      : scale(0.95) !important;\n  transition-duration: 0.08s !important;\n}\n\n/* ── Flag button pulse ──────────────────────────────────────── */\n@keyframes badgePulse {\n  0%   { transform: scale(1);    }\n  50%  { transform: scale(1.15); }\n  100% { transform: scale(1);    }\n}\n.flag-btn.active svg {\n  animation: badgePulse 0.4s var(--ease-spring);\n}\n\n/* ── Modal effects ──────────────────────────────────────────── */\n.modal-overlay {\n  transition: opacity 0.25s var(--ease-out) !important;\n}\n.modal {\n  animation: modalIn 0.38s var(--ease-spring) both !important;\n}\n@keyframes modalIn {\n  from { opacity: 0; transform: translateY(28px) scale(0.93); }\n  to   { opacity: 1; transform: translateY(0)    scale(1);    }\n}\n\n/* ── Result item animations ─────────────────────────────────── */\n.result-item {\n  animation: fadeUp 0.4s var(--ease-out) both;\n}\n.result-item:nth-child(1) { animation-delay: 0.05s; }\n.result-item:nth-child(2) { animation-delay: 0.1s; }\n.result-item:nth-child(3) { animation-delay: 0.15s; }\n.result-item:nth-child(4) { animation-delay: 0.2s; }\n.result-item:nth-child(5) { animation-delay: 0.25s; }\n.result-item:nth-child(n+6) { animation-delay: 0.3s; }\n\n/* ── Stat box hover ─────────────────────────────────────────── */\n.bank-stat-box, .meta-item {\n  transition:\n    transform    0.2s var(--ease-out),\n    border-color 0.2s var(--ease-out) !important;\n}\n.bank-stat-box:hover, .meta-item:hover {\n  transform   : translateY(-2px);\n  border-color: var(--accent) !important;\n}\n\n/* ── Timer warning pulse ────────────────────────────────────── */\n@keyframes pulse {\n  0%, 100% { opacity: 1; }\n  50%      { opacity: 0.6; }\n}\n\n/* ── Respect prefers-reduced-motion ─────────────────────────── */\n@media (prefers-reduced-motion: reduce) {\n  *, *::before, *::after {\n    animation-duration  : 0.01ms !important;\n    animation-delay     : 0ms    !important;\n    transition-duration : 0.01ms !important;\n  }\n}';
   document.head.appendChild(_animStyle);
 
   document.body.innerHTML = `
@@ -1336,7 +523,7 @@ function toggleHighlighterMode() {
       b.classList.add('active');
     });
     if (!state.submitted) renderQuestion(state.current);
-    showToast('🖍 Highlighter ON');
+    EngineShared.showToast('🖍 Highlighter ON');
   } else {
     _togglePicker();
   }
@@ -1352,7 +539,7 @@ function disableHighlighterMode() {
   });
   _closeAllPickers();
   if (!state.submitted) renderQuestion(state.current);
-  showToast('Highlighter OFF');
+  EngineShared.showToast('Highlighter OFF');
 }
 
 // Toggle color picker visibility
@@ -1492,7 +679,7 @@ function hlApplyColor(colorNum) {
   delete _hlCache[gIdx];
   window.getSelection().removeAllRanges();
   renderQuestion(state.current);
-  debounceSaveProgress();
+  EngineShared.debounceSave(saveProgress);
 }
 
 function hlEraseSelection() {
@@ -1512,7 +699,7 @@ function hlEraseSelection() {
   delete _hlCache[gIdx];
   window.getSelection().removeAllRanges();
   renderQuestion(state.current);
-  debounceSaveProgress();
+  EngineShared.debounceSave(saveProgress);
 }
 
 function clearAllHighlights(sessionIdx) {
@@ -1522,8 +709,8 @@ function clearAllHighlights(sessionIdx) {
     delete _hlCache[gIdx];
   }
   renderQuestion(sessionIdx);
-  debounceSaveProgress();
-  showToast('Highlights cleared');
+  EngineShared.debounceSave(saveProgress);
+  EngineShared.showToast('Highlights cleared');
 }
 
 /* ── STRIKETHROUGH TOGGLE (uses global bank index) ─────────── */
@@ -1534,55 +721,8 @@ function toggleStrikethrough(sessionIdx, optIdx) {
   state.strikethrough[gIdx][optIdx] = !state.strikethrough[gIdx][optIdx];
   if (!state.strikethrough[gIdx][optIdx]) delete state.strikethrough[gIdx][optIdx];
   renderQuestion(sessionIdx);
-  debounceSaveProgress();
+  EngineShared.debounceSave(saveProgress);
 }
-
-/* ── KEYBOARD SHORTCUTS (H, 1-4, S) ───────────────────────── */
-document.addEventListener('keydown', function(e) {
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-  var quizActive = document.getElementById('quiz-screen') && document.getElementById('quiz-screen').classList.contains('active');
-  if (!quizActive) return;
-
-  if ((e.key === 'h' || e.key === 'H') && !e.ctrlKey && !e.metaKey && !e.altKey) {
-    e.preventDefault();
-    e.stopImmediatePropagation();
-    toggleHighlighterMode();
-    return;
-  }
-  // 1-4: set highlighter color (also apply if text is selected)
-  if ((e.key >= '1' && e.key <= '4') && !e.ctrlKey && !e.metaKey && !e.altKey) {
-    e.preventDefault();
-    e.stopImmediatePropagation();
-    _hlLastColor = parseInt(e.key);
-    _syncPickerUI();
-    var sel = window.getSelection();
-    if (sel && !sel.isCollapsed && state.isHighlighterMode) {
-      hlApplyColor(_hlLastColor);
-    }
-    return;
-  }
-  if (state.isHighlighterMode && !e.ctrlKey && !e.metaKey && !e.altKey) {
-    if (e.key === 's' || e.key === 'S') {
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      var q = SESSION_QUESTIONS[state.current];
-      if (q) {
-        // Strike the hovered option if any, otherwise the first un-struck one
-        if (_hoveredOption >= 0) {
-          toggleStrikethrough(state.current, _hoveredOption);
-          return;
-        }
-        var gIdx = _hlGlobalIdx(state.current);
-        var stMap = (gIdx !== undefined && state.strikethrough[gIdx]) || {};
-        for (var i = 0; i < q.options.length; i++) {
-          if (!stMap[i]) { toggleStrikethrough(state.current, i); return; }
-        }
-        if (gIdx !== undefined) state.strikethrough[gIdx] = {};
-        renderQuestion(state.current);
-      }
-    }
-  }
-});
 
 /* ── TAG-AWARE HIGHLIGHT INJECTION ─────────────────────────── */
 function _applyHighlightsToHTML(html, hlList, part, optIndex) {
@@ -1696,7 +836,6 @@ let selectedCount = 20;
 
 /* ─── SESSION PROGRESS STORAGE ─────────────────────────────────────
    Tracks quiz session progress (answers, flags, timer) across page reloads.
-   Uses same pattern as misc-mcq.html for consistency.
 ──────────────────────────────────────────────────────────────── */
 const STORAGE_VERSION = 'v1';
 const STORAGE_KEY = `quiz_progress_${STORAGE_VERSION}_${(BANK_CONFIG.uid || window.location.pathname).replace(/[^a-zA-Z0-9]/g, '_')}`;
@@ -1705,20 +844,9 @@ let restoreToastTimeout = null;
 let restoreScreenTimeout = null;  // tracks the setTimeout inside doRestoreProgress
 let pendingTransitionTimeout = null;  // tracks screen transition timeouts to prevent race conditions
 
-/**
- * Safely save quiz progress to localStorage
- * Handles quota errors and validates data before saving
- */
-let saveProgressTimeout = null;
-function debounceSaveProgress() {
-  if (saveProgressTimeout) clearTimeout(saveProgressTimeout);
-  saveProgressTimeout = setTimeout(saveProgress, 500);
-}
-
 function saveProgress() {
   if (state.submitted) return;
 
-  // Don't save if there's no progress yet (prevents blank saves on first load/exit)
   const hasAnswers = Object.keys(state.answers || {}).length > 0;
   const hasFlags = Object.values(state.flagged || {}).some(v => v === true);
   const hasTime = (state.elapsed || 0) > 10;
@@ -1730,8 +858,8 @@ function saveProgress() {
     version: STORAGE_VERSION,
     quizTitle: BANK_CONFIG.title,
     totalQuestions: SESSION_QUESTIONS.length,
-    questionCount: selectedCount, // Store the selected question count for validation
-    sessionIndices: SESSION_QUESTION_INDICES, // Exact bank indices — lets restore skip re-selection
+    questionCount: selectedCount,
+    sessionIndices: SESSION_QUESTION_INDICES,
     current: state.current,
     answers: state.answers,
     flagged: state.flagged,
@@ -1749,9 +877,7 @@ function saveProgress() {
       console.warn('Invalid save data, skipping save');
       return;
     }
-
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
-
   } catch (e) {
     if (e.name === 'QuotaExceededError' || e.code === 22) {
       console.warn('LocalStorage quota exceeded, clearing old saves...');
@@ -1760,8 +886,8 @@ function saveProgress() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
       } catch (retryError) {
         console.error('Failed to save progress even after cleanup:', retryError);
-        showToast('Storage full! Clear tracker data to save progress.', [
-          { label: 'Go to Menu', primary: true, onClick: navigateToIndex }
+        EngineShared.showToast('Storage full! Clear tracker data to save progress.', [
+          { label: 'Go to Menu', primary: true, onClick: EngineShared.navigateToIndex }
         ]);
       }
     } else {
@@ -1770,9 +896,6 @@ function saveProgress() {
   }
 }
 
-/**
- * Validate save data structure
- */
 function isValidSaveData(data) {
   if (!data || typeof data !== 'object') return false;
   if (typeof data.current !== 'number' || data.current < 0) return false;
@@ -1782,170 +905,78 @@ function isValidSaveData(data) {
   if (!['exam', 'learning'].includes(data.mode)) return false;
   if (typeof data.questionCount !== 'number' || data.questionCount < 1) return false;
   if (typeof data.totalQuestions !== 'number' || data.totalQuestions < 1) return false;
-  // sessionIndices must exist and every index must be a valid bank index
   if (!Array.isArray(data.sessionIndices) || data.sessionIndices.length === 0) return false;
   if (data.sessionIndices.some(i => typeof i !== 'number' || i < 0 || i >= QUESTION_BANK.length)) return false;
-  // highlights and strikethrough are optional for backward compatibility
   if (data.highlights && typeof data.highlights !== 'object') return false;
   if (data.strikethrough && typeof data.strikethrough !== 'object') return false;
   return true;
 }
 
-/**
- * Clear old saves from other quizzes to free up space
- */
 function clearOldSaves() {
   try {
     const now = Date.now();
     const maxAge = 7 * 24 * 60 * 60 * 1000;
-
     Object.keys(localStorage).forEach(key => {
       if (key.startsWith('quiz_progress_')) {
         try {
           const data = JSON.parse(localStorage.getItem(key));
-          if (now - data.timestamp > maxAge) {
-            localStorage.removeItem(key);
-          }
-        } catch (e) {
-          localStorage.removeItem(key);
-        }
+          if (now - data.timestamp > maxAge) localStorage.removeItem(key);
+        } catch (e) { localStorage.removeItem(key); }
       }
     });
-  } catch (e) {
-    console.error('Error clearing old saves:', e);
-  }
+  } catch (e) { console.error('Error clearing old saves:', e); }
 }
 
 function clearProgress() {
   localStorage.removeItem(STORAGE_KEY);
 }
 
-/**
- * Check for saved progress on init and show optional restore toast
- */
 function checkSavedProgress() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (!saved) return;
-
   try {
     const data = JSON.parse(saved);
-
-    if (data.version !== STORAGE_VERSION) {
-
-      localStorage.removeItem(STORAGE_KEY);
-      return;
-    }
-
-    if (data.quizTitle !== BANK_CONFIG.title) {
-
-      localStorage.removeItem(STORAGE_KEY);
-      return;
-    }
-
-    // Validate basic structure before showing restore option
-    if (!isValidSaveData(data)) {
-
-      localStorage.removeItem(STORAGE_KEY);
-      return;
-    }
-
+    if (data.version !== STORAGE_VERSION) { localStorage.removeItem(STORAGE_KEY); return; }
+    if (data.quizTitle !== BANK_CONFIG.title) { localStorage.removeItem(STORAGE_KEY); return; }
+    if (!isValidSaveData(data)) { localStorage.removeItem(STORAGE_KEY); return; }
     const maxAge = 7 * 24 * 60 * 60 * 1000;
-    if (Date.now() - data.timestamp > maxAge) {
-
-      localStorage.removeItem(STORAGE_KEY);
-      return;
-    }
-
+    if (Date.now() - data.timestamp > maxAge) { localStorage.removeItem(STORAGE_KEY); return; }
     pendingRestoreData = data;
-
-    showToast("📂 Previous progress found!", [
-      {
-        label: "Restore",
-        primary: true,
-        onClick: () => {
-          clearTimeout(restoreToastTimeout);
-          doRestoreProgress(pendingRestoreData);
-        }
-      },
-      {
-        label: "Dismiss",
-        primary: false,
-        onClick: () => {
-          clearTimeout(restoreToastTimeout);
-          pendingRestoreData = null;
-          clearProgress();
-        }
-      }
+    EngineShared.showToast("📂 Previous progress found!", [
+      { label: "Restore", primary: true, onClick: function() { clearTimeout(restoreToastTimeout); doRestoreProgress(pendingRestoreData); } },
+      { label: "Dismiss", primary: false, onClick: function() { clearTimeout(restoreToastTimeout); pendingRestoreData = null; clearProgress(); } }
     ]);
-
-    restoreToastTimeout = setTimeout(() => {
-
-      pendingRestoreData = null;
-      clearProgress();
-      const toast = document.getElementById('toast');
-      if (toast) {
-        toast.classList.remove('show');
-      }
-    }, 15000);
-
-  } catch(e) {
-    console.error('Error checking saved progress:', e);
-    localStorage.removeItem(STORAGE_KEY);
-  }
+    restoreToastTimeout = setTimeout(function() { pendingRestoreData = null; clearProgress(); var toast = document.getElementById('toast'); if (toast) toast.classList.remove('show'); }, 15000);
+  } catch(e) { console.error('Error checking saved progress:', e); localStorage.removeItem(STORAGE_KEY); }
 }
 
-/**
- * Actually perform the restore with validated data
- */
 function doRestoreProgress(data) {
-  if (!data.savedAt) {
-    data.savedAt = data.timestamp;
-  }
-
-  // Restore the selectedCount from saved data
+  if (!data.savedAt) data.savedAt = data.timestamp;
   selectedCount = data.questionCount || 20;
-  
-  // Update the input field to reflect restored count
-  const inp = document.getElementById('q-count-input');
+  var inp = document.getElementById('q-count-input');
   if (inp) inp.value = selectedCount;
-
-  // Restore session questions DIRECTLY from saved indices — do NOT call
-  // selectSessionQuestions() here because that would pick NEW questions,
-  // corrupt bank progress (double-count the session), and mismatch answers.
   SESSION_QUESTION_INDICES = data.sessionIndices;
   SESSION_QUESTIONS = data.sessionIndices.map(i => QUESTION_BANK[i]);
-
-  // Validate all answer indices are still valid
   for (const [qIdx, optIdx] of Object.entries(data.answers)) {
     const qIndex = parseInt(qIdx);
     if (qIndex >= 0 && qIndex < SESSION_QUESTIONS.length) {
       const optCount = SESSION_QUESTIONS[qIndex].options.length;
-      if (optIdx < 0 || optIdx >= optCount) {
-        delete data.answers[qIdx];
-      }
-    } else {
-      delete data.answers[qIdx];
-    }
+      if (optIdx < 0 || optIdx >= optCount) delete data.answers[qIdx];
+    } else { delete data.answers[qIdx]; }
   }
-
   state.current = Math.min(data.current, SESSION_QUESTIONS.length - 1);
   state.answers = data.answers;
   state.flagged = data.flagged || {};
   state.highlights = data.highlights || {};
   state.strikethrough = data.strikethrough || {};
   state.elapsed = data.elapsed || 0;
-  // In learning mode, timerSecs is irrelevant (count-up uses elapsed only)
-  // Only restore timerSecs for exam mode to avoid confusion
   state.timerSecs = (data.mode === 'learning') ? 0 : (data.timerSecs || 0);
   state.mode = data.mode;
   state.submitted = false;
-
   if (restoreScreenTimeout) clearTimeout(restoreScreenTimeout);
-  restoreScreenTimeout = setTimeout(() => {
+  restoreScreenTimeout = setTimeout(function() {
     restoreScreenTimeout = null;
-    // Set CSS variable for portrait nav grid (same as startQuiz does)
     document.documentElement.style.setProperty('--q-count', SESSION_QUESTIONS.length);
-
     document.getElementById('timer-display').classList.remove('hidden');
     showScreen('quiz-screen');
     buildNavGrid();
@@ -1956,10 +987,7 @@ function doRestoreProgress(data) {
   }, 500);
 }
 
-/* ─── BANK PROGRESS STORAGE ─────────────────────────────────────
-   Tracks which questions from the bank have been shown across sessions.
-   Structure: { shownIndices: number[], totalSessions: number, cycleCount: number }
-──────────────────────────────────────────────────────────────── */
+/* ─── BANK PROGRESS STORAGE ───────────────────────────────────── */
 const BANK_PROGRESS_KEY = `bank_progress_v1_${(BANK_CONFIG.uid || 'default').replace(/[^a-zA-Z0-9]/g,'_')}`;
 
 function getBankProgress() {
@@ -1983,8 +1011,8 @@ function saveBankProgress(progress) {
   } catch(e) {
     console.error('Failed to save bank progress:', e);
     if (e.name === 'QuotaExceededError' || e.code === 22) {
-      showToast('Storage full! Clear tracker data to save bank progress.', [
-        { label: 'Go to Menu', primary: true, onClick: navigateToIndex }
+      EngineShared.showToast('Storage full! Clear tracker data to save bank progress.', [
+        { label: 'Go to Menu', primary: true, onClick: EngineShared.navigateToIndex }
       ]);
     }
   }
@@ -1994,13 +1022,10 @@ function resetBankProgress() {
   if (!confirm('Reset all bank progress? This will forget which questions you have already seen.')) return;
   localStorage.removeItem(BANK_PROGRESS_KEY);
   updateStartScreenStats();
-  showToast('🔄 Bank progress reset!');
+  EngineShared.showToast('🔄 Bank progress reset!');
 }
 
-/* ─── QUESTION SELECTION ─────────────────────────────────────
-   Picks `count` questions preferring unshown ones.
-   When all questions have been shown, starts a new coverage cycle.
-──────────────────────────────────────────────────────────────── */
+/* ─── QUESTION SELECTION ───────────────────────────────────── */
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -2013,35 +1038,30 @@ function shuffle(arr) {
 function selectSessionQuestions(count, order = 'sequential') {
   const bankSize = QUESTION_BANK.length;
   const progress = getBankProgress();
-  
+
   const allIndices = Array.from({ length: bankSize }, (_, i) => i);
   let unshown = allIndices.filter(i => !progress.shownIndices.includes(i));
-  
-  // Cap count to remaining questions in current cycle
+
   const maxAllowed = unshown.length > 0 ? unshown.length : bankSize;
   const n = Math.min(count, maxAllowed);
-  
+
   let picked;
-  
+
   if (unshown.length === 0) {
-    // All questions have been shown — start a new coverage cycle
     progress.cycleCount++;
     progress.shownIndices = [];
     unshown = [...allIndices];
     saveBankProgress(progress);
-    showToast(`🎉 Full cycle complete! Starting fresh — cycle ${progress.cycleCount + 1}`);
+    EngineShared.showToast(`🎉 Full cycle complete! Starting fresh — cycle ${progress.cycleCount + 1}`);
     picked = order === 'sequential'
       ? unshown.sort((a, b) => a - b).slice(0, n)
       : shuffle(unshown).slice(0, n);
   } else {
-    // Sequential: pick next N questions in original bank order (no shuffle)
-    // Random: shuffle then pick N for fair random coverage
     picked = order === 'sequential'
       ? unshown.sort((a, b) => a - b).slice(0, n)
       : shuffle(unshown).slice(0, n);
   }
 
-  // Update shown indices — use Set for dedup to handle edge cases
   progress.shownIndices = [...new Set([...progress.shownIndices, ...picked])];
   progress.totalSessions++;
   saveBankProgress(progress);
@@ -2049,6 +1069,7 @@ function selectSessionQuestions(count, order = 'sequential') {
   SESSION_QUESTION_INDICES = picked;
   return picked.map(i => QUESTION_BANK[i]);
 }
+
 function updateStartScreenStats() {
   const progress = getBankProgress();
   const bankSize = QUESTION_BANK.length;
@@ -2056,36 +1077,24 @@ function updateStartScreenStats() {
   const pct      = bankSize > 0 ? Math.round(covered / bankSize * 100) : 0;
   const remaining = bankSize - covered;
 
-  // If cycle is complete (100% coverage), automatically reset for new cycle
   if (pct === 100 && covered > 0) {
     progress.cycleCount++;
     progress.shownIndices = [];
     saveBankProgress(progress);
-    showToast(`🎉 Full cycle complete! Starting fresh — cycle ${progress.cycleCount + 1}`);
-    // Refresh progress values after reset
+    EngineShared.showToast(`🎉 Full cycle complete! Starting fresh — cycle ${progress.cycleCount + 1}`);
     const newCovered = 0;
-    const newRemaining = bankSize;
-    
     document.getElementById('stat-covered').textContent  = newCovered;
     document.getElementById('stat-total').textContent    = bankSize;
     document.getElementById('stat-sessions').textContent = progress.totalSessions;
     document.getElementById('coverage-fill').style.width = '0%';
     document.getElementById('coverage-pct').textContent  = '0%';
-    
-    // Reset input for fresh cycle
     const inp = document.getElementById('q-count-input');
     selectedCount = Math.min(selectedCount || 20, bankSize);
     inp.value = selectedCount;
-    inp.max = newRemaining;
-    inp.placeholder = newRemaining;
-    
-    // Update the +5 button
+    inp.max = 0;
+    inp.placeholder = 0;
     const plusBtn = inp.parentElement.querySelector('.time-adj-btn:last-child');
-    if (plusBtn) {
-      plusBtn.textContent = '+5';
-      plusBtn.disabled = false;
-      plusBtn.style.opacity = '';
-    }
+    if (plusBtn) { plusBtn.textContent = '+5'; plusBtn.disabled = false; plusBtn.style.opacity = ''; }
     return;
   }
 
@@ -2095,25 +1104,20 @@ function updateStartScreenStats() {
   document.getElementById('coverage-fill').style.width = pct + '%';
   document.getElementById('coverage-pct').textContent  = pct + '%';
 
-  // Cap the question count input to remaining questions in current cycle
   const inp = document.getElementById('q-count-input');
   const currentVal = parseInt(inp.value) || selectedCount || 20;
-  // Always cap to remaining questions
   const maxAllowed = remaining;
   inp.max = maxAllowed;
   inp.placeholder = maxAllowed;
-  
-  // Reset selectedCount to maxAllowed when cycle is complete to ensure user can select any number
+
   if (covered === 0) {
-    // Fresh cycle - reset to default or keep user's last preference if within range
     selectedCount = Math.min(selectedCount || 20, bankSize);
     inp.value = selectedCount;
   } else if (currentVal > maxAllowed) {
     inp.value = maxAllowed;
     selectedCount = maxAllowed;
   }
-  
-  // Update the +5 button behavior based on remaining questions
+
   const plusBtn = inp.parentElement.querySelector('.time-adj-btn:last-child');
   if (plusBtn) {
     plusBtn.textContent = currentVal >= maxAllowed ? 'max' : '+5';
@@ -2127,16 +1131,14 @@ function adjustCount(delta) {
   const bankSize = QUESTION_BANK.length;
   const progress = getBankProgress();
   const remaining = Math.max(1, bankSize - progress.shownIndices.length);
-  // Always cap to remaining questions
   const maxAllowed = remaining;
-  
+
   const cur = parseInt(inp.value) || selectedCount || 20;
   const newVal = Math.max(1, Math.min(maxAllowed, cur + delta));
   inp.value = newVal;
   selectedCount = newVal;
   autoSetTime(newVal);
 
-  // Update +5 button state based on remaining questions
   const plusBtn = inp.parentElement.querySelector('.time-adj-btn:last-child');
   if (plusBtn) {
     plusBtn.textContent = newVal >= maxAllowed ? 'max' : '+5';
@@ -2144,7 +1146,6 @@ function adjustCount(delta) {
     plusBtn.style.opacity = newVal >= maxAllowed ? '0.4' : '';
   }
 
-  // Only clear saved progress when user actively changes the count (not during init)
   if (uiReady) clearProgress();
 }
 
@@ -2152,17 +1153,15 @@ function setCount(n) {
   const bankSize = QUESTION_BANK.length;
   const progress = getBankProgress();
   const remaining = Math.max(1, bankSize - progress.shownIndices.length);
-  // Always cap to remaining questions
   const maxAllowed = remaining;
-  
-  if (n === -1) n = maxAllowed; // "All" = all remaining questions in current cycle
+
+  if (n === -1) n = maxAllowed;
   n = Math.max(1, Math.min(n, maxAllowed));
   selectedCount = n;
 
   document.getElementById('q-count-input').value = n;
   autoSetTime(n);
 
-  // Update +5 button state based on remaining questions
   const inp = document.getElementById('q-count-input');
   const plusBtn = inp.parentElement.querySelector('.time-adj-btn:last-child');
   if (plusBtn) {
@@ -2171,7 +1170,6 @@ function setCount(n) {
     plusBtn.style.opacity = n >= maxAllowed ? '0.4' : '';
   }
 
-  // Only clear saved progress when user actively changes the count (not during init)
   if (uiReady) clearProgress();
 }
 
@@ -2179,18 +1177,16 @@ function onCustomCount(val) {
   const bankSize = QUESTION_BANK.length;
   const progress = getBankProgress();
   const remaining = Math.max(1, bankSize - progress.shownIndices.length);
-  // Always cap to remaining questions
   const maxAllowed = remaining;
-  
+
   let n = parseInt(val) || 1;
   n = Math.max(1, Math.min(n, maxAllowed));
   selectedCount = n;
-  
+
   const inp = document.getElementById('q-count-input');
   inp.value = n;
   autoSetTime(n);
 
-  // Update +5 button state based on remaining questions
   const plusBtn = inp.parentElement.querySelector('.time-adj-btn:last-child');
   if (plusBtn) {
     plusBtn.textContent = n >= maxAllowed ? 'max' : '+5';
@@ -2198,7 +1194,6 @@ function onCustomCount(val) {
     plusBtn.style.opacity = n >= maxAllowed ? '0.4' : '';
   }
 
-  // Only clear saved progress when user actively changes the count (not during init)
   if (uiReady) clearProgress();
 }
 
@@ -2224,12 +1219,10 @@ document.querySelectorAll('input[name="quiz-mode"]').forEach(input => {
     });
     const selected = this.closest('label').querySelector('.mode-option');
     selected.classList.add('mode-selected');
-    // Show/hide time selector
     const timeSec = document.getElementById('time-section');
     timeSec.style.display = this.value === 'exam' ? '' : 'none';
   });
 });
-// Init mode selection visuals
 (function() {
   const checked = document.querySelector('input[name="quiz-mode"]:checked');
   if (checked) {
@@ -2255,7 +1248,6 @@ document.querySelectorAll('input[name="quiz-order"]').forEach(input => {
     selected.style.background  = 'var(--accent-dim)';
   });
 });
-// Init order selection visuals
 (function() {
   const checked = document.querySelector('input[name="quiz-order"]:checked');
   if (checked) {
@@ -2278,36 +1270,31 @@ function initUI() {
 
   const bankSize = QUESTION_BANK.length;
   const progress = getBankProgress();
-  
-  // Check if cycle is complete (100% coverage) on initial load and auto-reset
+
   const covered = progress.shownIndices.length;
   const pct = bankSize > 0 ? Math.round(covered / bankSize * 100) : 0;
   if (pct === 100 && covered > 0) {
     progress.cycleCount++;
     progress.shownIndices = [];
     saveBankProgress(progress);
-    showToast(`🎉 Full cycle complete! Starting fresh — cycle ${progress.cycleCount + 1}`);
+    EngineShared.showToast(`🎉 Full cycle complete! Starting fresh — cycle ${progress.cycleCount + 1}`);
   }
-  
+
   const remaining = Math.max(1, bankSize - progress.shownIndices.length);
   const capCount = document.getElementById('q-count-input');
 
-  // Set max to remaining questions (or bank size if all covered)
   capCount.max = remaining;
   capCount.placeholder = remaining;
 
-  // Default count
   const defaultCount = Math.min(20, remaining);
-  adjustCount(0); // Initialize with default value
+  adjustCount(0);
 
   updateStartScreenStats();
 
-  // Theme
   const savedTheme = localStorage.getItem('quiz-theme');
   if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
-  updateThemeIcon();
+  EngineShared.updateThemeIcon();
 
-  // Mark UI as fully initialised — count-change handlers may now clear saved progress
   uiReady = true;
 }
 
@@ -2318,11 +1305,8 @@ function startQuiz() {
   const timeMins = parseInt(document.getElementById('time-input').value) || 30;
   let count = selectedCount;
 
-  // Clear any existing saved progress before starting a new session
   clearProgress();
 
-  // Select questions from bank — sequential picks next N in bank order, random shuffles
-  // This function automatically starts a new cycle if all questions have been shown
   SESSION_QUESTIONS = selectSessionQuestions(count, order);
 
   state.current   = 0;
@@ -2333,7 +1317,6 @@ function startQuiz() {
   state.mode      = mode;
   state.timerSecs = timeMins * 60;
 
-  // Set CSS variable for portrait nav grid
   document.documentElement.style.setProperty('--q-count', SESSION_QUESTIONS.length);
 
   showScreen('quiz-screen');
@@ -2363,11 +1346,10 @@ function showScreen(id) {
   const target = document.getElementById(id);
   if (target.style.opacity === '0') target.style.opacity = '';
 
-  // Restart child animations with a SINGLE reflow on the container.
   if (id === 'start-screen') {
     const animEls = target.querySelectorAll('.start-card, .start-icon');
     animEls.forEach(el => { el.style.animation = 'none'; });
-    void target.offsetHeight; // one reflow resets all children at once
+    void target.offsetHeight;
     animEls.forEach(el => { el.style.animation = ''; });
   }
 
@@ -2387,20 +1369,19 @@ function startTimer() {
       if (delta >= 1) {
         state.elapsed   += delta;
         lastTime = now;
-        // In exam mode, count down the timer
         if (state.mode !== 'learning') {
           state.timerSecs -= delta;
           if (state.timerSecs <= 0) {
             state.timerSecs = 0;
             stopTimer();
-            showToast("⏰ Time's up! Submitting…");
+            EngineShared.showToast("⏰ Time's up! Submitting…");
             submitTimeout = setTimeout(confirmSubmit, 1500);
           }
         }
         updateTimerDisplay();
       }
     }
-  }, 500); // 500ms is enough — display only needs updating every second
+  }, 500);
 }
 
 function stopTimer() {
@@ -2410,7 +1391,6 @@ function stopTimer() {
 }
 
 function updateTimerDisplay() {
-  // In learning mode show elapsed (count-up), in exam mode show remaining (countdown)
   const secs = state.mode === 'learning'
     ? (state.elapsed || 0)
     : Math.max(0, state.timerSecs || 0);
@@ -2418,7 +1398,6 @@ function updateTimerDisplay() {
   document.getElementById('timer-text').textContent =
     String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
   const el = document.getElementById('timer-display');
-  // Warning state only in exam mode when time is low
   if (state.mode !== 'learning' && secs < 120) {
     el.classList.add('warn');
   } else {
@@ -2499,8 +1478,7 @@ function renderQuestion(idx) {
   updateNavStats();
   area.scrollTop = 0;
 
-  // Apply highlights & strikethrough after DOM is built
-  delete _hlCache[_hlGlobalIdx(idx)];  // DOM is fresh, must re-apply
+  delete _hlCache[_hlGlobalIdx(idx)];
   applyBulkHighlights(idx);
 }
 
@@ -2508,15 +1486,13 @@ function renderQuestion(idx) {
 function selectAnswer(qIdx, optIdx) {
   if (state.mode === 'learning' && state.answers[qIdx] !== undefined) return;
   state.answers[qIdx] = optIdx;
-  debounceSaveProgress(); // persist answer immediately
+  EngineShared.debounceSave(saveProgress);
   updateNavGrid(qIdx);
   updateNavStats();
-  // In learning mode: re-render to show explanation and highlights
   if (state.mode === 'learning') {
-    renderQuestion(qIdx);  // renderQuestion also updates progress
+    renderQuestion(qIdx);
     return;
   }
-  // Update progress bar (non-learning mode)
   var done = 0;
   for (var k in state.answers) { if (state.answers.hasOwnProperty(k)) done++; }
   document.getElementById('progress-fill').style.width = (done / SESSION_QUESTIONS.length * 100) + '%';
@@ -2541,8 +1517,8 @@ function toggleFlag(idx) {
   }
   updateNavGrid(idx);
   updateNavStats();
-  debounceSaveProgress(); // persist flag immediately
-  showToast(state.flagged[idx] ? `⚑ Question ${idx+1} flagged` : `Question ${idx+1} unflagged`);
+  EngineShared.debounceSave(saveProgress);
+  EngineShared.showToast(state.flagged[idx] ? `⚑ Question ${idx+1} flagged` : `Question ${idx+1} unflagged`);
 }
 
 /* ─── NAV GRID ───────────────────────────────────────────────── */
@@ -2566,7 +1542,6 @@ function updateNavGrid(changedIdx) {
     var isWrong = isAnswered && state.mode === 'learning' && state.answers[i] !== SESSION_QUESTIONS[i].correct;
     btn.className = 'nav-btn' + (isCurrent ? ' current' : isWrong ? ' wrong' : isAnswered ? ' answered' : '') + (isFlagged && !isCurrent ? ' flagged' : '');
 
-    // Flag dot — reuse existing if possible
     var existingDot = btn.querySelector('.flag-dot');
     if (isFlagged) {
       if (!existingDot) {
@@ -2586,7 +1561,7 @@ function updateNavGrid(changedIdx) {
     if (changedIdx !== null) indicesToUpdate.add(changedIdx);
     indicesToUpdate.forEach(i => updateNode(i));
   }
-  
+
   lastCurrentIdx = state.current;
 }
 
@@ -2601,7 +1576,6 @@ function updateNavStats() {
 
 /* ─── SUBMIT ─────────────────────────────────────────────────── */
 function attemptSubmit() {
-  // Cancel any pending auto-submit from timer expiry to prevent double submission
   if (submitTimeout) { clearTimeout(submitTimeout); submitTimeout = null; }
 
   if (state.mode === 'learning') { confirmSubmit(); return; }
@@ -2615,9 +1589,8 @@ function attemptSubmit() {
 }
 function closeModal() { document.getElementById('submit-modal').classList.remove('open'); }
 function confirmSubmit() {
-  // Guard against double submission (race condition: timer expiry + user click)
   if (state.submitted) return;
-  state.submitted = true;  // Set flag FIRST to close the re-entry window immediately
+  state.submitted = true;
   clearInterval(saveIntervalId);
   if (pendingTransitionTimeout) {
     clearTimeout(pendingTransitionTimeout);
@@ -2625,11 +1598,17 @@ function confirmSubmit() {
   }
   closeModal();
   stopTimer();
-  saveTrackerData();
-
-  // Clear saved progress — session is done, no restore needed
+  EngineTracker.saveTrackerData({
+    config: window.BANK_CONFIG,
+    questions: window.SESSION_QUESTIONS || window.QUESTION_BANK,
+    state: state,
+    keys: KEYS,
+    sessionIndices: typeof SESSION_QUESTION_INDICES !== 'undefined' ? SESSION_QUESTION_INDICES : null,
+    questionBank: typeof QUESTION_BANK !== 'undefined' ? QUESTION_BANK : null,
+    onNavigate: EngineShared.navigateToIndex,
+    onToast: EngineShared.showToast
+  });
   clearProgress();
-
   buildResults();
   showScreen('result-screen');
 }
@@ -2637,26 +1616,21 @@ function confirmSubmit() {
 /* ─── NEW SESSION BUTTON ─────────────────────────────────────── */
 function onNewSessionClick(event) {
   event.preventDefault();
-  
-  // Check if bank coverage is 100% (cycle complete)
+
   const progress = getBankProgress();
   const bankSize = QUESTION_BANK.length;
   const covered = progress.shownIndices.length;
   const pct = bankSize > 0 ? Math.round(covered / bankSize * 100) : 0;
-  
-  // If cycle is complete (100% coverage), show the completed cycle toast
+
   if (pct === 100) {
-    // Reset to start a fresh cycle
     progress.cycleCount++;
     progress.shownIndices = [];
     saveBankProgress(progress);
-    showToast(`🎉 Full cycle complete! Starting fresh — cycle ${progress.cycleCount + 1}`);
-    // Navigate to start screen where user can choose any number of questions
+    EngineShared.showToast(`🎉 Full cycle complete! Starting fresh — cycle ${progress.cycleCount + 1}`);
     showScreen('start-screen');
     return;
   }
-  
-  // For incomplete cycles, just navigate to start screen
+
   showScreen('start-screen');
 }
 
@@ -2690,7 +1664,6 @@ function buildResults() {
   else grade='💪 Don\'t Give Up!';
   document.getElementById('res-grade').textContent = grade;
 
-  // Study notes placeholder (injected by ai-assistant-engine if API key exists)
   var notesPlaceholder = document.getElementById('study-notes-placeholder');
   if (!notesPlaceholder) {
     notesPlaceholder = document.createElement('div');
@@ -2701,7 +1674,7 @@ function buildResults() {
     }
   }
   if (localStorage.getItem('gemini_api_key')) {
-    _ensureAiAssistant(function() { AiAssistant.maybeRenderNotesCard(SESSION_QUESTIONS, state.answers); });
+    EngineShared.ensureAiAssistant(function() { AiAssistant.maybeRenderNotesCard(SESSION_QUESTIONS, state.answers); });
   }
 
   renderResultItems('all');
@@ -2713,18 +1686,18 @@ let renderResultItemsRafId = null;
 function renderResultItems(filter) {
   const list = document.getElementById('result-list');
   list.innerHTML = '';
-  
+
   if (renderResultItemsRafId) {
     cancelAnimationFrame(renderResultItemsRafId);
     renderResultItemsRafId = null;
   }
-  
+
   let i = 0;
   let itemsRendered = 0;
-  
+
   function renderChunk() {
     const chunkEnd = Math.min(i + 20, SESSION_QUESTIONS.length);
-    
+
     for (; i < chunkEnd; i++) {
       const q = SESSION_QUESTIONS[i];
       const ans = state.answers[i];
@@ -2738,7 +1711,7 @@ function renderResultItems(filter) {
         || (filter === 'skipped' && isSkipped)
         || (filter === 'flagged' && isFlagged);
       if (!show) continue;
-      
+
       itemsRendered++;
 
       const icon = isSkipped ? '—' : (isCorrect ? '✓' : '✗');
@@ -2774,7 +1747,7 @@ function renderResultItems(filter) {
         </div>`;
       list.appendChild(el);
     }
-    
+
     if (i < SESSION_QUESTIONS.length) {
       renderResultItemsRafId = requestAnimationFrame(renderChunk);
     } else {
@@ -2784,7 +1757,7 @@ function renderResultItems(filter) {
       renderResultItemsRafId = null;
     }
   }
-  
+
   renderResultItemsRafId = requestAnimationFrame(renderChunk);
 }
 
@@ -2822,149 +1795,28 @@ function confirmResetAction() {
   document.querySelectorAll('.hl-mode-btn').forEach(function(b) { b.classList.remove('active'); });
   state.elapsed = 0;
 
-  // Decrement session counter and remove shown indices so reset doesn't count toward bank progress
   const progress = getBankProgress();
-  if (progress.totalSessions > 0) {
-    progress.totalSessions--;
-  }
-  // Remove the current session's questions from shown indices
+  if (progress.totalSessions > 0) progress.totalSessions--;
   if (SESSION_QUESTION_INDICES && SESSION_QUESTION_INDICES.length > 0) {
     const sessionSet = new Set(SESSION_QUESTION_INDICES);
     progress.shownIndices = progress.shownIndices.filter(i => !sessionSet.has(i));
   }
   saveBankProgress(progress);
 
-  // Clear saved progress when manually resetting
   clearProgress();
 
-  // Clear all pending async actions that could steal the screen
   pendingRestoreData = null;
-  if (restoreToastTimeout) {
-    clearTimeout(restoreToastTimeout);
-    restoreToastTimeout = null;
-  }
-  if (restoreScreenTimeout) {
-    clearTimeout(restoreScreenTimeout);
-    restoreScreenTimeout = null;
-  }
+  if (restoreToastTimeout) { clearTimeout(restoreToastTimeout); restoreToastTimeout = null; }
+  if (restoreScreenTimeout) { clearTimeout(restoreScreenTimeout); restoreScreenTimeout = null; }
 
   closeResetModal();
   showScreen('start-screen');
 }
 
-/* ─── THEME ──────────────────────────────────────────────────── */
-function toggleTheme() {
-  const html = document.documentElement;
-  const newTheme = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-  html.setAttribute('data-theme', newTheme);
-
-  // Remove FOUC-prevention inline styles so the CSS-variable rules on body take over.
-  document.body.style.background = '';
-  document.body.style.color = '';
-
-  // Keep the browser chrome (address bar / status bar) in sync.
-  const themeMeta = document.querySelector('meta[name="theme-color"]');
-  if (themeMeta) themeMeta.content = newTheme === 'light' ? '#f3f0eb' : '#0d1117';
-
-  localStorage.setItem('quiz-theme', newTheme);
-  updateThemeIcon();
-}
-function updateThemeIcon() {
-  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-  document.querySelectorAll('.theme-toggle-btn').forEach(b => {
-    b.textContent = isDark ? '☀' : '☾';
-  });
-}
-
-/* ─── NAVIGATE ───────────────────────────────────────────────── */
-function navigateToIndex(event) {
-  event.preventDefault();
-  // Always navigate to index.html to prevent history.back() loops
-  // within the quiz flow (start → quiz → results → back would bounce)
-  window.location.href = 'index.html';
-}
-
-/* ─── TOAST ──────────────────────────────────────────────────── */
-let toastTimer;
-
-function showToast(msg, actions = []) {
-  const t = document.getElementById('toast');
-
-  // Clear any existing content
-  t.innerHTML = '';
-
-  // Create message span
-  const msgSpan = document.createElement('span');
-  msgSpan.textContent = msg;
-  msgSpan.style.flex = '1';
-  t.appendChild(msgSpan);
-
-  // Add action buttons if provided
-  if (actions.length > 0) {
-    const actionsContainer = document.createElement('div');
-    actionsContainer.style.display = 'flex';
-    actionsContainer.style.gap = '0.5rem';
-    actionsContainer.style.marginLeft = '0.75rem';
-
-    actions.forEach(action => {
-      const btn = document.createElement('button');
-      btn.textContent = action.label;
-      btn.style.cssText = `
-        padding: 0.35rem 0.75rem;
-        border-radius: 6px;
-        border: 1px solid var(--border);
-        background: ${action.primary ? 'var(--accent)' : 'var(--surface2)'};
-        color: ${action.primary ? '#000' : 'var(--text)'};
-        font-size: 0.75rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all var(--transition);
-      `;
-      btn.onclick = () => {
-        action.onClick();
-        t.classList.remove('show');
-      };
-      btn.onmouseenter = () => {
-        if (!action.primary) {
-          btn.style.borderColor = 'var(--accent)';
-          btn.style.color = 'var(--accent)';
-        }
-      };
-      btn.onmouseleave = () => {
-        if (!action.primary) {
-          btn.style.borderColor = 'var(--border)';
-          btn.style.color = 'var(--text)';
-        }
-      };
-      actionsContainer.appendChild(btn);
-    });
-
-    t.appendChild(actionsContainer);
-  }
-
-  t.classList.add('show');
-  clearTimeout(toastTimer);
-
-  // Auto-hide only if no actions (for simple toasts)
-  if (actions.length === 0) {
-    toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
-  }
-}
-
-/* ── AI ASSISTANT (lazy-loaded) ──────────────────────────── */
-function _ensureAiAssistant(cb) {
-  if (window.AiAssistant) { cb(); return; }
-  var s = document.createElement('script');
-  s.src = (window.__QUIZ_ENGINE_BASE || '') + 'ai-assistant-engine.js';
-  s.onload = cb;
-  s.onerror = function() { showToast('AI Assistant requires internet connection'); };
-  document.body.appendChild(s);
-}
-
 function openAiAssistant() {
   var q = SESSION_QUESTIONS[state.current];
   if (!q) return;
-  _ensureAiAssistant(function() { AiAssistant.openAssistant(q); });
+  EngineShared.ensureAiAssistant(function() { AiAssistant.openAssistant(q); });
 }
 
 // Auto-save every 5 seconds
@@ -2972,23 +1824,58 @@ let saveIntervalId = setInterval(saveProgress, 5000);
 
 // Save progress before page unload (tab close, refresh, navigation)
 window.addEventListener('beforeunload', function() {
-  if (!state.submitted) {
-    saveProgress();
-  }
+  if (!state.submitted) saveProgress();
 });
 
 /* ─── VISIBILITY CHANGE ──────────────────────────────────────── */
-// Pause timer when user leaves the page/tab, resume when they come back
 window.addEventListener('visibilitychange', () => {
   if (document.hidden && !state.submitted) {
     stopTimer();
   } else if (!document.hidden && !state.submitted && state.timerID === null
              && document.getElementById('quiz-screen').classList.contains('active')) {
-    // Only restart the interval if the quiz screen is actually showing
     startTimer();
   }
 });
 
+/* ── KEYBOARD SHORTCUTS ─────────────────────────────────────── */
+EngineShared.setupShortcuts({
+  isActive: function() { return document.getElementById('quiz-screen')?.classList.contains('active'); },
+  onPrev: function() { if (state.current > 0) renderQuestion(state.current - 1); },
+  onNext: function() { if (state.current < SESSION_QUESTIONS.length - 1) renderQuestion(state.current + 1); },
+  onFlag: function() { toggleFlag(state.current); },
+  onToggleHighlighter: toggleHighlighterMode,
+  onStrikethrough: function() {
+    var q = SESSION_QUESTIONS[state.current];
+    if (q) {
+      if (_hoveredOption >= 0) { toggleStrikethrough(state.current, _hoveredOption); return; }
+      var gIdx = _hlGlobalIdx(state.current);
+      var stMap = (gIdx !== undefined && state.strikethrough[gIdx]) || {};
+      for (var i = 0; i < q.options.length; i++) {
+        if (!stMap[i]) { toggleStrikethrough(state.current, i); return; }
+      }
+      if (gIdx !== undefined) state.strikethrough[gIdx] = {};
+      renderQuestion(state.current);
+    }
+  },
+  onSubmit: function() { attemptSubmit(); },
+  onEscape: function() { closeModal(); closeResetModal(); closeKbHelp(); },
+  onHelp: function() { toggleKbHelp(); }
+});
+
+// Color selector keys (1-4) in highlighter mode
+document.addEventListener('keydown', function(e) {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if ((e.key >= '1' && e.key <= '4') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    var quizActive = document.getElementById('quiz-screen')?.classList.contains('active');
+    if (quizActive) {
+      e.preventDefault(); e.stopImmediatePropagation();
+      _hlLastColor = parseInt(e.key);
+      _syncPickerUI();
+      var sel = window.getSelection();
+      if (sel && !sel.isCollapsed && state.isHighlighterMode) hlApplyColor(_hlLastColor);
+    }
+  }
+});
 
 /* ── PDF EXPORT ─────────────────────────────────────────────── */
 function onExportFilterChange(checkbox) {
@@ -3030,7 +1917,7 @@ function exportToPDF() {
     else if (wrongCb.checked && flaggedCb.checked)  filter = 'wrong+flagged';
   }
 
-  showToast('Generating PDF...');
+  EngineShared.showToast('Generating PDF...');
 
   const qs      = (typeof SESSION_QUESTIONS !== 'undefined' && SESSION_QUESTIONS && SESSION_QUESTIONS.length)
     ? SESSION_QUESTIONS : QUESTIONS;
@@ -3043,12 +1930,7 @@ function exportToPDF() {
   const timeEl  = document.getElementById('res-time');
   const timeUsed = timeEl ? timeEl.textContent : '--';
 
-  const filterLabels = {
-    'all':          'All Questions',
-    'wrong':        'Wrong Answers',
-    'flagged':      'Flagged Questions',
-    'wrong+flagged':'Wrong + Flagged'
-  };
+  const filterLabels = { 'all': 'All Questions', 'wrong': 'Wrong Answers', 'flagged': 'Flagged Questions', 'wrong+flagged': 'Wrong + Flagged' };
 
   const toExport = [];
   qs.forEach((q, i) => {
@@ -3139,27 +2021,23 @@ function exportToPDF() {
 
   function runExport() {
     if (typeof html2pdf === 'undefined') {
-      showToast('PDF library still loading, try again in a moment');
+      EngineShared.showToast('PDF library still loading, try again in a moment');
       return;
     }
     try {
       var children = Array.from(container.children);
       if (children.length === 0) return;
-      
+
       var worker = html2pdf().set(opt).from(children[0]).toPdf();
-      
+
       children.slice(1).forEach(function(child) {
         worker = worker.get('pdf').then(function(pdf) {
           pdf.addPage();
         }).from(child).toContainer().toCanvas().toPdf();
       });
-      
-      worker.save().catch(function(err) { 
-          console.error('PDF export error:', err);
-      });
-    } catch (err) {
-      console.error('PDF export error:', err);
-    }
+
+      worker.save().catch(function(err) { console.error('PDF export error:', err); });
+    } catch (err) { console.error('PDF export error:', err); }
   }
 
   if (typeof html2pdf !== 'undefined') {
@@ -3168,7 +2046,7 @@ function exportToPDF() {
     var s = document.createElement('script');
     s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
     s.onload  = runExport;
-    s.onerror = function() { showToast('Failed to load PDF library'); };
+    s.onerror = function() { EngineShared.showToast('Failed to load PDF library'); };
     document.head.appendChild(s);
   }
 }
@@ -3178,612 +2056,241 @@ initUI();
 checkSavedProgress();
 
 /* ================================================================
-   TRACKER PANEL
+   TRACKER DASHBOARD & KEYBOARD HELP
    ================================================================ */
-/* ════════════════════════════════════════════════════════════════
-   QUESTION TRACKER DASHBOARD  v2
-   ─────────────────────────────────────────────────────────────
-   • Folder-aware: groups data by URL path segments
-   • No hardcoded values: auto-detects config & question sources
-   • Dynamic scopes: this-quiz / this-folder / all
-   • PDF export for tracked questions
-   • Fully expandable — drop into any quiz page
-   ════════════════════════════════════════════════════════════════ */
-(function() {
-  'use strict';
-
-  /* ── Storage keys ── */
-  const TRACKER_VERSION = 'v2';
-  const STORAGE_PREFIX = 'quiz_tracker_';
-  const KEYS_LIST_KEY  = 'quiz_tracker_keys';
-
-  /* ── Auto-detect config & questions source ── */
-  function getConfig() {
-    return (typeof QUIZ_CONFIG !== 'undefined' && QUIZ_CONFIG)
-      || (typeof BANK_CONFIG !== 'undefined' && BANK_CONFIG)
-      || { uid: location.pathname, title: document.title };
-  }
-  function getQuestions() {
-    return (typeof SESSION_QUESTIONS !== 'undefined' && SESSION_QUESTIONS && SESSION_QUESTIONS.length)
-      ? SESSION_QUESTIONS
-      : (typeof QUESTIONS !== 'undefined' ? QUESTIONS : []);
-  }
-
-  /* ── Path-based group resolution ── */
-  /* —— Get the project root name from ENGINE_BASE (e.g. "MU61S8") —— */
-  var _rootName = '';
+window.removeTrackerItem = function(uid, qIdx) {
   try {
-    _rootName = new URL(ENGINE_BASE || '', location.href).pathname
-      .replace(/\/$/, '').replace(/^\//, '');
-  } catch (e) {}
-
-  /* —— Normalize a stored d.path by stripping the project root prefix —— */
-  function _normStoredPath(p) {
-    if (!p) return '';
-    var s = p.replace(/^\//, '');
-    if (_rootName && s.indexOf(_rootName + '/') === 0) {
-      s = s.substring(_rootName.length + 1);
-    } else if (_rootName && s === _rootName) {
-      s = '';
-    }
-    return s;
-  }
-
-  /* —— Get folder segments RELATIVE to ENGINE_BASE (project root) ——
-     e.g. "/MU61S8/gyn/dep/l1-anatomy.html" → ["gyn", "gyn/dep"]
-     This matches the format used by computeFolderPath() */
-  function getFolderSegments(path) {
-    var cleaned = path.replace(/\/[^/]*$/, '').replace(/^\//, '');
-    if (_rootName && cleaned.indexOf(_rootName + '/') === 0) {
-      cleaned = cleaned.substring(_rootName.length + 1);
-    } else if (_rootName && cleaned === _rootName) {
-      cleaned = '';
-    }
-    var parts = cleaned.split('/').filter(Boolean);
-    var segments = [];
-    for (var i = 0; i < parts.length; i++) {
-      segments.push(parts.slice(0, i + 1).join('/'));
-    }
-    return segments;
-  }
-
-  function getStorageKey(uid) {
-    return STORAGE_PREFIX + TRACKER_VERSION + '_' + uid;
-  }
-
-  /* ══════════════════════════════════════════
-     SAVE — called after quiz submission
-     ══════════════════════════════════════════ */
-
-  /* ── Compute folder path & title relative to project root ── */
-  function computeFolderPath() {
-    // ENGINE_BASE points to the project root (where bank-engine.js lives)
-    // Use it to compute the folder of the current quiz relative to the root.
-    // Works on both local servers and GitHub Pages (where the repo slug is
-    // included in ENGINE_BASE via document.currentScript.src).
-    try {
-      var rootUrl = ENGINE_BASE || '';
-      // Resolve rootUrl relative to current location for proper URL construction.
-      // If ENGINE_BASE is already absolute (which it is from .src), this is a no-op.
-      var rootAbs = new URL(rootUrl, location.href).href;
-      var pageAbs = location.href;
-      // Get the relative path from project root to current page
-      var relative = pageAbs.substring(rootAbs.length);
-      // Remove filename to get folder path
-      var folderPath = relative.replace(/[^/]*$/, '');
-      return folderPath || '';
-    } catch (e) {
-      // Fallback: use path-based extraction
-      var cleaned = location.pathname.replace(/^\//, '');
-      var parts = cleaned.split('/');
-      if (parts.length > 1) return parts.slice(0, -1).join('/') + '/';
-      return '';
-    }
-  }
-
-  var _folderTitleCache = {};
-  var _eagerFolderTitle = null; // pre-fetched at page load for offline-safe saves
-
-  function fetchAndCacheFolderTitle(folderPath) {
-    if (!folderPath || _folderTitleCache[folderPath]) {
-      return Promise.resolve(_folderTitleCache[folderPath] || null);
-    }
-    var rootAbs = '';
-    try { rootAbs = new URL(ENGINE_BASE || '', location.href).href; } catch(e) { rootAbs = ''; }
-    var indexUrl = rootAbs + folderPath + 'index.html';
-    return fetch(indexUrl)
-      .then(function(resp) { return resp.ok ? resp.text() : null; })
-      .then(function(html) {
-        if (!html) return null;
-        var match = html.match(/<title>([^<]+)<\/title>/i);
-        if (match) {
-          var rawTitle = match[1].trim();
-          var cleaned = rawTitle.replace(/^(?:QuizTool|MU61\s+Quiz|Mansoura\s+MCQ)\s*[-–—]\s*/i, '').trim();
-          if (cleaned) {
-            _folderTitleCache[folderPath] = cleaned;
-            _eagerFolderTitle = rawTitle; // keep raw for tracker storage
-          }
-          return rawTitle;
-        }
-        return null;
-      })
-      .catch(function() { return null; });
-  }
-
-  // Eagerly fetch folder title at page load so it is available offline at submit time
-  (function() {
-    try {
-      var fp = computeFolderPath();
-      if (fp) fetchAndCacheFolderTitle(fp).then(function(t) { if (t) _eagerFolderTitle = t; });
-    } catch(e) {}
-  })();
-
-  function getSafeTrackerKeys() {
-    try {
-      var raw = localStorage.getItem(KEYS_LIST_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch(e) {
-      console.warn('Recovered corrupted tracker keys list');
-      return [];
-    }
-  }
-
-  window.saveTrackerData = function() {
-    try {
-      var cfg = getConfig();
-      var qs  = getQuestions();
-      if (!qs.length) return;
-
-      var wrongQs = [], flaggedQs = [];
-      var currentSessionIndices = {};
-      var currentSessionTexts = {};
-      var hasGlobalIndices = (typeof SESSION_QUESTION_INDICES !== 'undefined' && SESSION_QUESTION_INDICES);
-      
-      qs.forEach(function(q, i) {
-        var ans = state.answers[i];
-        var isWrong   = ans !== undefined && ans !== q.correct;
-        var isFlagged = state.flagged && state.flagged[i];
-
-        // Determine the global index in the bank
-        var qIdx = hasGlobalIndices ? SESSION_QUESTION_INDICES[i] : (q.idx !== undefined ? q.idx : i);
-        
-        // Track by index if we have global indices, otherwise track by text
-        if (hasGlobalIndices || q.idx !== undefined) {
-          currentSessionIndices[qIdx] = true;
-        } else {
-          // For non-bank quizzes, use question text to identify questions across sessions
-          currentSessionTexts[q.question] = true;
-        }
-
-        var qData = {
-          idx: qIdx,
-          text: q.question,
-          yourAnswer:   ans !== undefined ? KEYS[ans] + '. ' + q.options[ans] : 'Not answered',
-          correctAnswer: KEYS[q.correct] + '. ' + q.options[q.correct],
-          explanation: q.explanation || ''
-        };
-        if (isWrong)   wrongQs.push(qData);
-        if (isFlagged) flaggedQs.push(qData);
-      });
-
-      var storageKey = getStorageKey(cfg.uid || location.pathname);
-      var existingRaw = localStorage.getItem(storageKey);
-      var existingData = null;
-      if (existingRaw) {
-        try { existingData = JSON.parse(existingRaw); } catch (e) {}
-      }
-
-      // Merge with existing data to ensure we don't overwrite previous sessions
-      if (existingData) {
-        var oldWrong = (existingData.wrong || []).filter(function(wq) {
-          // Use appropriate tracking method based on whether we have global indices
-          if (hasGlobalIndices || wq.idx !== undefined) {
-            return !currentSessionIndices[wq.idx];
-          } else {
-            return !currentSessionTexts[wq.text];
-          }
-        });
-        var oldFlagged = (existingData.flagged || []).filter(function(fq) {
-          if (hasGlobalIndices || fq.idx !== undefined) {
-            return !currentSessionIndices[fq.idx];
-          } else {
-            return !currentSessionTexts[fq.text];
-          }
-        });
-        wrongQs = oldWrong.concat(wrongQs);
-        flaggedQs = oldFlagged.concat(flaggedQs);
-      }
-
-      if (!wrongQs.length && !flaggedQs.length) {
-         localStorage.removeItem(storageKey);
-         var keys = getSafeTrackerKeys();
-         localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(keys.filter(function(k) { return k !== (cfg.uid || location.pathname); })));
-         updateDashboardBadge();
-         return;
-      }
-
-      var folderPath = computeFolderPath();
-
-      var data = {
-        uid:         cfg.uid || location.pathname,
-        title:       cfg.title || document.title,
-        timestamp:   Date.now(),
-        totalQs:     typeof QUESTION_BANK !== 'undefined' ? QUESTION_BANK.length : (existingData ? Math.max(existingData.totalQs || 0, qs.length) : qs.length),
-        wrongCount:  wrongQs.length,
-        flaggedCount: flaggedQs.length,
-        wrong:       wrongQs,
-        flagged:     flaggedQs,
-        path:        location.pathname,
-        folderPath:  folderPath
-      };
-
-      // Use eagerly-pre-fetched title (available even offline) with fetch fallback
-      var cachedTitle = _eagerFolderTitle || _folderTitleCache[folderPath] || null;
-      function _persistTracker(folderTitle) {
-        if (folderTitle) data.folderTitle = folderTitle;
-        try {
-          localStorage.setItem(getStorageKey(data.uid), JSON.stringify(data));
-          var keys = getSafeTrackerKeys();
-          if (keys.indexOf(data.uid) === -1) { keys.push(data.uid); }
-          localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(keys));
-          updateDashboardBadge();
-        } catch (e) {
-          if (e.name === 'QuotaExceededError' || e.code === 22) {
-            showToast('Storage full! Clear tracker data to continue tracking mistakes.', [
-              { label: 'Go to Menu', primary: true, onClick: navigateToIndex }
-            ]);
-          }
-        }
-      }
-      if (cachedTitle) {
-        _persistTracker(cachedTitle);
-      } else {
-        fetchAndCacheFolderTitle(folderPath).then(_persistTracker).catch(function() { _persistTracker(null); });
-      }
-    } catch (e) { console.error('Tracker save error:', e); }
-  };
-
-  /* ══════════════════════════════════════════
-     CLEANUP — disabled (keep all tracker data indefinitely)
-     ══════════════════════════════════════════ */
-  // 30-day cleanup has been removed - all tracker data is kept indefinitely
-
-  /* ══════════════════════════════════════════
-     READ — fetch tracker entries
-     ══════════════════════════════════════════ */
-  function getAllTrackerData() {
-    try {
-      var keys = getSafeTrackerKeys();
-      var results = [];
-      keys.forEach(function(uid) {
-        var raw = localStorage.getItem(getStorageKey(uid));
-        if (raw) try { results.push(JSON.parse(raw)); } catch(e) {}
-      });
-      return results;
-    } catch(e) { return []; }
-  }
-
-  function getTrackerDataForScope(scope, scopePath) {
-    var all = getAllTrackerData();
-    var cfg = getConfig();
-
-    if (scope === 'quiz') {
-      return all.filter(function(d) { return d.uid === cfg.uid; });
-    }
-
-    if (scope === 'folder' && scopePath) {
-      var target = scopePath.replace(/^\/|\/$/g, ''); // normalize: remove leading/trailing slashes
-      return all.filter(function(d) {
-        // Check stored folderPath (ENGINE_BASE-relative) and d.path (full URL, normalized)
-        var fp = (d.folderPath || '').replace(/^\/|\/$/g, '');
-        var dp = _normStoredPath(d.path);
-        // Extract folder from full path for comparison
-        var dpFolder = '';
-        if (dp) {
-          var dpParts = dp.split('/');
-          if (dpParts.length > 1) {
-            dpFolder = dpParts.slice(0, -1).join('/').replace(/^\/|\/$/g, '');
-          }
-        }
-        // Match if the quiz's folder starts with the target folder path
-        // This ensures "gyn/dep" matches when target is "gyn", but "gyn-extra" does not
-        return (fp && (fp === target || fp.indexOf(target + '/') === 0)) 
-            || (dpFolder && (dpFolder === target || dpFolder.indexOf(target + '/') === 0));
-      });
-    }
-
-    return all; // scope === 'all'
-  }
-
-  /* ══════════════════════════════════════════
-     BADGE — count on the dashboard button
-     ══════════════════════════════════════════ */
-  window.updateDashboardBadge = function() {
-    var keys = getSafeTrackerKeys();
-    var total = 0;
-    keys.forEach(function(uid) {
-      var raw = localStorage.getItem(getStorageKey(uid));
-      if (!raw) return;
-      var wMatch = raw.match(/"wrongCount"\s*:\s*(\d+)/);
-      var fMatch = raw.match(/"flaggedCount"\s*:\s*(\d+)/);
-      if (wMatch || fMatch) {
-        total += (wMatch ? parseInt(wMatch[1], 10) : 0) + (fMatch ? parseInt(fMatch[1], 10) : 0);
-      } else {
-        try {
-          var d = JSON.parse(raw);
-          total += (d.wrong || []).length + (d.flagged || []).length;
-        } catch(e) {}
-      }
-    });
-    var badge = document.getElementById('tracker-badge-count');
-    if (badge) badge.textContent = total > 0 ? total : '';
-  };
-
-  /* ══════════════════════════════════════════
-     CURRENT SCOPE STATE
-     ══════════════════════════════════════════ */
-  var currentScope = 'quiz';
-  var currentScopePath = '';
-
-
-  window.switchDashScope = function(scope, path) {
-    currentScope = scope;
-    currentScopePath = path;
-
-    // Update tab active state
-    var tabs = document.querySelectorAll('.dash-scope-tab');
-    tabs.forEach(function(tab) {
-      tab.classList.toggle('active', tab.getAttribute('data-scope') === scope);
-    });
-
-    renderDashboard();
-  };
-
-  /* ══════════════════════════════════════════
-     RENDER DASHBOARD CONTENT
-     ══════════════════════════════════════════ */
-  function renderDashboard() {
-    var data = getTrackerDataForScope(currentScope, currentScopePath);
-    var totalWrong = 0, totalFlagged = 0;
-
-    data.forEach(function(d) {
-      totalWrong   += (d.wrong || []).length;
-      totalFlagged += (d.flagged || []).length;
-    });
-
-    document.getElementById('dash-total-wrong').textContent   = totalWrong;
-    document.getElementById('dash-total-flagged').textContent = totalFlagged;
-    document.getElementById('dash-total-quizzes').textContent = data.length;
-
-    var body = document.getElementById('dash-body');
-
-    if (!data.length) {
-      body.innerHTML = '<div class="dash-empty"><div class="dash-empty-icon">📋</div>'
-        + '<p>No tracked questions yet.<br>Complete a quiz to start tracking wrong and flagged questions.</p></div>';
-      return;
-    }
-
-    // Sort most recent first
-    data.sort(function(a, b) { return (b.timestamp || 0) - (a.timestamp || 0); });
-
-    var html = '';
-    data.forEach(function(d) {
-      var wrongItems   = d.wrong || [];
-      var flaggedItems = d.flagged || [];
-      var wrongIdxs    = {};
-      wrongItems.forEach(function(q) { wrongIdxs[q.idx] = true; });
-      var uniqueFlagged = flaggedItems.filter(function(q) { return !wrongIdxs[q.idx]; });
-      if (!wrongItems.length && !uniqueFlagged.length) return;
-
-      var dateStr = d.timestamp
-        ? new Date(d.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-        : '';
-
-      html += '<div class="dash-quiz-group">';
-      html += '<div class="dash-quiz-title">' + (d.title || 'Unknown Quiz');
-      if (wrongItems.length)   html += ' <span class="quiz-badge wrong-badge">' + wrongItems.length + ' wrong</span>';
-      if (flaggedItems.length) html += ' <span class="quiz-badge flag-badge">' + flaggedItems.length + ' flagged</span>';
-      if (dateStr)             html += ' <span style="font-size:0.7rem;color:var(--text-muted);font-weight:400;margin-left:auto;">' + dateStr + '</span>';
-      html += '</div>';
-
-      wrongItems.forEach(function(q) {
-        var isAlsoFlagged = flaggedItems.some(function(f) { return f.idx === q.idx; });
-        html += buildDashQItem(d.uid, q, isAlsoFlagged ? 'Wrong + Flagged' : 'Wrong', 'wrong', '✗');
-      });
-
-      uniqueFlagged.forEach(function(q) {
-        html += buildDashQItem(d.uid, q, 'Flagged', 'flagged', '⚑');
-      });
-
-      html += '</div>';
-    });
-
-    body.innerHTML = html || '<div class="dash-empty"><div class="dash-empty-icon">✅</div><p>No wrong or flagged questions tracked. Great job!</p></div>';
-  }
-
-  function buildDashQItem(uid, q, typeLabel, iconClass, iconText) {
-    var esc = (q.text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    return '<div class="dash-q-item">'
-      + '<div class="dash-q-icon ' + iconClass + '">' + iconText + '</div>'
-      + '<div class="dash-q-content">'
-      +   '<div class="dash-q-num">Q' + ((q.idx || 0) + 1) + ' · ' + typeLabel + '</div>'
-      +   '<div class="dash-q-text">' + esc + '</div>'
-      + '</div>'
-      + '<button class="dash-q-remove" onclick="removeTrackerItem(\'' + uid + '\',' + (q.idx || 0) + ')" title="Remove">✕</button>'
-      + '</div>';
-  }
-
-
-  /* ══════════════════════════════════════════
-     REMOVE / CLEAR
-     ══════════════════════════════════════════ */
-  window.removeTrackerItem = function(uid, qIdx) {
-    try {
-      var raw = localStorage.getItem(getStorageKey(uid));
-      if (!raw) return;
-      var data = JSON.parse(raw);
-      data.wrong   = (data.wrong   || []).filter(function(q) { return q.idx !== qIdx; });
-      data.flagged = (data.flagged || []).filter(function(q) { return q.idx !== qIdx; });
-      data.wrongCount   = data.wrong.length;
-      data.flaggedCount = data.flagged.length;
-
-      if (!data.wrong.length && !data.flagged.length) {
-        localStorage.removeItem(getStorageKey(uid));
-        var keys = getSafeTrackerKeys();
-        localStorage.setItem(KEYS_LIST_KEY, JSON.stringify(keys.filter(function(k) { return k !== uid; })));
-      } else {
-        localStorage.setItem(getStorageKey(uid), JSON.stringify(data));
-      }
-      renderDashboard();
-      updateDashboardBadge();
-    } catch(e) { console.error('Remove tracker item error:', e); }
-  };
-
-  window.clearAllTrackerData = function() {
-    if (!confirm('Clear all tracked questions? This cannot be undone.')) return;
-    try {
-      var keys = getSafeTrackerKeys();
-      keys.forEach(function(uid) { localStorage.removeItem(getStorageKey(uid)); });
-      localStorage.removeItem(KEYS_LIST_KEY);
-      renderDashboard();
-      updateDashboardBadge();
-    } catch(e) { console.error('Clear tracker error:', e); }
-  };
-
-  /* ══════════════════════════════════════════
-     PDF EXPORT
-     ══════════════════════════════════════════ */
-  window.exportTrackerToPDF = function() {
-    var data = getTrackerDataForScope(currentScope, currentScopePath);
-    if (!data.length) { showToast('No tracked questions to export.'); return; }
-
-    var totalWrong = 0, totalFlagged = 0;
-    data.forEach(function(d) { totalWrong += (d.wrong || []).length; totalFlagged += (d.flagged || []).length; });
-
-    var scopeLabel = currentScope === 'quiz' ? 'This Quiz' : (currentScope === 'folder' ? currentScopePath : 'All Quizzes');
-    var now = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-
-    var container = document.createElement('div');
-
-    var currentChunkHtml = '<h1 style="font-size:22px;margin:0 0 4px;font-family:Georgia,serif;">📊 Question Tracker</h1>'
-      + '<p style="color:#78716c;margin:0 0 4px;font-size:13px;">Scope: ' + scopeLabel + ' &mdash; ' + now + '</p>'
-      + '<div style="background:#f8f6f1;border-radius:12px;padding:18px 20px;margin-bottom:22px;border:1px solid #d0ccc5;display:flex;gap:18px;align-items:center;flex-wrap:wrap;">'
-      +   '<div style="flex:1;min-width:180px;">'
-      +     '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
-      +       '<div style="background:#fff;border:1px solid #d0ccc5;border-radius:8px;padding:7px 12px;text-align:center;min-width:62px;"><div style="font-size:16px;font-weight:700;color:#dc2626;">' + totalWrong + '</div><div style="font-size:10px;color:#78716c;">Wrong</div></div>'
-      +       '<div style="background:#fff;border:1px solid #d0ccc5;border-radius:8px;padding:7px 12px;text-align:center;min-width:62px;"><div style="font-size:16px;font-weight:700;color:#2563eb;">' + totalFlagged + '</div><div style="font-size:10px;color:#78716c;">Flagged</div></div>'
-      +       '<div style="background:#fff;border:1px solid #d0ccc5;border-radius:8px;padding:7px 12px;text-align:center;min-width:62px;"><div style="font-size:16px;font-weight:700;color:#16a34a;">' + data.length + '</div><div style="font-size:10px;color:#78716c;">Quizzes</div></div>'
-      +     '</div>'
-      +   '</div>'
-      + '</div>';
-    var itemsCount = 0;
-    var itemsPerChunk = 15;
-
-    data.sort(function(a, b) { return (b.timestamp || 0) - (a.timestamp || 0); });
-
-    data.forEach(function(d) {
-      var wrongItems   = d.wrong || [];
-      var flaggedItems = d.flagged || [];
-      var wrongIdxs    = {};
-      wrongItems.forEach(function(q) { wrongIdxs[q.idx] = true; });
-      var uniqueFlagged = flaggedItems.filter(function(q) { return !wrongIdxs[q.idx]; });
-
-      if (!wrongItems.length && !uniqueFlagged.length) return;
-
-      currentChunkHtml += '<h3 style="font-size:14px;margin:18px 0 8px;font-family:Georgia,serif;">' + (d.title || 'Quiz') + '</h3>';
-
-      var allItems = [];
-      wrongItems.forEach(function(q) {
-        var alsoFlagged = flaggedItems.some(function(f) { return f.idx === q.idx; });
-        allItems.push({ q: q, type: alsoFlagged ? 'Wrong + Flagged' : 'Wrong', color: '#dc2626', bg: 'rgba(220,38,38,.06)' });
-      });
-      uniqueFlagged.forEach(function(q) {
-        allItems.push({ q: q, type: 'Flagged', color: '#2563eb', bg: 'rgba(37,99,235,.06)' });
-      });
-
-      allItems.forEach(function(item) {
-        var q = item.q;
-        currentChunkHtml += '<div style="border:1.5px solid ' + item.color + ';border-radius:10px;margin-bottom:12px;overflow:hidden;page-break-inside:avoid;">'
-          +   '<div style="padding:12px 15px;background:' + item.bg + ';">'
-          +     '<div style="display:flex;gap:10px;align-items:flex-start;">'
-          +       '<div style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex-shrink:0;background:rgba(0,0,0,.06);color:' + item.color + ';">' + (item.type === 'Flagged' ? '⚑' : '✗') + '</div>'
-          +       '<div>'
-          +         '<div style="font-size:10px;color:#78716c;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">Q' + ((q.idx || 0) + 1) + ' · ' + item.type + '</div>'
-          +         '<div style="font-size:14px;font-weight:500;line-height:1.5;">' + q.text + '</div>'
-          +       '</div>'
-          +     '</div>'
-          +   '</div>'
-          +   '<div style="padding:10px 15px 12px;border-top:1px solid #e5e0db;">'
-          +     '<div style="background:rgba(220,38,38,.08);border-radius:6px;padding:7px 11px;margin-bottom:7px;font-size:12px;"><span style="font-size:10px;text-transform:uppercase;font-weight:700;opacity:.6;margin-right:8px;">Your Answer</span>' + q.yourAnswer + '</div>'
-          +     '<div style="background:rgba(22,163,74,.08);border-radius:6px;padding:7px 11px;margin-bottom:7px;font-size:12px;"><span style="font-size:10px;text-transform:uppercase;font-weight:700;opacity:.6;margin-right:8px;">Correct Answer</span>' + q.correctAnswer + '</div>';
-        if (q.explanation) {
-          currentChunkHtml += '<div style="background:#f8f6f1;border-left:3px solid #c27803;border-radius:0 6px 6px 0;padding:9px 11px;font-size:12px;color:#44403c;line-height:1.6;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#1c1917;margin-bottom:3px;">Explanation</div>' + q.explanation + '</div>';
-        }
-        currentChunkHtml += '</div></div>';
-        itemsCount++;
-
-        if (itemsCount >= itemsPerChunk) {
-          var chunkDiv = document.createElement('div');
-          chunkDiv.innerHTML = '<div style="font-family:Arial,sans-serif;max-width:780px;margin:0 auto;padding:20px;color:#1c1917;">' + currentChunkHtml + '</div>';
-          container.appendChild(chunkDiv);
-          currentChunkHtml = '';
-          itemsCount = 0;
-        }
-      });
-    });
-
-    if (currentChunkHtml) {
-      var chunkDiv = document.createElement('div');
-      chunkDiv.innerHTML = '<div style="font-family:Arial,sans-serif;max-width:780px;margin:0 auto;padding:20px;color:#1c1917;">' + currentChunkHtml + '</div>';
-      container.appendChild(chunkDiv);
-    }
-
-    var filename = 'question_tracker_' + scopeLabel.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.pdf';
-    var opt = {
-      margin: [10,10,10,10],
-      filename: filename,
-      image: { type: 'jpeg', quality: 0.97 },
-      html2canvas: { scale: 2, useCORS: true, logging: false },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    function runExport() {
-      var children = Array.from(container.children);
-      if (children.length === 0) return;
-      
-      var worker = html2pdf().set(opt).from(children[0]).toPdf();
-      
-      children.slice(1).forEach(function(child) {
-        worker = worker.get('pdf').then(function(pdf) {
-          pdf.addPage();
-        }).from(child).toContainer().toCanvas().toPdf();
-      });
-      
-      worker.save().catch(function() {});
-    }
-
-    if (typeof html2pdf !== 'undefined') {
-      runExport();
+    var raw = localStorage.getItem(EngineTracker.getStorageKey(uid));
+    if (!raw) return;
+    var data = JSON.parse(raw);
+    data.wrong   = (data.wrong   || []).filter(function(q) { return q.idx !== qIdx; });
+    data.flagged = (data.flagged || []).filter(function(q) { return q.idx !== qIdx; });
+    data.wrongCount   = data.wrong.length;
+    data.flaggedCount = data.flagged.length;
+
+    if (!data.wrong.length && !data.flagged.length) {
+      localStorage.removeItem(EngineTracker.getStorageKey(uid));
+      var keys = EngineTracker.getSafeTrackerKeys();
+      localStorage.setItem('quiz_tracker_keys', JSON.stringify(keys.filter(function(k) { return k !== uid; })));
     } else {
-      var s = document.createElement('script');
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-      s.onload  = runExport;
-      s.onerror = function() { showToast('Failed to load PDF library'); };
-      document.head.appendChild(s);
+      localStorage.setItem(EngineTracker.getStorageKey(uid), JSON.stringify(data));
     }
-  };
+    renderDashboard();
+    EngineTracker.updateDashboardBadge();
+  } catch(e) { console.error('Remove tracker item error:', e); }
+};
 
-  /* ── Init badge on load ── */
-  updateDashboardBadge();
+window.clearAllTrackerData = function() {
+  if (!confirm('Clear all tracked questions? This cannot be undone.')) return;
+  try {
+    var keys = EngineTracker.getSafeTrackerKeys();
+    keys.forEach(function(uid) { localStorage.removeItem(EngineTracker.getStorageKey(uid)); });
+    localStorage.removeItem('quiz_tracker_keys');
+    renderDashboard();
+    EngineTracker.updateDashboardBadge();
+  } catch(e) { console.error('Clear tracker error:', e); }
+};
 
-  /* ═══════════════════════════════════════════════════════════
-     KEYBOARD SHORTCUTS & HELP CARD
-     ═══════════════════════════════════════════════════════════ */
-  
-  /* Inject CSS for keyboard help card */
-  var _kbStyle = document.createElement('style');
-  _kbStyle.textContent = `
-/* Keyboard Shortcuts Help Card */
+var currentScope = 'quiz';
+var currentScopePath = '';
+
+window.switchDashScope = function(scope, path) {
+  currentScope = scope;
+  currentScopePath = path;
+  var tabs = document.querySelectorAll('.dash-scope-tab');
+  tabs.forEach(function(tab) {
+    tab.classList.toggle('active', tab.getAttribute('data-scope') === scope);
+  });
+  renderDashboard();
+};
+
+function renderDashboard() {
+  var data = EngineTracker.getTrackerDataForScope(currentScope, currentScopePath);
+  var totalWrong = 0, totalFlagged = 0;
+
+  data.forEach(function(d) {
+    totalWrong   += (d.wrong || []).length;
+    totalFlagged += (d.flagged || []).length;
+  });
+
+  document.getElementById('dash-total-wrong').textContent   = totalWrong;
+  document.getElementById('dash-total-flagged').textContent = totalFlagged;
+  document.getElementById('dash-total-quizzes').textContent = data.length;
+
+  var body = document.getElementById('dash-body');
+
+  if (!data.length) {
+    body.innerHTML = '<div class="dash-empty"><div class="dash-empty-icon">📋</div><p>No tracked questions yet.<br>Complete a quiz to start tracking wrong and flagged questions.</p></div>';
+    return;
+  }
+
+  data.sort(function(a, b) { return (b.timestamp || 0) - (a.timestamp || 0); });
+
+  var html = '';
+  data.forEach(function(d) {
+    var wrongItems   = d.wrong || [];
+    var flaggedItems = d.flagged || [];
+    var wrongIdxs    = {};
+    wrongItems.forEach(function(q) { wrongIdxs[q.idx] = true; });
+    var uniqueFlagged = flaggedItems.filter(function(q) { return !wrongIdxs[q.idx]; });
+    if (!wrongItems.length && !uniqueFlagged.length) return;
+
+    var dateStr = d.timestamp
+      ? new Date(d.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+      : '';
+
+    html += '<div class="dash-quiz-group">';
+    html += '<div class="dash-quiz-title">' + (d.title || 'Unknown Quiz');
+    if (wrongItems.length)   html += ' <span class="quiz-badge wrong-badge">' + wrongItems.length + ' wrong</span>';
+    if (flaggedItems.length) html += ' <span class="quiz-badge flag-badge">' + flaggedItems.length + ' flagged</span>';
+    if (dateStr)             html += ' <span style="font-size:0.7rem;color:var(--text-muted);font-weight:400;margin-left:auto;">' + dateStr + '</span>';
+    html += '</div>';
+
+    wrongItems.forEach(function(q) {
+      var isAlsoFlagged = flaggedItems.some(function(f) { return f.idx === q.idx; });
+      html += buildDashQItem(d.uid, q, isAlsoFlagged ? 'Wrong + Flagged' : 'Wrong', 'wrong', '✗');
+    });
+
+    uniqueFlagged.forEach(function(q) {
+      html += buildDashQItem(d.uid, q, 'Flagged', 'flagged', '⚑');
+    });
+
+    html += '</div>';
+  });
+
+  body.innerHTML = html || '<div class="dash-empty"><div class="dash-empty-icon">✅</div><p>No wrong or flagged questions tracked. Great job!</p></div>';
+}
+
+function buildDashQItem(uid, q, typeLabel, iconClass, iconText) {
+  var esc = (q.text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return '<div class="dash-q-item">'
+    + '<div class="dash-q-icon ' + iconClass + '">' + iconText + '</div>'
+    + '<div class="dash-q-content">'
+    +   '<div class="dash-q-num">Q' + ((q.idx || 0) + 1) + ' · ' + typeLabel + '</div>'
+    +   '<div class="dash-q-text">' + esc + '</div>'
+    + '</div>'
+    + '<button class="dash-q-remove" onclick="removeTrackerItem(\'' + uid + '\',' + (q.idx || 0) + ')" title="Remove">✕</button>'
+    + '</div>';
+}
+
+window.exportTrackerToPDF = function() {
+  var data = EngineTracker.getTrackerDataForScope(currentScope, currentScopePath);
+  if (!data.length) { EngineShared.showToast('No tracked questions to export.'); return; }
+
+  var totalWrong = 0, totalFlagged = 0;
+  data.forEach(function(d) { totalWrong += (d.wrong || []).length; totalFlagged += (d.flagged || []).length; });
+
+  var scopeLabel = currentScope === 'quiz' ? 'This Quiz' : (currentScope === 'folder' ? currentScopePath : 'All Quizzes');
+  var now = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  var container = document.createElement('div');
+
+  var currentChunkHtml = '<h1 style="font-size:22px;margin:0 0 4px;font-family:Georgia,serif;">📊 Question Tracker</h1>'
+    + '<p style="color:#78716c;margin:0 0 4px;font-size:13px;">Scope: ' + scopeLabel + ' &mdash; ' + now + '</p>'
+    + '<div style="background:#f8f6f1;border-radius:12px;padding:18px 20px;margin-bottom:22px;border:1px solid #d0ccc5;display:flex;gap:18px;align-items:center;flex-wrap:wrap;">'
+    +   '<div style="flex:1;min-width:180px;">'
+    +     '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+    +       '<div style="background:#fff;border:1px solid #d0ccc5;border-radius:8px;padding:7px 12px;text-align:center;min-width:62px;"><div style="font-size:16px;font-weight:700;color:#dc2626;">' + totalWrong + '</div><div style="font-size:10px;color:#78716c;">Wrong</div></div>'
+    +       '<div style="background:#fff;border:1px solid #d0ccc5;border-radius:8px;padding:7px 12px;text-align:center;min-width:62px;"><div style="font-size:16px;font-weight:700;color:#2563eb;">' + totalFlagged + '</div><div style="font-size:10px;color:#78716c;">Flagged</div></div>'
+    +       '<div style="background:#fff;border:1px solid #d0ccc5;border-radius:8px;padding:7px 12px;text-align:center;min-width:62px;"><div style="font-size:16px;font-weight:700;color:#16a34a;">' + data.length + '</div><div style="font-size:10px;color:#78716c;">Quizzes</div></div>'
+    +     '</div>'
+    +   '</div>'
+    + '</div>';
+  var itemsCount = 0;
+  var itemsPerChunk = 15;
+
+  data.sort(function(a, b) { return (b.timestamp || 0) - (a.timestamp || 0); });
+
+  data.forEach(function(d) {
+    var wrongItems   = d.wrong || [];
+    var flaggedItems = d.flagged || [];
+    var wrongIdxs    = {};
+    wrongItems.forEach(function(q) { wrongIdxs[q.idx] = true; });
+    var uniqueFlagged = flaggedItems.filter(function(q) { return !wrongIdxs[q.idx]; });
+
+    if (!wrongItems.length && !uniqueFlagged.length) return;
+
+    currentChunkHtml += '<h3 style="font-size:14px;margin:18px 0 8px;font-family:Georgia,serif;">' + (d.title || 'Quiz') + '</h3>';
+
+    var allItems = [];
+    wrongItems.forEach(function(q) {
+      var alsoFlagged = flaggedItems.some(function(f) { return f.idx === q.idx; });
+      allItems.push({ q: q, type: alsoFlagged ? 'Wrong + Flagged' : 'Wrong', color: '#dc2626', bg: 'rgba(220,38,38,.06)' });
+    });
+    uniqueFlagged.forEach(function(q) {
+      allItems.push({ q: q, type: 'Flagged', color: '#2563eb', bg: 'rgba(37,99,235,.06)' });
+    });
+
+    allItems.forEach(function(item) {
+      var q = item.q;
+      currentChunkHtml += '<div style="border:1.5px solid ' + item.color + ';border-radius:10px;margin-bottom:12px;overflow:hidden;page-break-inside:avoid;">'
+        +   '<div style="padding:12px 15px;background:' + item.bg + ';">'
+        +     '<div style="display:flex;gap:10px;align-items:flex-start;">'
+        +       '<div style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex-shrink:0;background:rgba(0,0,0,.06);color:' + item.color + ';">' + (item.type === 'Flagged' ? '⚑' : '✗') + '</div>'
+        +       '<div>'
+        +         '<div style="font-size:10px;color:#78716c;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">Q' + ((q.idx || 0) + 1) + ' · ' + item.type + '</div>'
+        +         '<div style="font-size:14px;font-weight:500;line-height:1.5;">' + q.text + '</div>'
+        +       '</div>'
+        +     '</div>'
+        +   '</div>'
+        +   '<div style="padding:10px 15px 12px;border-top:1px solid #e5e0db;">'
+        +     '<div style="background:rgba(220,38,38,.08);border-radius:6px;padding:7px 11px;margin-bottom:7px;font-size:12px;"><span style="font-size:10px;text-transform:uppercase;font-weight:700;opacity:.6;margin-right:8px;">Your Answer</span>' + q.yourAnswer + '</div>'
+        +     '<div style="background:rgba(22,163,74,.08);border-radius:6px;padding:7px 11px;margin-bottom:7px;font-size:12px;"><span style="font-size:10px;text-transform:uppercase;font-weight:700;opacity:.6;margin-right:8px;">Correct Answer</span>' + q.correctAnswer + '</div>';
+      if (q.explanation) {
+        currentChunkHtml += '<div style="background:#f8f6f1;border-left:3px solid #c27803;border-radius:0 6px 6px 0;padding:9px 11px;font-size:12px;color:#44403c;line-height:1.6;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#1c1917;margin-bottom:3px;">Explanation</div>' + q.explanation + '</div>';
+      }
+      currentChunkHtml += '</div></div>';
+      itemsCount++;
+
+      if (itemsCount >= itemsPerChunk) {
+        var chunkDiv = document.createElement('div');
+        chunkDiv.innerHTML = '<div style="font-family:Arial,sans-serif;max-width:780px;margin:0 auto;padding:20px;color:#1c1917;">' + currentChunkHtml + '</div>';
+        container.appendChild(chunkDiv);
+        currentChunkHtml = '';
+        itemsCount = 0;
+      }
+    });
+  });
+
+  if (currentChunkHtml) {
+    var chunkDiv = document.createElement('div');
+    chunkDiv.innerHTML = '<div style="font-family:Arial,sans-serif;max-width:780px;margin:0 auto;padding:20px;color:#1c1917;">' + currentChunkHtml + '</div>';
+    container.appendChild(chunkDiv);
+  }
+
+  var filename = 'question_tracker_' + scopeLabel.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.pdf';
+  var opt = { margin: [10,10,10,10], filename: filename, image: { type: 'jpeg', quality: 0.97 }, html2canvas: { scale: 2, useCORS: true, logging: false }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
+
+  function runExport() {
+    var children = Array.from(container.children);
+    if (children.length === 0) return;
+    var worker = html2pdf().set(opt).from(children[0]).toPdf();
+    children.slice(1).forEach(function(child) {
+      worker = worker.get('pdf').then(function(pdf) { pdf.addPage(); }).from(child).toContainer().toCanvas().toPdf();
+    });
+    worker.save().catch(function() {});
+  }
+
+  if (typeof html2pdf !== 'undefined') {
+    runExport();
+  } else {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    s.onload  = runExport;
+    s.onerror = function() { EngineShared.showToast('Failed to load PDF library'); };
+    document.head.appendChild(s);
+  }
+};
+
+EngineTracker.updateDashboardBadge();
+
+/* ═══════════════════════════════════════════════════════════
+   KEYBOARD SHORTCUTS & HELP CARD
+   ═══════════════════════════════════════════════════════════ */
+
+/* Inject CSS for keyboard help card */
+var _kbStyle = document.createElement('style');
+_kbStyle.textContent = `
 .kb-help-overlay {
   position: fixed;
   inset: 0;
@@ -3890,189 +2397,111 @@ checkSavedProgress();
 }
 .kb-hint strong { color: var(--accent); }
 `;
-  document.head.appendChild(_kbStyle);
+document.head.appendChild(_kbStyle);
 
-  /* Build help card HTML */
-  var _kbHelpHTML = '';
-  _kbHelpHTML += '<div class="kb-help-overlay" id="kb-help-overlay" onclick="if(event.target===this)closeKbHelp()">';
-  _kbHelpHTML += '  <div class="kb-help-card">';
-  _kbHelpHTML += '    <button class="kb-close-btn" onclick="closeKbHelp()">✕</button>';
-  _kbHelpHTML += '    <h3>⌨️ Keyboard Shortcuts</h3>';
-  _kbHelpHTML += '    <div class="kb-shortcut-list">';
-  
-  // Bank screen shortcuts
-  _kbHelpHTML += '      <div class="kb-shortcut-item">';
-  _kbHelpHTML += '        <div class="kb-keys"><span class="kb-key">↑</span><span class="kb-key">↓</span></div>';
-  _kbHelpHTML += '        <div class="kb-desc">Navigate topics/options</div>';
-  _kbHelpHTML += '      </div>';
-  _kbHelpHTML += '      <div class="kb-shortcut-item">';
-  _kbHelpHTML += '        <div class="kb-keys"><span class="kb-key">Enter</span></div>';
-  _kbHelpHTML += '        <div class="kb-desc">Select topic / Start quiz</div>';
-  _kbHelpHTML += '      </div>';
-  _kbHelpHTML += '      <div class="kb-shortcut-item">';
-  _kbHelpHTML += '        <div class="kb-keys"><span class="kb-key">←</span><span class="kb-key">→</span></div>';
-  _kbHelpHTML += '        <div class="kb-desc">Previous / Next question</div>';
-  _kbHelpHTML += '      </div>';
-  _kbHelpHTML += '      <div class="kb-shortcut-item">';
-  _kbHelpHTML += '        <div class="kb-keys"><span class="kb-key">F</span></div>';
-  _kbHelpHTML += '        <div class="kb-desc">Toggle flag</div>';
-  _kbHelpHTML += '      </div>';
-  _kbHelpHTML += '      <div class="kb-shortcut-item">';
-  _kbHelpHTML += '        <div class="kb-keys"><span class="kb-key">H</span></div>';
-  _kbHelpHTML += '        <div class="kb-desc">Toggle highlighter mode</div>';
-  _kbHelpHTML += '      </div>';
-  _kbHelpHTML += '      <div class="kb-shortcut-item">';
-  _kbHelpHTML += '        <div class="kb-keys"><span class="kb-key">1</span><span class="kb-key">2</span><span class="kb-key">3</span><span class="kb-key">4</span></div>';
-  _kbHelpHTML += '        <div class="kb-desc">Highlight color (Yellow / Green / Blue / Red)</div>';
-  _kbHelpHTML += '      </div>';
-  _kbHelpHTML += '      <div class="kb-shortcut-item">';
-  _kbHelpHTML += '        <div class="kb-keys"><span class="kb-key">S</span></div>';
-  _kbHelpHTML += '        <div class="kb-desc">Strikethrough (highlighter mode)</div>';
-  _kbHelpHTML += '      </div>';
-  
-  _kbHelpHTML += '    </div>';
-  _kbHelpHTML += '    <div class="kb-hint">Press <strong>/</strong> to show/hide this help</div>';
-  _kbHelpHTML += '  </div>';
-  _kbHelpHTML += '</div>';
+var _kbHelpHTML = '';
+_kbHelpHTML += '<div class="kb-help-overlay" id="kb-help-overlay" onclick="if(event.target===this)closeKbHelp()">';
+_kbHelpHTML += '  <div class="kb-help-card">';
+_kbHelpHTML += '    <button class="kb-close-btn" onclick="closeKbHelp()">✕</button>';
+_kbHelpHTML += '    <h3>⌨️ Keyboard Shortcuts</h3>';
+_kbHelpHTML += '    <div class="kb-shortcut-list">';
 
-  /* Append to body */
-  var _kbDiv = document.createElement('div');
-  _kbDiv.innerHTML = _kbHelpHTML;
-  document.body.appendChild(_kbDiv);
+_kbHelpHTML += '      <div class="kb-shortcut-item">';
+_kbHelpHTML += '        <div class="kb-keys"><span class="kb-key">←</span><span class="kb-key">→</span></div>';
+_kbHelpHTML += '        <div class="kb-desc">Previous / Next question</div>';
+_kbHelpHTML += '      </div>';
+_kbHelpHTML += '      <div class="kb-shortcut-item">';
+_kbHelpHTML += '        <div class="kb-keys"><span class="kb-key">F</span></div>';
+_kbHelpHTML += '        <div class="kb-desc">Toggle flag</div>';
+_kbHelpHTML += '      </div>';
+_kbHelpHTML += '      <div class="kb-shortcut-item">';
+_kbHelpHTML += '        <div class="kb-keys"><span class="kb-key">H</span></div>';
+_kbHelpHTML += '        <div class="kb-desc">Toggle highlighter mode</div>';
+_kbHelpHTML += '      </div>';
+_kbHelpHTML += '      <div class="kb-shortcut-item">';
+_kbHelpHTML += '        <div class="kb-keys"><span class="kb-key">1</span><span class="kb-key">2</span><span class="kb-key">3</span><span class="kb-key">4</span></div>';
+_kbHelpHTML += '        <div class="kb-desc">Highlight color (Yellow / Green / Blue / Red)</div>';
+_kbHelpHTML += '      </div>';
+_kbHelpHTML += '      <div class="kb-shortcut-item">';
+_kbHelpHTML += '        <div class="kb-keys"><span class="kb-key">S</span></div>';
+_kbHelpHTML += '        <div class="kb-desc">Strikethrough (highlighter mode)</div>';
+_kbHelpHTML += '      </div>';
+_kbHelpHTML += '      <div class="kb-shortcut-item">';
+_kbHelpHTML += '        <div class="kb-keys"><span class="kb-key">Enter</span></div>';
+_kbHelpHTML += '        <div class="kb-desc">Submit quiz</div>';
+_kbHelpHTML += '      </div>';
 
-  /* Keyboard help open/close functions */
-  window.openKbHelp = function() {
-    var overlay = document.getElementById('kb-help-overlay');
-    if (overlay) {
-      overlay.classList.add('open');
-    }
-  };
-  window.closeKbHelp = function() {
-    var overlay = document.getElementById('kb-help-overlay');
-    if (overlay) {
-      overlay.classList.remove('open');
-    }
-  };
+_kbHelpHTML += '    </div>';
+_kbHelpHTML += '    <div class="kb-hint">Press <strong>/</strong> to show/hide this help</div>';
+_kbHelpHTML += '  </div>';
+_kbHelpHTML += '</div>';
 
-  /* Keyboard event listener */
-  document.addEventListener('keydown', function(e) {
-    // Don't capture if user is typing in input
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+var _kbDiv = document.createElement('div');
+_kbDiv.innerHTML = _kbHelpHTML;
+document.body.appendChild(_kbDiv);
 
-    var overlay = document.getElementById('kb-help-overlay');
-    var isOpen = overlay && overlay.classList.contains('open');
+window.openKbHelp = function() {
+  var overlay = document.getElementById('kb-help-overlay');
+  if (overlay) overlay.classList.add('open');
+};
+window.closeKbHelp = function() {
+  var overlay = document.getElementById('kb-help-overlay');
+  if (overlay) overlay.classList.remove('open');
+};
+function toggleKbHelp() {
+  var overlay = document.getElementById('kb-help-overlay');
+  if (overlay && overlay.classList.contains('open')) {
+    closeKbHelp();
+  } else {
+    openKbHelp();
+  }
+}
 
-    // Close help with Escape
-    if (e.key === 'Escape' && isOpen) {
-      closeKbHelp();
-      return;
-    }
+/* ── Animation Helpers ─────────────────────────────────────── */
+(function () {
+  'use strict';
 
-    // Toggle help with /
-    if (e.key === '/') {
-      e.preventDefault();
-      if (isOpen) {
-        closeKbHelp();
-      } else {
-        openKbHelp();
-      }
-      return;
-    }
-
-    // Don't process shortcuts if help is open
-    if (isOpen) return;
-
-    // Don't process shortcuts if restore toast is showing
-    var restoreToast = document.getElementById('toast');
-    if (restoreToast && restoreToast.classList.contains('show')) {
-      // Check if it has action buttons (restore/dismiss)
-      if (restoreToast.querySelector('button')) return;
-    }
-
-    // Only process if quiz screen is active
-    var quizScreen = document.getElementById('quiz-screen');
-    if (!quizScreen || !quizScreen.classList.contains('active')) return;
-
-    // Navigation: Arrow keys
-    if (e.key === 'ArrowLeft') {
-      e.preventDefault();
-      if (typeof state !== 'undefined' && state.current > 0) renderQuestion(state.current - 1);
-    } else if (e.key === 'ArrowRight') {
-      e.preventDefault();
-      if (typeof state !== 'undefined' && state.current < SESSION_QUESTIONS.length - 1) renderQuestion(state.current + 1);
-    }
-
-    // Flag: F
-    if (e.key.toLowerCase() === 'f') {
-      e.preventDefault();
-      if (typeof state !== 'undefined') toggleFlag(state.current);
-    }
-
-    // Submit: Enter (only on quiz screen, not start screen)
-    if (e.key === 'Enter' && !e.shiftKey) {
-      var startScreen = document.getElementById('start-screen');
-      if (startScreen && startScreen.classList.contains('active')) {
-        // On start screen, trigger start
-        e.preventDefault();
-        var startBtn = document.querySelector('.btn-start');
-        if (startBtn) startBtn.click();
-      } else if (typeof state !== 'undefined' && state.submitted !== true) {
-        e.preventDefault();
-        attemptSubmit();
-      }
-    }
+  /* 1. Ripple effect for primary buttons */
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.btn-start, .btn-nav.primary, .btn-restart');
+    if (!btn) return;
+    var wave = document.createElement('span');
+    wave.className = 'ripple-wave';
+    var r = btn.getBoundingClientRect();
+    wave.style.left = (e.clientX - r.left) + 'px';
+    wave.style.top  = (e.clientY - r.top)  + 'px';
+    btn.appendChild(wave);
+    wave.addEventListener('animationend', function () { wave.remove(); });
   });
 
-  /* ── Animation Helpers ─────────────────────────────────────── */
-  (function () {
-    'use strict';
-
-    /* 1. Ripple effect for primary buttons */
-    document.addEventListener('click', function (e) {
-      var btn = e.target.closest('.btn-start, .btn-nav.primary, .btn-restart');
-      if (!btn) return;
-      var wave = document.createElement('span');
-      wave.className = 'ripple-wave';
-      var r = btn.getBoundingClientRect();
-      wave.style.left = (e.clientX - r.left) + 'px';
-      wave.style.top  = (e.clientY - r.top)  + 'px';
-      btn.appendChild(wave);
-      wave.addEventListener('animationend', function () { wave.remove(); });
-    });
-
-    /* 2. Theme toggle spin */
-    document.addEventListener('click', function (e) {
-      var btn = e.target.closest('.theme-toggle-btn, #theme-toggle');
-      if (!btn) return;
+  /* 2. Theme toggle spin */
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.theme-toggle-btn, #theme-toggle');
+    if (!btn) return;
+    btn.classList.remove('theme-spinning');
+    void btn.offsetWidth;
+    btn.classList.add('theme-spinning');
+    btn.addEventListener('animationend', function () {
       btn.classList.remove('theme-spinning');
-      void btn.offsetWidth; /* reflow to restart */
-      btn.classList.add('theme-spinning');
-      btn.addEventListener('animationend', function () {
-        btn.classList.remove('theme-spinning');
-      }, { once: true });
-    });
+    }, { once: true });
+  });
 
-    /* 3. Smooth screen transitions */
-    var _origShowScreen = window.showScreen;
-    if (_origShowScreen) {
-      window.showScreen = function (id) {
-        var current = document.querySelector('.screen.active');
-        var target = document.getElementById(id);
-        // Don't animate if already on the same screen or no current screen
-        if (current === target || !current) {
-          _origShowScreen(id);
-          return;
-        }
-        current.style.opacity = '0';
-        setTimeout(function () {
-          current.classList.remove('active');
-          current.style.opacity = ''; // clean up so returning later works
-          _origShowScreen(id);
-        }, 150);
-      };
-    }
-  })();
-
+  /* 3. Smooth screen transitions */
+  var _origShowScreen = window.showScreen;
+  if (_origShowScreen) {
+    window.showScreen = function (id) {
+      var current = document.querySelector('.screen.active');
+      var target = document.getElementById(id);
+      if (current === target || !current) {
+        _origShowScreen(id);
+        return;
+      }
+      current.style.opacity = '0';
+      setTimeout(function () {
+        current.classList.remove('active');
+        current.style.opacity = '';
+        _origShowScreen(id);
+      }, 150);
+    };
+  }
 })();
-
-window.__HTML2PDF_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';

@@ -69,6 +69,7 @@ var FLASHCARD_BANK = [
   window.__FLASHCARD_ENGINE_BASE = '../'.repeat(
     Math.max(0, location.pathname.split('/').filter(Boolean).length - 2)
   );
+  document.write('<scr' + 'ipt src="' + window.__FLASHCARD_ENGINE_BASE + 'engine-shared.js"><\/scr' + 'ipt>');
   document.write('<scr' + 'ipt src="' + window.__FLASHCARD_ENGINE_BASE + 'flashcard-engine.js"><\/scr' + 'ipt>');
 })();
 </script>

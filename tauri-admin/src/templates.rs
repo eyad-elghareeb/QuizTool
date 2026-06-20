@@ -95,6 +95,7 @@ const QUESTIONS = {questions_json};
 <script>
 (function(){{
   window.__QUIZ_ENGINE_BASE='../'.repeat(Math.max(0,location.pathname.split('/').filter(Boolean).length-2));
+  document.write('<scr'+'ipt src="'+window.__QUIZ_ENGINE_BASE+'engine-shared.js"><\/scr'+'ipt>');
   document.write('<scr'+'ipt src="'+window.__QUIZ_ENGINE_BASE+'quiz-engine.js"><\/scr'+'ipt>');
 }})();
 </script>
@@ -132,6 +133,7 @@ const QUESTION_BANK = {questions_json};
 <script>
 (function(){{
   window.__QUIZ_ENGINE_BASE='../'.repeat(Math.max(0,location.pathname.split('/').filter(Boolean).length-2));
+  document.write('<scr'+'ipt src="'+window.__QUIZ_ENGINE_BASE+'engine-shared.js"><\/scr'+'ipt>');
   document.write('<scr'+'ipt src="'+window.__QUIZ_ENGINE_BASE+'bank-engine.js"><\/scr'+'ipt>');
 }})();
 </script>
@@ -180,6 +182,7 @@ const WRITTEN_QUESTIONS = {questions_json};
 (function () {{
   window.__WRITTEN_ENGINE_BASE = '../'.repeat(Math.max(0, location.pathname.split('/').filter(Boolean).length - 2));
   window.__WRITTEN_ENGINE_VERSION = '{ver}';
+  document.write('<scr' + 'ipt src="' + window.__WRITTEN_ENGINE_BASE + 'engine-shared.js' + '><\/scr' + 'ipt>');
   document.write('<scr' + 'ipt src="' + window.__WRITTEN_ENGINE_BASE + 'written-engine.js?v=' + window.__WRITTEN_ENGINE_VERSION + '"><\/scr' + 'ipt>');
 }})();
 </script>
@@ -220,8 +223,9 @@ var FLASHCARD_BANK = {questions_json};
 <script>
 (function(){{
   window.__FLASHCARD_ENGINE_BASE='../'.repeat(Math.max(0,location.pathname.split('/').filter(Boolean).length-2));
+  document.write('<scr'+'ipt src="'+window.__FLASHCARD_ENGINE_BASE+'engine-shared.js"><\/scr'+'ipt>');
   document.write('<scr'+'ipt src="'+window.__FLASHCARD_ENGINE_BASE+'flashcard-engine.js"><\/scr'+'ipt>');
-}})();
+}}}})();
 </script>
 </body>
 </html>
@@ -321,6 +325,7 @@ const {cases_const} = {cases_body};
 <script>
 (function(){{
   window.__OSCE_ENGINE_BASE='../'.repeat(Math.max(0,location.pathname.split('/').filter(Boolean).length-2));
+  document.write('<scr'+'ipt src="'+window.__OSCE_ENGINE_BASE+'engine-shared.js"><\/scr'+'ipt>');
   document.write('<scr'+'ipt src="'+window.__OSCE_ENGINE_BASE+'osce-engine.js"><\/scr'+'ipt>');
 }})();
 </script>

@@ -84,6 +84,7 @@ const WRITTEN_QUESTIONS = [
     Math.max(0, location.pathname.split('/').filter(Boolean).length - 2)
   );
   window.__WRITTEN_ENGINE_VERSION = '2026-06-01-ai-fallback-ui';
+  document.write('<scr' + 'ipt src="' + window.__WRITTEN_ENGINE_BASE + 'engine-shared.js"><\/scr' + 'ipt>');
   document.write('<scr' + 'ipt src="' + window.__WRITTEN_ENGINE_BASE + 'written-engine.js?v=' + window.__WRITTEN_ENGINE_VERSION + '"><\/scr' + 'ipt>');
 })();
 </script>
