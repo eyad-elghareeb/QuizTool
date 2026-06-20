@@ -1258,35 +1258,8 @@
       return snakeifyClient(parts.join('_'), 'quiz_file');
     }
 
-    function defaultQuestion() {
-      return { question: '', options: ['', '', '', ''], correct: 0, explanation: '' };
-    }
-
     function fixOCRArtifacts(input) {
       return input.replace(/[\u2B0D\u2AF9\u2C55]/g, '\u2264').replace(/[\u2B0E\u2AFA\u2C56]/g, '\u2265').replace(/\u242E/g, '\u03BC');
-    }
-
-    function normaliseAndEscapeCurlyQuotes(input) {
-      const CURLY_DQ = /[\u201C\u201D\u00AB\u00BB\u201E\u201F]/;
-      const CURLY_SQ = /[\u2018\u2019\u2032\u02BC]/;
-      let result = ''; let i = 0; let inString = false; let stringChar = '';
-      while (i < input.length) {
-        const ch = input[i];
-        if (!inString) {
-          if (ch === '"' || ch === "'") { inString = true; stringChar = ch; result += ch; }
-          else if (CURLY_DQ.test(ch)) result += '"';
-          else if (CURLY_SQ.test(ch)) result += "'";
-          else result += ch;
-        } else {
-          if (ch === '\\') { result += ch; i++; if (i < input.length) result += input[i]; }
-          else if (ch === stringChar) { inString = false; result += ch; stringChar = ''; }
-          else if (CURLY_DQ.test(ch)) result += '\\"';
-          else if (CURLY_SQ.test(ch)) result += "'";
-          else result += ch;
-        }
-        i++;
-      }
-      return result;
     }
 
     function sanitizeStringsStateMachine(str) {
@@ -2540,10 +2513,6 @@
 
     function renderMetaCard(label, value) {
       return `<div class="meta-card"><div class="meta-label">${escapeHtml(label)}</div><div class="meta-value">${escapeHtml(value)}</div></div>`;
-    }
-
-    function renderTabButton(key, label) {
-      return `<button class="tab-btn ${state.currentTab === key ? 'active' : ''}" onclick="setTab('${key}')">${escapeHtml(label)}</button>`;
     }
 
     function setTab(tab) {
@@ -3852,12 +3821,6 @@
       }
     }
 
-    async function saveAndSync() {
-      const saved = await saveFile();
-      if (!saved) return;
-      await runSync({ preserveCurrent: true });
-    }
-
     async function convertFile() {
       if (!state.currentFile) return;
       const meta = state.currentData?.meta;
@@ -3989,20 +3952,6 @@
       const menu = document.getElementById('more-actions-dropdown');
       if (menu) menu.style.display = 'none';
       document.removeEventListener('click', closeAllDropdowns);
-    }
-
-    function openPdfModal(url) {
-      openModal({
-        title: 'Export PDF',
-        subtitle: 'The PDF exporter provides a print-ready view of the current file.',
-        body: `
-          <iframe class="preview-frame" src="${previewUrl(state.currentFile)}" style="flex: 1; min-height: 0;" title="File Preview"></iframe>
-          <div class="modal-actions">
-            <button class="btn btn-primary" onclick="openInBrowser('${url}')">Open in Browser</button>
-            <button class="btn" onclick="closeModal()">Close</button>
-          </div>
-        `
-      });
     }
 
     function folderOptions(selected = '.') {
@@ -5084,10 +5033,6 @@
           }
         },
       });
-    }
-
-    function openGitModal() {
-      openDeployModal();
     }
 
     function renderDeployProviderFields() {

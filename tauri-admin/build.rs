@@ -25,8 +25,8 @@ fn main() {
         "favicon.svg",
         "sw.js",
         "manifest.webmanifest",
+        "osce-engine.js",
         "pdf-exporter.html",
-        "written-template.html",
     ];
 
     for file in &files_to_copy {
