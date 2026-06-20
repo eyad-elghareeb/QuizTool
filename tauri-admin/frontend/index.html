@@ -3378,11 +3378,16 @@
       const patient = caseItem.patient || {};
       const hiddenProfile = caseItem.hiddenProfile || {};
       const rubric = caseItem.rubric || {};
+      const examiner = caseItem.examiner || {};
+      const dp = caseItem.dataPresented || {};
       const mustAsk = Array.isArray(rubric.mustAsk) ? rubric.mustAsk : [];
       const bonus = Array.isArray(rubric.bonus) ? rubric.bonus : [];
       const keySymptoms = Array.isArray(hiddenProfile.keySymptoms) ? hiddenProfile.keySymptoms : [];
       const redFlags = Array.isArray(hiddenProfile.redFlags) ? hiddenProfile.redFlags : [];
       const pastHistory = Array.isArray(hiddenProfile.pastHistory) ? hiddenProfile.pastHistory : [];
+      const tables = Array.isArray(dp.tables) ? dp.tables : [];
+      const pq = Array.isArray(caseItem.questions) ? caseItem.questions : [];
+      const caseType = caseItem.type || 'history';
       return `
         <div class="editor-card ${collapsed ? 'collapsed' : ''}" data-qidx="${index}">
           <div class="editor-card-header">
@@ -3420,6 +3425,88 @@
                   <option value="Advanced" ${caseItem.difficulty==='Advanced'?'selected':''}>Advanced</option>
                 </select>
               </div>
+              <div class="field">
+                <label>Type</label>
+                <select class="text-input osce-type" data-index="${index}" onchange="syncQuizBankEditor()" style="width:auto;">
+                  <option value="history" ${caseType==='history'?'selected':''}>History Taking</option>
+                  <option value="data-interp" ${caseType==='data-interp'?'selected':''}>Data Interpretation</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Time <span class="muted">(minutes)</span></label>
+                <input class="text-input osce-time" data-index="${index}" value="${escapeHtml(caseItem.time !== undefined ? caseItem.time : '480')}" oninput="syncQuizBankEditor()" type="number" placeholder="480">
+              </div>
+            </div>
+            <div class="field full">
+              <label>Task / Instructions</label>
+              <textarea class="text-area osce-task" data-index="${index}" oninput="syncQuizBankEditor()" style="min-height:50px;">${escapeHtml(caseItem.task || '')}</textarea>
+            </div>
+            <div class="field-grid" style="margin-top:0.4rem;">
+              <div class="field">
+                <label>Examiner Name</label>
+                <input class="text-input osce-examiner-name" data-index="${index}" value="${escapeHtml(examiner.name || '')}" oninput="syncQuizBankEditor()" placeholder="Examiner">
+              </div>
+              <div class="field">
+                <label>Examiner Title</label>
+                <input class="text-input osce-examiner-title" data-index="${index}" value="${escapeHtml(examiner.title || '')}" oninput="syncQuizBankEditor()" placeholder="Consultant">
+              </div>
+            </div>
+
+            <div style="border-top:1px solid var(--border); margin:0.75rem 0; padding-top:0.75rem;">
+              <div style="font-weight:700; font-size:0.85rem; color:var(--accent); margin-bottom:0.5rem;">Clinical Scenario <span class="muted" style="font-weight:400;">(shown to student before the encounter — e.g., referral letter, triage note)</span></div>
+              <div class="field full">
+                <textarea class="text-area osce-scenario" data-index="${index}" oninput="syncQuizBankEditor()" style="min-height:80px;">${escapeHtml(dp.scenario || '')}</textarea>
+              </div>
+            </div>
+
+            <div style="border-top:1px solid var(--border); margin:0.75rem 0; padding-top:0.75rem;">
+              <div style="font-weight:700; font-size:0.85rem; color:var(--accent); margin-bottom:0.5rem;">Data Tables <span class="muted" style="font-weight:400;">(lab results, vitals, etc. shown to student)</span></div>
+              ${tables.map((tbl, ti) => `
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:0.6rem;margin-bottom:0.5rem;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;">
+                    <span style="font-size:0.75rem;font-weight:700;color:var(--accent);">Table ${ti + 1}</span>
+                    <button class="mini-btn delete" onclick="_osceRemoveTable(${index}, ${ti})" style="padding:0.2rem 0.4rem;font-size:0.65rem;">✕ Remove</button>
+                  </div>
+                  <div class="field" style="margin-bottom:0.35rem;">
+                    <label style="font-size:0.7rem;font-weight:600;">Title</label>
+                    <input class="text-input osce-table-title" data-index="${index}" data-tableidx="${ti}" value="${escapeHtml(tbl.title || '')}" oninput="syncQuizBankEditor()" placeholder="Table title" style="font-size:0.7rem;padding:0.25rem 0.4rem;">
+                  </div>
+                  <div class="field" style="margin-bottom:0.35rem;">
+                    <label style="font-size:0.7rem;font-weight:600;">Headers <span class="muted">(comma-separated)</span></label>
+                    <input class="text-input osce-table-headers" data-index="${index}" data-tableidx="${ti}" value="${escapeHtml((tbl.headers||[]).join(', '))}" oninput="syncQuizBankEditor()" placeholder="Test, Value, Unit, Reference Range" style="font-size:0.7rem;padding:0.25rem 0.4rem;">
+                  </div>
+                  <div class="field">
+                    <label style="font-size:0.7rem;font-weight:600;">Rows <span class="muted">(one per line, cells separated by tabs)</span></label>
+                    <textarea class="text-area osce-table-rows" data-index="${index}" data-tableidx="${ti}" oninput="syncQuizBankEditor()" style="min-height:50px;font-size:0.7rem;font-family:Consolas,monospace;">${escapeHtml((tbl.rows||[]).map(r => (Array.isArray(r) ? r.join('\t') : '')).join('\n'))}</textarea>
+                  </div>
+                </div>
+              `).join('')}
+              <button class="mini-btn" onclick="_osceAddTable(${index})">+ Add Table</button>
+            </div>
+
+            <div style="border-top:1px solid var(--border); margin:0.75rem 0; padding-top:0.75rem;">
+              <div style="font-weight:700; font-size:0.85rem; color:var(--accent); margin-bottom:0.5rem;">Post-Encounter Questions <span class="muted" style="font-weight:400;">(scored by AI examiner after the encounter)</span></div>
+              ${pq.map((qItem, qi) => `
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:0.6rem;margin-bottom:0.5rem;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;">
+                    <span style="font-size:0.75rem;font-weight:700;color:var(--accent);">Question ${qi + 1}</span>
+                    <button class="mini-btn delete" onclick="_osceRemovePq(${index}, ${qi})" style="padding:0.2rem 0.4rem;font-size:0.65rem;">✕ Remove</button>
+                  </div>
+                  <div class="field" style="margin-bottom:0.35rem;">
+                    <label style="font-size:0.7rem;font-weight:600;">Question</label>
+                    <textarea class="text-area osce-pq-question" data-index="${index}" data-pqidx="${qi}" oninput="syncQuizBankEditor()" style="min-height:50px;font-size:0.75rem;">${escapeHtml(qItem.question || '')}</textarea>
+                  </div>
+                  <div class="field" style="margin-bottom:0.35rem;">
+                    <label style="font-size:0.7rem;font-weight:600;">Model Answer</label>
+                    <textarea class="text-area osce-pq-answer" data-index="${index}" data-pqidx="${qi}" oninput="syncQuizBankEditor()" style="min-height:40px;font-size:0.75rem;">${escapeHtml(qItem.answer || '')}</textarea>
+                  </div>
+                  <div class="field">
+                    <label style="font-size:0.7rem;font-weight:600;">Rubric <span class="muted">(marking guide for AI)</span></label>
+                    <textarea class="text-area osce-pq-rubric" data-index="${index}" data-pqidx="${qi}" oninput="syncQuizBankEditor()" style="min-height:40px;font-size:0.75rem;">${escapeHtml(qItem.rubric || '')}</textarea>
+                  </div>
+                </div>
+              `).join('')}
+              <button class="mini-btn" onclick="_osceAddPq(${index})">+ Add Question</button>
             </div>
 
             <div style="border-top:1px solid var(--border); margin:0.75rem 0; padding-top:0.75rem;">
@@ -3491,7 +3578,7 @@
             <div style="border-top:1px solid var(--border); margin:0.75rem 0; padding-top:0.75rem;">
               <div style="font-weight:700; font-size:0.85rem; color:var(--accent); margin-bottom:0.5rem;">Clinical Images <span class="muted" style="font-weight:400;">(shown to student — supports base64, URLs, or data URIs)</span></div>
               <div class="osce-images-grid" data-index="${index}">
-                ${(caseItem.dataPresented?.images || []).map((img, i) => `
+                ${(dp.images || []).map((img, i) => `
                   <div class="osce-image-thumb" data-idx="${i}">
                     <img src="${escapeHtml(img.src)}" alt="${escapeHtml(img.alt || img.caption || img.title || 'Clinical image')}" loading="lazy">
                     <input type="hidden" class="osce-img-src" data-index="${index}" data-imgidx="${i}" value="${escapeHtml(img.src)}">
@@ -3764,6 +3851,50 @@
       }
     }
 
+    function _osceAddTable(caseIdx) {
+      const list = state.currentData?.meta?.questions;
+      if (!list || !list[caseIdx]) return;
+      if (!list[caseIdx].dataPresented) list[caseIdx].dataPresented = {};
+      if (!Array.isArray(list[caseIdx].dataPresented.tables)) list[caseIdx].dataPresented.tables = [];
+      list[caseIdx].dataPresented.tables.push({ title: '', headers: [], rows: [] });
+      renderFilePanel();
+      setTab('editor');
+      syncQuizBankEditor();
+    }
+
+    function _osceRemoveTable(caseIdx, tableIdx) {
+      const list = state.currentData?.meta?.questions;
+      if (!list || !list[caseIdx]) return;
+      const dp = list[caseIdx].dataPresented;
+      if (dp && Array.isArray(dp.tables)) {
+        dp.tables.splice(tableIdx, 1);
+        renderFilePanel();
+        setTab('editor');
+        syncQuizBankEditor();
+      }
+    }
+
+    function _osceAddPq(caseIdx) {
+      const list = state.currentData?.meta?.questions;
+      if (!list || !list[caseIdx]) return;
+      if (!Array.isArray(list[caseIdx].questions)) list[caseIdx].questions = [];
+      list[caseIdx].questions.push({ question: '', answer: '', rubric: '' });
+      renderFilePanel();
+      setTab('editor');
+      syncQuizBankEditor();
+    }
+
+    function _osceRemovePq(caseIdx, pqIdx) {
+      const list = state.currentData?.meta?.questions;
+      if (!list || !list[caseIdx]) return;
+      if (Array.isArray(list[caseIdx].questions)) {
+        list[caseIdx].questions.splice(pqIdx, 1);
+        renderFilePanel();
+        setTab('editor');
+        syncQuizBankEditor();
+      }
+    }
+
     function scheduleValidation() {
       window.clearTimeout(state.validationTimer);
       state.validationTimer = window.setTimeout(() => {
@@ -3793,6 +3924,12 @@
           const caseTitle = card.querySelector('.osce-title')?.value || '';
           const specialty = card.querySelector('.osce-specialty')?.value || '';
           const difficulty = card.querySelector('.osce-difficulty')?.value || 'Intermediate';
+          const caseType = card.querySelector('.osce-type')?.value || 'history';
+          const caseTime = parseInt(card.querySelector('.osce-time')?.value) || 480;
+          const task = card.querySelector('.osce-task')?.value || '';
+          const examinerName = card.querySelector('.osce-examiner-name')?.value || '';
+          const examinerTitle = card.querySelector('.osce-examiner-title')?.value || '';
+          const scenario = card.querySelector('.osce-scenario')?.value || '';
           const pName = card.querySelector('.osce-patient-name')?.value || '';
           const pAge = parseInt(card.querySelector('.osce-patient-age')?.value) || 0;
           const pGender = card.querySelector('.osce-patient-gender')?.value || 'male';
@@ -3805,6 +3942,17 @@
           const hpVitals = card.querySelector('.osce-hp-vitals')?.value || '';
           const rubricMustAsk = (card.querySelector('.osce-rubric-mustask')?.value || '').split('\n').map(s => s.trim()).filter(Boolean);
           const rubricBonus = (card.querySelector('.osce-rubric-bonus')?.value || '').split('\n').map(s => s.trim()).filter(Boolean);
+          // Tables
+          const tableEls = Array.from(card.querySelectorAll('.osce-table-title[data-index="' + index + '"]'));
+          const tables = tableEls.map((_, ti) => {
+            const title = card.querySelector('.osce-table-title[data-index="' + index + '"][data-tableidx="' + ti + '"]')?.value || '';
+            const headersStr = card.querySelector('.osce-table-headers[data-index="' + index + '"][data-tableidx="' + ti + '"]')?.value || '';
+            const rowsStr = card.querySelector('.osce-table-rows[data-index="' + index + '"][data-tableidx="' + ti + '"]')?.value || '';
+            const headers = headersStr.split(',').map(s => s.trim()).filter(Boolean);
+            const rows = rowsStr.split('\n').map(line => line.trim()).filter(Boolean).map(line => line.split('\t').map(s => s.trim()));
+            return { title, headers, rows };
+          });
+          // Images
           const imgThumbs = Array.from(card.querySelectorAll('.osce-image-thumb'));
           const images = imgThumbs.map((thumb) => {
             const src = thumb.querySelector('.osce-img-src')?.value || '';
@@ -3812,11 +3960,23 @@
             const caption = thumb.querySelector('.osce-img-caption')?.value || '';
             return { src, title, caption, alt: caption || title || 'Clinical image' };
           }).filter(img => img.src);
+          // Post-encounter questions
+          const pqEls = Array.from(card.querySelectorAll('.osce-pq-question[data-index="' + index + '"]'));
+          const pq = pqEls.map((_, qi) => {
+            const question = card.querySelector('.osce-pq-question[data-index="' + index + '"][data-pqidx="' + qi + '"]')?.value || '';
+            const answer = card.querySelector('.osce-pq-answer[data-index="' + index + '"][data-pqidx="' + qi + '"]')?.value || '';
+            const rubric = card.querySelector('.osce-pq-rubric[data-index="' + index + '"][data-pqidx="' + qi + '"]')?.value || '';
+            return { question, answer, rubric };
+          }).filter(q => q.question);
           const result = {
             id: id || 'case-' + String(index + 1).padStart(3, '0'),
             title: caseTitle,
+            type: caseType,
             specialty,
             difficulty,
+            time: caseTime,
+            task: task || undefined,
+            examiner: (examinerName || examinerTitle) ? { name: examinerName || undefined, title: examinerTitle || undefined } : undefined,
             patient: { name: pName, age: pAge, gender: pGender, avatarSeed: pAvatar, opening: pOpening },
             hiddenProfile: {
               diagnosis: hpDiagnosis,
@@ -3830,9 +3990,12 @@
               bonus: rubricBonus,
             },
           };
-          if (images.length) {
-            result.dataPresented = { images };
-          }
+          const dp = {};
+          if (scenario) dp.scenario = scenario;
+          if (tables.length) dp.tables = tables;
+          if (images.length) dp.images = images;
+          if (Object.keys(dp).length) result.dataPresented = dp;
+          if (pq.length) result.questions = pq;
           return result;
         });
       } else if (isWritten) {
@@ -3901,10 +4064,32 @@
         const isWR = meta.type === 'written';
         const isOC = meta.type === 'osce';
         const configName = isFC ? 'BANK_CONFIG' : (isWR ? 'WRITTEN_CONFIG' : (isOC ? 'OSCE_CONFIG' : (meta.type === 'bank' ? 'BANK_CONFIG' : 'QUIZ_CONFIG')));
-        const arrayName = isFC ? 'FLASHCARD_BANK' : (isWR ? 'WRITTEN_QUESTIONS' : (isOC ? 'OSCE_CASES' : (meta.type === 'bank' ? 'QUESTION_BANK' : 'QUESTIONS')));
         let updated = state.currentData.content;
         updated = replaceAssignedBlock(updated, configName, '{', '}', meta.config);
-        updated = replaceAssignedBlock(updated, arrayName, '[', ']', questions);
+        // OSCE supports two formats: singular OSCE_CASE = { ... } (1 case per file,
+        // used by generated projects) and plural OSCE_CASES = [ ... ] (multi-case).
+        // Detect which format the file uses and preserve it.
+        if (isOC) {
+          const hasSingular = /(?:const|let|var)\s+OSCE_CASE\s*=/.test(updated);
+          const hasPlural = /(?:const|let|var)\s+OSCE_CASES\s*=/.test(updated);
+          if (hasSingular && !hasPlural && questions.length === 1) {
+            // Singular format: const OSCE_CASE = { ... }
+            updated = replaceAssignedBlock(updated, 'OSCE_CASE', '{', '}', questions[0]);
+            // Update the marker comment to OSCE_CASE
+            updated = updated.replace(/\/\*\s*\[OSCE_CASES_START\]\s*\*\//g, '/* [OSCE_CASE_START] */');
+            updated = updated.replace(/\/\*\s*\[OSCE_CASES_END\]\s*\*\//g, '/* [OSCE_CASE_END] */');
+          } else {
+            // Plural format: const OSCE_CASES = [ ... ]
+            const arrayName = isFC ? 'FLASHCARD_BANK' : (isWR ? 'WRITTEN_QUESTIONS' : (isOC ? 'OSCE_CASES' : (meta.type === 'bank' ? 'QUESTION_BANK' : 'QUESTIONS')));
+            updated = replaceAssignedBlock(updated, 'OSCE_CASES', '[', ']', questions);
+            // Update the marker comment to OSCE_CASES
+            updated = updated.replace(/\/\*\s*\[OSCE_CASE_START\]\s*\*\//g, '/* [OSCE_CASES_START] */');
+            updated = updated.replace(/\/\*\s*\[OSCE_CASE_END\]\s*\*\//g, '/* [OSCE_CASES_END] */');
+          }
+        } else {
+          const arrayName = isFC ? 'FLASHCARD_BANK' : (isWR ? 'WRITTEN_QUESTIONS' : (isOC ? 'OSCE_CASES' : (meta.type === 'bank' ? 'QUESTION_BANK' : 'QUESTIONS')));
+          updated = replaceAssignedBlock(updated, arrayName, '[', ']', questions);
+        }
         if (isFC) {
           const customScript = meta.customScript || '';
           const scStart = '/* [CUSTOM_SCRIPT_START] */';
@@ -4039,7 +4224,7 @@
       list.push(isFlashcard
         ? { type: 'basic', front: '', back: '', tags: [] }
         : isOsce
-          ? { id: 'case-' + String(list.length + 1).padStart(3, '0'), title: '', specialty: '', difficulty: 'Intermediate', patient: { name: '', age: 0, gender: 'male', avatarSeed: '', opening: '' }, hiddenProfile: { diagnosis: '', keySymptoms: [], redFlags: [], pastHistory: [], vitalSigns: '' }, rubric: { mustAsk: [], bonus: [] }, dataPresented: { images: [] } }
+          ? { id: 'case-' + String(list.length + 1).padStart(3, '0'), title: '', type: 'history', specialty: '', difficulty: 'Intermediate', time: 480, task: '', examiner: {}, patient: { name: '', age: 0, gender: 'male', avatarSeed: '', opening: '' }, hiddenProfile: { diagnosis: '', keySymptoms: [], redFlags: [], pastHistory: [], vitalSigns: '' }, rubric: { mustAsk: [], bonus: [] }, dataPresented: { scenario: '', tables: [], images: [] }, questions: [] }
           : isWritten
             ? { id: 'wq-' + Date.now().toString(36) + '-' + (list.length + 1), question: '', modelAnswer: '', rubric: '', explanation: '', tags: [] }
             : { question: '', options: ['', '', '', ''], correct: 0, explanation: '' }

@@ -289,7 +289,13 @@ document.head.appendChild(s)})();"##;
 pub fn create_osce_html(config: &Value, cases: &Value) -> String {
     let title = config.get("title").and_then(|v| v.as_str()).unwrap_or("OSCE Virtual Patients");
     let config_json = serde_json::to_string_pretty(config).unwrap_or_default();
-    let cases_json = serde_json::to_string_pretty(cases).unwrap_or_default();
+    // Use singular OSCE_CASE object format (matching generated project convention)
+    // when there's exactly one case; fall back to plural OSCE_CASES array for 0 or 2+.
+    let (cases_const, cases_body, cases_marker) = match cases.as_array() {
+        Some(arr) if arr.len() == 1 => ("OSCE_CASE", serde_json::to_string_pretty(&arr[0]).unwrap_or_default(), "OSCE_CASE"),
+        Some(_) => ("OSCE_CASES", serde_json::to_string_pretty(cases).unwrap_or_default(), "OSCE_CASES"),
+        None => ("OSCE_CASE", "{}".to_string(), "OSCE_CASE"),
+    };
     format!(r##"<!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
@@ -307,9 +313,9 @@ pub fn create_osce_html(config: &Value, cases: &Value) -> String {
 const OSCE_CONFIG = {config_json};
 /* [OSCE_CONFIG_END] */
 
-/* [OSCE_CASES_START] */
-const OSCE_CASES = {cases_json};
-/* [OSCE_CASES_END] */
+/* [{cases_marker}_START] */
+const {cases_const} = {cases_body};
+/* [{cases_marker}_END] */
 
 </script>
 <script>
@@ -320,7 +326,8 @@ const OSCE_CASES = {cases_json};
 </script>
 </body>
 </html>
-"##, fouc = FOUC_SCRIPT, title = title, config_json = config_json, cases_json = cases_json)
+"##, fouc = FOUC_SCRIPT, title = title, config_json = config_json,
+cases_const = cases_const, cases_body = cases_body, cases_marker = cases_marker)
 }
 
 pub fn create_index_html(folder_rel: &str, title: &str, description: &str) -> String {

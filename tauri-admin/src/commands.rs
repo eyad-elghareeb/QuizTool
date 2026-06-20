@@ -4,8 +4,11 @@ use crate::server::QuizServer;
 use base64::Engine;
 use regex::Regex;
 use serde_json::{json, Value};
+use std::collections::HashMap;
+use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
+use std::time::SystemTime;
 use tauri::State;
 use tauri::async_runtime;
 
@@ -14,6 +17,19 @@ use std::os::windows::process::CommandExt;
 
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+/// Maximum bytes to read per file during initial scan.
+/// Config blocks and marker comments always live in the first few KB;
+/// reading beyond that is wasted I/O for image-heavy OSCE files.
+const SCAN_HEADER_SIZE: u64 = 65536;
+
+/// Scan result cache keyed by `(path, mtime_secs)`.
+/// Avoids re-reading unchanged files on repeated scans.
+static SCAN_CACHE: OnceLock<Mutex<HashMap<String, (f64, parser::FileMeta)>>> = OnceLock::new();
+
+fn scan_cache() -> &'static Mutex<HashMap<String, (f64, parser::FileMeta)>> {
+    SCAN_CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+}
 
 pub struct ProjectRoot(pub std::sync::Mutex<PathBuf>);
 
@@ -76,6 +92,28 @@ fn collect_files(root: &Path) -> Vec<Value> {
     records
 }
 
+fn read_scan_content(p: &Path) -> String {
+    let metadata = match std::fs::metadata(p) {
+        Ok(m) => m,
+        Err(_) => return String::new(),
+    };
+    if metadata.len() <= SCAN_HEADER_SIZE {
+        return std::fs::read_to_string(p).unwrap_or_default();
+    }
+    // Large file (e.g. image-heavy OSCE): read only the header.
+    // Config markers and the opening `[` of data arrays always live
+    // in the first few KB. The lightweight `count_array_items` fallback
+    // in `parse_file_metadata` counts items without parsing base64 strings.
+    let mut f = match std::fs::File::open(p) {
+        Ok(f) => f,
+        Err(_) => return String::new(),
+    };
+    let mut buf = vec![0u8; SCAN_HEADER_SIZE as usize];
+    let n = f.read(&mut buf).unwrap_or(0);
+    buf.truncate(n);
+    String::from_utf8_lossy(&buf).into_owned()
+}
+
 fn collect_files_inner(dir: &Path, root: &Path, out: &mut Vec<Value>) {
     let rd = match std::fs::read_dir(dir) { Ok(r) => r, Err(_) => return };
     for entry in rd.flatten() {
@@ -84,16 +122,32 @@ fn collect_files_inner(dir: &Path, root: &Path, out: &mut Vec<Value>) {
         if p.is_dir() {
             if !should_skip(&name) { collect_files_inner(&p, root, out); }
         } else if name.to_lowercase().ends_with(".html") {
-            let content = std::fs::read_to_string(&p).unwrap_or_default();
-            let meta = parser::parse_file_metadata(&content);
+            let modified = p.metadata().ok().and_then(|m| m.modified().ok())
+                .and_then(|t| t.duration_since(SystemTime::UNIX_EPOCH).ok())
+                .map(|d| d.as_secs_f64()).unwrap_or(0.0);
+
+            // Cache check: skip files with unchanged mtime
+            let cache_key = format!("{}|{}", p.display(), modified);
+            let meta = {
+                let cache = scan_cache().lock().unwrap();
+                cache.get(&cache_key).map(|(_, m)| m.clone())
+            };
+            let meta = match meta {
+                Some(m) => m,
+                None => {
+                    let content = read_scan_content(&p);
+                    let m = parser::parse_file_metadata(&content);
+                    let mut cache = scan_cache().lock().unwrap();
+                    cache.insert(cache_key, (modified, m.clone()));
+                    m
+                }
+            };
+
             let rel = to_posix(&p, root);
             let folder = to_posix(p.parent().unwrap_or(root), root);
             let folder = if folder.is_empty() { ".".into() } else { folder };
             let title = meta.title.as_deref().unwrap_or(p.file_stem().and_then(|s| s.to_str()).unwrap_or(&name)).to_string();
             let icon = parser::infer_icon(&meta.file_type, &name);
-            let modified = p.metadata().ok().and_then(|m| m.modified().ok())
-                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-                .map(|d| d.as_secs_f64()).unwrap_or(0.0);
             out.push(json!({
                 "path": rel, "name": name, "folder": folder,
                 "type": meta.file_type.as_str(),

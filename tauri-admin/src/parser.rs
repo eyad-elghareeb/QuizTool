@@ -69,6 +69,62 @@ pub fn extract_assigned_literal(content: &str, const_name: &str, open_char: char
     }
 }
 
+/// Lightweight count of top-level items in a JS const array (`const NAME = [...]`).
+/// Skips string values entirely (O(1) per byte of string content), making it
+/// dramatically faster than `extract_assigned_literal` + `serde_json::from_str`
+/// for files with embedded base64 data where string values dominate file size.
+pub fn count_array_items(content: &str, const_name: &str) -> usize {
+    let pattern = format!(r"(?:const|let|var)\s+{}\s*=\s*\[", regex::escape(const_name));
+    let re = match Regex::new(&pattern) {
+        Ok(r) => r,
+        Err(_) => return 0,
+    };
+    let m = match re.find(content) {
+        Some(m) => m,
+        None => return 0,
+    };
+    let bytes = content[m.end() - 1..].as_bytes();
+    let mut depth: i32 = 0;
+    let mut in_string = false;
+    let mut string_quote = 0u8;
+    let mut escape = false;
+    let mut count = 0usize;
+    for &b in bytes {
+        if escape {
+            escape = false;
+            continue;
+        }
+        if in_string {
+            if b == b'\\' {
+                escape = true;
+            } else if b == string_quote {
+                in_string = false;
+            }
+            continue;
+        }
+        match b {
+            b'"' | b'\'' => {
+                in_string = true;
+                string_quote = b;
+            }
+            b'[' | b'{' => {
+                if depth == 1 && b == b'{' {
+                    count += 1;
+                }
+                depth += 1;
+            }
+            b']' | b'}' => {
+                depth -= 1;
+                if b == b']' && depth == 0 {
+                    break;
+                }
+            }
+            _ => {}
+        }
+    }
+    count
+}
+
 pub fn sanitize_jsonish(block: &str) -> String {
     let bytes = block.as_bytes();
     let mut out = Vec::with_capacity(block.len() + 32);
@@ -287,7 +343,8 @@ pub fn parse_file_metadata(content: &str) -> FileMeta {
     if let Some(cfg) = parse_literal(content, "QUIZ_CONFIG", '{', '}') {
         if cfg.is_object() {
             let questions = parse_literal(content, "QUESTIONS", '[', ']');
-            let qc = questions.as_ref().and_then(|v| v.as_array()).map(|a| a.len()).unwrap_or(0);
+            let qc = questions.as_ref().and_then(|v| v.as_array()).map(|a| a.len())
+                .unwrap_or_else(|| count_array_items(content, "QUESTIONS"));
             return FileMeta {
                 file_type: FileType::Quiz,
                 uid: cfg.get("uid").and_then(|v| v.as_str()).map(String::from),
@@ -300,8 +357,40 @@ pub fn parse_file_metadata(content: &str) -> FileMeta {
     }
     if let Some(cfg) = parse_literal(content, "OSCE_CONFIG", '{', '}') {
         if cfg.is_object() {
-            let cases = parse_literal(content, "OSCE_CASES", '[', ']');
-            let qc = cases.as_ref().and_then(|v| v.as_array()).map(|a| a.len()).unwrap_or(0);
+            // Multi-case array: const OSCE_CASES = [ ... ]
+            if let Some(cases) = parse_literal(content, "OSCE_CASES", '[', ']') {
+                let qc = cases.as_array().map(|a| a.len()).unwrap_or(0);
+                return FileMeta {
+                    file_type: FileType::Osce,
+                    uid: cfg.get("uid").and_then(|v| v.as_str()).map(String::from),
+                    title: cfg.get("title").and_then(|v| v.as_str()).map(String::from),
+                    description: cfg.get("description").and_then(|v| v.as_str()).map(String::from),
+                    icon: cfg.get("icon").and_then(|v| v.as_str()).map(String::from),
+                    hero_title: None, question_count: qc,
+                    config: Some(cfg), questions: Some(cases), quizzes: None,
+                };
+            }
+            // Single-case object: const OSCE_CASE = { ... }
+            if let Some(block) = extract_assigned_literal(content, "OSCE_CASE", '{', '}') {
+                if let Ok(case_val) = serde_json::from_str::<Value>(&block)
+                    .or_else(|_| serde_json::from_str(&sanitize_jsonish(&block)))
+                {
+                    if case_val.is_object() {
+                        return FileMeta {
+                            file_type: FileType::Osce,
+                            uid: cfg.get("uid").and_then(|v| v.as_str()).map(String::from),
+                            title: cfg.get("title").and_then(|v| v.as_str()).map(String::from),
+                            description: cfg.get("description").and_then(|v| v.as_str()).map(String::from),
+                            icon: cfg.get("icon").and_then(|v| v.as_str()).map(String::from),
+                            hero_title: None, question_count: 1,
+                            config: Some(cfg), questions: Some(Value::Array(vec![case_val])), quizzes: None,
+                        };
+                    }
+                }
+            }
+            // Fallback — config found but cases unparseable (e.g. truncated content).
+            // Lightweight count for OSCE_CASES array.
+            let qc = count_array_items(content, "OSCE_CASES");
             return FileMeta {
                 file_type: FileType::Osce,
                 uid: cfg.get("uid").and_then(|v| v.as_str()).map(String::from),
@@ -309,14 +398,15 @@ pub fn parse_file_metadata(content: &str) -> FileMeta {
                 description: cfg.get("description").and_then(|v| v.as_str()).map(String::from),
                 icon: cfg.get("icon").and_then(|v| v.as_str()).map(String::from),
                 hero_title: None, question_count: qc,
-                config: Some(cfg), questions: cases, quizzes: None,
+                config: Some(cfg), questions: None, quizzes: None,
             };
         }
     }
     if let Some(cfg) = parse_literal(content, "WRITTEN_CONFIG", '{', '}') {
         if cfg.is_object() {
             let questions = parse_literal(content, "WRITTEN_QUESTIONS", '[', ']');
-            let qc = questions.as_ref().and_then(|v| v.as_array()).map(|a| a.len()).unwrap_or(0);
+            let qc = questions.as_ref().and_then(|v| v.as_array()).map(|a| a.len())
+                .unwrap_or_else(|| count_array_items(content, "WRITTEN_QUESTIONS"));
             return FileMeta {
                 file_type: FileType::Written,
                 uid: cfg.get("uid").and_then(|v| v.as_str()).map(String::from),
@@ -334,7 +424,8 @@ pub fn parse_file_metadata(content: &str) -> FileMeta {
         if let Some(cfg) = parse_literal(content, "BANK_CONFIG", '{', '}') {
             if cfg.is_object() {
                 let questions = parse_literal(content, "FLASHCARD_BANK", '[', ']');
-                let qc = questions.as_ref().and_then(|v| v.as_array()).map(|a| a.len()).unwrap_or(0);
+                let qc = questions.as_ref().and_then(|v| v.as_array()).map(|a| a.len())
+                    .unwrap_or_else(|| count_array_items(content, "FLASHCARD_BANK"));
                 return FileMeta {
                     file_type: FileType::Flashcard,
                     uid: cfg.get("uid").and_then(|v| v.as_str()).map(String::from),
@@ -350,7 +441,8 @@ pub fn parse_file_metadata(content: &str) -> FileMeta {
     if let Some(cfg) = parse_literal(content, "BANK_CONFIG", '{', '}') {
         if cfg.is_object() {
             let questions = parse_literal(content, "QUESTION_BANK", '[', ']');
-            let qc = questions.as_ref().and_then(|v| v.as_array()).map(|a| a.len()).unwrap_or(0);
+            let qc = questions.as_ref().and_then(|v| v.as_array()).map(|a| a.len())
+                .unwrap_or_else(|| count_array_items(content, "QUESTION_BANK"));
             return FileMeta {
                 file_type: FileType::Bank,
                 uid: cfg.get("uid").and_then(|v| v.as_str()).map(String::from),
@@ -487,7 +579,9 @@ pub fn validate_dashboard_content(_rel_path: &str, content: &str, original_uid: 
         }
         FileType::Osce => {
             if !content.contains("/* [OSCE_CONFIG_START] */") { issues.push(mk_err("OSCE config markers are missing.", "config", "osce_config_markers", None)); }
-            if !content.contains("/* [OSCE_CASES_START] */") { issues.push(mk_err("OSCE cases markers are missing.", "cases", "osce_cases_markers", None)); }
+            if !content.contains("/* [OSCE_CASES_START] */") && !content.contains("/* [OSCE_CASE_START] */") {
+                issues.push(mk_err("OSCE cases markers are missing.", "cases", "osce_cases_markers", None));
+            }
             let uid = meta.uid.as_deref().unwrap_or("").trim().to_string();
             if uid.is_empty() { issues.push(mk_err("OSCE UID is required.", "uid", "uid_missing", None)); }
             else if !original_uid.is_empty() && original_uid != uid { issues.push(mk_warn("UID changed from the saved file. This can orphan learner progress.", "uid", "uid_changed", None)); }
