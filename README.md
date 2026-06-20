@@ -1,4 +1,4 @@
-# QuizTool V5 🎯
+# QuizTool V5.1 🎯
 
 A modern, feature-rich quiz creation and management platform built with vanilla HTML, CSS, and JavaScript. Create custom quizzes, flashcards, written assessments, and deploy production-ready quiz sites — all in a beautiful, responsive interface.
 
@@ -8,7 +8,7 @@ A modern, feature-rich quiz creation and management platform built with vanilla 
 
 ## ✨ Highlights
 
-### 🧠 8 Quiz Engines
+### 🧠 9 Quiz Engines
 
 | Engine | Purpose |
 |--------|---------|
@@ -20,6 +20,7 @@ A modern, feature-rich quiz creation and management platform built with vanilla 
 | **Hub Engine** | Quiz card dashboard, tracker overview, theme management |
 | **Search Engine** | Global content search across all quizzes and banks |
 | **AI Assistant** | Browser-side AI Q&A for explaining concepts |
+| **OSCE Engine** | Virtual-patient history-taking with AI examiner scoring |
 
 ### 🛠️ 10 Authoring Tools
 
@@ -100,13 +101,8 @@ Long-term mistake tracking across all sessions. Shared between all engines and h
 
 **Using the Tauri app (recommended):**
 ```bash
-cd tauri && cargo tauri build
-# Or run in dev mode: cargo tauri dev
-```
-
-**Using the recommended Tauri generator:**
-```bash
 cd tauri && cargo tauri dev
+# Or build: cargo tauri build
 ```
 
 ### Running the Tauri Admin Dashboard
@@ -127,7 +123,7 @@ cd tauri-admin && cargo tauri build
 ```
 QuizTool/
 ├── index.html                 ← Tool hub
-├── quiz-engine.js / bank-engine.js / ...  ← 8 engines
+├── engines/                   ← 9 engines + 3 shared modules
 ├── quiz-maker.html / bank-maker.html / ... ← 10 authoring tools
 ├── quiz-template.html / ...   ← 5 templates
 ├── tauri/                     ← Native project generator
