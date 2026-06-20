@@ -2,19 +2,19 @@
 // These are bundled into the binary at compile time and written into
 // generated project ZIPs. No external files needed at runtime.
 
-pub const INDEX_ENGINE_JS: &str = include_str!("../../index-engine.js");
-pub const INDEX_ENGINE_CSS: &str = include_str!("../../index-engine.css");
-pub const SEARCH_ENGINE_JS: &str = include_str!("../../search-engine.js");
-pub const QUIZ_ENGINE_JS: &str = include_str!("../../quiz-engine.js");
-pub const BANK_ENGINE_JS: &str = include_str!("../../bank-engine.js");
-pub const SYNC_ENGINE_JS: &str = include_str!("../../sync-engine.js");
-pub const FLASHCARD_ENGINE_JS: &str = include_str!("../../flashcard-engine.js");
-pub const WRITTEN_ENGINE_JS: &str = include_str!("../../written-engine.js");
-pub const OSCE_ENGINE_JS: &str = include_str!("../../osce-engine.js");
-pub const AI_ASSISTANT_ENGINE_JS: &str = include_str!("../../ai-assistant-engine.js");
-pub const ENGINE_SHARED_JS: &str = include_str!("../../engine-shared.js");
-pub const ENGINE_SHARED_CSS: &str = include_str!("../../engine-shared.css");
-pub const ENGINE_TRACKER_JS: &str = include_str!("../../engine-tracker.js");
+pub const INDEX_ENGINE_JS: &str = include_str!("../../engines/index-engine.js");
+pub const INDEX_ENGINE_CSS: &str = include_str!("../../engines/index-engine.css");
+pub const SEARCH_ENGINE_JS: &str = include_str!("../../engines/search-engine.js");
+pub const QUIZ_ENGINE_JS: &str = include_str!("../../engines/quiz-engine.js");
+pub const BANK_ENGINE_JS: &str = include_str!("../../engines/bank-engine.js");
+pub const SYNC_ENGINE_JS: &str = include_str!("../../engines/sync-engine.js");
+pub const FLASHCARD_ENGINE_JS: &str = include_str!("../../engines/flashcard-engine.js");
+pub const WRITTEN_ENGINE_JS: &str = include_str!("../../engines/written-engine.js");
+pub const OSCE_ENGINE_JS: &str = include_str!("../../engines/osce-engine.js");
+pub const AI_ASSISTANT_ENGINE_JS: &str = include_str!("../../engines/ai-assistant-engine.js");
+pub const ENGINE_SHARED_JS: &str = include_str!("../../engines/engine-shared.js");
+pub const ENGINE_SHARED_CSS: &str = include_str!("../../engines/engine-shared.css");
+pub const ENGINE_TRACKER_JS: &str = include_str!("../../engines/engine-tracker.js");
 
 pub const FAVICON_SVG: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <rect width="100" height="100" rx="22" fill="#0d1117"/>

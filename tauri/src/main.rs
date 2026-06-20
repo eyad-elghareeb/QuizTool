@@ -96,7 +96,7 @@ fn download_local(
         .ok()
         .and_then(|p| p.parent().map(|d| d.to_path_buf()))
         .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
-    let projects_dir = if exe_dir.join("index-engine.js").exists() || exe_dir.join("manifest.webmanifest").exists() {
+    let projects_dir = if exe_dir.join("engines").join("index-engine.js").exists() || exe_dir.join("manifest.webmanifest").exists() {
         exe_dir.parent().unwrap_or(&exe_dir).to_path_buf()
     } else {
         exe_dir

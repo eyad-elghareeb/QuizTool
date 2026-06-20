@@ -8,6 +8,7 @@
 
   var _cs = document.currentScript;
   var ENGINE_BASE = _cs ? _cs.src.replace(/[^\/]*$/, '') : '';
+  var ROOT_BASE = ENGINE_BASE.replace(/[^\/]+\/$/, '');
 
   /* ── CSS variables (injected inline so they're available synchronously) ── */
   var CSS_VARS = `:root {
@@ -92,14 +93,15 @@
 
     /* ── Theme colour meta + shared CSS + PWA assets ──────── */
     initHead: function() {
+      var root = ENGINE_BASE + '../';
       EngineShared._addMeta('theme-color', '#0d1117');
       EngineShared._addLink('stylesheet', ENGINE_BASE + 'engine-shared.css');
       EngineShared._addLink('preconnect', 'https://fonts.googleapis.com');
       EngineShared._addLink('preconnect', 'https://fonts.gstatic.com', {crossOrigin: ''});
       EngineShared._addLink('stylesheet', 'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap');
-      EngineShared._addLink('manifest',   ENGINE_BASE + 'manifest.webmanifest');
-      EngineShared._addLink('icon',       ENGINE_BASE + 'favicon.svg', {type: 'image/svg+xml'});
-      EngineShared._addLink('apple-touch-icon', ENGINE_BASE + 'favicon.svg');
+      EngineShared._addLink('manifest',   root + 'manifest.webmanifest');
+      EngineShared._addLink('icon',       root + 'favicon.svg', {type: 'image/svg+xml'});
+      EngineShared._addLink('apple-touch-icon', root + 'favicon.svg');
     },
 
     /* ── HTML escaping ────────────────────────────────────── */

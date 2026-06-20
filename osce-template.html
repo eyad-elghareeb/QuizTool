@@ -114,8 +114,8 @@ const OSCE_CASE = {
     Math.max(0, location.pathname.split('/').filter(Boolean).length - 2)
   );
   var candidates = location.protocol === 'file:'
-    ? ['', computedBase, '../', '../../', '../../../']
-    : [computedBase, '', '../', '../../', '../../../'];
+    ? ['', computedBase, 'engines/', '../', '../../', '../../../']
+    : [computedBase, '', 'engines/', '../', '../../', '../../../'];
   var tried = {};
   function loadNext() {
     var base = candidates.shift();

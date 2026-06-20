@@ -136,10 +136,17 @@ def build_pyinstaller():
     if templates_dir.exists():
         datas.append(str(templates_dir) + ';generator_templates')
 
-    # Engine files
+    # Engine files (in engines/ subdirectory)
     for name in ['quiz-engine.js', 'bank-engine.js', 'index-engine.js', 
                  'flashcard-engine.js', 'written-engine.js', 'sync-engine.js',
-                 'ai-assistant-engine.js', 'index-engine.css', 'quiz-engine-test.html']:
+                 'ai-assistant-engine.js', 'engine-shared.js', 'engine-shared.css',
+                 'engine-tracker.js', 'index-engine.css']:
+        p = BASE_DIR / 'engines' / name
+        if p.exists():
+            datas.append(str(p) + ';.')
+
+    # Root-level test file
+    for name in ['quiz-engine-test.html']:
         p = BASE_DIR / name
         if p.exists():
             datas.append(str(p) + ';.')

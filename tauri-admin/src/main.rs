@@ -49,7 +49,7 @@ fn get_project_root() -> PathBuf {
             let mut curr = exe_dir.to_path_buf();
             // Try up to 5 levels up
             for _ in 0..5 {
-                if curr.join("index-engine.js").exists() || curr.join("manifest.webmanifest").exists() || curr.join("quiz-engine.js").exists() {
+                if curr.join("engines").join("index-engine.js").exists() || curr.join("manifest.webmanifest").exists() || curr.join("engines").join("quiz-engine.js").exists() {
                     return curr;
                 }
                 // If we are in a 'target' folder, keep walking up

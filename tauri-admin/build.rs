@@ -12,29 +12,43 @@ fn main() {
 
     fs::create_dir_all(&dest_dir).unwrap();
 
-    let files_to_copy = [
+    let engine_files = [
         "quiz-engine.js",
         "bank-engine.js",
         "flashcard-engine.js",
         "written-engine.js",
         "ai-assistant-engine.js",
+        "osce-engine.js",
         "index-engine.js",
         "search-engine.js",
-        "index-engine.css",
         "sync-engine.js",
-        "favicon.svg",
-        "sw.js",
-        "manifest.webmanifest",
-        "osce-engine.js",
         "engine-shared.js",
         "engine-shared.css",
         "engine-tracker.js",
+    ];
+
+    for file in &engine_files {
+        let src = quiztool_root.join("engines").join(file);
+        let dest = dest_dir.join(file);
+        if src.exists() {
+            fs::copy(&src, &dest).unwrap_or_else(|_| panic!("Failed to copy {}", file));
+            println!("cargo:rerun-if-changed={}", src.display());
+        }
+    }
+
+    let root_files = [
+        "favicon.svg",
+        "sw.js",
+        "manifest.webmanifest",
+        "index-engine.css",
         "pdf-exporter.html",
     ];
 
-    for file in &files_to_copy {
+    for file in &root_files {
         let src = if *file == "pdf-exporter.html" {
             project_dir.join("frontend/pdf-exporter.html")
+        } else if *file == "index-engine.css" {
+            quiztool_root.join("engines").join(file)
         } else {
             quiztool_root.join(file)
         };

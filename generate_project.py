@@ -350,15 +350,15 @@ self.addEventListener('fetch', function (event) {
     
     return sw_content
 
-INDEX_ENGINE_JS = read_file('index-engine.js')
-INDEX_ENGINE_CSS = read_file('index-engine.css')
-SEARCH_ENGINE_JS = read_file('search-engine.js')
-QUIZ_ENGINE_JS = read_file('quiz-engine.js')
-BANK_ENGINE_JS = read_file('bank-engine.js')
-FLASHCARD_ENGINE_JS = read_file('flashcard-engine.js')
-WRITTEN_ENGINE_JS = read_file('written-engine.js')
-AI_ASSISTANT_ENGINE_JS = read_file('ai-assistant-engine.js')
-SYNC_ENGINE_JS = read_file('sync-engine.js')
+INDEX_ENGINE_JS = read_file('engines/index-engine.js')
+INDEX_ENGINE_CSS = read_file('engines/index-engine.css')
+SEARCH_ENGINE_JS = read_file('engines/search-engine.js')
+QUIZ_ENGINE_JS = read_file('engines/quiz-engine.js')
+BANK_ENGINE_JS = read_file('engines/bank-engine.js')
+FLASHCARD_ENGINE_JS = read_file('engines/flashcard-engine.js')
+WRITTEN_ENGINE_JS = read_file('engines/written-engine.js')
+AI_ASSISTANT_ENGINE_JS = read_file('engines/ai-assistant-engine.js')
+SYNC_ENGINE_JS = read_file('engines/sync-engine.js')
 
 # Read sync scripts from QuizTool's own scripts/ folder (self-contained, no MU61S8 dependency)
 _SCRIPTS_DIR = BASE_DIR / 'scripts'

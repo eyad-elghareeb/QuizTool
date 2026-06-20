@@ -87,11 +87,8 @@
     }
     
     // Resolve the correct path to sync-engine.js from the current index file
-    // Engine base path is computed dynamically based on the current depth
-    var depth = Math.max(0, location.pathname.split('/').filter(Boolean).length - 2);
-    var engineBase = depth > 0 ? '../'.repeat(depth) : './';
     var s = document.createElement('script');
-    s.src = engineBase + 'sync-engine.js';
+    s.src = ENGINE_BASE + 'sync-engine.js';
     s.onload = function() {
       if (window.SyncEngine) window.SyncEngine.ui.openModal();
     };
@@ -140,10 +137,8 @@
     }
     if (_searchLoading) return;
     _searchLoading = true;
-    var depth = Math.max(0, location.pathname.split('/').filter(Boolean).length - 2);
-    var engineBase = depth > 0 ? '../'.repeat(depth) : './';
     var s = document.createElement('script');
-    s.src = engineBase + 'search-engine.js';
+    s.src = ENGINE_BASE + 'search-engine.js';
     s.onload = function () {
       if (typeof window.__searchEngineOpen === 'function') {
         window.__searchEngineOpen();

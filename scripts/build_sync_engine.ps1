@@ -9,8 +9,8 @@ param(
     [string]$RepoRoot = (Split-Path $PSScriptRoot -Parent)
 )
 
-$engineSrc  = Join-Path $RepoRoot "sync-engine.src.js"
-$outputFile = Join-Path $RepoRoot "sync-engine.js"
+$engineSrc  = Join-Path (Join-Path $RepoRoot "engines") "sync-engine.src.js"
+$outputFile = Join-Path (Join-Path $RepoRoot "engines") "sync-engine.js"
 
 Write-Host "Building sync-engine.js ..."
 

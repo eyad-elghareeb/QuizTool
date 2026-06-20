@@ -355,8 +355,8 @@ function init() {
 }
 
 async function tryLoadEngines() {
-  try { const r = await fetch('quiz-engine.js'); if (r.ok) quizEngineCode = await r.text(); } catch(_) {}
-  try { const r = await fetch('bank-engine.js'); if (r.ok) bankEngineCode = await r.text(); } catch(_) {}
+  try { const r = await fetch('engines/quiz-engine.js'); if (r.ok) quizEngineCode = await r.text(); } catch(_) {}
+  try { const r = await fetch('engines/bank-engine.js'); if (r.ok) bankEngineCode = await r.text(); } catch(_) {}
   updateEngineStatus();
 }
 

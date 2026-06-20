@@ -17,11 +17,11 @@ const HTML5QRCODE_CDN =
   'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js';
 
 var PRECACHE_REL_PATHS = [
-  'quiz-engine.js',
-  'bank-engine.js',
-  'index-engine.js',
-  'search-engine.js',
-  'written-engine.js',
+  'engines/quiz-engine.js',
+  'engines/bank-engine.js',
+  'engines/index-engine.js',
+  'engines/search-engine.js',
+  'engines/written-engine.js',
   'tracker-map.json',
   'index.html',
   'bank-maker.html',
@@ -114,11 +114,11 @@ self.addEventListener('install', function (event) {
       var cache = await caches.open(CACHE_NAME);
 
       var REQUIRED = [
-        'quiz-engine.js',
-        'bank-engine.js',
-        'index-engine.js',
-        'written-engine.js',
-        'index-engine.css',
+        'engines/quiz-engine.js',
+        'engines/bank-engine.js',
+        'engines/index-engine.js',
+        'engines/written-engine.js',
+        'engines/index-engine.css',
         'index.html',
         'manifest.webmanifest',
         'favicon.svg'
@@ -238,7 +238,7 @@ function handleAsset(event, request) {
           'bank-engine.js',
           'index-engine.js',
           'written-engine.js',
-          'index-engine.css',
+  'engines/index-engine.css',
           'manifest.webmanifest',
           'favicon.svg',
           'icon-48.png',
